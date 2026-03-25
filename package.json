@@ -10,9 +10,13 @@
   "scripts": {
     "dev": "pnpm --filter web dev",
     "dev:web": "pnpm --filter web dev",
-    "dev:api": "cd apps/api && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "dev:api": "uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "sync:py": "uv sync",
+    "install:all": "pnpm install && uv sync",
     "dev:all": "concurrently -n api,web -c cyan,magenta \"pnpm run dev:api\" \"pnpm run dev:web\"",
     "build": "pnpm --filter web build",
+    "build:all": "pnpm --filter web build && pnpm run build:api",
+    "build:api": "python apps/api/build.py",
     "lint": "pnpm --filter web lint",
     "prepare": "husky"
   },

@@ -3,14 +3,13 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quant-agent-api"
+name = "agent"
 version = "0.1.0"
-description = "quant-agent Python API"
-requires-python = ">=3.9"
+description = "Quant Agents"
+requires-python = ">=3.10"
 dependencies = [
-  "fastapi>=0.115.0",
-  "uvicorn[standard]>=0.32.0",
+    "langgraph",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["agent"]
