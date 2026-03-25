@@ -9,6 +9,7 @@ dependencies = ["quant-agent-api"]
 quant-agent-api = { workspace = true }
 datasource-sql = { workspace = true }
 evaluate = { workspace = true }
+workspace = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*"]
@@ -18,6 +19,7 @@ dev = [
     "pytest>=8.0.0",
     "datasource-sql",
     "evaluate",
+    "workspace",
 ]
 
 [tool.pytest.ini_options]
