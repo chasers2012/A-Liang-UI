@@ -8,8 +8,9 @@ version = "0.1.0"
 description = "Compute factor values from panel data or FactorDataSource"
 requires-python = ">=3.10"
 dependencies = [
+    "alphalens-reloaded>=0.4.6",
     "factor",
-    "pandas>=2.0.0",
+    "pandas>=2.2.0",
 ]
 
 [tool.uv.sources]
