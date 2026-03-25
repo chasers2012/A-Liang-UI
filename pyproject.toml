@@ -7,6 +7,17 @@ dependencies = ["quant-agent-api"]
 
 [tool.uv.sources]
 quant-agent-api = { workspace = true }
+datasource-sql = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "datasource-sql",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["lib"]
+addopts = ["-ra"]
