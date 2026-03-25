@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evaluate"
+version = "0.1.0"
+description = "Compute factor values from panel data or FactorDataSource"
+requires-python = ">=3.10"
+dependencies = [
+    "factor",
+    "pandas>=2.0.0",
+]
+
+[tool.uv.sources]
+factor = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["evaluate"]

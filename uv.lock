@@ -15,6 +15,7 @@ resolution-markers = [
 members = [
     "agent",
     "datasource-sql",
+    "evaluate",
     "factor",
     "quant-agent",
     "quant-agent-api",
@@ -214,6 +215,22 @@ requires-dist = [
     { name = "factor", editable = "lib/factor" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
+]
+
+[[package]]
+name = "evaluate"
+version = "0.1.0"
+source = { editable = "lib/evaluate" }
+dependencies = [
+    { name = "factor" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "factor", editable = "lib/factor" },
+    { name = "pandas", specifier = ">=2.0.0" },
 ]
 
 [[package]]
@@ -1233,6 +1250,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "datasource-sql" },
+    { name = "evaluate" },
     { name = "pytest" },
 ]
 
@@ -1242,6 +1260,7 @@ requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
 [package.metadata.requires-dev]
 dev = [
     { name = "datasource-sql", editable = "lib/datasource-sql" },
+    { name = "evaluate", editable = "lib/evaluate" },
     { name = "pytest", specifier = ">=8.0.0" },
 ]
 
