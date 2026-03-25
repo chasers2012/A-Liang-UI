@@ -1,4 +1,4 @@
-from evaluate.compute import (
+from factor.batch import (
     compute_factor_values,
     compute_factor_values_from_source,
     max_lookback,

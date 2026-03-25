@@ -4,8 +4,8 @@ from typing import List, Optional, Sequence
 
 import pandas as pd
 
-from factor.core import Factor
 from factor.datasource import FactorDataSource
+from factor.factor import Factor
 
 
 def merged_dependencies(factors: Sequence[Factor]) -> List[str]:

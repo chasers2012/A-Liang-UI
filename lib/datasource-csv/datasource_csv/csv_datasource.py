@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Mapping, Optional, Union
+from typing import List, Optional, Union
 
 import pandas as pd
 from factor.datasource import FactorDataSource
@@ -30,8 +30,10 @@ class CsvFactorDataSource(FactorDataSource):
     """
     Load a long-format CSV into a MultiIndex (date, asset) panel.
 
-    Expects one row per (date, asset). Map factor dependency names to file
-    columns via ``column_map`` when they differ.
+    Expects one row per (date, asset). Column names in the file must match the
+    ``fields`` passed to :meth:`get_panel` (after date/asset renaming to index).
+    To map logical factor fields to different CSV headers, use
+    :class:`factor.DependencyResolver` ``alias`` when registering this source.
     """
 
     def __init__(
@@ -40,13 +42,11 @@ class CsvFactorDataSource(FactorDataSource):
         *,
         date_column: str,
         asset_column: str,
-        column_map: Optional[Mapping[str, str]] = None,
         read_csv_kwargs: Optional[dict] = None,
     ) -> None:
         self._path = Path(path)
         self._date_column = date_column
         self._asset_column = asset_column
-        self._column_map = dict(column_map) if column_map else {}
         self._read_csv_kwargs = dict(read_csv_kwargs) if read_csv_kwargs else {}
 
     def _read_csv_kwargs_effective(self) -> dict:
@@ -68,7 +68,7 @@ class CsvFactorDataSource(FactorDataSource):
 
         usecols = {self._date_column, self._asset_column}
         for f in fields:
-            usecols.add(self._column_map.get(f, f))
+            usecols.add(f)
         read_kw = self._read_csv_kwargs_effective()
         peek_kw = {k: v for k, v in read_kw.items() if k != "usecols"}
         header = pd.read_csv(self._path, nrows=0, **peek_kw)
@@ -86,15 +86,12 @@ class CsvFactorDataSource(FactorDataSource):
             usecols=sorted(usecols),
             **read_kw,
         )
-        rename = {
-            self._date_column: "date",
-            self._asset_column: "asset",
-        }
-        for f in fields:
-            src = self._column_map.get(f, f)
-            if src != f:
-                rename[src] = f
-        df = df.rename(columns=rename)
+        df = df.rename(
+            columns={
+                self._date_column: "date",
+                self._asset_column: "asset",
+            }
+        )
 
         df["date"] = pd.to_datetime(df["date"])
         df["asset"] = df["asset"].astype(str)

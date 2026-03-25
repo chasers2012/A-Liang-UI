@@ -6,8 +6,8 @@
 
 | 文件 | 说明 |
 |------|------|
-| `price_factor.py` | `PriceFactor`：继承 `factor.core.Factor`，`calc` 返回 `close` 列 |
-| `run.py` | 命令行：读入 CSV、调用 `compute_factor_values_from_source`、写出结果 |
+| `price_factor.py` | `PriceFactor`：继承 `factor.Factor`，`calc` 返回 `close` 列 |
+| `run.py` | 命令行：读入 CSV、`DependencyResolver` 注册数据源并计算因子、写出结果 |
 | `sample_bars.csv` | 最小示例数据（列：`date`, `asset`, `close`） |
 
 ## 环境
@@ -30,7 +30,7 @@ uv run python examples/calculate-factor/run.py \
 - **必选**：`-i` / `--input` 输入 CSV，`-o` / `--output` 输出 CSV，`--end-date` 结束日 `YYYY-MM-DD`（含）。
 - **可选**：`--start-date`；`--date-column`、`--asset-column`（默认均为 `date` / `asset`）；`--close-column`（默认 `close`，会映射为因子依赖名 `close`）。
 
-若 CSV 表头与上述不一致，必须通过对应参数对齐，否则 `CsvFactorDataSource` 会报错并列出「文件中实际存在的列名」。
+若 CSV 表头与上述不一致，须用 `--date-column` / `--asset-column` / `--close-column` 对齐；收盘价列名会通过 `DependencyResolver` 的 `alias` 映射到因子依赖 `close`，底层 CSV 仍按真实列名读取，缺失列时 `CsvFactorDataSource` 会报错并列出文件中存在的列名。
 
 示例：表头为 `d,sym,c` 时：
 

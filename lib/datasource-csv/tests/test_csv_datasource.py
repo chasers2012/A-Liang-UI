@@ -16,7 +16,6 @@ def test_csv_factor_data_source_wrong_column_names(tmp_path: Path):
         p,
         date_column="d",
         asset_column="sym",
-        column_map={"close": "c"},
     )
     with pytest.raises(ValueError, match="Missing in file"):
         ds.get_panel(
@@ -31,7 +30,7 @@ def test_csv_factor_data_source_wrong_column_names(tmp_path: Path):
 def test_csv_factor_data_source_panel(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
-        "d,sym,c\n"
+        "d,sym,close\n"
         "2025-01-02,AAA,10.0\n"
         "2025-01-03,AAA,11.0\n",
         encoding="utf-8",
@@ -41,7 +40,6 @@ def test_csv_factor_data_source_panel(tmp_path: Path):
         p,
         date_column="d",
         asset_column="sym",
-        column_map={"close": "c"},
     )
     df = ds.get_panel(
         fields=["close"],

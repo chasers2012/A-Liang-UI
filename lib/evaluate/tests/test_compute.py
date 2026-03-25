@@ -8,7 +8,7 @@ from evaluate import (
     max_lookback,
     merged_dependencies,
 )
-from factor.core import Factor
+from factor import Factor
 
 
 class _DoubleClose(Factor):

@@ -1,5 +1,5 @@
 """
-从 CSV 加载行情，用 evaluate + datasource_csv 计算 PriceFactor，并写出结果。
+从 CSV 加载行情，通过 DependencyResolver 注册数据源后批量计算因子并写出结果。
 
 用法（在 quant-agent 仓库根目录）:
   uv run python examples/calculate-factor/run.py -i data.csv -o factors.csv --end-date 2025-01-03
@@ -10,13 +10,15 @@ import argparse
 import sys
 from pathlib import Path
 
-from datasource_csv import CsvFactorDataSource
-from evaluate import compute_factor_values_from_source
-
 _EX_DIR = Path(__file__).resolve().parent
 if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
+from datasource_csv import CsvFactorDataSource  # noqa: E402
+from factor import (  # noqa: E402
+    DependencyResolver, compute_factor_values, max_lookback,
+    merged_dependencies,
+)
 from price_factor import PriceFactor  # noqa: E402
 
 
@@ -63,24 +65,29 @@ def main() -> None:
     )
     args = p.parse_args()
 
-    column_map = {}
-    if args.close_column != "close":
-        column_map["close"] = args.close_column
-
     ds = CsvFactorDataSource(
         args.input,
         date_column=args.date_column,
         asset_column=args.asset_column,
-        column_map=column_map or None,
     )
     factors = [PriceFactor()]
-    out = compute_factor_values_from_source(
-        factors,
-        ds,
+
+    resolver = DependencyResolver()
+    close_alias = ({
+        "close": args.close_column
+    } if args.close_column != "close" else None)
+    resolver.register_datasource(ds, ["close"], alias=close_alias)
+
+    fields = merged_dependencies(factors)
+    window = max_lookback(factors)
+    panel = resolver.get_panel(
+        fields=fields,
         start_date=args.start_date,
         end_date=args.end_date,
         stock_codes=None,
+        window=window,
     )
+    out = compute_factor_values(factors, panel)
     flat = out.reset_index()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     flat.to_csv(args.output, index=False)

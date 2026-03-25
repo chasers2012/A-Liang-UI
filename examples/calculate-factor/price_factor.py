@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from factor.core import Factor
+from factor.factor import Factor
 
 
 class PriceFactor(Factor):
