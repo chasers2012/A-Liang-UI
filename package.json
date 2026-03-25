@@ -1,0 +1,14 @@
+{
+  "name": "quant-agent",
+  "private": true,
+  "pnpm": {
+    "ignoredBuiltDependencies": ["sharp", "unrs-resolver"]
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
