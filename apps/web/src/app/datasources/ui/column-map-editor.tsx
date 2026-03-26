@@ -1,10 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,6 +29,8 @@ import {
   type SqlDriverForm,
 } from "../form-model";
 
+import { FieldPair } from "./form-section";
+
 type InspectContext = {
   datasourceId: string | null;
   db_driver: SqlDriverForm;
@@ -35,6 +44,10 @@ type InspectContext = {
 
 type Props = {
   rows: ColumnMapRow[];
+  dateColumn: string;
+  assetColumn: string;
+  onDateColumnChange: (value: string) => void;
+  onAssetColumnChange: (value: string) => void;
   onChangeRow: (
     index: number,
     field: keyof ColumnMapRow,
@@ -49,6 +62,10 @@ type Props = {
 
 export function ColumnMapEditor({
   rows,
+  dateColumn,
+  assetColumn,
+  onDateColumnChange,
+  onAssetColumnChange,
   onChangeRow,
   onApplyLoadedColumns,
   onAddRow,
@@ -58,6 +75,22 @@ export function ColumnMapEditor({
   const [loadingCols, setLoadingCols] = useState(false);
   const [loadColsError, setLoadColsError] = useState<string | null>(null);
   const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
+  const loadGenerationRef = useRef(0);
+  const loadColumnsRef = useRef<() => Promise<void>>(async () => {});
+
+  const columnSelectOptions = useMemo(() => {
+    const fromRows = rows
+      .map((r) => r.column.trim())
+      .filter((c) => c.length > 0);
+    const set = new Set(fromRows);
+    const d = dateColumn.trim();
+    const a = assetColumn.trim();
+    if (d) set.add(d);
+    if (a) set.add(a);
+    return [...set].sort((x, y) => x.localeCompare(y));
+  }, [rows, dateColumn, assetColumn]);
+
+  const useColumnSelects = columnSelectOptions.length > 0;
 
   const loadColumns = useCallback(async () => {
     if (!inspectContext) return;
@@ -66,6 +99,13 @@ export function ColumnMapEditor({
       setLoadColsError("请先填写表名");
       return;
     }
+    const host = inspectContext.db_host.trim();
+    const dbName = inspectContext.db_name.trim();
+    if (!inspectContext.datasourceId && (!host || !dbName)) {
+      setLoadColsError("请先填写主机与数据库名");
+      return;
+    }
+    const generation = ++loadGenerationRef.current;
     setLoadColsError(null);
     setLoadingCols(true);
     try {
@@ -73,33 +113,64 @@ export function ColumnMapEditor({
       try {
         dbPort = parseOptionalPort(inspectContext.db_port);
       } catch (e) {
-        setLoadColsError(e instanceof Error ? e.message : String(e));
-        setLoadingCols(false);
+        if (generation === loadGenerationRef.current) {
+          setLoadColsError(e instanceof Error ? e.message : String(e));
+          setLoadingCols(false);
+        }
         return;
       }
       const { columns } = await fetchSqlTableColumns({
         datasource_id: inspectContext.datasourceId,
         db_driver: inspectContext.db_driver,
-        db_host: inspectContext.db_host.trim(),
+        db_host: host,
         db_port: dbPort ?? null,
         db_username: inspectContext.db_username.trim(),
         db_password: inspectContext.db_password,
-        db_name: inspectContext.db_name.trim(),
+        db_name: dbName,
         table: t,
       });
+      if (generation !== loadGenerationRef.current) return;
       if (columns.length === 0) {
         setLoadColsError("未返回任何列（请确认表名与权限）");
-        setLoadingCols(false);
         return;
       }
       onApplyLoadedColumns(columns);
       setHasLoadedFromDb(true);
     } catch (e) {
-      setLoadColsError(e instanceof Error ? e.message : String(e));
+      if (generation === loadGenerationRef.current) {
+        setLoadColsError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setLoadingCols(false);
+      if (generation === loadGenerationRef.current) {
+        setLoadingCols(false);
+      }
     }
   }, [inspectContext, onApplyLoadedColumns]);
+
+  loadColumnsRef.current = loadColumns;
+
+  useEffect(() => {
+    if (!inspectContext) return;
+    const t = inspectContext.table.trim();
+    const host = inspectContext.db_host.trim();
+    const dbName = inspectContext.db_name.trim();
+    if (!t) return;
+    if (!inspectContext.datasourceId && (!host || !dbName)) return;
+
+    const timer = window.setTimeout(() => {
+      void loadColumnsRef.current();
+    }, 480);
+    return () => clearTimeout(timer);
+  }, [
+    inspectContext?.datasourceId,
+    inspectContext?.db_driver,
+    inspectContext?.db_host,
+    inspectContext?.db_name,
+    inspectContext?.db_password,
+    inspectContext?.db_port,
+    inspectContext?.db_username,
+    inspectContext?.table,
+  ]);
 
   const showFullColumnTable = hasLoadedFromDb && rows.length > 0;
 
@@ -115,15 +186,80 @@ export function ColumnMapEditor({
             disabled={loadingCols}
             onClick={() => void loadColumns()}
           >
-            {loadingCols ? "加载中…" : "从数据库加载列"}
+            {loadingCols ? "刷新中…" : "刷新"}
           </Button>
         ) : null}
       </div>
       <p className="text-xs text-muted-foreground">
-        加载后将列出该表全部列：勾选需参与因子映射的列，并填写映射名称（写入{" "}
-        <span className="font-mono">column_map</span> 的键，对应因子依赖名）。
-        未勾选列不会保存到映射中。
+        表名与连接信息就绪后会自动拉取列名；也可点击「刷新」重新获取。随后用下拉框选择日期列与资产列，并在下方勾选需参与因子映射的列、填写映射名称（
+        <span className="font-mono">column_map</span> 的键）。未勾选列不会保存到映射中。
       </p>
+      <FieldPair>
+        <div className="grid gap-2">
+          <Label htmlFor="ds-dcol">日期列</Label>
+          {useColumnSelects ? (
+            <Select
+              modal={false}
+              value={dateColumn.trim() || undefined}
+              onValueChange={(v) => {
+                if (v != null) onDateColumnChange(v);
+              }}
+            >
+              <SelectTrigger id="ds-dcol" className="w-full font-mono text-xs">
+                <SelectValue placeholder="选择列" />
+              </SelectTrigger>
+              <SelectContent>
+                {columnSelectOptions.map((c) => (
+                  <SelectItem key={c} value={c} className="font-mono text-xs">
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="ds-dcol"
+              required
+              className="font-mono text-xs"
+              placeholder="自动加载列或手动填写映射后可下拉选择"
+              value={dateColumn}
+              onChange={(e) => onDateColumnChange(e.target.value)}
+            />
+          )}
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="ds-acol">资产列</Label>
+          {useColumnSelects ? (
+            <Select
+              modal={false}
+              value={assetColumn.trim() || undefined}
+              onValueChange={(v) => {
+                if (v != null) onAssetColumnChange(v);
+              }}
+            >
+              <SelectTrigger id="ds-acol" className="w-full font-mono text-xs">
+                <SelectValue placeholder="选择列" />
+              </SelectTrigger>
+              <SelectContent>
+                {columnSelectOptions.map((c) => (
+                  <SelectItem key={`a-${c}`} value={c} className="font-mono text-xs">
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              id="ds-acol"
+              required
+              className="font-mono text-xs"
+              placeholder="自动加载列或手动填写映射后可下拉选择"
+              value={assetColumn}
+              onChange={(e) => onAssetColumnChange(e.target.value)}
+            />
+          )}
+        </div>
+      </FieldPair>
       {loadColsError ? (
         <p className="text-xs text-destructive">{loadColsError}</p>
       ) : null}

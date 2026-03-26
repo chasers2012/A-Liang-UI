@@ -24,6 +24,9 @@ export async function commitDatasourceForm(
       if (!form.db_host.trim() || !form.db_name.trim()) {
         throw new Error("请填写主机（IP）与数据库名");
       }
+      if (!form.date_column.trim() || !form.asset_column.trim()) {
+        throw new Error("请选择或填写日期列与资产列");
+      }
       return await createDatasource({
         name: form.name.trim(),
         type: "sql",

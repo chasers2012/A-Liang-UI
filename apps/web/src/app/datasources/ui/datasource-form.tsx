@@ -285,7 +285,7 @@ export function DatasourceForm({
 
               <FormSection
                 title="表面板列"
-                description="长表格式：每行一条 (日期, 资产) 观测。"
+                description="填写要读取的数据表；日期列与资产列在下方「字段映射」中选择。"
               >
                 <div className="grid gap-2">
                   <Label htmlFor="ds-table">表名（可含 schema）</Label>
@@ -296,31 +296,18 @@ export function DatasourceForm({
                     onChange={(e) => set({ table: e.target.value })}
                   />
                 </div>
-                <FieldPair>
-                  <div className="grid gap-2">
-                    <Label htmlFor="ds-dcol">日期列</Label>
-                    <Input
-                      id="ds-dcol"
-                      required
-                      value={form.date_column}
-                      onChange={(e) => set({ date_column: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="ds-acol">资产列</Label>
-                    <Input
-                      id="ds-acol"
-                      required
-                      value={form.asset_column}
-                      onChange={(e) => set({ asset_column: e.target.value })}
-                    />
-                  </div>
-                </FieldPair>
               </FormSection>
 
-              <FormSection title="字段映射（column_map）">
+              <FormSection
+                title="字段映射（column_map）"
+                description="从数据库加载列后，用下拉框选择日期列与资产列，并配置因子字段映射。"
+              >
                 <ColumnMapEditor
                   rows={form.column_map_rows}
+                  dateColumn={form.date_column}
+                  assetColumn={form.asset_column}
+                  onDateColumnChange={(v) => set({ date_column: v })}
+                  onAssetColumnChange={(v) => set({ asset_column: v })}
                   onChangeRow={updateColumnRow}
                   onApplyLoadedColumns={applyLoadedSqlColumns}
                   onAddRow={addColumnRow}
