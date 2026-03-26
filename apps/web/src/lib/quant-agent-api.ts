@@ -174,3 +174,89 @@ export function deleteFactor(id: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export interface FactorEvaluationsAggregatePublic {
+  total_factors: number;
+  evaluated_count: number;
+  unevaluated_count: number;
+  primary_period: string;
+  mean_ic_primary_avg: number | null;
+}
+
+export interface FactorEvaluationRowPublic {
+  factor_id: string;
+  name: string;
+  has_evaluation: boolean;
+  evaluated_at?: string | null;
+  mean_ic: Record<string, number>;
+  error?: string | null;
+}
+
+export interface FactorEvaluationsSummaryPublic {
+  aggregate: FactorEvaluationsAggregatePublic;
+  rows: FactorEvaluationRowPublic[];
+}
+
+export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
+  return apiFetchJson<FactorEvaluationsSummaryPublic>(
+    "/factors/evaluations/summary",
+  );
+}
+
+export type FactorCodeSnapshotKind = "auto" | "manual";
+
+export interface FactorCodeSnapshotMeta {
+  name: string;
+  group: string;
+  group_label: string;
+  description: string;
+  max_window: number;
+  dependencies: string[];
+}
+
+export interface FactorCodeSnapshotSummaryPublic {
+  id: string;
+  saved_at: string;
+  kind: FactorCodeSnapshotKind;
+  label?: string | null;
+  meta: FactorCodeSnapshotMeta;
+}
+
+export interface FactorCodeSnapshotDetailPublic extends FactorCodeSnapshotSummaryPublic {
+  source: string;
+}
+
+export interface FactorEvaluationHistoryEntry {
+  id: string;
+  linked_snapshot_id?: string | null;
+  evaluated_at: string;
+  window?: { start?: string | null; end?: string | null } | null;
+  mean_ic: Record<string, number>;
+  mean_return_spread: Record<string, number>;
+  error?: string | null;
+}
+
+export function listFactorSnapshots(
+  factorId: string,
+): Promise<FactorCodeSnapshotSummaryPublic[]> {
+  return apiFetchJson<FactorCodeSnapshotSummaryPublic[]>(
+    `/factors/${encodeURIComponent(factorId)}/snapshots`,
+  );
+}
+
+export function getFactorSnapshot(
+  factorId: string,
+  snapshotId: string,
+): Promise<FactorCodeSnapshotDetailPublic> {
+  return apiFetchJson<FactorCodeSnapshotDetailPublic>(
+    `/factors/${encodeURIComponent(factorId)}/snapshots/${encodeURIComponent(snapshotId)}`,
+  );
+}
+
+export function getFactorEvaluationHistory(
+  factorId: string,
+): Promise<FactorEvaluationHistoryEntry[]> {
+  return apiFetchJson<FactorEvaluationHistoryEntry[]>(
+    `/factors/${encodeURIComponent(factorId)}/evaluations/history`,
+  );
+}

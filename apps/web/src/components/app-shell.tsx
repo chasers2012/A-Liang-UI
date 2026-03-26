@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  ArrowLeft,
   Bot,
   Database,
   GitBranch,
@@ -14,7 +15,12 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import {
+  buildAppHeaderBreadcrumbs,
+  headerBackHref,
+} from "@/components/app-header-nav";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +36,8 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const headerCrumbs = buildAppHeaderBreadcrumbs(pathname);
+  const backHref = headerBackHref(pathname);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
@@ -52,13 +60,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )}
           <ThemeToggle />
         </div>
-        <nav className="flex flex-1 flex-col gap-1 p-2" aria-label="主导航">
+        <nav
+          className="flex flex-1 flex-col gap-1 p-2"
+          aria-label="主导航"
+        >
           {navItems.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
                 : pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+                pathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
               <Link
@@ -70,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   collapsed && "justify-center px-0",
                   active &&
-                    "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
+                  "bg-sidebar-accent font-medium text-sidebar-accent-foreground",
                 )}
               >
                 <Icon className="size-4 shrink-0" aria-hidden />
@@ -92,8 +103,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
       </aside>
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto bg-background">
-        {children}
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+        <header
+          className="flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6 py-2 md:px-8"
+          role="banner"
+        >
+          <PageBreadcrumb items={headerCrumbs} variant="header" />
+          {backHref != null ? (
+            <Link
+              href={backHref}
+              className={cn(
+                buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                }),
+                "shrink-0 gap-1.5",
+              )}
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              返回
+            </Link>
+          ) : null}
+        </header>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">
+          {children}
+        </div>
       </main>
     </div>
   );

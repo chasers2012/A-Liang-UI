@@ -26,7 +26,12 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { DataSourceType, SqlPublic } from "@/lib/quant-agent-api";
 
-import type { ColumnMapRow, EditorMode, FormState, SqlDriverForm } from "../form-model";
+import type {
+  ColumnMapRow,
+  EditorMode,
+  FormState,
+  SqlDriverForm,
+} from "../form-model";
 import { emptyColumnMapRows } from "../form-model";
 import { ColumnMapEditor } from "./column-map-editor";
 import { FieldPair, FormSection } from "./form-section";
@@ -84,10 +89,7 @@ export function DatasourceEditorDialog({
   const addColumnRow = () => {
     setForm((f) => ({
       ...f,
-      column_map_rows: [
-        ...f.column_map_rows,
-        { factor: "", column: "" },
-      ],
+      column_map_rows: [...f.column_map_rows, { factor: "", column: "" }],
     }));
   };
 
@@ -96,31 +98,24 @@ export function DatasourceEditorDialog({
       const next = f.column_map_rows.filter((_, i) => i !== index);
       return {
         ...f,
-        column_map_rows:
-          next.length > 0 ? next : emptyColumnMapRows(),
+        column_map_rows: next.length > 0 ? next : emptyColumnMapRows(),
       };
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(92vh,840px)] gap-0 border-border/80 p-0 sm:max-w-2xl">
+      <DialogContent size="lg">
+        <DialogHeader title={editorMode === "create" ? "新增数据源" : "编辑数据源"}>
+          {editorMode === "create"
+            ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
+            : "密码留空表示保留原值。填写主机或库名并保存后，将从旧版整段 URL 迁移为分字段。"}
+        </DialogHeader>
         <form
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
           onSubmit={(e) => void onSubmit(e)}
         >
-          <DialogHeader className="space-y-2 border-b border-border/60 bg-muted/20 px-6 py-5">
-            <DialogTitle className="text-lg">
-              {editorMode === "create" ? "新增数据源" : "编辑数据源"}
-            </DialogTitle>
-            <DialogDescription className="text-sm leading-relaxed">
-              {editorMode === "create"
-                ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
-                : "密码留空表示保留原值。填写主机或库名并保存后，将从旧版整段 URL 迁移为分字段。"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody className="space-y-4 px-6 py-5">
+          <DialogBody variant="inset">
             {editorMode === "create" && (
               <div className="grid gap-2">
                 <Label htmlFor="ds-type">类型</Label>
@@ -128,14 +123,23 @@ export function DatasourceEditorDialog({
                   modal={false}
                   items={DATASOURCE_TYPE_ITEMS}
                   value={form.type}
-                  onValueChange={(v) => set({ type: v as DataSourceType })}
+                  onValueChange={(v) =>
+                    set({ type: v as DataSourceType })
+                  }
                 >
-                  <SelectTrigger id="ds-type" className="w-full">
+                  <SelectTrigger
+                    id="ds-type"
+                    className="w-full"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="z-[200]">
-                    <SelectItem value="sql">SQL 表</SelectItem>
-                    <SelectItem value="csv">CSV 文件</SelectItem>
+                    <SelectItem value="sql">
+                      SQL 表
+                    </SelectItem>
+                    <SelectItem value="csv">
+                      CSV 文件
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -148,7 +152,9 @@ export function DatasourceEditorDialog({
                   id="ds-name"
                   required
                   value={form.name}
-                  onChange={(e) => set({ name: e.target.value })}
+                  onChange={(e) =>
+                    set({ name: e.target.value })
+                  }
                 />
               </div>
               <div className="flex flex-wrap gap-8 pt-1">
@@ -159,9 +165,13 @@ export function DatasourceEditorDialog({
                   <Switch
                     id="ds-enabled"
                     checked={form.enabled}
-                    onCheckedChange={(v) => set({ enabled: v })}
+                    onCheckedChange={(v) =>
+                      set({ enabled: v })
+                    }
                   />
-                  <span className="text-sm font-medium">启用</span>
+                  <span className="text-sm font-medium">
+                    启用
+                  </span>
                 </Label>
                 <Label
                   htmlFor="ds-default"
@@ -171,105 +181,158 @@ export function DatasourceEditorDialog({
                     id="ds-default"
                     checked={form.is_default}
                     disabled={!form.enabled}
-                    onCheckedChange={(v) => set({ is_default: v })}
+                    onCheckedChange={(v) =>
+                      set({ is_default: v })
+                    }
                   />
-                  <span className="text-sm font-medium">设为默认</span>
+                  <span className="text-sm font-medium">
+                    设为默认
+                  </span>
                 </Label>
               </div>
             </FormSection>
 
             {form.type === "sql" && (
               <>
-                {editorMode === "edit" && editingSql?.has_legacy_engine_url && (
-                  <Alert className="border-amber-500/40 bg-amber-500/5">
-                    <AlertTitle className="text-amber-950 dark:text-amber-100">
-                      旧版连接串
-                    </AlertTitle>
-                    <AlertDescription className="text-amber-900/90 dark:text-amber-50/90">
-                      填写下方主机、库名等信息并保存后，将改为分字段存储并清除旧 URL。
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {editorMode === "edit" &&
+                  editingSql?.has_legacy_engine_url && (
+                    <Alert className="border-amber-500/40 bg-amber-500/5">
+                      <AlertTitle className="text-amber-950 dark:text-amber-100">
+                        旧版连接串
+                      </AlertTitle>
+                      <AlertDescription className="text-amber-900/90 dark:text-amber-50/90">
+                        填写下方主机、库名等信息并保存后，将改为分字段存储并清除旧
+                        URL。
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                 <FormSection
                   title="数据库连接"
                   description="端口留空时使用默认值：PostgreSQL 5432，MySQL 3306。"
                 >
                   <div className="grid gap-2">
-                    <Label htmlFor="ds-db-driver">数据库类型</Label>
+                    <Label htmlFor="ds-db-driver">
+                      数据库类型
+                    </Label>
                     <Select
                       modal={false}
                       items={DB_DRIVER_ITEMS}
                       value={form.db_driver}
                       onValueChange={(v) =>
-                        set({ db_driver: v as SqlDriverForm })
+                        set({
+                          db_driver:
+                            v as SqlDriverForm,
+                        })
                       }
                     >
-                      <SelectTrigger id="ds-db-driver" className="w-full">
+                      <SelectTrigger
+                        id="ds-db-driver"
+                        className="w-full"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="z-[200]">
-                        <SelectItem value="postgresql">PostgreSQL</SelectItem>
-                        <SelectItem value="mysql">MySQL / MariaDB</SelectItem>
+                        <SelectItem value="postgresql">
+                          PostgreSQL
+                        </SelectItem>
+                        <SelectItem value="mysql">
+                          MySQL / MariaDB
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <FieldPair>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-host">主机（IP）</Label>
+                      <Label htmlFor="ds-host">
+                        主机（IP）
+                      </Label>
                       <Input
                         id="ds-host"
-                        required={editorMode === "create"}
+                        required={
+                          editorMode === "create"
+                        }
                         placeholder="127.0.0.1"
                         value={form.db_host}
-                        onChange={(e) => set({ db_host: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            db_host: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-port">端口</Label>
+                      <Label htmlFor="ds-port">
+                        端口
+                      </Label>
                       <Input
                         id="ds-port"
                         inputMode="numeric"
                         placeholder={
-                          form.db_driver === "mysql" ? "默认 3306" : "默认 5432"
+                          form.db_driver === "mysql"
+                            ? "默认 3306"
+                            : "默认 5432"
                         }
                         value={form.db_port}
-                        onChange={(e) => set({ db_port: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            db_port: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </FieldPair>
                   <div className="grid gap-2">
-                    <Label htmlFor="ds-dbname">数据库名</Label>
+                    <Label htmlFor="ds-dbname">
+                      数据库名
+                    </Label>
                     <Input
                       id="ds-dbname"
                       required={editorMode === "create"}
                       value={form.db_name}
-                      onChange={(e) => set({ db_name: e.target.value })}
+                      onChange={(e) =>
+                        set({ db_name: e.target.value })
+                      }
                     />
                   </div>
                   <FieldPair>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-user">用户名</Label>
+                      <Label htmlFor="ds-user">
+                        用户名
+                      </Label>
                       <Input
                         id="ds-user"
                         autoComplete="off"
                         value={form.db_username}
-                        onChange={(e) => set({ db_username: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            db_username:
+                              e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-pass">密码</Label>
+                      <Label htmlFor="ds-pass">
+                        密码
+                      </Label>
                       <Input
                         id="ds-pass"
                         type="password"
                         autoComplete="new-password"
                         placeholder={
-                          editorMode === "edit" && editingSql?.has_password
+                          editorMode === "edit" &&
+                            editingSql?.has_password
                             ? "留空则保留已保存"
                             : "可选"
                         }
                         value={form.db_password}
-                        onChange={(e) => set({ db_password: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            db_password:
+                              e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </FieldPair>
@@ -280,31 +343,49 @@ export function DatasourceEditorDialog({
                   description="长表格式：每行一条 (日期, 资产) 观测。"
                 >
                   <div className="grid gap-2">
-                    <Label htmlFor="ds-table">表名（可含 schema）</Label>
+                    <Label htmlFor="ds-table">
+                      表名（可含 schema）
+                    </Label>
                     <Input
                       id="ds-table"
                       required
                       value={form.table}
-                      onChange={(e) => set({ table: e.target.value })}
+                      onChange={(e) =>
+                        set({ table: e.target.value })
+                      }
                     />
                   </div>
                   <FieldPair>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-dcol">日期列</Label>
+                      <Label htmlFor="ds-dcol">
+                        日期列
+                      </Label>
                       <Input
                         id="ds-dcol"
                         required
                         value={form.date_column}
-                        onChange={(e) => set({ date_column: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            date_column:
+                              e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="ds-acol">资产列</Label>
+                      <Label htmlFor="ds-acol">
+                        资产列
+                      </Label>
                       <Input
                         id="ds-acol"
                         required
                         value={form.asset_column}
-                        onChange={(e) => set({ asset_column: e.target.value })}
+                        onChange={(e) =>
+                          set({
+                            asset_column:
+                              e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </FieldPair>
@@ -332,41 +413,58 @@ export function DatasourceEditorDialog({
                     id="ds-csvpath"
                     required
                     value={form.csv_path}
-                    onChange={(e) => set({ csv_path: e.target.value })}
+                    onChange={(e) =>
+                      set({ csv_path: e.target.value })
+                    }
                   />
                 </div>
                 <FieldPair>
                   <div className="grid gap-2">
-                    <Label htmlFor="ds-csv-dcol">日期列</Label>
+                    <Label htmlFor="ds-csv-dcol">
+                      日期列
+                    </Label>
                     <Input
                       id="ds-csv-dcol"
                       required
                       value={form.csv_date_column}
                       onChange={(e) =>
-                        set({ csv_date_column: e.target.value })
+                        set({
+                          csv_date_column:
+                            e.target.value,
+                        })
                       }
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="ds-csv-acol">资产列</Label>
+                    <Label htmlFor="ds-csv-acol">
+                      资产列
+                    </Label>
                     <Input
                       id="ds-csv-acol"
                       required
                       value={form.csv_asset_column}
                       onChange={(e) =>
-                        set({ csv_asset_column: e.target.value })
+                        set({
+                          csv_asset_column:
+                            e.target.value,
+                        })
                       }
                     />
                   </div>
                 </FieldPair>
                 <div className="grid gap-2">
-                  <Label htmlFor="ds-kw">read_csv_kwargs（JSON）</Label>
+                  <Label htmlFor="ds-kw">
+                    read_csv_kwargs（JSON）
+                  </Label>
                   <Textarea
                     id="ds-kw"
                     className="min-h-[88px] font-mono text-xs leading-relaxed"
                     value={form.read_csv_kwargs_json}
                     onChange={(e) =>
-                      set({ read_csv_kwargs_json: e.target.value })
+                      set({
+                        read_csv_kwargs_json:
+                          e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -381,7 +479,7 @@ export function DatasourceEditorDialog({
             )}
           </DialogBody>
 
-          <DialogFooter className="gap-2 border-t border-border/60 bg-muted/15 px-6 py-4 sm:justify-end">
+          <DialogFooter variant="plain">
             <Button
               type="button"
               variant="outline"

@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -17,52 +15,40 @@ import type { FactorSummaryPublic } from "@/lib/quant-agent-api";
 
 type Props = {
   items: FactorSummaryPublic[];
-  onDelete: (f: FactorSummaryPublic) => void;
 };
 
 function formatUpdatedAt(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
 }
 
-export function FactorCardList({ items, onDelete }: Props) {
+export function FactorCardList({ items }: Props) {
   return (
     <ul className="flex flex-col gap-2.5" role="list">
       {items.map((f) => {
         const depsText = f.dependencies.join(", ");
         return (
           <li key={f.id}>
-            <Card
-              size="sm"
-              className="gap-0 py-0 shadow-sm ring-1 ring-border/80 transition-colors hover:bg-muted/20"
+            <Link
+              href={`/factors/${encodeURIComponent(f.id)}`}
+              className={cn(
+                "block rounded-xl outline-none ring-offset-background transition-colors",
+                "hover:bg-muted/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              )}
             >
-              <CardHeader className="border-0 px-3 py-3 pb-2">
-                <CardTitle className="truncate font-mono text-sm font-semibold tracking-tight">
-                  {f.name}
-                </CardTitle>
-                <CardAction>
-                  <div className="flex gap-0.5">
-                    <Link
-                      href={`/factors/${encodeURIComponent(f.id)}/edit`}
-                      title="编辑"
-                      className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon" }),
-                        "size-8",
-                      )}
-                    >
-                      <Pencil className="size-4" />
-                    </Link>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      title="删除"
-                      onClick={() => onDelete(f)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
+              <Card
+                size="sm"
+                className="gap-0 py-0 shadow-sm ring-1 ring-border/80 transition-colors hover:bg-muted/20"
+              >
+                <CardHeader className="border-0 px-3 py-3 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="min-w-0 flex-1 truncate font-mono text-sm font-semibold tracking-tight">
+                      {f.name}
+                    </CardTitle>
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted-foreground/60"
+                      aria-hidden
+                    />
                   </div>
-                </CardAction>
                 <CardDescription className="text-xs leading-relaxed">
                   <span className="text-muted-foreground">{f.group}</span>
                   {f.group_label && f.group_label !== f.group ? (
@@ -91,6 +77,7 @@ export function FactorCardList({ items, onDelete }: Props) {
                 </p>
               </CardContent>
             </Card>
+            </Link>
           </li>
         );
       })}

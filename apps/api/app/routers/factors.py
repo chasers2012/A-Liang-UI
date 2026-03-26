@@ -2,6 +2,32 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from app.factor_code_snapshot_schemas import (
+    FactorCodeSnapshotDetailPublic,
+    FactorCodeSnapshotSummaryPublic,
+)
+from app.factor_code_snapshots_store import (
+    append_code_snapshot,
+    delete_snapshots_for_factor,
+    get_snapshot,
+    list_snapshots_for_factor,
+)
+from app.factor_evaluation_history_schemas import FactorEvaluationHistoryEntry
+from app.factor_evaluation_history_store import (
+    append_history_entry,
+    delete_history_for_factor,
+    entry_from_latest_evaluation,
+    list_history_for_factor,
+)
+from app.factor_evaluation_schemas import (
+    FactorEvaluationRowPublic,
+    FactorEvaluationsAggregatePublic,
+    FactorEvaluationsSummaryPublic,
+)
+from app.factor_evaluations_store import (
+    delete_evaluation_for_factor,
+    load_evaluations_file,
+)
 from app.factor_registry import (
     delete_source_file,
     get_by_id,
@@ -24,6 +50,8 @@ from app.factor_schemas import (
 from app.factor_validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/factors", tags=["factors"])
+
+PRIMARY_IC_PERIOD = "5"
 
 
 def _detail(rec: FactorRecord) -> FactorDetailPublic:
@@ -59,6 +87,131 @@ def _merge_patch(rec, patch: FactorPatch) -> None:
 def list_factors() -> list[FactorSummaryPublic]:
     reg = load_registry()
     return [record_to_summary(i) for i in reg.items]
+
+
+@router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
+def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
+    try:
+        ev_file = load_evaluations_file()
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    reg = load_registry()
+    rows: list[FactorEvaluationRowPublic] = []
+    ic_for_avg: list[float] = []
+    evaluated_ok = 0
+
+    for rec in reg.items:
+        snap = ev_file.items.get(rec.id)
+        if snap is None:
+            rows.append(
+                FactorEvaluationRowPublic(
+                    factor_id=rec.id,
+                    name=rec.name,
+                    has_evaluation=False,
+                )
+            )
+            continue
+
+        err_raw = (snap.error or "").strip()
+        err: str | None = err_raw or None
+        success = err is None
+        if success:
+            evaluated_ok += 1
+            v = snap.mean_ic.get(PRIMARY_IC_PERIOD)
+            if v is not None:
+                ic_for_avg.append(float(v))
+
+        rows.append(
+            FactorEvaluationRowPublic(
+                factor_id=rec.id,
+                name=rec.name,
+                has_evaluation=True,
+                evaluated_at=snap.evaluated_at,
+                mean_ic=dict(snap.mean_ic),
+                error=err,
+            )
+        )
+
+    total = len(reg.items)
+    mean_ic_primary: float | None = None
+    if ic_for_avg:
+        mean_ic_primary = sum(ic_for_avg) / len(ic_for_avg)
+
+    aggregate = FactorEvaluationsAggregatePublic(
+        total_factors=total,
+        evaluated_count=evaluated_ok,
+        unevaluated_count=total - evaluated_ok,
+        primary_period=PRIMARY_IC_PERIOD,
+        mean_ic_primary_avg=mean_ic_primary,
+    )
+    return FactorEvaluationsSummaryPublic(aggregate=aggregate, rows=rows)
+
+
+@router.get(
+    "/{factor_id}/evaluations/history",
+    response_model=list[FactorEvaluationHistoryEntry],
+)
+def factor_evaluation_history(factor_id: str) -> list[FactorEvaluationHistoryEntry]:
+    reg = load_registry()
+    if get_by_id(reg, factor_id) is None:
+        raise HTTPException(status_code=404, detail="因子不存在")
+    try:
+        rows = list_history_for_factor(factor_id)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return list(reversed(rows))
+
+
+@router.get(
+    "/{factor_id}/snapshots",
+    response_model=list[FactorCodeSnapshotSummaryPublic],
+)
+def list_factor_snapshots(factor_id: str) -> list[FactorCodeSnapshotSummaryPublic]:
+    reg = load_registry()
+    if get_by_id(reg, factor_id) is None:
+        raise HTTPException(status_code=404, detail="因子不存在")
+    try:
+        snaps = list_snapshots_for_factor(factor_id)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    return [
+        FactorCodeSnapshotSummaryPublic(
+            id=s.id,
+            saved_at=s.saved_at,
+            kind=s.kind,
+            label=s.label,
+            meta=s.meta,
+        )
+        for s in reversed(snaps)
+    ]
+
+
+@router.get(
+    "/{factor_id}/snapshots/{snapshot_id}",
+    response_model=FactorCodeSnapshotDetailPublic,
+)
+def get_factor_snapshot(
+    factor_id: str,
+    snapshot_id: str,
+) -> FactorCodeSnapshotDetailPublic:
+    reg = load_registry()
+    if get_by_id(reg, factor_id) is None:
+        raise HTTPException(status_code=404, detail="因子不存在")
+    try:
+        snap = get_snapshot(factor_id, snapshot_id)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    if snap is None:
+        raise HTTPException(status_code=404, detail="快照不存在")
+    return FactorCodeSnapshotDetailPublic(
+        id=snap.id,
+        saved_at=snap.saved_at,
+        kind=snap.kind,
+        label=snap.label,
+        meta=snap.meta,
+        source=snap.source,
+    )
 
 
 @router.get("/{factor_id}", response_model=FactorDetailPublic)
@@ -121,7 +274,33 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
             validate_source_syntax(body.source)
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
-        write_source(rec, body.source)
+        old_src = read_source(rec)
+        if body.source != old_src:
+            write_source(rec, body.source)
+            try:
+                snap = append_code_snapshot(
+                    factor_id,
+                    rec,
+                    body.source,
+                    kind="auto",
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=500, detail=str(e)) from e
+            try:
+                ev_file = load_evaluations_file()
+            except ValueError:
+                pass
+            else:
+                latest = ev_file.items.get(factor_id)
+                if latest is not None:
+                    entry = entry_from_latest_evaluation(
+                        latest,
+                        linked_snapshot_id=snap.id,
+                    )
+                    try:
+                        append_history_entry(factor_id, entry)
+                    except ValueError:
+                        pass
 
     rec.updated_at = utc_now_iso()
     save_registry(reg)
@@ -137,3 +316,15 @@ def delete_factor(factor_id: str) -> None:
     reg.items = [i for i in reg.items if i.id != factor_id]
     delete_source_file(rec)
     save_registry(reg)
+    try:
+        delete_snapshots_for_factor(factor_id)
+    except ValueError:
+        pass
+    try:
+        delete_history_for_factor(factor_id)
+    except ValueError:
+        pass
+    try:
+        delete_evaluation_for_factor(factor_id)
+    except ValueError:
+        pass

@@ -3,16 +3,9 @@ from __future__ import annotations
 import json
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.factor_registry import load_registry, read_source, resolve_source_path
 from app.factor_validate import validate_factor_name, validate_source_syntax
-from app.main import app
-
-
-@pytest.fixture
-def client(workspace_tmp):
-    return TestClient(app)
 
 
 MIN_SOURCE = "x = 1\n"

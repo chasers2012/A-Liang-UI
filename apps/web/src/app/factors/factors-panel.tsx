@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Library, Plus } from "lucide-react";
 
@@ -15,28 +15,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  deleteFactor,
   getQuantAgentApiBase,
   listFactors,
   type FactorSummaryPublic,
 } from "@/lib/quant-agent-api";
 
-import { DeleteFactorDialog } from "./ui/delete-factor-dialog";
 import { FactorCardList } from "./ui/factor-card-list";
+import { FactorEvaluationsOverview } from "./ui/factor-evaluations-overview";
 
 export function FactorsPanel() {
   const [items, setItems] = useState<FactorSummaryPublic[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-
-  const [deleteTarget, setDeleteTarget] = useState<FactorSummaryPublic | null>(
-    null,
-  );
-  const [deleting, setDeleting] = useState(false);
+  const [evalRefreshKey, setEvalRefreshKey] = useState(0);
+  const skipEvalRefreshBump = useRef(true);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
     try {
       setItems(await listFactors());
+      if (skipEvalRefreshBump.current) {
+        skipEvalRefreshBump.current = false;
+      } else {
+        setEvalRefreshKey((k) => k + 1);
+      }
     } catch (e) {
       setItems(null);
       setLoadError(e instanceof Error ? e.message : String(e));
@@ -46,20 +47,6 @@ export function FactorsPanel() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await deleteFactor(deleteTarget.id);
-      setDeleteTarget(null);
-      await refresh();
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   const count = items?.length ?? 0;
 
@@ -115,7 +102,7 @@ export function FactorsPanel() {
           <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
             <CardTitle className="text-base">因子列表</CardTitle>
             <CardDescription>
-              共 {count} 条；每张卡片内可编辑或删除。
+              共 {count} 条。点击卡片进入详情，再编辑或查看评价与历史。
             </CardDescription>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pt-6">
@@ -140,7 +127,7 @@ export function FactorsPanel() {
             )}
             {items && items.length > 0 && (
               <div className="min-w-0">
-                <FactorCardList items={items} onDelete={setDeleteTarget} />
+                <FactorCardList items={items} />
               </div>
             )}
           </CardContent>
@@ -148,24 +135,30 @@ export function FactorsPanel() {
 
         <Card className="flex h-full min-h-[min(24rem,50vh)] min-w-0 flex-col border-border/80 shadow-sm lg:min-h-0">
           <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">概览</CardTitle>
-            <CardDescription>选中因子的摘要与统计将显示于此。</CardDescription>
+            <CardTitle className="text-base">评价概览</CardTitle>
+            <CardDescription>
+              基于 workspace{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">
+                config/factor_evaluations.json
+              </code>{" "}
+              的快照；与左侧列表同步。
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col items-center justify-center gap-2 py-16 text-center">
-            <p className="text-sm text-muted-foreground">占位</p>
-            <p className="max-w-xs text-xs text-muted-foreground/80">
-              后续可在此展示依赖图、窗口、最近更新等信息。
-            </p>
+          <CardContent className="flex min-h-0 flex-1 flex-col pt-6">
+            {items === null ? (
+              <div className="flex flex-1 flex-col justify-center py-12 text-center text-sm text-muted-foreground">
+                加载因子列表…
+              </div>
+            ) : (
+              <FactorEvaluationsOverview
+                refreshKey={evalRefreshKey}
+                factorCount={count}
+              />
+            )}
           </CardContent>
         </Card>
       </div>
 
-      <DeleteFactorDialog
-        target={deleteTarget}
-        deleting={deleting}
-        onDismiss={() => setDeleteTarget(null)}
-        onConfirm={confirmDelete}
-      />
     </div>
   );
 }

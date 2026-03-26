@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,35 +17,18 @@ export function FactorFormPageContainer({ children }: { children: ReactNode }) {
     );
 }
 
-export function FactorFormBackLink() {
-    return (
-        <Link
-            href="/factors"
-            className={cn(
-                buttonVariants({ variant: "ghost", size: "sm" }),
-                "-ml-2 inline-flex w-fit gap-1 px-2",
-            )}
-        >
-            <ArrowLeft className="size-4" />
-            返回因子库
-        </Link>
-    );
-}
-
-/** 标题区：返回链接 + 标题 + workspace 说明 */
+/** 标题区：页面标题 + workspace 说明（面包屑仅在 AppShell 顶栏展示） */
 export function FactorFormPageHeader({
     title,
     factorNameBadge,
 }: {
     title: string;
-    /** 编辑页传入当前因子标识，显示在说明行开头 */
     factorNameBadge?: string;
 }) {
     const api = getQuantAgentApiBase();
     return (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
-                <FactorFormBackLink />
                 <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
                     {title}
                 </h1>
@@ -87,14 +69,22 @@ export function FactorFormHintAlert({ children }: { children: ReactNode }) {
     );
 }
 
-export function FactorFormSubmitRow({ submitting }: { submitting: boolean }) {
+export function FactorFormSubmitRow({
+    submitting,
+    cancelHref = "/factors",
+    cancelLabel = "取消",
+}: {
+    submitting: boolean;
+    cancelHref?: string;
+    cancelLabel?: string;
+}) {
     return (
         <div className="flex flex-wrap gap-2 border-t border-border/60 pt-6 justify-end">
             <Link
-                href="/factors"
+                href={cancelHref}
                 className={cn(buttonVariants({ variant: "outline" }))}
             >
-                取消
+                {cancelLabel}
             </Link>
             <Button type="submit" disabled={submitting}>
                 {submitting ? "保存中…" : "保存"}
@@ -106,7 +96,6 @@ export function FactorFormSubmitRow({ submitting }: { submitting: boolean }) {
 export function FactorFormLoadError({ message }: { message: string }) {
     return (
         <FactorFormPageContainer>
-            <FactorFormBackLink />
             <Alert variant="destructive">
                 <AlertTitle>无法加载因子</AlertTitle>
                 <AlertDescription>{message}</AlertDescription>

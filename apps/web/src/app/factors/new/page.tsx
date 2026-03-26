@@ -37,8 +37,8 @@ export default function NewFactorPage() {
     }
     setSubmitting(true);
     try {
-      await createFactor(bodyFromForm(form));
-      router.push("/factors");
+      const created = await createFactor(bodyFromForm(form));
+      router.push(`/factors/${encodeURIComponent(created.id)}`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -51,7 +51,7 @@ export default function NewFactorPage() {
       <FactorFormPageHeader title="新增因子" />
 
       <FactorFormHintAlert>
-        保存成功后将跳转到因子列表。因子文件名为{" "}
+        保存成功后将进入该因子的详情页。因子文件名为{" "}
         <span className="font-mono text-xs">factors/&lt;uuid&gt;.py</span>
         ，标识 <span className="font-mono text-xs">name</span>{" "}
         写入注册表并与类属性同步。
