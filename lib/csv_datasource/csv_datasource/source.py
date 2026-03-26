@@ -26,7 +26,7 @@ def _panel_load_start(
     return (end_ts - pd.offsets.BDay(w + 1)).normalize()
 
 
-class CsvFactorDataSource(FactorDataSource):
+class CsvDataSource(FactorDataSource):
     """
     Load a long-format CSV into a MultiIndex (date, asset) panel.
 

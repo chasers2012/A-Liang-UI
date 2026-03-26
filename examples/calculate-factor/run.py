@@ -14,7 +14,7 @@ _EX_DIR = Path(__file__).resolve().parent
 if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
-from datasource_csv import CsvFactorDataSource  # noqa: E402
+from csv_datasource import CsvDataSource  # noqa: E402
 from factor import DependencyResolver  # noqa: E402
 from price_factor import PriceFactor  # noqa: E402
 
@@ -62,7 +62,7 @@ def main() -> None:
     )
     args = p.parse_args()
 
-    ds = CsvFactorDataSource(
+    ds = CsvDataSource(
         args.input,
         date_column=args.date_column,
         asset_column=args.asset_column,

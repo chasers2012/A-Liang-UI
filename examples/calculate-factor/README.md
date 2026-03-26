@@ -1,6 +1,6 @@
 # calculate-factor 示例
 
-用 [lib/evaluate](../../lib/evaluate) 与 [lib/datasource-csv](../../lib/datasource-csv) 从 CSV 行情计算一个简单的 **PriceFactor**（因子值等于收盘价），并把结果写成 CSV。
+用 [lib/evaluate](../../lib/evaluate) 与 [lib/csv_datasource](../../lib/csv_datasource) 从 CSV 行情计算一个简单的 **PriceFactor**（因子值等于收盘价），并把结果写成 CSV。
 
 ## 内容说明
 
@@ -12,7 +12,7 @@
 
 ## 环境
 
-在仓库根目录 `quant-agent` 下执行，且已安装工作区依赖（例如 `uv sync`，dev 组包含 `evaluate`、`datasource-csv`）。
+在仓库根目录 `quant-agent` 下执行，且已安装工作区依赖（例如 `uv sync`，dev 组包含 `evaluate`、`csv-datasource`）。
 
 ## 快速运行
 
@@ -30,7 +30,7 @@ uv run python examples/calculate-factor/run.py \
 - **必选**：`-i` / `--input` 输入 CSV，`-o` / `--output` 输出 CSV，`--end-date` 结束日 `YYYY-MM-DD`（含）。
 - **可选**：`--start-date`；`--date-column`、`--asset-column`（默认均为 `date` / `asset`）；`--close-column`（默认 `close`，会映射为因子依赖名 `close`）。
 
-若 CSV 表头与上述不一致，须用 `--date-column` / `--asset-column` / `--close-column` 对齐；收盘价列名会通过 `DependencyResolver` 的 `alias` 映射到因子依赖 `close`，底层 CSV 仍按真实列名读取，缺失列时 `CsvFactorDataSource` 会报错并列出文件中存在的列名。
+若 CSV 表头与上述不一致，须用 `--date-column` / `--asset-column` / `--close-column` 对齐；收盘价列名会通过 `DependencyResolver` 的 `alias` 映射到因子依赖 `close`，底层 CSV 仍按真实列名读取，缺失列时 `CsvDataSource` 会报错并列出文件中存在的列名。
 
 示例：表头为 `d,sym,c` 时：
 
@@ -42,4 +42,4 @@ uv run python examples/calculate-factor/run.py -i bars.csv -o out.csv \
 
 ## 输入 CSV 形态
 
-长表：一行表示某日某标的，至少包含日期列、资产代码列、收盘价列（或通过 `--close-column` 指定列名）。默认使用 UTF-8；带 BOM 的文件也可正常读取（`datasource-csv` 默认 `utf-8-sig`）。
+长表：一行表示某日某标的，至少包含日期列、资产代码列、收盘价列（或通过 `--close-column` 指定列名）。默认使用 UTF-8；带 BOM 的文件也可正常读取（`csv-datasource` 默认 `utf-8-sig`）。

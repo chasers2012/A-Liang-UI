@@ -17,12 +17,12 @@ resolution-markers = [
 [manifest]
 members = [
     "agent",
-    "datasource-csv",
-    "datasource-sql",
+    "csv-datasource",
     "evaluate",
     "factor",
     "quant-agent",
     "quant-agent-api",
+    "sql-datasource",
     "workspace",
 ]
 
@@ -461,44 +461,27 @@ wheels = [
 ]
 
 [[package]]
+name = "csv-datasource"
+version = "0.1.0"
+source = { editable = "lib/csv_datasource" }
+dependencies = [
+    { name = "factor" },
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "factor", editable = "lib/factor" },
+    { name = "pandas", specifier = ">=2.0.0" },
+]
+
+[[package]]
 name = "cycler"
 version = "0.12.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a9/95/a3dbbb5028f35eafb79008e7522a75244477d2838f38cbb722248dabc2a8/cycler-0.12.1.tar.gz", hash = "sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c", size = 7615, upload-time = "2023-10-07T05:32:18.335Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl", hash = "sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30", size = 8321, upload-time = "2023-10-07T05:32:16.783Z" },
-]
-
-[[package]]
-name = "datasource-csv"
-version = "0.1.0"
-source = { editable = "lib/datasource-csv" }
-dependencies = [
-    { name = "factor" },
-    { name = "pandas" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "factor", editable = "lib/factor" },
-    { name = "pandas", specifier = ">=2.0.0" },
-]
-
-[[package]]
-name = "datasource-sql"
-version = "0.1.0"
-source = { editable = "lib/datasource-sql" }
-dependencies = [
-    { name = "factor" },
-    { name = "pandas" },
-    { name = "sqlalchemy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "factor", editable = "lib/factor" },
-    { name = "pandas", specifier = ">=2.0.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.0" },
 ]
 
 [[package]]
@@ -2052,10 +2035,10 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "datasource-csv" },
-    { name = "datasource-sql" },
+    { name = "csv-datasource" },
     { name = "evaluate" },
     { name = "pytest" },
+    { name = "sql-datasource" },
     { name = "workspace" },
 ]
 
@@ -2064,10 +2047,10 @@ requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "datasource-csv", editable = "lib/datasource-csv" },
-    { name = "datasource-sql", editable = "lib/datasource-sql" },
+    { name = "csv-datasource", editable = "lib/csv_datasource" },
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "pytest", specifier = ">=8.0.0" },
+    { name = "sql-datasource", editable = "lib/sql_datasource" },
     { name = "workspace", editable = "lib/workspace" },
 ]
 
@@ -2276,6 +2259,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "sql-datasource"
+version = "0.1.0"
+source = { editable = "lib/sql_datasource" }
+dependencies = [
+    { name = "factor" },
+    { name = "pandas" },
+    { name = "sqlalchemy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "factor", editable = "lib/factor" },
+    { name = "pandas", specifier = ">=2.0.0" },
+    { name = "sqlalchemy", specifier = ">=2.0.0" },
 ]
 
 [[package]]

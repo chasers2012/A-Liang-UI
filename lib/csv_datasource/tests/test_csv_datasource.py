@@ -2,17 +2,17 @@ from pathlib import Path
 
 import pytest
 
-from datasource_csv import CsvFactorDataSource
+from csv_datasource import CsvDataSource
 
 
-def test_csv_factor_data_source_wrong_column_names(tmp_path: Path):
+def test_csv_data_source_wrong_column_names(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
         "date,asset,close\n"
         "2025-01-02,AAA,1\n",
         encoding="utf-8",
     )
-    ds = CsvFactorDataSource(
+    ds = CsvDataSource(
         p,
         date_column="d",
         asset_column="sym",
@@ -27,7 +27,7 @@ def test_csv_factor_data_source_wrong_column_names(tmp_path: Path):
         )
 
 
-def test_csv_factor_data_source_panel(tmp_path: Path):
+def test_csv_data_source_panel(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
         "d,sym,close\n"
@@ -36,7 +36,7 @@ def test_csv_factor_data_source_panel(tmp_path: Path):
         encoding="utf-8",
     )
 
-    ds = CsvFactorDataSource(
+    ds = CsvDataSource(
         p,
         date_column="d",
         asset_column="sym",
@@ -54,7 +54,7 @@ def test_csv_factor_data_source_panel(tmp_path: Path):
     assert float(df.loc[("2025-01-03", "AAA"), "close"]) == 11.0
 
 
-def test_csv_factor_data_source_stock_codes_filter(tmp_path: Path):
+def test_csv_data_source_stock_codes_filter(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
         "date,asset,close\n"
@@ -62,7 +62,7 @@ def test_csv_factor_data_source_stock_codes_filter(tmp_path: Path):
         "2025-01-02,BBB,2\n",
         encoding="utf-8",
     )
-    ds = CsvFactorDataSource(p, date_column="date", asset_column="asset")
+    ds = CsvDataSource(p, date_column="date", asset_column="asset")
     df = ds.get_panel(
         fields=["close"],
         start_date="2025-01-02",

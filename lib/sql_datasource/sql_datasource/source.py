@@ -40,7 +40,7 @@ def _panel_load_start(
     return (end_ts - pd.offsets.BDay(w + 1)).normalize()
 
 
-class SqlFactorDataSource(FactorDataSource):
+class SqlDataSource(FactorDataSource):
     """
     Load a long-format SQL table into a MultiIndex (date, asset) panel.
 

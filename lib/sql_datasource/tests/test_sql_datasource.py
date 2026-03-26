@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine, text
 
-from datasource_sql import SqlFactorDataSource
+from sql_datasource import SqlDataSource
 
 
-def test_sql_factor_data_source_sqlite_panel():
+def test_sql_data_source_sqlite_panel():
     engine = create_engine("sqlite:///:memory:")
     with engine.connect() as conn:
         conn.execute(text("CREATE TABLE bars (d TEXT, sym TEXT, c REAL)"))
@@ -15,7 +15,7 @@ def test_sql_factor_data_source_sqlite_panel():
         )
         conn.commit()
 
-    ds = SqlFactorDataSource(
+    ds = SqlDataSource(
         engine,
         table="bars",
         date_column="d",

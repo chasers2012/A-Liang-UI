@@ -1,7 +1,7 @@
 """
 从 CSV 加载行情，计算因子并用 Alphalens（evaluate.AlphalensFactorEvaluator）做效果评估。
 
-用法（在 quant-agent 仓库根目录，需 dev 依赖含 evaluate、datasource-csv）:
+用法（在 quant-agent 仓库根目录，需 dev 依赖含 evaluate、csv-datasource）:
   uv run python examples/evaluate-factor/run.py
   uv run python examples/evaluate-factor/run.py -i path/to/bars.csv
 """
@@ -18,7 +18,7 @@ if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
 from momentum_factor import MomentumFactor  # noqa: E402
-from datasource_csv import CsvFactorDataSource  # noqa: E402
+from csv_datasource import CsvDataSource  # noqa: E402
 from evaluate import AlphalensFactorEvaluator  # noqa: E402
 from factor import DependencyResolver  # noqa: E402
 
@@ -90,7 +90,7 @@ def main() -> None:
     if not periods:
         raise SystemExit("--periods 至少需要一个整数")
 
-    ds = CsvFactorDataSource(
+    ds = CsvDataSource(
         args.input,
         date_column=args.date_column,
         asset_column=args.asset_column,
