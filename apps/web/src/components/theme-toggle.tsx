@@ -16,7 +16,11 @@ export function ThemeToggle() {
   }, []);
 
   const isDark = resolvedTheme === "dark";
-  const label = isDark ? "切换为浅色" : "切换为深色";
+  const label = mounted
+    ? isDark
+      ? "切换为浅色"
+      : "切换为深色"
+    : "切换主题";
 
   return (
     <Button
