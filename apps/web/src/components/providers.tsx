@@ -3,6 +3,8 @@
 import { Provider } from "jotai";
 import { ThemeProvider } from "next-themes";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
@@ -11,7 +13,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       storageKey="quant-agent-theme"
     >
-      <Provider>{children}</Provider>
+      <TooltipProvider>
+        <Provider>{children}</Provider>
+      </TooltipProvider>
     </ThemeProvider>
   );
 }
