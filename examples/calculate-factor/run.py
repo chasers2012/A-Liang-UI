@@ -1,5 +1,5 @@
 """
-从 CSV 加载行情，通过 DependencyResolver 注册数据源后批量计算因子并写出结果。
+从 CSV 加载行情，通过 DependencyResolver 注册数据源后计算因子并写出结果。
 
 用法（在 quant-agent 仓库根目录）:
   uv run python examples/calculate-factor/run.py -i data.csv -o factors.csv --end-date 2025-01-03
@@ -15,10 +15,7 @@ if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
 from datasource_csv import CsvFactorDataSource  # noqa: E402
-from factor import (  # noqa: E402
-    DependencyResolver, compute_factor_values, max_lookback,
-    merged_dependencies,
-)
+from factor import DependencyResolver  # noqa: E402
 from price_factor import PriceFactor  # noqa: E402
 
 
@@ -56,7 +53,7 @@ def main() -> None:
     p.add_argument(
         "--start-date",
         default=None,
-        help="起始日期 YYYY-MM-DD，省略则不限起点（仍受 CSV 与 window 影响）",
+        help="起始日期 YYYY-MM-DD；省略则只输出 end_date 及之前最后一个交易日截面（Factor.calculate 语义）",
     )
     p.add_argument(
         "--end-date",
@@ -70,24 +67,14 @@ def main() -> None:
         date_column=args.date_column,
         asset_column=args.asset_column,
     )
-    factors = [PriceFactor()]
-
     resolver = DependencyResolver()
     close_alias = ({
         "close": args.close_column
     } if args.close_column != "close" else None)
     resolver.register_datasource(ds, ["close"], alias=close_alias)
 
-    fields = merged_dependencies(factors)
-    window = max_lookback(factors)
-    panel = resolver.get_panel(
-        fields=fields,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        stock_codes=None,
-        window=window,
-    )
-    out = compute_factor_values(factors, panel)
+    factor = PriceFactor(dependency_resolver=resolver)
+    out = factor.calculate(args.start_date, args.end_date)
     flat = out.reset_index()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     flat.to_csv(args.output, index=False)

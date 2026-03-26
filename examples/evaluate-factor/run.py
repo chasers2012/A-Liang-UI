@@ -3,7 +3,7 @@
 
 用法（在 quant-agent 仓库根目录，需 dev 依赖含 evaluate、datasource-csv）:
   uv run python examples/evaluate-factor/run.py
-  uv run python examples/evaluate-factor/run.py -i path/to/bars.csv --tear-sheet-dir D:/out/tears
+  uv run python examples/evaluate-factor/run.py -i path/to/bars.csv
 """
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ import argparse
 import sys
 from pathlib import Path
 
-import alphalens as al
 import pandas as pd
 
 _EX_DIR = Path(__file__).resolve().parent
@@ -21,12 +20,7 @@ if str(_EX_DIR) not in sys.path:
 from momentum_factor import MomentumFactor  # noqa: E402
 from datasource_csv import CsvFactorDataSource  # noqa: E402
 from evaluate import AlphalensFactorEvaluator  # noqa: E402
-from factor import (  # noqa: E402
-    DependencyResolver,
-    compute_factor_values,
-    max_lookback,
-    merged_dependencies,
-)
+from factor import DependencyResolver  # noqa: E402
 
 
 def _default_end_date(csv_path: Path, date_column: str) -> str:
@@ -42,7 +36,6 @@ def _default_start_date(csv_path: Path, date_column: str) -> str:
 
 def main() -> None:
     default_csv = _EX_DIR / "sample_bars.csv"
-    default_tear_dir = _EX_DIR / "tear_sheets"
     p = argparse.ArgumentParser(description="评估因子（Alphalens IC / 分位收益等）")
     p.add_argument(
         "-i",
@@ -81,21 +74,17 @@ def main() -> None:
         default=0.35,
         help="get_clean_factor_and_forward_returns 的 max_loss（默认: 0.35）",
     )
-    p.add_argument(
-        "--tear-sheet-dir",
-        type=Path,
-        default=default_tear_dir,
-        help=f"完整 tear sheet 图输出目录（多张 PNG，默认: {default_tear_dir.name}/）",
-    )
     args = p.parse_args()
 
     if not args.input.is_file():
         raise SystemExit(f"输入文件不存在: {args.input}")
 
     end_date = args.end_date or _default_end_date(args.input, args.date_column)
-    start_date = args.start_date or _default_start_date(args.input, args.date_column)
+    start_date = args.start_date or _default_start_date(
+        args.input, args.date_column)
     try:
-        periods = tuple(int(x.strip()) for x in args.periods.split(",") if x.strip())
+        periods = tuple(
+            int(x.strip()) for x in args.periods.split(",") if x.strip())
     except ValueError as e:
         raise SystemExit(f"无效的 --periods: {args.periods}") from e
     if not periods:
@@ -106,57 +95,53 @@ def main() -> None:
         date_column=args.date_column,
         asset_column=args.asset_column,
     )
-    factors = [MomentumFactor()]
     resolver = DependencyResolver()
-    close_alias = {"close": args.close_column} if args.close_column != "close" else None
+    close_alias = {
+        "close": args.close_column
+    } if args.close_column != "close" else None
     resolver.register_datasource(ds, ["close"], alias=close_alias)
 
-    fields = merged_dependencies(factors)
-    window = max_lookback(factors)
-    panel = resolver.get_panel(
-        fields=fields,
-        start_date=start_date,
-        end_date=end_date,
-        stock_codes=None,
-        window=window,
-    )
-    if panel.empty:
-        raise SystemExit("面板为空：请检查 CSV 日期范围与列名")
+    factor = MomentumFactor(dependency_resolver=resolver)
+    try:
+        ev = AlphalensFactorEvaluator(
+            factor,
+            start_date=start_date,
+            end_date=end_date,
+        )
+    except ValueError as e:
+        raise SystemExit(f"无法加载评估数据: {e}") from e
 
-    factor_frame = compute_factor_values(factors, panel)
-    col = factor_frame.columns[0]
-    print(f"因子列: {col}，有效样本数: {factor_frame[col].notna().sum()}")
-
-    ev = AlphalensFactorEvaluator(panel)
     result = ev.evaluate_factor(
-        factor_frame,
         quantiles=args.quantiles,
         periods=periods,
         max_loss=args.max_loss,
-        tear_sheet_dir=str(args.tear_sheet_dir),
     )
+    col = result.factor_frame.columns[0]
+    print(f"因子列: {col}，有效样本数: {result.factor_frame[col].notna().sum()}")
 
-    ic = al.performance.factor_information_coefficient(
-        result.factor_data_clean, group_adjust=False, by_group=False
-    )
+    m = result.metrics
     print("\n=== IC 按持有期（日度序列描述统计）===\n")
-    print(ic.describe().to_string())
+    print(m.ic_summary.to_string())
 
-    mic = al.performance.mean_information_coefficient(
-        result.factor_data_clean, group_adjust=False, by_group=False
-    )
     print("\n=== 平均 IC（各前瞻期）===\n")
-    print(mic.to_string())
+    print(m.mean_ic.to_string())
 
-    mret, mret_std = al.performance.mean_return_by_quantile(
-        result.factor_data_clean, by_date=False, by_group=False, demeaned=True
-    )
     print("\n=== 分位组合平均收益（demeaned，全样本平均）===\n")
-    print(mret.to_string())
+    print(m.mean_return_by_quantile.to_string())
     print("\n=== 分位收益标准误 ===\n")
-    print(mret_std.to_string())
+    print(m.mean_return_by_quantile_std_error.to_string())
 
-    print(f"\nTear sheet 已写入: {args.tear_sheet_dir.resolve()}")
+    print("\n=== 最高分位减最低分位（spread）===\n")
+    print(m.mean_return_spread.to_string())
+    if m.mean_return_spread_std_error is not None:
+        print("\n=== spread 标准误 ===\n")
+        print(m.mean_return_spread_std_error.to_string())
+
+    print("\n=== Alpha / Beta（因子组合 vs 截面均值）===\n")
+    print(m.factor_alpha_beta.to_string())
+
+    print("\n=== 因子秩自相关（period=1）===\n")
+    print(m.factor_rank_autocorrelation.describe().to_string())
 
 
 if __name__ == "__main__":
