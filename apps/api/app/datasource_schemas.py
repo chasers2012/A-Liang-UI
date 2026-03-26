@@ -1,0 +1,274 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, Literal, Optional
+from uuid import uuid4
+
+from pydantic import BaseModel, Field, model_validator
+
+DataSourceType = Literal["sql", "csv"]
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+class SqlConfigStored(BaseModel):
+    """Stored SQL source. Prefer db_* fields; engine_url is legacy-only."""
+
+    engine_url: Optional[str] = None
+    db_driver: str = "postgresql"
+    db_host: str = ""
+    db_port: Optional[int] = None
+    db_username: str = ""
+    db_password: str = ""
+    db_name: str = ""
+    table: str
+    date_column: str
+    asset_column: str
+    column_map: dict[str, str] = Field(default_factory=dict)
+
+
+class CsvConfigStored(BaseModel):
+    path: str
+    date_column: str
+    asset_column: str
+    read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
+
+
+class DataSourceRecord(BaseModel):
+    id: str
+    name: str
+    type: DataSourceType
+    enabled: bool = True
+    is_default: bool = False
+    sql: Optional[SqlConfigStored] = None
+    csv: Optional[CsvConfigStored] = None
+    created_at: str
+    updated_at: str
+
+    @model_validator(mode="after")
+    def _type_matches_payload(self) -> DataSourceRecord:
+        if self.type == "sql" and self.sql is None:
+            raise ValueError("sql config required when type is sql")
+        if self.type == "csv" and self.csv is None:
+            raise ValueError("csv config required when type is csv")
+        if self.type == "sql" and self.csv is not None:
+            raise ValueError("csv config must be omitted when type is sql")
+        if self.type == "csv" and self.sql is not None:
+            raise ValueError("sql config must be omitted when type is csv")
+        return self
+
+
+class RegistryFile(BaseModel):
+    version: int = 1
+    items: list[DataSourceRecord] = Field(default_factory=list)
+
+
+# --- API payloads ---
+
+
+class SqlCreate(BaseModel):
+    db_driver: str = "postgresql"
+    db_host: str
+    db_port: Optional[int] = None
+    db_username: str = ""
+    db_password: str = ""
+    db_name: str
+    table: str
+    date_column: str
+    asset_column: str
+    column_map: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _host_and_db(self) -> SqlCreate:
+        if not self.db_host.strip() or not self.db_name.strip():
+            raise ValueError("主机（IP）与数据库名不能为空")
+        d = self.db_driver.lower()
+        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
+            raise ValueError("db_driver 须为 postgresql 或 mysql")
+        return self
+
+
+class CsvCreate(BaseModel):
+    path: str
+    date_column: str
+    asset_column: str
+    read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
+
+
+class DataSourceCreate(BaseModel):
+    name: str
+    type: DataSourceType
+    enabled: bool = True
+    is_default: bool = False
+    sql: Optional[SqlCreate] = None
+    csv: Optional[CsvCreate] = None
+
+    @model_validator(mode="after")
+    def _match(self) -> DataSourceCreate:
+        if self.type == "sql":
+            if self.sql is None:
+                raise ValueError("sql is required when type is sql")
+            if self.csv is not None:
+                raise ValueError("csv must be omitted when type is sql")
+        else:
+            if self.csv is None:
+                raise ValueError("csv is required when type is csv")
+            if self.sql is not None:
+                raise ValueError("sql must be omitted when type is csv")
+        return self
+
+    def to_record(self) -> DataSourceRecord:
+        now = utc_now_iso()
+        rid = str(uuid4())
+        if self.type == "sql" and self.sql:
+            s = self.sql
+            sql = SqlConfigStored(
+                engine_url=None,
+                db_driver=s.db_driver,
+                db_host=s.db_host.strip(),
+                db_port=s.db_port,
+                db_username=s.db_username.strip(),
+                db_password=s.db_password,
+                db_name=s.db_name.strip(),
+                table=s.table.strip(),
+                date_column=s.date_column.strip(),
+                asset_column=s.asset_column.strip(),
+                column_map=dict(s.column_map),
+            )
+            return DataSourceRecord(
+                id=rid,
+                name=self.name,
+                type="sql",
+                enabled=self.enabled,
+                is_default=self.is_default,
+                sql=sql,
+                csv=None,
+                created_at=now,
+                updated_at=now,
+            )
+        assert self.csv is not None
+        csv = CsvConfigStored(
+            path=self.csv.path,
+            date_column=self.csv.date_column,
+            asset_column=self.csv.asset_column,
+            read_csv_kwargs=dict(self.csv.read_csv_kwargs),
+        )
+        return DataSourceRecord(
+            id=rid,
+            name=self.name,
+            type="csv",
+            enabled=self.enabled,
+            is_default=self.is_default,
+            sql=None,
+            csv=csv,
+            created_at=now,
+            updated_at=now,
+        )
+
+
+class SqlPatch(BaseModel):
+    engine_url: Optional[str] = None
+    db_driver: Optional[str] = None
+    db_host: Optional[str] = None
+    db_port: Optional[int] = None
+    db_username: Optional[str] = None
+    db_password: Optional[str] = None
+    db_name: Optional[str] = None
+    table: Optional[str] = None
+    date_column: Optional[str] = None
+    asset_column: Optional[str] = None
+    column_map: Optional[dict[str, str]] = None
+
+
+class CsvPatch(BaseModel):
+    path: Optional[str] = None
+    date_column: Optional[str] = None
+    asset_column: Optional[str] = None
+    read_csv_kwargs: Optional[dict[str, Any]] = None
+
+
+class DataSourcePatch(BaseModel):
+    name: Optional[str] = None
+    enabled: Optional[bool] = None
+    is_default: Optional[bool] = None
+    sql: Optional[SqlPatch] = None
+    csv: Optional[CsvPatch] = None
+
+
+class SqlPublic(BaseModel):
+    db_driver: str = "postgresql"
+    db_host: str = ""
+    db_port: Optional[int] = None
+    db_username: str = ""
+    db_name: str = ""
+    has_password: bool = False
+    has_legacy_engine_url: bool = False
+    table: str
+    date_column: str
+    asset_column: str
+    column_map: dict[str, str]
+
+
+class CsvPublic(BaseModel):
+    path: str
+    date_column: str
+    asset_column: str
+    read_csv_kwargs: dict[str, Any]
+
+
+class DataSourcePublic(BaseModel):
+    id: str
+    name: str
+    type: DataSourceType
+    enabled: bool
+    is_default: bool
+    sql: Optional[SqlPublic] = None
+    csv: Optional[CsvPublic] = None
+    created_at: str
+    updated_at: str
+
+
+def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
+    sql_pub: Optional[SqlPublic] = None
+    csv_pub: Optional[CsvPublic] = None
+    if rec.type == "sql" and rec.sql:
+        s = rec.sql
+        legacy = bool((s.engine_url or "").strip())
+        sql_pub = SqlPublic(
+            db_driver=s.db_driver or "postgresql",
+            db_host=s.db_host,
+            db_port=s.db_port,
+            db_username=s.db_username,
+            db_name=s.db_name,
+            has_password=bool(s.db_password) or legacy,
+            has_legacy_engine_url=legacy,
+            table=s.table,
+            date_column=s.date_column,
+            asset_column=s.asset_column,
+            column_map=dict(s.column_map),
+        )
+    elif rec.type == "csv" and rec.csv:
+        csv_pub = CsvPublic(
+            path=rec.csv.path,
+            date_column=rec.csv.date_column,
+            asset_column=rec.csv.asset_column,
+            read_csv_kwargs=dict(rec.csv.read_csv_kwargs),
+        )
+    return DataSourcePublic(
+        id=rec.id,
+        name=rec.name,
+        type=rec.type,
+        enabled=rec.enabled,
+        is_default=rec.is_default,
+        sql=sql_pub,
+        csv=csv_pub,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+    )
+
+
+class TestResult(BaseModel):
+    ok: bool
+    message: str

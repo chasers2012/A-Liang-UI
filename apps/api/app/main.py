@@ -3,12 +3,12 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="quant-agent API", version="0.1.0")
+from app.routers import datasources as datasources_router
 
-_origins = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
-)
+app = FastAPI(title="quant-agent API", version="0.1.0")
+app.include_router(datasources_router.router)
+
+_origins = os.getenv("CORS_ORIGINS", "*")
 _origins_list = [o.strip() for o in _origins.split(",") if o.strip()]
 
 app.add_middleware(

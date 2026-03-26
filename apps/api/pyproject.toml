@@ -10,7 +10,14 @@ requires-python = ">=3.9"
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
+  "sqlalchemy>=2.0.0",
+  "psycopg[binary]>=3.1.0",
+  "pymysql>=1.1.0",
+  "workspace",
 ]
+
+[tool.uv.sources]
+workspace = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
