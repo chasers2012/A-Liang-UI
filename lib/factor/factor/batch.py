@@ -5,6 +5,7 @@ from typing import List, Optional, Sequence
 import pandas as pd
 
 from factor.datasource import FactorDataSource
+from factor.dependency_resolver import panel_load_start_date
 from factor.factor import Factor
 
 
@@ -64,11 +65,11 @@ def compute_factor_values_from_source(
 
     fields = merged_dependencies(factors)
     window = max_lookback(factors)
+    load_start = panel_load_start_date(start_date, end_date, window)
     panel = data_source.get_panel(
         fields=fields,
-        start_date=start_date,
+        start_date=load_start,
         end_date=end_date,
         stock_codes=stock_codes,
-        window=window,
     )
     return compute_factor_values(factors, panel)

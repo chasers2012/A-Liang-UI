@@ -21,31 +21,15 @@ def _quote_ident(engine: Engine, name: str) -> str:
     return prep.quote(name)
 
 
-def _panel_load_start(
-    start_date: Optional[str], end_date: str, window: int
-) -> pd.Timestamp:
-    """
-    Earliest calendar date to load so rolling windows up to ``window``
-    business days can be satisfied before the first requested bar.
-    """
-    end_ts = pd.Timestamp(end_date).normalize()
-    w = max(int(window), 0)
-    if start_date:
-        s = pd.Timestamp(start_date).normalize()
-        if w == 0:
-            return s
-        return (s - pd.offsets.BDay(w)).normalize()
-    if w == 0:
-        return end_ts
-    return (end_ts - pd.offsets.BDay(w + 1)).normalize()
-
-
 class SqlDataSource(FactorDataSource):
     """
     Load a long-format SQL table into a MultiIndex (date, asset) panel.
 
     Expects one row per (date, asset). Map factor dependency names to DB
     columns via ``column_map`` when they differ.
+
+    ``start_date`` / ``end_date`` are inclusive bounds; include any lookback history
+    in ``start_date`` (e.g. via :func:`factor.panel_load_start_date`).
 
     Depends on :class:`factor.datasource.FactorDataSource` and SQLAlchemy.
     """
@@ -69,12 +53,11 @@ class SqlDataSource(FactorDataSource):
         self,
         *,
         fields: List[str],
-        start_date: Optional[str],
+        start_date: str,
         end_date: str,
         stock_codes: Optional[List[str]],
-        window: int,
     ) -> pd.DataFrame:
-        load_start = _panel_load_start(start_date, end_date, window)
+        load_start = pd.Timestamp(start_date).normalize()
         end_ts = pd.Timestamp(end_date).normalize()
         prep = self._engine.dialect.identifier_preparer
 
@@ -118,5 +101,8 @@ class SqlDataSource(FactorDataSource):
 
         df["date"] = pd.to_datetime(df["date"])
         df["asset"] = df["asset"].astype(str)
+        for col in fields:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
         df = df.set_index(["date", "asset"]).sort_index()
         return df

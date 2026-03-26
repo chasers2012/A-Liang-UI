@@ -16,6 +16,49 @@ def _merge_panels(dfs: List[pd.DataFrame]) -> pd.DataFrame:
     return out
 
 
+def _trading_lookback_bdays(window: int, *, tail_extra: int = 0) -> int:
+    """
+    Business days to step back for a nominal ``window`` (bars / lookback length).
+
+    Adds slack on top of ``window`` because calendars have holidays and panels
+    may omit non-trading days; pure ``BDay(window)`` can be too tight.
+    """
+    w = max(int(window), 0)
+    if w == 0:
+        return tail_extra
+    slack = max(3, (w + 2) // 3)
+    return w + slack + tail_extra
+
+
+def panel_load_start_date(
+    start_date: Optional[str], end_date: str, window: int
+) -> str:
+    """
+    Earliest inclusive calendar date (``YYYY-MM-DD``) to pass to
+    :meth:`FactorDataSource.get_panel` for the user-visible ``start_date`` /
+    ``end_date`` and factor ``window``.
+
+    When ``start_date`` is None (factor "last day only" semantics), history is
+    anchored on ``end_date`` instead.
+    """
+    end_ts = pd.Timestamp(end_date).normalize()
+    w = max(int(window), 0)
+    if start_date:
+        s = pd.Timestamp(start_date).normalize()
+        if w == 0:
+            ts = s
+        else:
+            n = _trading_lookback_bdays(w)
+            ts = (s - pd.offsets.BDay(n)).normalize()
+    else:
+        if w == 0:
+            ts = end_ts
+        else:
+            n = _trading_lookback_bdays(w, tail_extra=1)
+            ts = (end_ts - pd.offsets.BDay(n)).normalize()
+    return ts.strftime("%Y-%m-%d")
+
+
 class DependencyResolver:
     """
     Maps dependency field names to :class:`FactorDataSource` instances and merges
@@ -26,6 +69,9 @@ class DependencyResolver:
 
     Not a :class:`FactorDataSource` itself; :class:`Factor` loads panels only through
     a resolver (``dependency_resolver`` on the factor or per-call override).
+
+    Uses :func:`panel_load_start_date` to turn ``window`` and optional user
+    ``start_date`` into the inclusive ``start_date`` passed to each datasource.
     """
 
     def __init__(self) -> None:
@@ -85,6 +131,8 @@ class DependencyResolver:
                 f"Unknown dependency field(s) {missing!r}; register a datasource that provides them"
             )
 
+        load_start = panel_load_start_date(start_date, end_date, window)
+
         by_source: Dict[int, tuple[FactorDataSource, List[str]]] = {}
         order: List[int] = []
         for f in fields:
@@ -113,10 +161,9 @@ class DependencyResolver:
 
             part = src.get_panel(
                 fields=phys_order,
-                start_date=start_date,
+                start_date=load_start,
                 end_date=end_date,
                 stock_codes=stock_codes,
-                window=window,
             )
             part = part.rename(columns=phys_to_logical)
             parts.append(part)

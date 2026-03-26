@@ -7,25 +7,6 @@ import pandas as pd
 from factor.datasource import FactorDataSource
 
 
-def _panel_load_start(
-    start_date: Optional[str], end_date: str, window: int
-) -> pd.Timestamp:
-    """
-    Earliest calendar date to load so rolling windows up to ``window``
-    business days can be satisfied before the first requested bar.
-    """
-    end_ts = pd.Timestamp(end_date).normalize()
-    w = max(int(window), 0)
-    if start_date:
-        s = pd.Timestamp(start_date).normalize()
-        if w == 0:
-            return s
-        return (s - pd.offsets.BDay(w)).normalize()
-    if w == 0:
-        return end_ts
-    return (end_ts - pd.offsets.BDay(w + 1)).normalize()
-
-
 class CsvDataSource(FactorDataSource):
     """
     Load a long-format CSV into a MultiIndex (date, asset) panel.
@@ -34,6 +15,9 @@ class CsvDataSource(FactorDataSource):
     ``fields`` passed to :meth:`get_panel` (after date/asset renaming to index).
     To map logical factor fields to different CSV headers, use
     :class:`factor.DependencyResolver` ``alias`` when registering this source.
+
+    ``start_date`` / ``end_date`` are inclusive bounds; include any lookback history
+    in ``start_date`` (e.g. via :func:`factor.panel_load_start_date`).
     """
 
     def __init__(
@@ -58,12 +42,11 @@ class CsvDataSource(FactorDataSource):
         self,
         *,
         fields: List[str],
-        start_date: Optional[str],
+        start_date: str,
         end_date: str,
         stock_codes: Optional[List[str]],
-        window: int,
     ) -> pd.DataFrame:
-        load_start = _panel_load_start(start_date, end_date, window)
+        load_start = pd.Timestamp(start_date).normalize()
         end_ts = pd.Timestamp(end_date).normalize()
 
         usecols = {self._date_column, self._asset_column}

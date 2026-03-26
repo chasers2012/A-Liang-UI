@@ -23,7 +23,6 @@ def test_csv_data_source_wrong_column_names(tmp_path: Path):
             start_date="2025-01-02",
             end_date="2025-01-02",
             stock_codes=None,
-            window=0,
         )
 
 
@@ -43,10 +42,9 @@ def test_csv_data_source_panel(tmp_path: Path):
     )
     df = ds.get_panel(
         fields=["close"],
-        start_date="2025-01-03",
+        start_date="2025-01-02",
         end_date="2025-01-03",
         stock_codes=None,
-        window=1,
     )
     assert df.index.names == ("date", "asset")
     assert list(df.columns) == ["close"]
@@ -68,7 +66,6 @@ def test_csv_data_source_stock_codes_filter(tmp_path: Path):
         start_date="2025-01-02",
         end_date="2025-01-02",
         stock_codes=["BBB"],
-        window=0,
     )
     assert len(df) == 1
     assert float(df.loc[("2025-01-02", "BBB"), "close"]) == 2.0

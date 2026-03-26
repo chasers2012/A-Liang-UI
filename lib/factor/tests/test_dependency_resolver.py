@@ -21,16 +21,23 @@ class _FixedSource(FactorDataSource):
         self,
         *,
         fields: list[str],
-        start_date: str | None,
+        start_date: str,
         end_date: str,
         stock_codes: list[str] | None,
-        window: int,
     ) -> pd.DataFrame:
-        _ = (start_date, end_date, stock_codes, window)
         missing = [f for f in fields if f not in self._df.columns]
         if missing:
             raise KeyError(missing)
-        return self._df[list(fields)]
+        df = self._df[list(fields)]
+        if df.empty:
+            return df
+        d = df.index.get_level_values("date")
+        sd = pd.Timestamp(start_date)
+        ed = pd.Timestamp(end_date)
+        mask = (d >= sd) & (d <= ed)
+        if stock_codes is not None:
+            mask &= df.index.get_level_values("asset").isin(stock_codes)
+        return df.loc[mask]
 
 
 def test_resolver_merges_two_sources_inner_join() -> None:
