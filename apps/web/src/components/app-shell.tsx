@@ -11,10 +11,12 @@ import {
   Database,
   GitBranch,
   LayoutDashboard,
+  Layers,
   Library,
   LineChart,
   PanelLeftClose,
   PanelLeftOpen,
+  Scale,
   Table2,
   TableProperties,
 } from "lucide-react";
@@ -73,7 +75,15 @@ export type SidebarNavMainItem = {
 export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
   navMain: [
     { title: "首页", url: "/", icon: LayoutDashboard },
-    { title: "因子库", url: "/factors", icon: Library },
+    {
+      title: "因子",
+      url: "#",
+      icon: Layers,
+      items: [
+        { title: "因子库", url: "/factors", icon: Library },
+        { title: "评价体系", url: "/factor-evaluations", icon: Scale },
+      ],
+    },
     {
       title: "数据",
       url: "#",

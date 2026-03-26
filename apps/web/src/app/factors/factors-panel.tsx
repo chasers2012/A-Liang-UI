@@ -107,6 +107,11 @@ export function FactorsPanel() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pt-6">
+            {items === null && !loadError && (
+              <div className="flex flex-1 flex-col justify-center py-12 text-center text-sm text-muted-foreground">
+                加载因子列表…
+              </div>
+            )}
             {items && items.length === 0 && !loadError && (
               <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-12 text-center">
                 <Library
@@ -160,7 +165,6 @@ export function FactorsPanel() {
           </CardContent>
         </Card>
       </div>
-
     </Page>
   );
 }

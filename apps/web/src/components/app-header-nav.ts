@@ -3,6 +3,7 @@ import type { PageBreadcrumbItem } from "@/components/page-breadcrumb";
 const TOP_LEVEL = new Set([
   "/",
   "/factors",
+  "/factor-evaluations",
   "/datasources",
   "/test-sets",
   "/strategies",
@@ -20,6 +21,7 @@ export function buildAppHeaderBreadcrumbs(
 ): PageBreadcrumbItem[] {
   if (pathname === "/") return [{ label: "首页" }];
   if (pathname === "/factors") return [{ label: "因子库" }];
+  if (pathname === "/factor-evaluations") return [{ label: "评价体系" }];
   if (pathname === "/factors/new") {
     return [{ href: "/factors", label: "因子库" }, { label: "新增" }];
   }
