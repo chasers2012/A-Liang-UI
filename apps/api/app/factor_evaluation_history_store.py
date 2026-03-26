@@ -64,6 +64,7 @@ def entry_from_latest_evaluation(
         linked_snapshot_id=linked_snapshot_id,
         evaluated_at=snap.evaluated_at,
         window=snap.window,
+        stock_count=snap.stock_count,
         mean_ic=dict(snap.mean_ic),
         mean_return_spread=dict(snap.mean_return_spread),
         error=snap.error,

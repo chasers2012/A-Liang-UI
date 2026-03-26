@@ -12,6 +12,7 @@ class FactorEvaluationHistoryEntry(BaseModel):
     linked_snapshot_id: Optional[str] = None
     evaluated_at: str
     window: Optional[FactorEvaluationWindow] = None
+    stock_count: Optional[int] = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: Optional[str] = None

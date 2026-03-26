@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Bot,
   Database,
+  FlaskConical,
   GitBranch,
   LayoutDashboard,
   Library,
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/", label: "首页", icon: LayoutDashboard },
   { href: "/factors", label: "因子库", icon: Library },
   { href: "/datasources", label: "数据源", icon: Database },
+  { href: "/test-sets", label: "测试集", icon: FlaskConical },
   { href: "/strategies", label: "策略", icon: GitBranch },
   { href: "/backtest", label: "回测", icon: LineChart },
   { href: "/agent", label: "Agent", icon: Bot },
@@ -40,10 +42,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const backHref = headerBackHref(pathname);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1">
+    <div className="flex min-h-0 min-w-0 flex-1 h-screen w-screen overflow-hidden">
       <aside
         className={cn(
-          "flex min-h-0 shrink-0 flex-col self-stretch border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out",
+          "flex min-h-0 shrink-0 flex-col self-stretch border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-out h-screen",
           collapsed ? "w-14" : "w-56",
         )}
       >
@@ -103,9 +105,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
       </aside>
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background overflow-auto">
         <header
-          className="flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-6 py-2 md:px-8"
+          className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-background px-6 py-2 md:px-8"
           role="banner"
         >
           <PageBreadcrumb items={headerCrumbs} variant="header" />

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronRight, History, Pencil, Trash2 } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
+import { ChevronRight, History, Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,11 +15,27 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { factorEvaluationRunningAtom } from "@/lib/factor-evaluation-atoms";
+import {
+  formatEvaluationWindow,
+  formatStockCount,
+} from "@/lib/factor-evaluation-display";
 import {
   deleteFactor,
   getFactor,
   getFactorEvaluationsSummary,
+  listEvaluationTestSets,
+  runFactorEvaluation,
+  type EvaluationTestSetPublic,
   type FactorDetailPublic,
   type FactorEvaluationRowPublic,
   type FactorSummaryPublic,
@@ -41,15 +58,56 @@ export default function FactorDetailPage() {
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
   const router = useRouter();
+  const evaluationRunning = useAtomValue(factorEvaluationRunningAtom);
+  const setEvaluationRunning = useSetAtom(factorEvaluationRunningAtom);
 
   const [detail, setDetail] = useState<FactorDetailPublic | null>(null);
   const [evalRow, setEvalRow] = useState<FactorEvaluationRowPublic | null>(null);
   const [primaryPeriod, setPrimaryPeriod] = useState("5");
+  const [displayPeriod, setDisplayPeriod] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [deleteOpen, setDeleteOpen] = useState<FactorSummaryPublic | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
+  /** null = 自动（服务端：默认测试集 → 环境变量） */
+  const [runTestSetId, setRunTestSetId] = useState<string | null>(null);
+
+  const periodKeys = useMemo(() => {
+    const ic = evalRow?.mean_ic;
+    if (!ic || Object.keys(ic).length === 0) return [];
+    return Object.keys(ic).sort((a, b) => Number(a) - Number(b));
+  }, [evalRow?.mean_ic]);
+
+  const periodItemMap = useMemo(() => {
+    const o: Record<string, string> = {};
+    for (const k of periodKeys) o[k] = `${k} 日`;
+    return o;
+  }, [periodKeys]);
+
+  const testSetSelectItems = useMemo(() => {
+    const o: Record<string, string> = {
+      __auto__: "自动（默认测试集或环境变量）",
+    };
+    for (const t of testSets) {
+      o[t.id] = t.name;
+    }
+    return o;
+  }, [testSets]);
+
+  useEffect(() => {
+    if (periodKeys.length === 0) {
+      setDisplayPeriod("");
+      return;
+    }
+    setDisplayPeriod((prev) => {
+      if (prev && periodKeys.includes(prev)) return prev;
+      if (periodKeys.includes(primaryPeriod)) return primaryPeriod;
+      return periodKeys[0] ?? "";
+    });
+  }, [periodKeys, primaryPeriod]);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -60,13 +118,20 @@ export default function FactorDetailPage() {
     setLoadError(null);
     setLoading(true);
     try {
-      const [d, summary] = await Promise.all([
+      const [d, summary, ts] = await Promise.all([
         getFactor(id),
         getFactorEvaluationsSummary(),
+        listEvaluationTestSets(),
       ]);
       setDetail(d);
       setPrimaryPeriod(summary.aggregate.primary_period);
       setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
+      setTestSets(ts);
+      setRunTestSetId((prev) => {
+        if (prev && ts.some((x) => x.id === prev)) return prev;
+        const def = ts.find((t) => t.is_default);
+        return def ? def.id : null;
+      });
     } catch (e) {
       setDetail(null);
       setEvalRow(null);
@@ -76,9 +141,45 @@ export default function FactorDetailPage() {
     }
   }, [id]);
 
+  const refreshEvalRow = useCallback(async () => {
+    if (!id) return;
+    const summary = await getFactorEvaluationsSummary();
+    setPrimaryPeriod(summary.aggregate.primary_period);
+    setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
+  }, [id]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  const evaluatingThis =
+    evaluationRunning != null && evaluationRunning.factorId === id;
+  const evaluatingOther =
+    evaluationRunning != null && evaluationRunning.factorId !== id;
+
+  const handleRunEvaluation = async () => {
+    if (!id || !detail) return;
+    if (evaluatingOther) {
+      setLoadError(
+        `已有因子「${evaluationRunning.factorName}」正在评价，请等待完成后再试。`,
+      );
+      return;
+    }
+    if (evaluatingThis) return;
+
+    setEvaluationRunning({ factorId: id, factorName: detail.name });
+    setLoadError(null);
+    try {
+      await runFactorEvaluation(id, { testSetId: runTestSetId });
+      await refreshEvalRow();
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setEvaluationRunning((prev) =>
+        prev?.factorId === id ? null : prev,
+      );
+    }
+  };
 
   const confirmDelete = async () => {
     if (!deleteOpen) return;
@@ -136,8 +237,9 @@ export default function FactorDetailPage() {
     updated_at: detail.updated_at,
   };
 
-  const pp = primaryPeriod;
+  const pp = displayPeriod || primaryPeriod;
   const icPrimary = evalRow?.mean_ic?.[pp];
+  const spreadPrimary = evalRow?.mean_return_spread?.[pp];
 
   return (
     <FactorFormPageContainer>
@@ -153,7 +255,44 @@ export default function FactorDetailPage() {
               : null}
           </p>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
+          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-[14rem]">
+            <Label
+              htmlFor="factor-eval-test-set"
+              className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              评价测试集
+            </Label>
+            <Select
+              modal={false}
+              items={testSetSelectItems}
+              value={runTestSetId ?? "__auto__"}
+              onValueChange={(v) => {
+                if (!v) return;
+                setRunTestSetId(v === "__auto__" ? null : v);
+              }}
+              disabled={evaluatingThis || evaluatingOther}
+            >
+              <SelectTrigger
+                id="factor-eval-test-set"
+                size="sm"
+                className="w-full min-w-0"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__auto__">
+                  自动（默认测试集或环境变量）
+                </SelectItem>
+                {testSets.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-wrap gap-2">
           <Link
             href={`/factors/${encodeURIComponent(id)}/edit`}
             className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
@@ -170,6 +309,23 @@ export default function FactorDetailPage() {
           </Link>
           <Button
             type="button"
+            variant="secondary"
+            className="gap-1.5"
+            disabled={evaluatingThis || evaluatingOther}
+            title={
+              evaluatingOther
+                ? `「${evaluationRunning.factorName}」正在评价中`
+                : undefined
+            }
+            onClick={() => void handleRunEvaluation()}
+          >
+            {evaluatingThis ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : null}
+            {evaluatingThis ? "评价中…" : "运行评价"}
+          </Button>
+          <Button
+            type="button"
             variant="destructive"
             className="gap-1.5"
             onClick={() => setDeleteOpen(summaryForDelete)}
@@ -177,6 +333,7 @@ export default function FactorDetailPage() {
             <Trash2 className="size-4" />
             删除
           </Button>
+          </div>
         </div>
       </div>
 
@@ -279,14 +436,87 @@ export default function FactorDetailPage() {
                     {evalRow.error}
                   </p>
                 ) : null}
-                <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    Mean IC（主周期 {pp}D）
-                  </p>
-                  <p className="font-mono text-lg tabular-nums">
-                    {formatIc(icPrimary)}
-                  </p>
+                <dl className="grid gap-2 border-t border-border/60 pt-4 text-xs">
+                  <div className="flex flex-wrap gap-x-2 gap-y-1">
+                    <dt className="text-muted-foreground">样本区间</dt>
+                    <dd className="break-all font-mono text-[0.7rem] leading-relaxed tabular-nums">
+                      {formatEvaluationWindow(evalRow.window)}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap gap-x-2 gap-y-1">
+                    <dt className="text-muted-foreground">股票数量</dt>
+                    <dd className="font-mono tabular-nums">
+                      {formatStockCount(evalRow.stock_count)}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Mean IC（{pp}D）
+                    </p>
+                    <p className="font-mono text-lg tabular-nums">
+                      {formatIc(icPrimary)}
+                    </p>
+                  </div>
+                  {periodKeys.length > 1 ? (
+                    <div className="flex flex-col gap-1.5">
+                      <Label
+                        htmlFor="factor-detail-period"
+                        className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        展示周期（主周期 {primaryPeriod}D）
+                      </Label>
+                      <Select
+                        modal={false}
+                        items={periodItemMap}
+                        value={displayPeriod}
+                        onValueChange={(v) => v && setDisplayPeriod(v)}
+                      >
+                        <SelectTrigger
+                          id="factor-detail-period"
+                          size="sm"
+                          className="w-[8.5rem]"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {periodKeys.map((k) => (
+                            <SelectItem key={k} value={k}>
+                              {k} 日
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                 </div>
+                {evalRow.mean_return_spread &&
+                Object.keys(evalRow.mean_return_spread).length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Return spread（{pp}D）
+                    </p>
+                    <p className="font-mono text-lg tabular-nums">
+                      {formatIc(spreadPrimary)}
+                    </p>
+                    <p className="mb-2 mt-3 text-xs font-medium text-muted-foreground">
+                      各周期 spread
+                    </p>
+                    <ul className="flex flex-wrap gap-2 font-mono text-xs tabular-nums">
+                      {Object.entries(evalRow.mean_return_spread)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([k, v]) => (
+                          <li
+                            key={k}
+                            className="rounded-md border border-border/80 bg-muted/20 px-2 py-1"
+                          >
+                            {k}D: {formatIc(v)}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                ) : null}
                 {evalRow.mean_ic &&
                 Object.keys(evalRow.mean_ic).length > 0 ? (
                   <div>

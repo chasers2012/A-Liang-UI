@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Pencil, Trash2, Zap } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -12,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { DataSourcePublic } from "@/lib/quant-agent-api";
 
 import { datasourceSummary } from "../datasource-summary";
@@ -22,7 +24,6 @@ type Props = {
   onToggleEnabled: (ds: DataSourcePublic, enabled: boolean) => void;
   onToggleDefault: (ds: DataSourcePublic, isDefault: boolean) => void;
   onTest: (ds: DataSourcePublic) => void;
-  onEdit: (ds: DataSourcePublic) => void;
   onDelete: (ds: DataSourcePublic) => void;
 };
 
@@ -36,7 +37,6 @@ export function DatasourceTable({
   onToggleEnabled,
   onToggleDefault,
   onTest,
-  onEdit,
   onDelete,
 }: Props) {
   return (
@@ -63,7 +63,14 @@ export function DatasourceTable({
                 key={ds.id}
                 className="border-border/60 transition-colors hover:bg-muted/30"
               >
-                <TableCell className="pl-4 font-medium">{ds.name}</TableCell>
+                <TableCell className="pl-4 font-medium">
+                  <Link
+                    href={`/datasources/${encodeURIComponent(ds.id)}`}
+                    className="text-foreground underline-offset-4 hover:underline"
+                  >
+                    {ds.name}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
                     {ds.type}
@@ -108,15 +115,17 @@ export function DatasourceTable({
                     >
                       <Zap className="size-4" />
                     </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
+                    <Link
+                      href={`/datasources/${encodeURIComponent(ds.id)}/edit`}
                       title="编辑"
-                      onClick={() => onEdit(ds)}
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                        "inline-flex size-7 items-center justify-center",
+                      )}
                     >
-                      <Pencil className="size-4" />
-                    </Button>
+                      <Pencil className="size-4" aria-hidden />
+                      <span className="sr-only">编辑</span>
+                    </Link>
                     <Button
                       type="button"
                       variant="ghost"

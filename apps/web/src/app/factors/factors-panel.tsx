@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Library, Plus } from "lucide-react";
 
+import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -51,7 +52,7 @@ export function FactorsPanel() {
   const count = items?.length ?? 0;
 
   return (
-    <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-7xl flex-1 flex-col gap-8 p-6 md:p-8">
+    <Page>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -153,12 +154,13 @@ export function FactorsPanel() {
               <FactorEvaluationsOverview
                 refreshKey={evalRefreshKey}
                 factorCount={count}
+                onRefresh={() => setEvalRefreshKey((k) => k + 1)}
               />
             )}
           </CardContent>
         </Card>
       </div>
 
-    </div>
+    </Page>
   );
 }

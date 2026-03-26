@@ -8,11 +8,17 @@ from app.datasource_schemas import (
     DataSourcePatch,
     DataSourcePublic,
     DataSourceRecord,
+    SqlTableColumnsRequest,
+    SqlTableColumnsResponse,
     TestResult,
     record_to_public,
     utc_now_iso,
 )
-from app.datasource_test import test_datasource
+from app.datasource_table_columns import (
+    list_table_column_names,
+    sql_config_for_column_listing,
+)
+from app.datasource_test import verify_datasource
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
@@ -96,6 +102,23 @@ def list_datasources() -> list[DataSourcePublic]:
     return [record_to_public(i) for i in reg.items]
 
 
+@router.post("/sql-table-columns", response_model=SqlTableColumnsResponse)
+def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
+    stored = None
+    if body.datasource_id:
+        reg = load_registry()
+        rec = get_by_id(reg, body.datasource_id)
+        if rec is None or rec.type != "sql" or not rec.sql:
+            raise HTTPException(status_code=404, detail="数据源不存在或非 SQL 类型")
+        stored = rec.sql
+    try:
+        cfg = sql_config_for_column_listing(body, stored)
+        cols = list_table_column_names(cfg)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return SqlTableColumnsResponse(columns=cols)
+
+
 @router.get("/{ds_id}", response_model=DataSourcePublic)
 def get_datasource(ds_id: str) -> DataSourcePublic:
     reg = load_registry()
@@ -162,5 +185,5 @@ def test_datasource_endpoint(ds_id: str) -> TestResult:
     rec = get_by_id(reg, ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    ok, msg = test_datasource(rec)
+    ok, msg = verify_datasource(rec)
     return TestResult(ok=ok, message=msg)

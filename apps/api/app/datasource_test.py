@@ -9,7 +9,7 @@ from app.datasource_schemas import DataSourceRecord
 from app.datasource_sql_url import build_sqlalchemy_url
 
 
-def test_datasource(rec: DataSourceRecord) -> tuple[bool, str]:
+def verify_datasource(rec: DataSourceRecord) -> tuple[bool, str]:
     if not rec.enabled:
         return False, "数据源已禁用，请先启用后再测试。"
 

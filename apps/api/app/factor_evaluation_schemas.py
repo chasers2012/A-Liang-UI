@@ -13,6 +13,7 @@ class FactorEvaluationWindow(BaseModel):
 class FactorEvaluationSnapshot(BaseModel):
     evaluated_at: str
     window: Optional[FactorEvaluationWindow] = None
+    stock_count: Optional[int] = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: Optional[str] = None
@@ -28,7 +29,10 @@ class FactorEvaluationRowPublic(BaseModel):
     name: str
     has_evaluation: bool
     evaluated_at: Optional[str] = None
+    window: Optional[FactorEvaluationWindow] = None
+    stock_count: Optional[int] = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
+    mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: Optional[str] = None
 
 
@@ -43,3 +47,7 @@ class FactorEvaluationsAggregatePublic(BaseModel):
 class FactorEvaluationsSummaryPublic(BaseModel):
     aggregate: FactorEvaluationsAggregatePublic
     rows: list[FactorEvaluationRowPublic]
+
+
+class FactorEvaluationRunBody(BaseModel):
+    test_set_id: Optional[str] = None

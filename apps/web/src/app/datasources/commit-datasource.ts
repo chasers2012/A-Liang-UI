@@ -12,19 +12,19 @@ import {
   sqlDriverFromApi,
 } from "./form-model";
 
-/** @returns whether the dialog should close without calling the API */
+/** @returns 保存后的记录；未调用 API（无变更）时返回 null */
 export async function commitDatasourceForm(
   editorMode: EditorMode,
   editingId: string | null,
   form: FormState,
   items: DataSourcePublic[] | null,
-): Promise<boolean> {
+): Promise<DataSourcePublic | null> {
   if (editorMode === "create") {
     if (form.type === "sql") {
       if (!form.db_host.trim() || !form.db_name.trim()) {
         throw new Error("请填写主机（IP）与数据库名");
       }
-      await createDatasource({
+      return await createDatasource({
         name: form.name.trim(),
         type: "sql",
         enabled: form.enabled,
@@ -42,24 +42,22 @@ export async function commitDatasourceForm(
           column_map: mapFromRows(form.column_map_rows),
         },
       });
-    } else {
-      await createDatasource({
-        name: form.name.trim(),
-        type: "csv",
-        enabled: form.enabled,
-        is_default: form.is_default,
-        csv: {
-          path: form.csv_path.trim(),
-          date_column: form.csv_date_column.trim(),
-          asset_column: form.csv_asset_column.trim(),
-          read_csv_kwargs: parseJsonObject(
-            form.read_csv_kwargs_json,
-            "read_csv_kwargs",
-          ),
-        },
-      });
     }
-    return false;
+    return await createDatasource({
+      name: form.name.trim(),
+      type: "csv",
+      enabled: form.enabled,
+      is_default: form.is_default,
+      csv: {
+        path: form.csv_path.trim(),
+        date_column: form.csv_date_column.trim(),
+        asset_column: form.csv_asset_column.trim(),
+        read_csv_kwargs: parseJsonObject(
+          form.read_csv_kwargs_json,
+          "read_csv_kwargs",
+        ),
+      },
+    });
   }
 
   if (!editingId) throw new Error("记录已不存在");
@@ -120,8 +118,7 @@ export async function commitDatasourceForm(
     if (Object.keys(csvPatch).length) patch.csv = csvPatch;
   }
 
-  if (Object.keys(patch).length === 0) return true;
+  if (Object.keys(patch).length === 0) return null;
 
-  await patchDatasource(editingId, patch);
-  return false;
+  return await patchDatasource(editingId, patch);
 }

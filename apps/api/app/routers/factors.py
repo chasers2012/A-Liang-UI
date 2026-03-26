@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 
 from app.factor_code_snapshot_schemas import (
     FactorCodeSnapshotDetailPublic,
@@ -21,12 +21,15 @@ from app.factor_evaluation_history_store import (
 )
 from app.factor_evaluation_schemas import (
     FactorEvaluationRowPublic,
+    FactorEvaluationRunBody,
     FactorEvaluationsAggregatePublic,
     FactorEvaluationsSummaryPublic,
 )
+from app.factor_evaluation_runner import run_evaluation_for_factor
 from app.factor_evaluations_store import (
     delete_evaluation_for_factor,
     load_evaluations_file,
+    upsert_evaluation_for_factor,
 )
 from app.factor_registry import (
     delete_source_file,
@@ -128,7 +131,10 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
                 name=rec.name,
                 has_evaluation=True,
                 evaluated_at=snap.evaluated_at,
+                window=snap.window,
+                stock_count=snap.stock_count,
                 mean_ic=dict(snap.mean_ic),
+                mean_return_spread=dict(snap.mean_return_spread),
                 error=err,
             )
         )
@@ -161,6 +167,47 @@ def factor_evaluation_history(factor_id: str) -> list[FactorEvaluationHistoryEnt
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     return list(reversed(rows))
+
+
+@router.post(
+    "/{factor_id}/evaluations/run",
+    response_model=FactorEvaluationRowPublic,
+)
+def post_factor_evaluation_run(
+    factor_id: str,
+    body: FactorEvaluationRunBody | None = Body(default=None),
+) -> FactorEvaluationRowPublic:
+    reg = load_registry()
+    rec = get_by_id(reg, factor_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="因子不存在")
+    ts_id = body.test_set_id if body is not None else None
+    try:
+        snap = run_evaluation_for_factor(factor_id, test_set_id=ts_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        upsert_evaluation_for_factor(factor_id, snap)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    entry = entry_from_latest_evaluation(snap, linked_snapshot_id=None)
+    try:
+        append_history_entry(factor_id, entry)
+    except ValueError:
+        pass
+    err_raw = (snap.error or "").strip()
+    err: str | None = err_raw or None
+    return FactorEvaluationRowPublic(
+        factor_id=factor_id,
+        name=rec.name,
+        has_evaluation=True,
+        evaluated_at=snap.evaluated_at,
+        window=snap.window,
+        stock_count=snap.stock_count,
+        mean_ic=dict(snap.mean_ic),
+        mean_return_spread=dict(snap.mean_return_spread),
+        error=err,
+    )
 
 
 @router.get(

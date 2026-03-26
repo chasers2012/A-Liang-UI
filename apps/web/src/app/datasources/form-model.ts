@@ -1,6 +1,11 @@
 import type { DataSourcePublic, DataSourceType } from "@/lib/quant-agent-api";
 
-export type ColumnMapRow = { factor: string; column: string };
+export type ColumnMapRow = {
+  factor: string;
+  column: string;
+  /** 为 false 时不写入 column_map；加载表列后为每列展示勾选 */
+  enabled?: boolean;
+};
 
 export type SqlDriverForm = "postgresql" | "mysql";
 
@@ -28,23 +33,45 @@ export type FormState = {
 };
 
 export function emptyColumnMapRows(): ColumnMapRow[] {
-  return [{ factor: "", column: "" }];
+  return [{ factor: "", column: "", enabled: true }];
 }
 
 export function rowsFromMap(m: Record<string, string>): ColumnMapRow[] {
   const e = Object.entries(m);
   if (e.length === 0) return emptyColumnMapRows();
-  return e.map(([factor, column]) => ({ factor, column }));
+  return e.map(([factor, column]) => ({ factor, column, enabled: true }));
 }
 
 export function mapFromRows(rows: ColumnMapRow[]): Record<string, string> {
   const o: Record<string, string> = {};
   for (const r of rows) {
+    if (r.enabled === false) continue;
     const k = r.factor.trim();
     if (!k) continue;
-    o[k] = r.column.trim();
+    const col = r.column.trim();
+    if (!col) continue;
+    o[k] = col;
   }
   return o;
+}
+
+/** 将接口返回的列名与当前映射合并为完整行列表（用于加载表列后写回表单）。 */
+export function mergeLoadedSqlColumns(
+  apiColumns: string[],
+  prev: ColumnMapRow[],
+): ColumnMapRow[] {
+  const colToFactor = new Map<string, string>();
+  for (const r of prev) {
+    if (r.enabled === false) continue;
+    const c = r.column.trim();
+    const f = r.factor.trim();
+    if (c && f) colToFactor.set(c, f);
+  }
+  return apiColumns.map((column) => ({
+    column,
+    factor: colToFactor.get(column) ?? "",
+    enabled: colToFactor.has(column),
+  }));
 }
 
 export function emptyForm(): FormState {

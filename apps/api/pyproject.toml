@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "quant-agent-api"
 version = "0.1.0"
 description = "quant-agent Python API"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
@@ -14,10 +14,19 @@ dependencies = [
   "psycopg[binary]>=3.1.0",
   "pymysql>=1.1.0",
   "workspace",
+  "evaluate",
+  "factor",
+  "sql-datasource",
+  "csv-datasource",
+  "numpy>=1.26.0",
 ]
 
 [tool.uv.sources]
 workspace = { workspace = true }
+evaluate = { workspace = true }
+factor = { workspace = true }
+sql-datasource = { workspace = true }
+csv-datasource = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

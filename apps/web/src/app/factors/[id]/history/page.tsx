@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { History } from "lucide-react";
@@ -14,16 +14,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   type FactorCodeSnapshotDetailPublic,
   type FactorCodeSnapshotSummaryPublic,
   type FactorEvaluationHistoryEntry,
   getFactor,
+  getFactorEvaluationsSummary,
   getFactorSnapshot,
-  listFactorSnapshots,
   getFactorEvaluationHistory,
+  listFactorSnapshots,
 } from "@/lib/quant-agent-api";
+import {
+  formatEvaluationWindow,
+  formatStockCount,
+} from "@/lib/factor-evaluation-display";
 import { FactorFormPageContainer } from "../../ui/factor-form-page";
 import {
   Table,
@@ -34,10 +47,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-const PRIMARY_IC = "5";
-
 function formatTs(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
+}
+
+function formatMetric(n: number | undefined): string {
+  if (n === undefined) return "—";
+  return n.toFixed(4);
+}
+
+function sortedPeriodKeys(rows: FactorEvaluationHistoryEntry[]): string[] {
+  const s = new Set<string>();
+  for (const row of rows) {
+    Object.keys(row.mean_ic ?? {}).forEach((k) => s.add(k));
+    Object.keys(row.mean_return_spread ?? {}).forEach((k) => s.add(k));
+  }
+  return [...s].sort((a, b) => Number(a) - Number(b));
 }
 
 export default function FactorHistoryPage() {
@@ -52,6 +77,8 @@ export default function FactorHistoryPage() {
   const [evalHistory, setEvalHistory] = useState<FactorEvaluationHistoryEntry[]>(
     [],
   );
+  const [primaryPeriod, setPrimaryPeriod] = useState("5");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("");
   const [tab, setTab] = useState<"snapshots" | "evaluations">("snapshots");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<FactorCodeSnapshotDetailPublic | null>(
@@ -61,19 +88,32 @@ export default function FactorHistoryPage() {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const periodKeys = useMemo(
+    () => sortedPeriodKeys(evalHistory),
+    [evalHistory],
+  );
+
+  const periodItemMap = useMemo(() => {
+    const o: Record<string, string> = {};
+    for (const k of periodKeys) o[k] = `${k} 日`;
+    return o;
+  }, [periodKeys]);
+
   const loadLists = useCallback(async () => {
     if (!id) return;
     setLoadError(null);
     setLoading(true);
     try {
-      const [detailFactor, snaps, ev] = await Promise.all([
+      const [detailFactor, snaps, ev, summary] = await Promise.all([
         getFactor(id),
         listFactorSnapshots(id),
         getFactorEvaluationHistory(id),
+        getFactorEvaluationsSummary(),
       ]);
       setFactorName(detailFactor.name);
       setSnapshots(snaps);
       setEvalHistory(ev);
+      setPrimaryPeriod(summary.aggregate.primary_period);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -84,6 +124,18 @@ export default function FactorHistoryPage() {
   useEffect(() => {
     void loadLists();
   }, [loadLists]);
+
+  useEffect(() => {
+    if (periodKeys.length === 0) {
+      setSelectedPeriod("");
+      return;
+    }
+    setSelectedPeriod((prev) => {
+      if (prev && periodKeys.includes(prev)) return prev;
+      if (periodKeys.includes(primaryPeriod)) return primaryPeriod;
+      return periodKeys[0] ?? "";
+    });
+  }, [periodKeys, primaryPeriod]);
 
   useEffect(() => {
     if (snapshots.length === 0) {
@@ -146,6 +198,8 @@ export default function FactorHistoryPage() {
       </FactorFormPageContainer>
     );
   }
+
+  const pp = selectedPeriod || primaryPeriod;
 
   return (
     <FactorFormPageContainer>
@@ -283,11 +337,42 @@ export default function FactorHistoryPage() {
 
       {tab === "evaluations" && (
         <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
-            <CardTitle className="text-sm">评价历史</CardTitle>
-            <CardDescription className="text-xs">
-              保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
-            </CardDescription>
+          <CardHeader className="space-y-3 border-b border-border/60 bg-muted/10 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <CardTitle className="text-sm">评价历史</CardTitle>
+                <CardDescription className="text-xs">
+                  保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
+                </CardDescription>
+              </div>
+              {periodKeys.length > 0 ? (
+                <div className="flex flex-col gap-1.5 sm:items-end">
+                  <Label
+                    htmlFor="eval-period"
+                    className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    展示周期（主周期 {primaryPeriod}D）
+                  </Label>
+                  <Select
+                    modal={false}
+                    items={periodItemMap}
+                    value={selectedPeriod}
+                    onValueChange={(v) => v && setSelectedPeriod(v)}
+                  >
+                    <SelectTrigger id="eval-period" size="sm" className="w-[8.5rem]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {periodKeys.map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {k} 日
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {evalHistory.length === 0 ? (
@@ -304,8 +389,13 @@ export default function FactorHistoryPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>时间</TableHead>
+                      <TableHead className="min-w-[9rem]">样本区间</TableHead>
+                      <TableHead className="text-right">股票数</TableHead>
                       <TableHead className="text-right">
-                        Mean IC ({PRIMARY_IC}D)
+                        Mean IC ({pp}D)
+                      </TableHead>
+                      <TableHead className="text-right">
+                        Return spread ({pp}D)
                       </TableHead>
                       <TableHead>关联快照</TableHead>
                       <TableHead>状态</TableHead>
@@ -313,24 +403,40 @@ export default function FactorHistoryPage() {
                   </TableHeader>
                   <TableBody>
                     {evalHistory.map((row) => {
-                      const ic = row.mean_ic[PRIMARY_IC];
+                      const ic = row.mean_ic[pp];
+                      const spread = row.mean_return_spread?.[pp];
                       const err = row.error?.trim();
                       return (
                         <TableRow key={row.id}>
                           <TableCell className="font-mono text-xs whitespace-nowrap">
                             {formatTs(row.evaluated_at)}
                           </TableCell>
+                          <TableCell className="max-w-[14rem] font-mono text-[0.65rem] leading-snug break-all text-muted-foreground">
+                            {formatEvaluationWindow(row.window)}
+                          </TableCell>
                           <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {err ? "—" : ic != null ? ic.toFixed(4) : "—"}
+                            {formatStockCount(row.stock_count)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs tabular-nums">
+                            {err ? "—" : formatMetric(ic)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs tabular-nums">
+                            {err ? "—" : formatMetric(spread)}
                           </TableCell>
                           <TableCell className="max-w-32 truncate font-mono text-[0.65rem] text-muted-foreground">
                             {row.linked_snapshot_id ?? "—"}
                           </TableCell>
-                          <TableCell className="text-xs">
+                          <TableCell className="max-w-[min(24rem,40vw)] text-xs">
                             {err ? (
-                              <span className="text-destructive" title={err}>
-                                失败
-                              </span>
+                              <div className="space-y-1">
+                                <span className="text-destructive">失败</span>
+                                <p
+                                  className="whitespace-pre-wrap break-words font-mono text-[0.65rem] leading-snug text-destructive/90"
+                                  title={err}
+                                >
+                                  {err}
+                                </p>
+                              </div>
                             ) : (
                               <span className="text-emerald-600 dark:text-emerald-400">
                                 成功

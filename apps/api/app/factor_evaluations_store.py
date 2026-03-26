@@ -5,7 +5,10 @@ from pathlib import Path
 
 from workspace import ensure_dir, workspace_path
 
-from app.factor_evaluation_schemas import FactorEvaluationsFile
+from app.factor_evaluation_schemas import (
+    FactorEvaluationsFile,
+    FactorEvaluationSnapshot,
+)
 
 CONFIG_DIR = "config"
 FACTOR_EVALUATIONS_FILENAME = "factor_evaluations.json"
@@ -48,4 +51,12 @@ def delete_evaluation_for_factor(factor_id: str) -> None:
     if factor_id not in file.items:
         return
     del file.items[factor_id]
+    save_evaluations_file(file)
+
+
+def upsert_evaluation_for_factor(
+    factor_id: str, snap: FactorEvaluationSnapshot
+) -> None:
+    file = load_evaluations_file()
+    file.items[factor_id] = snap
     save_evaluations_file(file)

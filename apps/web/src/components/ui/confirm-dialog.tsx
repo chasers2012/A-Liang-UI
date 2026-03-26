@@ -9,13 +9,13 @@ import {
   DialogFooter,
   DialogHeader,
 } from "@/components/ui/dialog";
-import { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 export type ConfirmDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: ComponentProps<typeof DialogHeader>["title"];
-  description: ComponentProps<typeof DialogHeader>["description"];
+  description: ReactNode;
   cancelLabel?: string;
   confirmLabel: string;
   confirmVariant?: "default" | "destructive";

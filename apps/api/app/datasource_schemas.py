@@ -272,3 +272,20 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
 class TestResult(BaseModel):
     ok: bool
     message: str
+
+
+class SqlTableColumnsRequest(BaseModel):
+    """Resolve connection (optional merge from saved datasource) and inspect ``table``."""
+
+    datasource_id: Optional[str] = None
+    db_driver: str = "postgresql"
+    db_host: str = ""
+    db_port: Optional[int] = None
+    db_username: str = ""
+    db_password: str = ""
+    db_name: str = ""
+    table: str = ""
+
+
+class SqlTableColumnsResponse(BaseModel):
+    columns: list[str]

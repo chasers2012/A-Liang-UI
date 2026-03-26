@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Database, Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,6 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Page } from "@/components/page";
+import { cn } from "@/lib/utils";
 import {
   ApiError,
   type DataSourcePublic,
@@ -22,14 +25,6 @@ import {
   testDatasource,
 } from "@/lib/quant-agent-api";
 
-import { commitDatasourceForm } from "./commit-datasource";
-import {
-  emptyForm,
-  hydrateFormFromDataSource,
-  type EditorMode,
-  type FormState,
-} from "./form-model";
-import { DatasourceEditorDialog } from "./ui/datasource-editor-dialog";
 import { DatasourceTable } from "./ui/datasource-table";
 import { DeleteDatasourceDialog } from "./ui/delete-datasource-dialog";
 
@@ -42,13 +37,6 @@ export function DatasourcesPanel() {
     ok: boolean;
     message: string;
   } | null>(null);
-
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorMode, setEditorMode] = useState<EditorMode>("create");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<DataSourcePublic | null>(
     null,
@@ -68,49 +56,6 @@ export function DatasourcesPanel() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const openCreate = useCallback(() => {
-    setEditorMode("create");
-    setEditingId(null);
-    setForm(emptyForm());
-    setFormError(null);
-    setEditorOpen(true);
-  }, []);
-
-  const openEdit = useCallback((ds: DataSourcePublic) => {
-    setEditorMode("edit");
-    setEditingId(ds.id);
-    setForm(hydrateFormFromDataSource(ds));
-    setFormError(null);
-    setEditorOpen(true);
-  }, []);
-
-  const onSubmitForm = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      setFormError(null);
-      setSubmitting(true);
-      try {
-        const noop = await commitDatasourceForm(
-          editorMode,
-          editingId,
-          form,
-          items,
-        );
-        if (noop) {
-          setEditorOpen(false);
-          return;
-        }
-        setEditorOpen(false);
-        await refresh();
-      } catch (err) {
-        setFormError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [editorMode, editingId, form, items, refresh],
-  );
 
   const withBusy = useCallback(
     async (id: string, fn: () => Promise<unknown>) => {
@@ -167,14 +112,10 @@ export function DatasourcesPanel() {
     }
   };
 
-  const editingSql = editingId
-    ? items?.find((i) => i.id === editingId)?.sql
-    : undefined;
-
   const count = items?.length ?? 0;
 
   return (
-    <div className="mx-auto flex min-h-0 min-w-0 w-full max-w-5xl flex-1 flex-col gap-8 p-6 md:p-8">
+    <Page>
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -193,13 +134,16 @@ export function DatasourcesPanel() {
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
               ~/.quant-agent
             </code>
-            ）。
+            ）。点击名称查看详情。
           </p>
         </div>
-        <Button type="button" onClick={openCreate} className="shrink-0 gap-1.5">
+        <Link
+          href="/datasources/new"
+          className={cn(buttonVariants(), "shrink-0 gap-1.5")}
+        >
           <Plus className="size-4" />
           新增数据源
-        </Button>
+        </Link>
       </header>
 
       {loadError && (
@@ -235,11 +179,17 @@ export function DatasourcesPanel() {
                 strokeWidth={1.25}
               />
               <p className="text-sm text-muted-foreground">
-                暂无数据源，点击右上角「新增数据源」开始配置。
+                暂无数据源，点击「新增数据源」开始配置。
               </p>
-              <Button type="button" variant="secondary" size="sm" onClick={openCreate}>
+              <Link
+                href="/datasources/new"
+                className={cn(
+                  buttonVariants({ variant: "secondary", size: "sm" }),
+                  "inline-flex h-7 items-center px-2.5",
+                )}
+              >
                 新增数据源
-              </Button>
+              </Link>
             </div>
           )}
           {items && items.length > 0 && (
@@ -249,24 +199,11 @@ export function DatasourcesPanel() {
               onToggleEnabled={toggleEnabled}
               onToggleDefault={toggleDefault}
               onTest={runTest}
-              onEdit={openEdit}
               onDelete={setDeleteTarget}
             />
           )}
         </CardContent>
       </Card>
-
-      <DatasourceEditorDialog
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-        editorMode={editorMode}
-        form={form}
-        setForm={setForm}
-        editingSql={editingSql ?? undefined}
-        formError={formError}
-        submitting={submitting}
-        onSubmit={onSubmitForm}
-      />
 
       <DeleteDatasourceDialog
         target={deleteTarget}
@@ -274,6 +211,6 @@ export function DatasourcesPanel() {
         onDismiss={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />
-    </div>
+    </Page>
   );
 }

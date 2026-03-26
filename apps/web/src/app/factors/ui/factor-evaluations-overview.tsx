@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BarChart3 } from "lucide-react";
+import Link from "next/link";
+import { BarChart3, RefreshCw } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -30,11 +32,13 @@ function formatIc(n: number | null | undefined): string {
 type Props = {
   refreshKey: number;
   factorCount: number;
+  onRefresh?: () => void;
 };
 
 export function FactorEvaluationsOverview({
   refreshKey,
   factorCount,
+  onRefresh,
 }: Props) {
   const [data, setData] = useState<FactorEvaluationsSummaryPublic | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,6 +109,20 @@ export function FactorEvaluationsOverview({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
+      {onRefresh ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => onRefresh()}
+          >
+            <RefreshCw className="size-3.5" />
+            刷新评价
+          </Button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border/80 bg-muted/10 px-3 py-2.5">
           <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
@@ -160,6 +178,9 @@ export function FactorEvaluationsOverview({
             <TableRow>
               <TableHead>因子</TableHead>
               <TableHead className="text-right">Mean IC ({pp}D)</TableHead>
+              <TableHead className="hidden text-right md:table-cell">
+                Spread ({pp}D)
+              </TableHead>
               <TableHead className="hidden sm:table-cell">评价时间</TableHead>
               <TableHead className="text-right">状态</TableHead>
             </TableRow>
@@ -167,6 +188,7 @@ export function FactorEvaluationsOverview({
           <TableBody>
             {rows.map((r) => {
               const ic = r.mean_ic[pp];
+              const spread = r.mean_return_spread?.[pp];
               let status: string;
               if (!r.has_evaluation) {
                 status = "未评价";
@@ -178,10 +200,18 @@ export function FactorEvaluationsOverview({
               return (
                 <TableRow key={r.factor_id}>
                   <TableCell className="max-w-40 truncate font-mono text-xs font-medium">
-                    {r.name}
+                    <Link
+                      href={`/factors/${encodeURIComponent(r.factor_id)}`}
+                      className="text-foreground underline-offset-4 hover:underline"
+                    >
+                      {r.name}
+                    </Link>
                   </TableCell>
                   <TableCell className="text-right font-mono text-xs tabular-nums">
                     {r.error ? "—" : formatIc(ic)}
+                  </TableCell>
+                  <TableCell className="hidden text-right font-mono text-xs tabular-nums md:table-cell">
+                    {r.error ? "—" : formatIc(spread)}
                   </TableCell>
                   <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                     {formatIsoShort(r.evaluated_at ?? null)}

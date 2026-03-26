@@ -1,6 +1,7 @@
 /** Base URL for quant-agent FastAPI (no trailing slash). */
 export function getQuantAgentApiBase(): string {
-  const raw = process.env.NEXT_PUBLIC_QUANT_AGENT_API ?? "http://127.0.0.1:8000";
+  const raw =
+    process.env.NEXT_PUBLIC_QUANT_AGENT_API ?? "http://127.0.0.1:8000";
   return raw.replace(/\/$/, "");
 }
 
@@ -59,7 +60,13 @@ function parseDetail(text: string): string {
     const j = JSON.parse(text) as { detail?: unknown };
     if (typeof j.detail === "string") return j.detail;
     if (Array.isArray(j.detail)) {
-      return j.detail.map((d) => (typeof d === "object" && d && "msg" in d ? String((d as { msg: string }).msg) : String(d))).join("; ");
+      return j.detail
+        .map((d) =>
+          typeof d === "object" && d && "msg" in d
+            ? String((d as { msg: string }).msg)
+            : String(d),
+        )
+        .join("; ");
     }
   } catch {
     /* ignore */
@@ -72,8 +79,7 @@ export async function apiFetchJson<T>(
   init?: RequestInit,
 ): Promise<T> {
   const url = `${getQuantAgentApiBase()}${path.startsWith("/") ? path : `/${path}`}`;
-  const hasJsonBody =
-    typeof init?.body === "string" && init.body.length > 0;
+  const hasJsonBody = typeof init?.body === "string" && init.body.length > 0;
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -95,6 +101,12 @@ export function listDatasources(): Promise<DataSourcePublic[]> {
   return apiFetchJson<DataSourcePublic[]>("/datasources");
 }
 
+export function getDatasource(id: string): Promise<DataSourcePublic> {
+  return apiFetchJson<DataSourcePublic>(
+    `/datasources/${encodeURIComponent(id)}`,
+  );
+}
+
 export function createDatasource(body: unknown): Promise<DataSourcePublic> {
   return apiFetchJson<DataSourcePublic>("/datasources", {
     method: "POST",
@@ -106,10 +118,13 @@ export function patchDatasource(
   id: string,
   body: unknown,
 ): Promise<DataSourcePublic> {
-  return apiFetchJson<DataSourcePublic>(`/datasources/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
+  return apiFetchJson<DataSourcePublic>(
+    `/datasources/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 export function deleteDatasource(id: string): Promise<void> {
@@ -122,6 +137,44 @@ export function testDatasource(id: string): Promise<TestResult> {
   return apiFetchJson<TestResult>(
     `/datasources/${encodeURIComponent(id)}/test`,
     { method: "POST" },
+  );
+}
+
+export interface SqlTableColumnsRequestBody {
+  datasource_id?: string | null;
+  db_driver: string;
+  db_host: string;
+  db_port?: number | null;
+  db_username: string;
+  db_password: string;
+  db_name: string;
+  table: string;
+}
+
+export interface SqlTableColumnsResponseBody {
+  columns: string[];
+}
+
+export function fetchSqlTableColumns(
+  body: SqlTableColumnsRequestBody,
+): Promise<SqlTableColumnsResponseBody> {
+  return apiFetchJson<SqlTableColumnsResponseBody>(
+    "/datasources/sql-table-columns",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        ...(body.datasource_id
+          ? { datasource_id: body.datasource_id }
+          : {}),
+        db_driver: body.db_driver,
+        db_host: body.db_host,
+        db_port: body.db_port ?? null,
+        db_username: body.db_username,
+        db_password: body.db_password,
+        db_name: body.db_name,
+        table: body.table,
+      }),
+    },
   );
 }
 
@@ -147,9 +200,7 @@ export function listFactors(): Promise<FactorSummaryPublic[]> {
 }
 
 export function getFactor(id: string): Promise<FactorDetailPublic> {
-  return apiFetchJson<FactorDetailPublic>(
-    `/factors/${encodeURIComponent(id)}`,
-  );
+  return apiFetchJson<FactorDetailPublic>(`/factors/${encodeURIComponent(id)}`);
 }
 
 export function createFactor(body: unknown): Promise<FactorDetailPublic> {
@@ -188,7 +239,10 @@ export interface FactorEvaluationRowPublic {
   name: string;
   has_evaluation: boolean;
   evaluated_at?: string | null;
+  window?: { start?: string | null; end?: string | null } | null;
+  stock_count?: number | null;
   mean_ic: Record<string, number>;
+  mean_return_spread?: Record<string, number>;
   error?: string | null;
 }
 
@@ -231,8 +285,9 @@ export interface FactorEvaluationHistoryEntry {
   linked_snapshot_id?: string | null;
   evaluated_at: string;
   window?: { start?: string | null; end?: string | null } | null;
+  stock_count?: number | null;
   mean_ic: Record<string, number>;
-  mean_return_spread: Record<string, number>;
+  mean_return_spread?: Record<string, number>;
   error?: string | null;
 }
 
@@ -258,5 +313,77 @@ export function getFactorEvaluationHistory(
 ): Promise<FactorEvaluationHistoryEntry[]> {
   return apiFetchJson<FactorEvaluationHistoryEntry[]>(
     `/factors/${encodeURIComponent(factorId)}/evaluations/history`,
+  );
+}
+
+export interface EvaluationTestSetDatasourceBindingPublic {
+  datasource_id: string;
+  datasource_name: string;
+  datasource_type: string;
+  dependencies: string[];
+}
+
+export interface EvaluationTestSetPublic {
+  id: string;
+  name: string;
+  description: string;
+  datasource_bindings: EvaluationTestSetDatasourceBindingPublic[];
+  start: string;
+  end: string;
+  stock_codes: string[];
+  quantiles: number;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function listEvaluationTestSets(): Promise<EvaluationTestSetPublic[]> {
+  return apiFetchJson<EvaluationTestSetPublic[]>("/evaluation-test-sets");
+}
+
+export function getEvaluationTestSet(
+  id: string,
+): Promise<EvaluationTestSetPublic> {
+  return apiFetchJson<EvaluationTestSetPublic>(
+    `/evaluation-test-sets/${encodeURIComponent(id)}`,
+  );
+}
+
+export function createEvaluationTestSet(
+  body: unknown,
+): Promise<EvaluationTestSetPublic> {
+  return apiFetchJson<EvaluationTestSetPublic>("/evaluation-test-sets", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function patchEvaluationTestSet(
+  id: string,
+  body: unknown,
+): Promise<EvaluationTestSetPublic> {
+  return apiFetchJson<EvaluationTestSetPublic>(
+    `/evaluation-test-sets/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  );
+}
+
+export function deleteEvaluationTestSet(id: string): Promise<void> {
+  return apiFetchJson<void>(`/evaluation-test-sets/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function runFactorEvaluation(
+  factorId: string,
+  options?: { testSetId: string | null },
+): Promise<FactorEvaluationRowPublic> {
+  const init: RequestInit = { method: "POST" };
+  if (options !== undefined) {
+    init.body = JSON.stringify({ test_set_id: options.testSetId });
+  }
+  return apiFetchJson<FactorEvaluationRowPublic>(
+    `/factors/${encodeURIComponent(factorId)}/evaluations/run`,
+    init,
   );
 }
