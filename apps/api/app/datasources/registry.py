@@ -6,7 +6,7 @@ from typing import Optional
 
 from workspace import ensure_dir, get_workspace_root, workspace_path
 
-from app.datasource_schemas import DataSourceRecord, RegistryFile
+from app.datasources.schemas import DataSourceRecord, RegistryFile
 
 CONFIG_DIR = "config"
 REGISTRY_FILENAME = "datasources.json"

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation_metric_loader import load_evaluation_metric_class
-from app.evaluation_metric_schemas import (
+from app.evaluation.metric_loader import load_evaluation_metric_class
+from app.evaluation.metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -13,7 +13,7 @@ from app.evaluation_metric_schemas import (
     record_to_summary,
     utc_now_iso,
 )
-from app.evaluation_metrics_store import (
+from app.evaluation.metrics_store import (
     delete_source_file,
     get_by_id,
     load_registry,
@@ -21,7 +21,7 @@ from app.evaluation_metrics_store import (
     save_registry,
     write_source,
 )
-from app.factor_validate import validate_factor_name, validate_source_syntax
+from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 

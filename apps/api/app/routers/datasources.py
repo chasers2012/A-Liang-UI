@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.datasource_registry import get_by_id, load_registry, save_registry
-from app.datasource_schemas import (
+from app.datasources.registry import get_by_id, load_registry, save_registry
+from app.datasources.schemas import (
     DataSourceCreate,
     DataSourcePatch,
     DataSourcePublic,
@@ -14,11 +14,11 @@ from app.datasource_schemas import (
     record_to_public,
     utc_now_iso,
 )
-from app.datasource_table_columns import (
+from app.datasources.table_columns import (
     list_table_column_names,
     sql_config_for_column_listing,
 )
-from app.datasource_test import verify_datasource
+from app.datasources.verify import verify_datasource
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 

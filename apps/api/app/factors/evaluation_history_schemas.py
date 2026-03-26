@@ -4,7 +4,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.factor_evaluation_schemas import FactorEvaluationWindow
+from app.factors.evaluation_schemas import FactorEvaluationWindow
 
 
 class FactorEvaluationHistoryEntry(BaseModel):

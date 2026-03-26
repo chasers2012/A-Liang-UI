@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 
-from app.evaluation_profile_schemas import EvaluationWorkflow
-from app.node_type_registry import builtin_node_definition, is_builtin_type
+from app.evaluation.profile_schemas import EvaluationWorkflow
+from app.evaluation.node_type_registry import builtin_node_definition, is_builtin_type
 
 
 def validate_workflow_graph(

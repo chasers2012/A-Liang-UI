@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.datasource_schemas import utc_now_iso
+from app.datasources.schemas import utc_now_iso
 
 
 class WorkflowViewport(BaseModel):

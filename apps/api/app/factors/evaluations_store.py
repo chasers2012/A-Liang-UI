@@ -5,7 +5,7 @@ from pathlib import Path
 
 from workspace import ensure_dir, workspace_path
 
-from app.factor_evaluation_schemas import (
+from app.factors.evaluation_schemas import (
     FactorEvaluationsFile,
     FactorEvaluationSnapshot,
 )

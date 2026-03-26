@@ -9,23 +9,23 @@ from typing import Optional
 import pandas as pd
 from factor import DependencyResolver
 
-from app.datasource_registry import get_by_id as ds_get_by_id
-from app.datasource_registry import load_registry as load_datasource_registry
-from app.datasource_schemas import DataSourceRecord
-from app.evaluation_test_set_schemas import EvaluationTestSetRecord
-from app.evaluation_test_sets_store import (
+from app.datasources.registry import get_by_id as ds_get_by_id
+from app.datasources.registry import load_registry as load_datasource_registry
+from app.datasources.schemas import DataSourceRecord
+from app.evaluation.test_set_schemas import EvaluationTestSetRecord
+from app.evaluation.test_sets_store import (
     get_by_id as test_set_get_by_id,
     get_default_test_set,
     load_file as load_test_sets_file,
 )
-from app.datasource_sql_url import build_sqlalchemy_url
-from app.factor_evaluation_schemas import (
+from app.datasources.sql_url import build_sqlalchemy_url
+from app.factors.evaluation_schemas import (
     FactorEvaluationSnapshot,
     FactorEvaluationWindow,
 )
-from app.factor_loader import load_factor_class
-from app.factor_registry import get_by_id, load_registry, read_source
-from app.factor_schemas import utc_now_iso
+from app.factors.loader import load_factor_class
+from app.factors.registry import get_by_id, load_registry, read_source
+from app.factors.schemas import utc_now_iso
 
 
 def _pick_default_datasource() -> Optional[DataSourceRecord]:
@@ -148,7 +148,7 @@ def _build_datasource(rec: DataSourceRecord):
             column_map=dict(rec.sql.column_map),
         )
     if rec.type == "csv" and rec.csv:
-        from app.datasource_registry import resolve_csv_path
+        from app.datasources.registry import resolve_csv_path
         from csv_datasource import CsvDataSource
 
         path = resolve_csv_path(rec.csv.path)
@@ -342,7 +342,7 @@ def run_evaluation_for_factor(
     test_set_id: Optional[str] = None,
     evaluation_profile: Optional[object] = None,
 ) -> FactorEvaluationSnapshot:
-    from app.evaluation_profile_schemas import EvaluationProfileRecord
+    from app.evaluation.profile_schemas import EvaluationProfileRecord
 
     merged_ts = (test_set_id or "").strip() or None
     if (
@@ -358,7 +358,7 @@ def run_evaluation_for_factor(
         and isinstance(evaluation_profile, EvaluationProfileRecord)
         and evaluation_profile.workflow.nodes
     ):
-        from app.evaluation_workflow_runner import run_evaluation_profile_workflow
+        from app.evaluation.workflow_runner import run_evaluation_profile_workflow
 
         return run_evaluation_profile_workflow(
             factor_id,

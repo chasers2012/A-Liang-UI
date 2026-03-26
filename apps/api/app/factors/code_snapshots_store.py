@@ -5,13 +5,13 @@ from pathlib import Path
 
 from workspace import ensure_dir, workspace_path
 
-from app.factor_code_snapshot_schemas import (
+from app.factors.code_snapshot_schemas import (
     FactorCodeSnapshot,
     FactorCodeSnapshotsFile,
     FactorCodeSnapshotMeta,
     FactorCodeSnapshotKind,
 )
-from app.factor_schemas import FactorRecord, new_factor_id, utc_now_iso
+from app.factors.schemas import FactorRecord, new_factor_id, utc_now_iso
 
 CONFIG_DIR = "config"
 FACTOR_CODE_SNAPSHOTS_FILENAME = "factor_code_snapshots.json"

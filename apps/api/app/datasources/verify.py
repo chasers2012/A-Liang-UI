@@ -4,9 +4,9 @@ import os
 
 from sqlalchemy import create_engine, text
 
-from app.datasource_registry import resolve_csv_path
-from app.datasource_schemas import DataSourceRecord
-from app.datasource_sql_url import build_sqlalchemy_url
+from app.datasources.registry import resolve_csv_path
+from app.datasources.schemas import DataSourceRecord
+from app.datasources.sql_url import build_sqlalchemy_url
 
 
 def verify_datasource(rec: DataSourceRecord) -> tuple[bool, str]:

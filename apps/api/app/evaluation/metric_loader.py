@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from evaluate import EvaluationMetric
 
-from app.factor_loader import strip_markdown_fences
+from app.factors.loader import strip_markdown_fences
 
 
 def _base_eval_metric_name(base: ast.expr) -> Optional[str]:

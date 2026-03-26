@@ -10,18 +10,18 @@ import pandas as pd
 from evaluate import MeanInformationCoefficientMetric
 from evaluate.factor_evaluator import _alphalens_metrics
 
-from app.evaluation_metric_loader import load_evaluation_metric_class
-from app.evaluation_profile_schemas import EvaluationProfileRecord
-from app.evaluation_metrics_store import get_by_id as metric_get_by_id
-from app.evaluation_metrics_store import load_registry as load_metrics_registry
-from app.evaluation_metrics_store import read_source as read_metric_source
-from app.factor_evaluation_runner import (
+from app.evaluation.metric_loader import load_evaluation_metric_class
+from app.evaluation.profile_schemas import EvaluationProfileRecord
+from app.evaluation.metrics_store import get_by_id as metric_get_by_id
+from app.evaluation.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.metrics_store import read_source as read_metric_source
+from app.factors.evaluation_runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
     build_alphalens_evaluator_for_factor,
 )
-from app.factor_evaluation_schemas import FactorEvaluationSnapshot
-from app.factor_schemas import utc_now_iso
+from app.factors.evaluation_schemas import FactorEvaluationSnapshot
+from app.factors.schemas import utc_now_iso
 
 
 def _workflow_topological_order(workflow) -> list[str]:

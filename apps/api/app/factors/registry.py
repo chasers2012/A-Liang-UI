@@ -6,7 +6,7 @@ from typing import Optional
 
 from workspace import ensure_dir, get_workspace_root, workspace_path
 
-from app.factor_schemas import FACTORS_DIR, FactorRegistryFile, FactorRecord
+from app.factors.schemas import FACTORS_DIR, FactorRegistryFile, FactorRecord
 
 CONFIG_DIR = "config"
 FACTORS_REGISTRY_FILENAME = "factors.json"

@@ -121,7 +121,7 @@ def test_evaluation_history_linked_on_patch(client, workspace_tmp):
 
 
 def test_trim_prefers_dropping_auto(monkeypatch, client):
-    import app.factor_code_snapshots_store as cs
+    import app.factors.code_snapshots_store as cs
 
     monkeypatch.setattr(cs, "MAX_SNAPSHOTS_PER_FACTOR", 3)
     monkeypatch.setattr(cs, "MAX_SNAPSHOTS_HARD_CAP", 5)

@@ -6,7 +6,7 @@ from typing import Optional
 
 from workspace import ensure_dir, get_workspace_root, workspace_path
 
-from app.evaluation_metric_schemas import (
+from app.evaluation.metric_schemas import (
     EVALUATION_METRICS_DIR,
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,

@@ -5,12 +5,12 @@ from pathlib import Path
 
 from workspace import ensure_dir, workspace_path
 
-from app.factor_evaluation_history_schemas import (
+from app.factors.evaluation_history_schemas import (
     FactorEvaluationHistoryEntry,
     FactorEvaluationHistoryFile,
 )
-from app.factor_evaluation_schemas import FactorEvaluationSnapshot
-from app.factor_schemas import new_factor_id
+from app.factors.evaluation_schemas import FactorEvaluationSnapshot
+from app.factors.schemas import new_factor_id
 
 CONFIG_DIR = "config"
 FACTOR_EVALUATION_HISTORY_FILENAME = "factor_evaluation_history.json"

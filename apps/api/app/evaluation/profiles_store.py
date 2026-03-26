@@ -6,7 +6,7 @@ from typing import Optional
 
 from workspace import ensure_dir, workspace_path
 
-from app.evaluation_profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
+from app.evaluation.profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
 
 CONFIG_DIR = "config"
 REGISTRY_FILENAME = "evaluation_profiles.json"

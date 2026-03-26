@@ -6,7 +6,7 @@ from typing import Optional
 
 from workspace import ensure_dir, workspace_path
 
-from app.evaluation_test_set_schemas import (
+from app.evaluation.test_set_schemas import (
     EvaluationTestSetRecord,
     EvaluationTestSetsFile,
 )

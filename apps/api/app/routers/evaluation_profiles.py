@@ -2,22 +2,22 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation_profile_schemas import (
+from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     NodeTypeDefinitionPublic,
     NodeTypeSocketPublic,
 )
-from app.datasource_schemas import utc_now_iso
-from app.evaluation_profiles_store import (
+from app.datasources.schemas import utc_now_iso
+from app.evaluation.profiles_store import (
     apply_default_uniqueness,
     get_by_id,
     load_file,
     save_file,
 )
-from app.node_type_registry import BUILTIN_NODE_SPECS
-from app.workflow_graph_validate import validate_workflow_graph
+from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS
+from app.evaluation.graph_validate import validate_workflow_graph
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 

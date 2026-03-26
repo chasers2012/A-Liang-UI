@@ -2,36 +2,36 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Body, HTTPException
 
-from app.factor_code_snapshot_schemas import (
+from app.factors.code_snapshot_schemas import (
     FactorCodeSnapshotDetailPublic,
     FactorCodeSnapshotSummaryPublic,
 )
-from app.factor_code_snapshots_store import (
+from app.factors.code_snapshots_store import (
     append_code_snapshot,
     delete_snapshots_for_factor,
     get_snapshot,
     list_snapshots_for_factor,
 )
-from app.factor_evaluation_history_schemas import FactorEvaluationHistoryEntry
-from app.factor_evaluation_history_store import (
+from app.factors.evaluation_history_schemas import FactorEvaluationHistoryEntry
+from app.factors.evaluation_history_store import (
     append_history_entry,
     delete_history_for_factor,
     entry_from_latest_evaluation,
     list_history_for_factor,
 )
-from app.factor_evaluation_schemas import (
+from app.factors.evaluation_schemas import (
     FactorEvaluationRowPublic,
     FactorEvaluationRunBody,
     FactorEvaluationsAggregatePublic,
     FactorEvaluationsSummaryPublic,
 )
-from app.factor_evaluation_runner import run_evaluation_for_factor
-from app.factor_evaluations_store import (
+from app.factors.evaluation_runner import run_evaluation_for_factor
+from app.factors.evaluations_store import (
     delete_evaluation_for_factor,
     load_evaluations_file,
     upsert_evaluation_for_factor,
 )
-from app.factor_registry import (
+from app.factors.registry import (
     delete_source_file,
     get_by_id,
     load_registry,
@@ -39,7 +39,7 @@ from app.factor_registry import (
     save_registry,
     write_source,
 )
-from app.factor_schemas import (
+from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
     FactorPatch,
@@ -50,7 +50,7 @@ from app.factor_schemas import (
     record_to_summary,
     utc_now_iso,
 )
-from app.factor_validate import validate_factor_name, validate_source_syntax
+from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 
@@ -186,10 +186,10 @@ def post_factor_evaluation_run(
     prof = None
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
-        from app.evaluation_profiles_store import get_by_id as get_profile_by_id
-        from app.evaluation_profiles_store import load_file as load_profiles_file
-        from app.node_type_registry import list_builtin_types
-        from app.workflow_graph_validate import validate_workflow_graph
+        from app.evaluation.profiles_store import get_by_id as get_profile_by_id
+        from app.evaluation.profiles_store import load_file as load_profiles_file
+        from app.evaluation.node_type_registry import list_builtin_types
+        from app.evaluation.graph_validate import validate_workflow_graph
 
         preg = load_profiles_file()
         prof = get_profile_by_id(preg, pid)
