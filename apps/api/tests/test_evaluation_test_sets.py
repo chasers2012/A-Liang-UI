@@ -10,7 +10,6 @@ def _csv_datasource_body(name: str = "ds_csv") -> dict:
         "name": name,
         "type": "csv",
         "enabled": True,
-        "is_default": True,
         "csv": {
             "path": "eval_test_panel.csv",
             "date_column": "date",

@@ -76,9 +76,6 @@ export function DatasourcesPanel() {
   const toggleEnabled = (ds: DataSourcePublic, enabled: boolean) =>
     void withBusy(ds.id, () => patchDatasource(ds.id, { enabled }));
 
-  const toggleDefault = (ds: DataSourcePublic, isDefault: boolean) =>
-    void withBusy(ds.id, () => patchDatasource(ds.id, { is_default: isDefault }));
-
   const runTest = async (ds: DataSourcePublic) => {
     setBusyId(ds.id);
     setTestHint(null);
@@ -197,7 +194,6 @@ export function DatasourcesPanel() {
               items={items}
               busyId={busyId}
               onToggleEnabled={toggleEnabled}
-              onToggleDefault={toggleDefault}
               onTest={runTest}
               onDelete={setDeleteTarget}
             />

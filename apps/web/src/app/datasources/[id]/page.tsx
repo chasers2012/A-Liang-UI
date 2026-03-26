@@ -232,20 +232,6 @@ export default function DatasourceDetailPage() {
                 />
               </dd>
             </div>
-            <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-center sm:gap-x-4">
-              <dt className="text-muted-foreground">is_default</dt>
-              <dd>
-                <Switch
-                  checked={ds.is_default}
-                  disabled={busy || !ds.enabled}
-                  onCheckedChange={(v) =>
-                    void withBusy(() =>
-                      patchDatasource(ds.id, { is_default: v }),
-                    )
-                  }
-                />
-              </dd>
-            </div>
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">created_at</dt>
               <dd className="font-mono text-xs tabular-nums">{formatIso(ds.created_at)}</dd>

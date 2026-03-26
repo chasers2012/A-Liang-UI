@@ -171,18 +171,6 @@ export function DatasourceForm({
                 />
                 <span className="text-sm font-medium">启用</span>
               </Label>
-              <Label
-                htmlFor="ds-default"
-                className="flex cursor-pointer items-center gap-2 font-normal"
-              >
-                <Switch
-                  id="ds-default"
-                  checked={form.is_default}
-                  disabled={!form.enabled}
-                  onCheckedChange={(v) => set({ is_default: v })}
-                />
-                <span className="text-sm font-medium">设为默认</span>
-              </Label>
             </div>
           </FormSection>
 

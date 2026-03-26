@@ -33,7 +33,6 @@ export interface DataSourcePublic {
   name: string;
   type: DataSourceType;
   enabled: boolean;
-  is_default: boolean;
   sql: SqlPublic | null;
   csv: CsvPublic | null;
   created_at: string;

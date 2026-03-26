@@ -31,7 +31,6 @@ export async function commitDatasourceForm(
         name: form.name.trim(),
         type: "sql",
         enabled: form.enabled,
-        is_default: form.is_default,
         sql: {
           db_driver: form.db_driver,
           db_host: form.db_host.trim(),
@@ -50,7 +49,6 @@ export async function commitDatasourceForm(
       name: form.name.trim(),
       type: "csv",
       enabled: form.enabled,
-      is_default: form.is_default,
       csv: {
         path: form.csv_path.trim(),
         date_column: form.csv_date_column.trim(),
@@ -71,7 +69,6 @@ export async function commitDatasourceForm(
 
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
   if (form.enabled !== orig.enabled) patch.enabled = form.enabled;
-  if (form.is_default !== orig.is_default) patch.is_default = form.is_default;
 
   if (form.type === "sql" && orig.sql) {
     const o = orig.sql;

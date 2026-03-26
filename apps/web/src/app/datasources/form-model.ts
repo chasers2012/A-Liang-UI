@@ -15,7 +15,6 @@ export type FormState = {
   name: string;
   type: DataSourceType;
   enabled: boolean;
-  is_default: boolean;
   db_driver: SqlDriverForm;
   db_host: string;
   db_port: string;
@@ -79,7 +78,6 @@ export function emptyForm(): FormState {
     name: "",
     type: "sql",
     enabled: true,
-    is_default: false,
     db_driver: "postgresql",
     db_host: "",
     db_port: "",
@@ -110,7 +108,6 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
       name: ds.name,
       type: "sql",
       enabled: ds.enabled,
-      is_default: ds.is_default,
       db_driver: sqlDriverFromApi(s.db_driver),
       db_host: s.db_host,
       db_port: s.db_port != null ? String(s.db_port) : "",
@@ -133,7 +130,6 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
       name: ds.name,
       type: "csv",
       enabled: ds.enabled,
-      is_default: ds.is_default,
       csv_path: ds.csv.path,
       csv_date_column: ds.csv.date_column,
       csv_asset_column: ds.csv.asset_column,

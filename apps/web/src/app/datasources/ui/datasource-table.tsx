@@ -22,7 +22,6 @@ type Props = {
   items: DataSourcePublic[];
   busyId: string | null;
   onToggleEnabled: (ds: DataSourcePublic, enabled: boolean) => void;
-  onToggleDefault: (ds: DataSourcePublic, isDefault: boolean) => void;
   onTest: (ds: DataSourcePublic) => void;
   onDelete: (ds: DataSourcePublic) => void;
 };
@@ -35,7 +34,6 @@ export function DatasourceTable({
   items,
   busyId,
   onToggleEnabled,
-  onToggleDefault,
   onTest,
   onDelete,
 }: Props) {
@@ -48,7 +46,6 @@ export function DatasourceTable({
             <TableHead className="w-20 font-medium">类型</TableHead>
             <TableHead className="font-medium">摘要</TableHead>
             <TableHead className="w-24 text-center font-medium">启用</TableHead>
-            <TableHead className="w-24 text-center font-medium">默认</TableHead>
             <TableHead className="w-44 font-medium">更新时间</TableHead>
             <TableHead className="w-36 pr-4 text-right font-medium">
               操作
@@ -88,15 +85,6 @@ export function DatasourceTable({
                       checked={ds.enabled}
                       disabled={busyId === ds.id}
                       onCheckedChange={(v) => onToggleEnabled(ds, v)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={ds.is_default}
-                      disabled={busyId === ds.id || !ds.enabled}
-                      onCheckedChange={(v) => onToggleDefault(ds, v)}
                     />
                   </div>
                 </TableCell>

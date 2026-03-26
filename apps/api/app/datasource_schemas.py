@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 DataSourceType = Literal["sql", "csv"]
 
@@ -37,11 +37,12 @@ class CsvConfigStored(BaseModel):
 
 
 class DataSourceRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     name: str
     type: DataSourceType
     enabled: bool = True
-    is_default: bool = False
     sql: Optional[SqlConfigStored] = None
     csv: Optional[CsvConfigStored] = None
     created_at: str
@@ -98,10 +99,11 @@ class CsvCreate(BaseModel):
 
 
 class DataSourceCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str
     type: DataSourceType
     enabled: bool = True
-    is_default: bool = False
     sql: Optional[SqlCreate] = None
     csv: Optional[CsvCreate] = None
 
@@ -142,7 +144,6 @@ class DataSourceCreate(BaseModel):
                 name=self.name,
                 type="sql",
                 enabled=self.enabled,
-                is_default=self.is_default,
                 sql=sql,
                 csv=None,
                 created_at=now,
@@ -160,7 +161,6 @@ class DataSourceCreate(BaseModel):
             name=self.name,
             type="csv",
             enabled=self.enabled,
-            is_default=self.is_default,
             sql=None,
             csv=csv,
             created_at=now,
@@ -190,9 +190,10 @@ class CsvPatch(BaseModel):
 
 
 class DataSourcePatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: Optional[str] = None
     enabled: Optional[bool] = None
-    is_default: Optional[bool] = None
     sql: Optional[SqlPatch] = None
     csv: Optional[CsvPatch] = None
 
@@ -223,7 +224,6 @@ class DataSourcePublic(BaseModel):
     name: str
     type: DataSourceType
     enabled: bool
-    is_default: bool
     sql: Optional[SqlPublic] = None
     csv: Optional[CsvPublic] = None
     created_at: str
@@ -261,7 +261,6 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
         name=rec.name,
         type=rec.type,
         enabled=rec.enabled,
-        is_default=rec.is_default,
         sql=sql_pub,
         csv=csv_pub,
         created_at=rec.created_at,

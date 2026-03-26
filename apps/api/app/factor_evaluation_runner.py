@@ -1,4 +1,4 @@
-"""Run Alphalens evaluation for a factor using workspace default datasource."""
+"""Run Alphalens evaluation for a factor using workspace panel data sources."""
 
 from __future__ import annotations
 
@@ -33,9 +33,6 @@ def _pick_default_datasource() -> Optional[DataSourceRecord]:
     enabled = [r for r in reg.items if r.enabled]
     if not enabled:
         return None
-    for r in enabled:
-        if r.is_default:
-            return r
     return enabled[0]
 
 

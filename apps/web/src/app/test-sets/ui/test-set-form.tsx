@@ -40,7 +40,8 @@ import {
 
 export type TestSetBindingFormRow = {
   datasource_id: string;
-  dependencies_text: string;
+  /** 因子依赖列名；顺序为预设字段在前，其余按填写顺序 */
+  dependencies: string[];
 };
 
 export type TestSetFormState = {
@@ -58,7 +59,7 @@ export function emptyTestSetForm(): TestSetFormState {
   return {
     name: "",
     description: "",
-    bindings: [{ datasource_id: "", dependencies_text: "" }],
+    bindings: [{ datasource_id: "", dependencies: [] }],
     start: "2023-01-01",
     end: "2024-12-31",
     stock_codes_text: "",
@@ -78,11 +79,9 @@ export function hydrateTestSetForm(row: EvaluationTestSetPublic): TestSetFormSta
     row.datasource_bindings.length > 0
       ? row.datasource_bindings.map((b) => ({
         datasource_id: b.datasource_id,
-        dependencies_text: b.dependencies.length
-          ? b.dependencies.join(", ")
-          : "",
+        dependencies: normalizeBindingDependencies(b.dependencies),
       }))
-      : [{ datasource_id: "", dependencies_text: "" }];
+      : [{ datasource_id: "", dependencies: [] }];
   return {
     name: row.name,
     description: row.description,
@@ -123,6 +122,38 @@ function parseDependencyFields(text: string): string[] {
   return out;
 }
 
+/** 常用行情/量价依赖，与多选框一致；其余名称通过「其它依赖」填写 */
+export const PRESET_DEPENDENCY_FIELDS = [
+  "open",
+  "high",
+  "low",
+  "close",
+  "volume",
+  "amount",
+  "turn",
+  "vwap",
+] as const;
+
+const PRESET_DEPENDENCY_SET = new Set<string>(PRESET_DEPENDENCY_FIELDS);
+
+function normalizeBindingDependencies(deps: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of PRESET_DEPENDENCY_FIELDS) {
+    if (deps.includes(p) && !seen.has(p)) {
+      seen.add(p);
+      out.push(p);
+    }
+  }
+  for (const d of deps) {
+    if (!PRESET_DEPENDENCY_SET.has(d) && !seen.has(d)) {
+      seen.add(d);
+      out.push(d);
+    }
+  }
+  return out;
+}
+
 type Props = {
   mode: "create" | "edit";
   testSetId?: string;
@@ -156,7 +187,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
   const addBinding = useCallback(() => {
     setForm((f) => ({
       ...f,
-      bindings: [...f.bindings, { datasource_id: "", dependencies_text: "" }],
+      bindings: [...f.bindings, { datasource_id: "", dependencies: [] }],
     }));
   }, []);
 
@@ -185,7 +216,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
           if (enabled.length === 1) {
             setForm((prev) => ({
               ...prev,
-              bindings: [{ datasource_id: enabled[0].id, dependencies_text: "" }],
+              bindings: [{ datasource_id: enabled[0].id, dependencies: [] }],
             }));
           }
         }
@@ -229,8 +260,8 @@ export function TestSetForm({ mode, testSetId }: Props) {
     }
     if (form.bindings.length > 1) {
       for (const b of form.bindings) {
-        if (!parseDependencyFields(b.dependencies_text).length) {
-          setFormError("多个数据源时，每条绑定须填写依赖字段（如 close、volume）");
+        if (!b.dependencies.length) {
+          setFormError("多个数据源时，每条绑定须至少勾选一个依赖字段或填写其它依赖");
           return;
         }
       }
@@ -243,7 +274,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
     const stock_codes = parseStockCodesFromText(form.stock_codes_text);
     const datasource_bindings = form.bindings.map((b) => ({
       datasource_id: b.datasource_id.trim(),
-      dependencies: parseDependencyFields(b.dependencies_text),
+      dependencies: normalizeBindingDependencies(b.dependencies),
     }));
     const payload = {
       name,
@@ -306,7 +337,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
           {mode === "create" ? "新增测试集" : "编辑测试集"}
         </h1>
         <p className="text-sm text-muted-foreground">
-          可配置多条数据源绑定；仅一条且依赖字段留空时，运行评价将使用因子的全部 dependencies。
+          可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。
         </p>
       </header>
 
@@ -374,7 +405,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
               <div>
                 <CardTitle className="text-base">数据源绑定</CardTitle>
                 <CardDescription>
-                  每条绑定对应一个已启用数据源及其提供的因子依赖字段；多源时字段不可重复。
+                  每条绑定对应一个已启用数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
                 </CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={addBinding}>
@@ -427,17 +458,43 @@ export function TestSetForm({ mode, testSetId }: Props) {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor={`ts-deps-${index}`}>依赖字段</Label>
-                  <Input
-                    id={`ts-deps-${index}`}
-                    value={row.dependencies_text}
-                    onChange={(e) =>
-                      updateBinding(index, { dependencies_text: e.target.value })
-                    }
-                    placeholder="单数据源可留空；多源时必填，如 close、volume"
-                    className="font-mono text-sm"
-                  />
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>依赖字段</Label>
+                    <p className="text-xs text-muted-foreground">
+                      单数据源时可全不选，表示使用因子全部依赖；多数据源时须至少选择或填写一项。
+                    </p>
+                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-md border border-border/60 bg-background/50 px-3 py-3">
+                      {PRESET_DEPENDENCY_FIELDS.map((field) => (
+                        <Label
+                          key={field}
+                          className="flex cursor-pointer items-center gap-2 font-normal"
+                        >
+                          <input
+                            type="checkbox"
+                            className={cn(
+                              "size-4 shrink-0 rounded border border-input accent-primary",
+                              "cursor-pointer",
+                            )}
+                            checked={row.dependencies.includes(field)}
+                            onChange={(e) => {
+                              const on = e.target.checked;
+                              const next = on
+                                ? normalizeBindingDependencies([
+                                  ...row.dependencies,
+                                  field,
+                                ])
+                                : normalizeBindingDependencies(
+                                  row.dependencies.filter((d) => d !== field),
+                                );
+                              updateBinding(index, { dependencies: next });
+                            }}
+                          />
+                          <span className="font-mono text-sm">{field}</span>
+                        </Label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

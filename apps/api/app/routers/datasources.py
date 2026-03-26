@@ -23,29 +23,12 @@ from app.datasource_test import verify_datasource
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
 
-def _apply_default_uniqueness(items: list[DataSourceRecord]) -> None:
-    default_ids = [i.id for i in items if i.is_default]
-    if len(default_ids) <= 1:
-        return
-    keep = default_ids[-1]
-    for i in items:
-        if i.id != keep:
-            i.is_default = False
-
-
-def _clear_default_if_disabled(rec: DataSourceRecord) -> None:
-    if not rec.enabled:
-        rec.is_default = False
-
-
 def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data:
         rec.name = data["name"]
     if "enabled" in data:
         rec.enabled = data["enabled"]
-    if "is_default" in data:
-        rec.is_default = data["is_default"]
 
     if rec.type == "sql" and rec.sql and "sql" in data:
         sp = data["sql"]
@@ -132,12 +115,7 @@ def get_datasource(ds_id: str) -> DataSourcePublic:
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     reg = load_registry()
     new_rec = body.to_record()
-    if new_rec.is_default:
-        for i in reg.items:
-            i.is_default = False
-    _clear_default_if_disabled(new_rec)
     reg.items.append(new_rec)
-    _apply_default_uniqueness(reg.items)
     save_registry(reg)
     return record_to_public(new_rec)
 
@@ -157,14 +135,6 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
 
     _merge_patch(rec, body)
     rec.updated_at = utc_now_iso()
-    _clear_default_if_disabled(rec)
-
-    if rec.is_default:
-        for i in reg.items:
-            if i.id != rec.id:
-                i.is_default = False
-
-    _apply_default_uniqueness(reg.items)
     save_registry(reg)
     return record_to_public(rec)
 
