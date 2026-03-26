@@ -5,14 +5,13 @@ from factor.batch import (
     merged_dependencies,
 )
 from factor.datasource import FactorDataSource
-from factor.dependency_resolver import DependencyResolver, DependencySolverDataSource
+from factor.dependency_resolver import DependencyResolver
 from factor.factor import Factor
 
 __all__ = [
     "Factor",
     "FactorDataSource",
     "DependencyResolver",
-    "DependencySolverDataSource",
     "compute_factor_values",
     "compute_factor_values_from_source",
     "max_lookback",

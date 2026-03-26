@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-from factor import DependencyResolver, DependencySolverDataSource
+from factor import DependencyResolver
 from factor.datasource import FactorDataSource
 
 
@@ -136,42 +136,3 @@ def test_no_registration_raises() -> None:
             stock_codes=None,
             window=0,
         )
-
-
-class _FakeSolver:
-    @classmethod
-    def get_data(
-        cls,
-        fields: list[str],
-        end_date: str,
-        stock_codes: list[str] | None = None,
-        start_date: str | None = None,
-        window: int = 0,
-    ) -> pd.DataFrame:
-        _ = (stock_codes, window)
-        df = _panel(
-            [(pd.Timestamp("2024-01-02"), "X", 3.0)],
-            fields,
-        )
-        return df
-
-    @classmethod
-    def list_registered_fields(cls) -> list[str]:
-        return ["close"]
-
-
-def test_dependency_solver_source_uses_injected_solver() -> None:
-    ds = DependencySolverDataSource(solver=_FakeSolver)
-    out = ds.get_panel(
-        fields=["close"],
-        start_date="2024-01-01",
-        end_date="2024-01-31",
-        stock_codes=None,
-        window=1,
-    )
-    assert "close" in out.columns
-    assert len(out) == 1
-
-
-def test_dependency_solver_source_list_fields_injected() -> None:
-    assert DependencySolverDataSource.list_solver_fields(solver=_FakeSolver) == ["close"]

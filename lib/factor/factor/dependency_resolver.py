@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 
@@ -24,8 +24,8 @@ class DependencyResolver:
     Same role as trade-backend ``DependencySolver`` for field→source routing,
     but sources are pluggable :class:`FactorDataSource` objects instead of DB tables.
 
-    Not a :class:`FactorDataSource` itself; :class:`Factor` calls :meth:`get_panel`
-    on a resolver when ``dependency_resolver=`` is configured.
+    Not a :class:`FactorDataSource` itself; :class:`Factor` loads panels only through
+    a resolver (``dependency_resolver`` on the factor or per-call override).
     """
 
     def __init__(self) -> None:
@@ -123,35 +123,3 @@ class DependencyResolver:
 
         merged = _merge_panels(parts)
         return merged[fields]
-
-
-class DependencySolverDataSource(FactorDataSource):
-    """
-    Adapts a class or object with ``DependencySolver``-style ``get_data`` /
-    ``list_registered_fields`` into :class:`FactorDataSource`.
-    """
-
-    def __init__(self, solver: Any) -> None:
-        self._solver = solver
-
-    @staticmethod
-    def list_solver_fields(solver: Any) -> List[str]:
-        return list(solver.list_registered_fields())
-
-    def get_panel(
-        self,
-        *,
-        fields: List[str],
-        start_date: Optional[str],
-        end_date: str,
-        stock_codes: Optional[List[str]],
-        window: int,
-    ) -> pd.DataFrame:
-        s = self._solver
-        return s.get_data(
-            fields,
-            end_date,
-            stock_codes=stock_codes,
-            start_date=start_date,
-            window=window,
-        )

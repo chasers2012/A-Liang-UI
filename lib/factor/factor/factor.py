@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
-    from factor.datasource import FactorDataSource
     from factor.dependency_resolver import DependencyResolver
 
 
@@ -34,12 +33,8 @@ class Factor(ABC):
         self,
         *,
         dependency_resolver: Optional["DependencyResolver"] = None,
-        data_source: Optional["FactorDataSource"] = None,
     ) -> None:
-        if dependency_resolver is not None and data_source is not None:
-            raise ValueError("Pass only one of dependency_resolver or data_source")
         self._dependency_resolver = dependency_resolver
-        self._data_source = data_source
 
     @abstractmethod
     def calc(self, data: pd.DataFrame) -> pd.Series | pd.DataFrame:
@@ -62,19 +57,16 @@ class Factor(ABC):
         stock_codes: Optional[List[str]] = None,
         *,
         dependency_resolver: Optional["DependencyResolver"] = None,
-        data_source: Optional["FactorDataSource"] = None,
     ) -> pd.DataFrame:
         """
-        Load panel data via :class:`FactorDataSource` and run ``calc``.
+        Load panel data via :class:`DependencyResolver` and run ``calc``.
 
         Args:
             start_date: ``YYYY-MM-DD``, or None / empty to keep only the last
                 available date (not after ``end_date`` when set).
             end_date: ``YYYY-MM-DD``
             stock_codes: Assets to include, or None for full universe.
-            dependency_resolver: Override instance :class:`DependencyResolver` for this call
-                (mutually exclusive with ``data_source``).
-            data_source: Override instance ``data_source`` for this call.
+            dependency_resolver: Override instance :class:`DependencyResolver` for this call.
 
         Returns:
             DataFrame, MultiIndex (date, asset), columns named per ``calc`` rules.
@@ -84,7 +76,6 @@ class Factor(ABC):
             end_date,
             stock_codes,
             dependency_resolver=dependency_resolver,
-            data_source=data_source,
         )
 
         if not isinstance(price_data.index, pd.MultiIndex):
@@ -203,14 +194,12 @@ class Factor(ABC):
         stock_codes: Optional[List[str]] = None,
         *,
         dependency_resolver: Optional["DependencyResolver"] = None,
-        data_source: Optional["FactorDataSource"] = None,
     ) -> pd.DataFrame:
         return self.calculate(
             start_date,
             end_date,
             stock_codes,
             dependency_resolver=dependency_resolver,
-            data_source=data_source,
         )
 
     def _load_data(
@@ -221,41 +210,20 @@ class Factor(ABC):
         dependencies: Optional[List[str]] = None,
         *,
         dependency_resolver: Optional["DependencyResolver"] = None,
-        data_source: Optional["FactorDataSource"] = None,
     ) -> pd.DataFrame:
-        if dependency_resolver is not None and data_source is not None:
-            raise ValueError("Pass only one of dependency_resolver or data_source")
-
         resolver: Optional["DependencyResolver"] = (
             dependency_resolver
             if dependency_resolver is not None
             else self._dependency_resolver
         )
-        ds: Optional["FactorDataSource"] = (
-            data_source if data_source is not None else self._data_source
-        )
-
-        if resolver is not None and ds is not None:
+        if resolver is None:
             raise ValueError(
-                "Pass only one of dependency_resolver or data_source "
-                "(including instance defaults from __init__)"
-            )
-        if resolver is None and ds is None:
-            raise ValueError(
-                f"Factor {self.name}: set dependency_resolver or data_source in __init__, "
-                "or pass dependency_resolver= / data_source= to calculate()"
+                f"Factor {self.name}: set dependency_resolver in __init__, "
+                "or pass dependency_resolver= to calculate()"
             )
 
         deps = dependencies if dependencies is not None else self.dependencies
-        if resolver is not None:
-            return resolver.get_panel(
-                fields=deps,
-                start_date=start_date,
-                end_date=end_date,
-                stock_codes=stock_codes,
-                window=self.max_window,
-            )
-        return ds.get_panel(
+        return resolver.get_panel(
             fields=deps,
             start_date=start_date,
             end_date=end_date,
