@@ -161,9 +161,16 @@ def _build_datasource(rec: DataSourceRecord):
     raise ValueError("数据源配置不完整")
 
 
-def run_evaluation_for_factor(
+def build_alphalens_evaluator_for_factor(
     factor_id: str, *, test_set_id: Optional[str] = None
-) -> FactorEvaluationSnapshot:
+) -> tuple[
+    Optional[FactorEvaluationSnapshot],
+    Optional[object],
+    FactorEvaluationWindow,
+    int,
+    Optional[list[str]],
+]:
+    """Return (error_snapshot, evaluator, window, quantiles, stock_codes) on success error is None."""
     reg = load_registry()
     rec = get_by_id(reg, factor_id)
     if rec is None:
@@ -178,22 +185,34 @@ def run_evaluation_for_factor(
     try:
         cls, _ = load_factor_class(src)
     except ValueError as e:
-        return FactorEvaluationSnapshot(
-            evaluated_at=utc_now_iso(),
-            window=window,
-            mean_ic={},
-            mean_return_spread={},
-            error=str(e),
+        return (
+            FactorEvaluationSnapshot(
+                evaluated_at=utc_now_iso(),
+                window=window,
+                mean_ic={},
+                mean_return_spread={},
+                error=str(e),
+            ),
+            None,
+            window,
+            quantiles,
+            stock_codes,
         )
 
     deps = list(cls.dependencies)
     if not deps:
-        return FactorEvaluationSnapshot(
-            evaluated_at=utc_now_iso(),
-            window=window,
-            mean_ic={},
-            mean_return_spread={},
-            error="因子 dependencies 为空",
+        return (
+            FactorEvaluationSnapshot(
+                evaluated_at=utc_now_iso(),
+                window=window,
+                mean_ic={},
+                mean_return_spread={},
+                error="因子 dependencies 为空",
+            ),
+            None,
+            window,
+            quantiles,
+            stock_codes,
         )
 
     resolver = DependencyResolver()
@@ -201,12 +220,18 @@ def run_evaluation_for_factor(
         if ts_rec is not None:
             binds = list(ts_rec.datasource_bindings)
             if not binds:
-                return FactorEvaluationSnapshot(
-                    evaluated_at=utc_now_iso(),
-                    window=window,
-                    mean_ic={},
-                    mean_return_spread={},
-                    error="测试集未配置数据源绑定",
+                return (
+                    FactorEvaluationSnapshot(
+                        evaluated_at=utc_now_iso(),
+                        window=window,
+                        mean_ic={},
+                        mean_return_spread={},
+                        error="测试集未配置数据源绑定",
+                    ),
+                    None,
+                    window,
+                    quantiles,
+                    stock_codes,
                 )
             n_b = len(binds)
             for b in binds:
@@ -215,43 +240,67 @@ def run_evaluation_for_factor(
                 fields = [x.strip() for x in b.dependencies if str(x).strip()]
                 if not fields:
                     if n_b > 1:
-                        return FactorEvaluationSnapshot(
-                            evaluated_at=utc_now_iso(),
-                            window=window,
-                            mean_ic={},
-                            mean_return_spread={},
-                            error="测试集含多个数据源时，每条绑定须填写 dependencies",
+                        return (
+                            FactorEvaluationSnapshot(
+                                evaluated_at=utc_now_iso(),
+                                window=window,
+                                mean_ic={},
+                                mean_return_spread={},
+                                error="测试集含多个数据源时，每条绑定须填写 dependencies",
+                            ),
+                            None,
+                            window,
+                            quantiles,
+                            stock_codes,
                         )
                     fields = list(deps)
                 resolver.register_datasource(panel_src, fields)
             missing = [f for f in deps if resolver.source_for_field(f) is None]
             if missing:
-                return FactorEvaluationSnapshot(
-                    evaluated_at=utc_now_iso(),
-                    window=window,
-                    mean_ic={},
-                    mean_return_spread={},
-                    error=f"测试集数据源未覆盖因子依赖: {missing}",
+                return (
+                    FactorEvaluationSnapshot(
+                        evaluated_at=utc_now_iso(),
+                        window=window,
+                        mean_ic={},
+                        mean_return_spread={},
+                        error=f"测试集数据源未覆盖因子依赖: {missing}",
+                    ),
+                    None,
+                    window,
+                    quantiles,
+                    stock_codes,
                 )
         else:
             assert legacy_ds is not None
             panel_src = _build_datasource(legacy_ds)
             resolver.register_datasource(panel_src, deps)
     except ValueError as e:
-        return FactorEvaluationSnapshot(
-            evaluated_at=utc_now_iso(),
-            window=window,
-            mean_ic={},
-            mean_return_spread={},
-            error=str(e),
+        return (
+            FactorEvaluationSnapshot(
+                evaluated_at=utc_now_iso(),
+                window=window,
+                mean_ic={},
+                mean_return_spread={},
+                error=str(e),
+            ),
+            None,
+            window,
+            quantiles,
+            stock_codes,
         )
     except Exception as e:  # noqa: BLE001
-        return FactorEvaluationSnapshot(
-            evaluated_at=utc_now_iso(),
-            window=window,
-            mean_ic={},
-            mean_return_spread={},
-            error=f"数据源初始化失败: {e}",
+        return (
+            FactorEvaluationSnapshot(
+                evaluated_at=utc_now_iso(),
+                window=window,
+                mean_ic={},
+                mean_return_spread={},
+                error=f"数据源初始化失败: {e}",
+            ),
+            None,
+            window,
+            quantiles,
+            stock_codes,
         )
 
     inst = cls(dependency_resolver=resolver)
@@ -263,26 +312,105 @@ def run_evaluation_for_factor(
 
         from evaluate import AlphalensFactorEvaluator
     except Exception as e:  # noqa: BLE001
-        return FactorEvaluationSnapshot(
-            evaluated_at=utc_now_iso(),
-            window=window,
-            mean_ic={},
-            mean_return_spread={},
-            error=f"评价依赖未就绪: {e}",
+        return (
+            FactorEvaluationSnapshot(
+                evaluated_at=utc_now_iso(),
+                window=window,
+                mean_ic={},
+                mean_return_spread={},
+                error=f"评价依赖未就绪: {e}",
+            ),
+            None,
+            window,
+            quantiles,
+            stock_codes,
         )
 
-    try:
-        ev = AlphalensFactorEvaluator(
-            inst,
-            start_date=start,
-            end_date=end,
-            stock_codes=stock_codes,
-            long_short=True,
+    ev = AlphalensFactorEvaluator(
+        inst,
+        start_date=start,
+        end_date=end,
+        stock_codes=stock_codes,
+        long_short=True,
+    )
+    return None, ev, window, quantiles, stock_codes
+
+
+def run_evaluation_for_factor(
+    factor_id: str,
+    *,
+    test_set_id: Optional[str] = None,
+    evaluation_profile: Optional[object] = None,
+) -> FactorEvaluationSnapshot:
+    from app.evaluation_profile_schemas import EvaluationProfileRecord
+
+    merged_ts = (test_set_id or "").strip() or None
+    if (
+        evaluation_profile is not None
+        and isinstance(evaluation_profile, EvaluationProfileRecord)
+        and evaluation_profile.test_set_id
+        and merged_ts is None
+    ):
+        merged_ts = evaluation_profile.test_set_id.strip() or None
+
+    if (
+        evaluation_profile is not None
+        and isinstance(evaluation_profile, EvaluationProfileRecord)
+        and evaluation_profile.workflow.nodes
+    ):
+        from app.evaluation_workflow_runner import run_evaluation_profile_workflow
+
+        return run_evaluation_profile_workflow(
+            factor_id,
+            evaluation_profile,
+            test_set_id=merged_ts,
         )
-        n_stocks = _stock_count_from_alignment(ev.alignment_index())
-        out = ev.evaluate_factor(quantiles=quantiles, periods=(1, 5, 10, 20))
+
+    err, ev, window, quantiles, _ = build_alphalens_evaluator_for_factor(
+        factor_id, test_set_id=merged_ts
+    )
+    if err is not None:
+        snap = err
+        if evaluation_profile is not None and isinstance(
+            evaluation_profile, EvaluationProfileRecord
+        ):
+            snap = snap.model_copy(
+                update={"evaluation_profile_id": evaluation_profile.id}
+            )
+        return snap
+    assert ev is not None
+
+    prep_periods = (1, 5, 10, 20)
+    prep_q: Optional[int] = None
+    long_short = True
+    max_loss = 0.5
+    if evaluation_profile is not None and isinstance(
+        evaluation_profile, EvaluationProfileRecord
+    ):
+        pr = evaluation_profile.prepare
+        prep_periods = tuple(int(x) for x in pr.forward_return_periods)
+        prep_q = pr.quantiles
+        long_short = pr.long_short
+        max_loss = pr.max_loss
+
+    q_use = prep_q if prep_q is not None else quantiles
+    try:
+        ev_eval = ev
+        ev_eval.long_short = long_short
+        n_stocks = _stock_count_from_alignment(ev_eval.alignment_index())
+        out = ev_eval.evaluate_factor(
+            quantiles=q_use,
+            periods=prep_periods,
+            max_loss=max_loss,
+        )
         mean_ic = _series_to_period_dict(out.metrics.mean_ic)
         mean_spread = _series_to_period_dict(out.metrics.mean_return_spread)
+        pid = (
+            evaluation_profile.id
+            if evaluation_profile is not None
+            and isinstance(evaluation_profile, EvaluationProfileRecord)
+            else None
+        )
         return FactorEvaluationSnapshot(
             evaluated_at=utc_now_iso(),
             window=window,
@@ -290,6 +418,7 @@ def run_evaluation_for_factor(
             mean_ic=mean_ic,
             mean_return_spread=mean_spread,
             error=None,
+            evaluation_profile_id=pid,
         )
     except Exception as e:  # noqa: BLE001
         tb = traceback.format_exc()

@@ -21,15 +21,28 @@ export function FactorEvaluationsPagePanel() {
           评价体系
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          本页说明因子评价在 workspace 中的落盘方式与使用方式；各因子的 IC、Spread
-          等汇总表请在{" "}
+          配置{" "}
+          <Link
+            href="/evaluation-profiles"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            评价方案
+          </Link>{" "}
+          （节点图工作流与 Alphalens 参数）与{" "}
+          <Link
+            href="/evaluation-metrics"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            评价指标
+          </Link>
+          （自定义 EvaluationMetric 源码）。各因子 IC、Spread 汇总请在{" "}
           <Link
             href="/factors"
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
             因子库
           </Link>{" "}
-          右侧「评价概览」查看与刷新。
+          「评价概览」查看与刷新。
         </p>
       </header>
 
@@ -73,7 +86,22 @@ export function FactorEvaluationsPagePanel() {
               <code className="mx-1 rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                 config/factor_evaluations.json
               </code>
-              ，由 CLI / Agent 等写入后，在因子库页「评价概览」中展示。
+              ，在因子库「评价概览」与运行评价时更新。
+            </li>
+            <li>
+              评价方案：
+              <code className="mx-1 rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                config/evaluation_profiles.json
+              </code>
+              ；评价指标：
+              <code className="mx-1 rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                config/evaluation_metrics.json
+              </code>
+              与{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                evaluation_metrics/
+              </code>
+              。
             </li>
           </ul>
           <p>

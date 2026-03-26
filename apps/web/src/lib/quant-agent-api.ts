@@ -375,14 +375,169 @@ export function deleteEvaluationTestSet(id: string): Promise<void> {
 
 export function runFactorEvaluation(
   factorId: string,
-  options?: { testSetId: string | null },
+  options?: {
+    testSetId?: string | null;
+    evaluationProfileId?: string | null;
+  },
 ): Promise<FactorEvaluationRowPublic> {
   const init: RequestInit = { method: "POST" };
   if (options !== undefined) {
-    init.body = JSON.stringify({ test_set_id: options.testSetId });
+    init.body = JSON.stringify({
+      test_set_id: options.testSetId ?? null,
+      evaluation_profile_id: options.evaluationProfileId ?? null,
+    });
   }
   return apiFetchJson<FactorEvaluationRowPublic>(
     `/factors/${encodeURIComponent(factorId)}/evaluations/run`,
     init,
+  );
+}
+
+export interface EvaluationMetricSummaryPublic {
+  id: string;
+  name: string;
+  description: string;
+  source_path: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {
+  source: string;
+}
+
+export function listEvaluationMetrics(): Promise<EvaluationMetricSummaryPublic[]> {
+  return apiFetchJson<EvaluationMetricSummaryPublic[]>("/evaluation-metrics");
+}
+
+export function getEvaluationMetric(
+  id: string,
+): Promise<EvaluationMetricDetailPublic> {
+  return apiFetchJson<EvaluationMetricDetailPublic>(
+    `/evaluation-metrics/${encodeURIComponent(id)}`,
+  );
+}
+
+export function createEvaluationMetric(
+  body: unknown,
+): Promise<EvaluationMetricDetailPublic> {
+  return apiFetchJson<EvaluationMetricDetailPublic>("/evaluation-metrics", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function patchEvaluationMetric(
+  id: string,
+  body: unknown,
+): Promise<EvaluationMetricDetailPublic> {
+  return apiFetchJson<EvaluationMetricDetailPublic>(
+    `/evaluation-metrics/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  );
+}
+
+export function deleteEvaluationMetric(id: string): Promise<void> {
+  return apiFetchJson<void>(`/evaluation-metrics/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export interface WorkflowNodeDto {
+  id: string;
+  type: string;
+  pos: [number, number];
+  params: Record<string, unknown>;
+}
+
+export interface WorkflowLinkDto {
+  id?: string | null;
+  from_node: string;
+  from_socket: string;
+  to_node: string;
+  to_socket: string;
+}
+
+export interface EvaluationWorkflowDto {
+  nodes: WorkflowNodeDto[];
+  links: WorkflowLinkDto[];
+  viewport?: { x: number; y: number; zoom: number } | null;
+}
+
+export interface EvaluationProfilePrepareDto {
+  forward_return_periods: number[];
+  quantiles: number | null;
+  long_short: boolean;
+  max_loss: number;
+}
+
+export interface EvaluationProfilePublic {
+  id: string;
+  name: string;
+  description: string;
+  test_set_id: string | null;
+  prepare: EvaluationProfilePrepareDto;
+  workflow: EvaluationWorkflowDto;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NodeTypeSocketPublic {
+  name: string;
+  required: boolean;
+  value_type: string;
+}
+
+export interface NodeTypeDefinitionPublic {
+  type: string;
+  label: string;
+  description: string;
+  inputs: NodeTypeSocketPublic[];
+  outputs: NodeTypeSocketPublic[];
+  user_defined: boolean;
+  metric_id: string | null;
+}
+
+export function listEvaluationProfiles(): Promise<EvaluationProfilePublic[]> {
+  return apiFetchJson<EvaluationProfilePublic[]>("/evaluation-profiles");
+}
+
+export function getEvaluationProfile(
+  id: string,
+): Promise<EvaluationProfilePublic> {
+  return apiFetchJson<EvaluationProfilePublic>(
+    `/evaluation-profiles/${encodeURIComponent(id)}`,
+  );
+}
+
+export function createEvaluationProfile(
+  body: unknown,
+): Promise<EvaluationProfilePublic> {
+  return apiFetchJson<EvaluationProfilePublic>("/evaluation-profiles", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function patchEvaluationProfile(
+  id: string,
+  body: unknown,
+): Promise<EvaluationProfilePublic> {
+  return apiFetchJson<EvaluationProfilePublic>(
+    `/evaluation-profiles/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  );
+}
+
+export function deleteEvaluationProfile(id: string): Promise<void> {
+  return apiFetchJson<void>(`/evaluation-profiles/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function listEvaluationNodeTypes(): Promise<NodeTypeDefinitionPublic[]> {
+  return apiFetchJson<NodeTypeDefinitionPublic[]>(
+    "/evaluation-profiles/node-types",
   );
 }

@@ -5,11 +5,15 @@ from factor.batch import (
     merged_dependencies,
 )
 
+from .evaluation_metric import EvaluationMetric
+
 _ALPHALENS_EXPORTS = frozenset(
     {
         "AlphalensEvaluateResult",
         "AlphalensFactorEvaluator",
         "AlphalensMetrics",
+        "FactorInformationCoefficientMetric",
+        "MeanInformationCoefficientMetric",
         "close_prices_wide",
         "compute_forward_return_from_wide",
     }
@@ -25,9 +29,12 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "EvaluationMetric",
     "AlphalensEvaluateResult",
     "AlphalensFactorEvaluator",
     "AlphalensMetrics",
+    "FactorInformationCoefficientMetric",
+    "MeanInformationCoefficientMetric",
     "close_prices_wide",
     "compute_factor_values",
     "compute_factor_values_from_source",

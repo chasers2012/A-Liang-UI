@@ -82,6 +82,8 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       items: [
         { title: "因子库", url: "/factors", icon: Library },
         { title: "评价体系", url: "/factor-evaluations", icon: Scale },
+        { title: "评价方案", url: "/evaluation-profiles", icon: Table2 },
+        { title: "评价指标", url: "/evaluation-metrics", icon: LineChart },
       ],
     },
     {

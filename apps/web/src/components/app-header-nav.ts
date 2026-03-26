@@ -4,6 +4,8 @@ const TOP_LEVEL = new Set([
   "/",
   "/factors",
   "/factor-evaluations",
+  "/evaluation-metrics",
+  "/evaluation-profiles",
   "/datasources",
   "/test-sets",
   "/strategies",
@@ -22,6 +24,8 @@ export function buildAppHeaderBreadcrumbs(
   if (pathname === "/") return [{ label: "首页" }];
   if (pathname === "/factors") return [{ label: "因子库" }];
   if (pathname === "/factor-evaluations") return [{ label: "评价体系" }];
+  if (pathname === "/evaluation-metrics") return [{ label: "评价指标" }];
+  if (pathname === "/evaluation-profiles") return [{ label: "评价方案" }];
   if (pathname === "/factors/new") {
     return [{ href: "/factors", label: "因子库" }, { label: "新增" }];
   }
@@ -51,6 +55,42 @@ export function buildAppHeaderBreadcrumbs(
   const detail = /^\/factors\/([^/]+)$/.exec(pathname);
   if (detail) {
     return [{ href: "/factors", label: "因子库" }, { label: "因子详情" }];
+  }
+
+  if (pathname === "/evaluation-metrics/new") {
+    return [{ href: "/evaluation-metrics", label: "评价指标" }, { label: "新增" }];
+  }
+  const emEdit = /^\/evaluation-metrics\/([^/]+)\/edit$/.exec(pathname);
+  if (emEdit) {
+    const mid = emEdit[1];
+    const base = `/evaluation-metrics/${encodeURIComponent(mid)}`;
+    return [
+      { href: "/evaluation-metrics", label: "评价指标" },
+      { href: base, label: "详情" },
+      { label: "编辑" },
+    ];
+  }
+  const emDetail = /^\/evaluation-metrics\/([^/]+)$/.exec(pathname);
+  if (emDetail && emDetail[1] !== "new") {
+    return [{ href: "/evaluation-metrics", label: "评价指标" }, { label: "详情" }];
+  }
+
+  if (pathname === "/evaluation-profiles/new") {
+    return [{ href: "/evaluation-profiles", label: "评价方案" }, { label: "新增" }];
+  }
+  const epEdit = /^\/evaluation-profiles\/([^/]+)\/edit$/.exec(pathname);
+  if (epEdit) {
+    const pid = epEdit[1];
+    const base = `/evaluation-profiles/${encodeURIComponent(pid)}`;
+    return [
+      { href: "/evaluation-profiles", label: "评价方案" },
+      { href: base, label: "详情" },
+      { label: "编辑" },
+    ];
+  }
+  const epDetail = /^\/evaluation-profiles\/([^/]+)$/.exec(pathname);
+  if (epDetail && epDetail[1] !== "new") {
+    return [{ href: "/evaluation-profiles", label: "评价方案" }, { label: "详情" }];
   }
 
   if (pathname === "/datasources") return [{ label: "数据源" }];
@@ -127,6 +167,18 @@ export function headerBackHref(pathname: string): string | null {
 
   const detail = /^\/factors\/([^/]+)$/.exec(pathname);
   if (detail) return "/factors";
+
+  if (pathname === "/evaluation-metrics/new") return "/evaluation-metrics";
+  const emEdit = /^\/evaluation-metrics\/([^/]+)\/edit$/.exec(pathname);
+  if (emEdit) return `/evaluation-metrics/${encodeURIComponent(emEdit[1])}`;
+  const emDetail = /^\/evaluation-metrics\/([^/]+)$/.exec(pathname);
+  if (emDetail && emDetail[1] !== "new") return "/evaluation-metrics";
+
+  if (pathname === "/evaluation-profiles/new") return "/evaluation-profiles";
+  const epEdit = /^\/evaluation-profiles\/([^/]+)\/edit$/.exec(pathname);
+  if (epEdit) return `/evaluation-profiles/${encodeURIComponent(epEdit[1])}`;
+  const epDetail = /^\/evaluation-profiles\/([^/]+)$/.exec(pathname);
+  if (epDetail && epDetail[1] !== "new") return "/evaluation-profiles";
 
   if (pathname === "/datasources/new") return "/datasources";
 

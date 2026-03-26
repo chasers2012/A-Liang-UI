@@ -15,10 +15,14 @@ import alphalens as al
 from factor.factor import Factor
 import pandas as pd
 
+from .alphalens_ic_metric import (
+    FactorInformationCoefficientMetric,
+    MeanInformationCoefficientMetric,
+)
 
-def close_prices_wide(
-    price_panel: pd.DataFrame, close_col: str = "close"
-) -> pd.DataFrame:
+
+def close_prices_wide(price_panel: pd.DataFrame,
+                      close_col: str = "close") -> pd.DataFrame:
     """
     Unstack MultiIndex (date, asset) panel to Alphalens price format: index = date, columns = asset.
     """
@@ -74,9 +78,10 @@ def _mean_returns_spread(
     ``by_date=False`` output uses a flat ``factor_quantile`` index, so we branch.
     """
     if isinstance(mean_ret.index, pd.MultiIndex):
-        return al.performance.compute_mean_returns_spread(
-            mean_ret, upper_quantile, lower_quantile, std_err=std_err
-        )
+        return al.performance.compute_mean_returns_spread(mean_ret,
+                                                          upper_quantile,
+                                                          lower_quantile,
+                                                          std_err=std_err)
     hi = mean_ret.loc[upper_quantile]
     lo = mean_ret.loc[lower_quantile]
     spread = hi - lo
@@ -84,7 +89,7 @@ def _mean_returns_spread(
         return spread, None
     se_hi = std_err.loc[upper_quantile]
     se_lo = std_err.loc[lower_quantile]
-    spread_se = (se_hi**2 + se_lo**2) ** 0.5
+    spread_se = (se_hi**2 + se_lo**2)**0.5
     return spread, spread_se
 
 
@@ -95,16 +100,9 @@ def _alphalens_metrics(
     group_adjust: bool = False,
     quantile_returns_demeaned: bool = True,
 ) -> AlphalensMetrics:
-    ic = al.performance.factor_information_coefficient(
-        factor_data_clean, group_adjust=group_adjust, by_group=False
-    )
+    ic = FactorInformationCoefficientMetric().evaluate(factor_data_clean)
     ic_summary = ic.describe()
-    mean_ic = al.performance.mean_information_coefficient(
-        factor_data_clean,
-        group_adjust=group_adjust,
-        by_group=False,
-        by_time=None,
-    )
+    mean_ic = MeanInformationCoefficientMetric().evaluate(factor_data_clean)
     mean_ret, std_err = al.performance.mean_return_by_quantile(
         factor_data_clean,
         by_date=False,
@@ -119,9 +117,8 @@ def _alphalens_metrics(
         group_adjust=group_adjust,
         equal_weight=False,
     )
-    rank_ac = al.performance.factor_rank_autocorrelation(
-        factor_data_clean, period=1
-    )
+    rank_ac = al.performance.factor_rank_autocorrelation(factor_data_clean,
+                                                         period=1)
     return AlphalensMetrics(
         ic=ic,
         ic_summary=ic_summary,

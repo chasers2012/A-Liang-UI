@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +17,8 @@ class FactorEvaluationSnapshot(BaseModel):
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: Optional[str] = None
+    evaluation_profile_id: Optional[str] = None
+    metric_results: dict[str, Any] = Field(default_factory=dict)
 
 
 class FactorEvaluationsFile(BaseModel):
@@ -51,3 +53,4 @@ class FactorEvaluationsSummaryPublic(BaseModel):
 
 class FactorEvaluationRunBody(BaseModel):
     test_set_id: Optional[str] = None
+    evaluation_profile_id: Optional[str] = None

@@ -181,9 +181,33 @@ def post_factor_evaluation_run(
     rec = get_by_id(reg, factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-    ts_id = body.test_set_id if body is not None else None
+    b = body or FactorEvaluationRunBody()
+    ts_id = b.test_set_id
+    prof = None
+    pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
+    if pid:
+        from app.evaluation_profiles_store import get_by_id as get_profile_by_id
+        from app.evaluation_profiles_store import load_file as load_profiles_file
+        from app.node_type_registry import list_builtin_types
+        from app.workflow_graph_validate import validate_workflow_graph
+
+        preg = load_profiles_file()
+        prof = get_profile_by_id(preg, pid)
+        if prof is None:
+            raise HTTPException(status_code=400, detail="评价方案不存在")
+        if prof.workflow.nodes:
+            try:
+                validate_workflow_graph(
+                    prof.workflow, allowed_types=set(list_builtin_types())
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
     try:
-        snap = run_evaluation_for_factor(factor_id, test_set_id=ts_id)
+        snap = run_evaluation_for_factor(
+            factor_id,
+            test_set_id=ts_id,
+            evaluation_profile=prof,
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     try:

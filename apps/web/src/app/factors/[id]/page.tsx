@@ -33,8 +33,10 @@ import {
   deleteFactor,
   getFactor,
   getFactorEvaluationsSummary,
+  listEvaluationProfiles,
   listEvaluationTestSets,
   runFactorEvaluation,
+  type EvaluationProfilePublic,
   type EvaluationTestSetPublic,
   type FactorDetailPublic,
   type FactorEvaluationRowPublic,
@@ -74,6 +76,9 @@ export default function FactorDetailPage() {
   const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
   /** null = 自动（服务端：默认测试集 → 环境变量） */
   const [runTestSetId, setRunTestSetId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<EvaluationProfilePublic[]>([]);
+  /** null = 不使用评价方案（仅测试集 + 默认 Alphalens 参数） */
+  const [runProfileId, setRunProfileId] = useState<string | null>(null);
 
   const periodKeys = useMemo(() => {
     const ic = evalRow?.mean_ic;
@@ -97,6 +102,16 @@ export default function FactorDetailPage() {
     return o;
   }, [testSets]);
 
+  const profileSelectItems = useMemo(() => {
+    const o: Record<string, string> = {
+      __none__: "无（默认参数）",
+    };
+    for (const p of profiles) {
+      o[p.id] = p.is_default ? `${p.name}（默认）` : p.name;
+    }
+    return o;
+  }, [profiles]);
+
   useEffect(() => {
     if (periodKeys.length === 0) {
       setDisplayPeriod("");
@@ -118,19 +133,26 @@ export default function FactorDetailPage() {
     setLoadError(null);
     setLoading(true);
     try {
-      const [d, summary, ts] = await Promise.all([
+      const [d, summary, ts, pr] = await Promise.all([
         getFactor(id),
         getFactorEvaluationsSummary(),
         listEvaluationTestSets(),
+        listEvaluationProfiles(),
       ]);
       setDetail(d);
       setPrimaryPeriod(summary.aggregate.primary_period);
       setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
       setTestSets(ts);
+      setProfiles(pr);
       setRunTestSetId((prev) => {
         if (prev && ts.some((x) => x.id === prev)) return prev;
         const def = ts.find((t) => t.is_default);
         return def ? def.id : null;
+      });
+      setRunProfileId((prev) => {
+        if (prev && pr.some((x) => x.id === prev)) return prev;
+        const defp = pr.find((p) => p.is_default);
+        return defp ? defp.id : null;
       });
     } catch (e) {
       setDetail(null);
@@ -170,7 +192,10 @@ export default function FactorDetailPage() {
     setEvaluationRunning({ factorId: id, factorName: detail.name });
     setLoadError(null);
     try {
-      await runFactorEvaluation(id, { testSetId: runTestSetId });
+      await runFactorEvaluation(id, {
+        testSetId: runTestSetId,
+        evaluationProfileId: runProfileId,
+      });
       await refreshEvalRow();
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
@@ -287,6 +312,40 @@ export default function FactorDetailPage() {
                 {testSets.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-[14rem]">
+            <Label
+              htmlFor="factor-eval-profile"
+              className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+            >
+              评价方案
+            </Label>
+            <Select
+              modal={false}
+              items={profileSelectItems}
+              value={runProfileId ?? "__none__"}
+              onValueChange={(v) => {
+                if (!v) return;
+                setRunProfileId(v === "__none__" ? null : v);
+              }}
+              disabled={evaluatingThis || evaluatingOther}
+            >
+              <SelectTrigger
+                id="factor-eval-profile"
+                size="sm"
+                className="w-full min-w-0"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">无（默认参数）</SelectItem>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.is_default ? `${p.name}（默认）` : p.name}
                   </SelectItem>
                 ))}
               </SelectContent>
