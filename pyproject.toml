@@ -10,6 +10,8 @@ quant-agent-api = { workspace = true }
 csv-datasource = { workspace = true }
 sql-datasource = { workspace = true }
 evaluate = { workspace = true }
+factor = { workspace = true }
+agent = { workspace = true }
 workspace = { workspace = true }
 
 [tool.uv.workspace]
@@ -18,9 +20,11 @@ members = ["apps/api", "lib/*"]
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "agent",
     "csv-datasource",
     "sql-datasource",
     "evaluate",
+    "factor",
     "workspace",
     "psycopg[binary]>=3.1",
 ]
