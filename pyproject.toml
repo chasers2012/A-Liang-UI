@@ -19,6 +19,7 @@ members = ["apps/api", "lib/*"]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.27.0",
     "pytest>=8.0.0",
     "agent",
     "csv-datasource",
@@ -30,5 +31,6 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["lib"]
+testpaths = ["lib", "apps/api/tests"]
+pythonpath = ["apps/api"]
 addopts = ["-ra"]

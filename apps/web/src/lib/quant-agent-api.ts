@@ -124,3 +124,53 @@ export function testDatasource(id: string): Promise<TestResult> {
     { method: "POST" },
   );
 }
+
+export interface FactorSummaryPublic {
+  id: string;
+  name: string;
+  group: string;
+  group_label: string;
+  description: string;
+  max_window: number;
+  dependencies: string[];
+  source_path: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FactorDetailPublic extends FactorSummaryPublic {
+  source: string;
+}
+
+export function listFactors(): Promise<FactorSummaryPublic[]> {
+  return apiFetchJson<FactorSummaryPublic[]>("/factors");
+}
+
+export function getFactor(id: string): Promise<FactorDetailPublic> {
+  return apiFetchJson<FactorDetailPublic>(
+    `/factors/${encodeURIComponent(id)}`,
+  );
+}
+
+export function createFactor(body: unknown): Promise<FactorDetailPublic> {
+  return apiFetchJson<FactorDetailPublic>("/factors", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function patchFactor(
+  id: string,
+  body: unknown,
+): Promise<FactorDetailPublic> {
+  return apiFetchJson<FactorDetailPublic>(
+    `/factors/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  );
+}
+
+export function deleteFactor(id: string): Promise<void> {
+  return apiFetchJson<void>(`/factors/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
