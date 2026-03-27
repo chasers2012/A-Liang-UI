@@ -381,7 +381,7 @@ function workflowNodeTitle(
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
 ): string {
   const n = profile?.workflow?.nodes?.find((x) => x.id === nodeId);
-  if (!n) return nodeId.length > 10 ? `${nodeId.slice(0, 8)}…` : nodeId;
+  if (!n) return "工作流节点";
   const label = NODE_TYPE_LABELS[n.type] ?? n.type;
   const mid = metricIdFromNode(n);
   if (mid) {

@@ -55,7 +55,21 @@ def _validate_link_sockets(
         raise ValueError(f"连线[{li}] 目标端口 {link.to_socket!r} 不是 {tt} 的输入")
 
 
+def _validate_unique_link_targets(links: list[WorkflowLink]) -> None:
+    """Each workflow input socket may have at most one incoming link (matches LiteGraph)."""
+    seen: set[tuple[str, str]] = set()
+    for li, link in enumerate(links):
+        key = (link.to_node, link.to_socket)
+        if key in seen:
+            raise ValueError(
+                f"连线[{li}] 与前面的连线冲突：节点 {link.to_node!r} 的输入端口 "
+                f"{link.to_socket!r} 只能连接一条边"
+            )
+        seen.add(key)
+
+
 def _validate_links(links: list[WorkflowLink], by_id: dict[str, WorkflowNode]) -> None:
+    _validate_unique_link_targets(links)
     for li, link in enumerate(links):
         _validate_link_endpoints(li, link, by_id)
         _validate_link_sockets(li, link, by_id)
@@ -91,6 +105,11 @@ def validate_workflow_graph(
     *,
     allowed_types: AbstractSet[str],
 ) -> None:
+    """Validate DAG structure and sockets.
+
+    Multiple nodes may share the same ``type`` (e.g. two ``metric:*`` nodes);
+    node ``id`` values must remain unique.
+    """
     nodes = workflow.nodes
     links = workflow.links
     by_id = _validate_unique_node_ids(nodes)
