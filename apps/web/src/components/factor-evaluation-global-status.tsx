@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { Loader2 } from "lucide-react";
 
-import { factorEvaluationRunningAtom } from "@/lib/factor-evaluation-atoms";
+import { factorEvaluationRunningAtom } from "@/models/factor";
 import { cn } from "@/lib/utils";
 
 export function FactorEvaluationGlobalStatus() {

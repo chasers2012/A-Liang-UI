@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { ChevronRight, History, Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -23,23 +23,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
-import { factorEvaluationRunningAtom } from "@/lib/factor-evaluation-atoms";
 import {
   deleteFactor,
-  getFactor,
-  getFactorEvaluationsSummary,
-  listEvaluationMetrics,
-  listEvaluationProfiles,
-  listEvaluationTestSets,
   runFactorEvaluation,
-  type EvaluationMetricSummaryPublic,
-  type EvaluationProfilePublic,
-  type EvaluationTestSetPublic,
-  type FactorDetailPublic,
   type FactorEvaluationRowPublic,
   type FactorSummaryPublic,
 } from "@/lib/quant-agent-api";
+import {
+  factorDetailStateAtomFamily,
+  factorEvaluationRunningAtom,
+  loadFactorDetailAtomFamily,
+  refreshFactorEvalRowAtomFamily,
+} from "@/models/factor";
 
 import { DeleteFactorDialog } from "../ui/delete-factor-dialog";
 import {
@@ -66,23 +63,27 @@ export default function FactorDetailPage() {
   const evaluationRunning = useAtomValue(factorEvaluationRunningAtom);
   const setEvaluationRunning = useSetAtom(factorEvaluationRunningAtom);
 
-  const [detail, setDetail] = useState<FactorDetailPublic | null>(null);
-  const [evalRow, setEvalRow] = useState<FactorEvaluationRowPublic | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [s, setS] = useAtom(factorDetailStateAtomFamily(id));
+  const loadDetail = useSetAtom(loadFactorDetailAtomFamily(id));
+  const refreshEvalRow = useSetAtom(refreshFactorEvalRowAtomFamily(id));
 
-  const [deleteOpen, setDeleteOpen] = useState<FactorSummaryPublic | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  useEffectMicrotask(() => {
+    void loadDetail();
+  }, [id, loadDetail]);
 
-  const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
-  /** null = 自动（服务端：默认测试集 → 环境变量） */
-  const [runTestSetId, setRunTestSetId] = useState<string | null>(null);
-  const [profiles, setProfiles] = useState<EvaluationProfilePublic[]>([]);
-  const [evaluationMetrics, setEvaluationMetrics] = useState<
-    EvaluationMetricSummaryPublic[]
-  >([]);
-  /** null = 不使用评价方案（仅测试集 + 默认 Alphalens 参数） */
-  const [runProfileId, setRunProfileId] = useState<string | null>(null);
+  const {
+    detail,
+    evalRow,
+    loadError,
+    loading,
+    testSets,
+    profiles,
+    evaluationMetrics,
+    runTestSetId,
+    runProfileId,
+    deleteTarget,
+    deleting,
+  } = s;
 
   const testSetSelectItems = useMemo(() => {
     const o: Record<string, string> = {
@@ -121,57 +122,6 @@ export default function FactorDetailPage() {
     return o;
   }, [evaluationMetrics]);
 
-  const load = useCallback(async () => {
-    if (!id) {
-      setLoadError("无效的因子 id");
-      setLoading(false);
-      return;
-    }
-    setLoadError(null);
-    setLoading(true);
-    try {
-      const [d, summary, ts, pr, metrics] = await Promise.all([
-        getFactor(id),
-        getFactorEvaluationsSummary(),
-        listEvaluationTestSets(),
-        listEvaluationProfiles(),
-        listEvaluationMetrics(),
-      ]);
-      setDetail(d);
-      setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
-      setTestSets(ts);
-      setProfiles(pr);
-      setEvaluationMetrics(metrics);
-      setRunTestSetId((prev) => {
-        if (prev && ts.some((x) => x.id === prev)) return prev;
-        const def = ts.find((t) => t.is_default);
-        return def ? def.id : null;
-      });
-      setRunProfileId((prev) => {
-        if (prev && pr.some((x) => x.id === prev)) return prev;
-        const defp = pr.find((p) => p.is_default);
-        return defp ? defp.id : null;
-      });
-    } catch (e) {
-      setDetail(null);
-      setEvalRow(null);
-      setEvaluationMetrics([]);
-      setLoadError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  const refreshEvalRow = useCallback(async () => {
-    if (!id) return;
-    const summary = await getFactorEvaluationsSummary();
-    setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
-  }, [id]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const evaluatingThis =
     evaluationRunning != null && evaluationRunning.factorId === id;
   const evaluatingOther =
@@ -180,15 +130,16 @@ export default function FactorDetailPage() {
   const handleRunEvaluation = async () => {
     if (!id || !detail) return;
     if (evaluatingOther) {
-      setLoadError(
-        `已有因子「${evaluationRunning.factorName}」正在评价，请等待完成后再试。`,
-      );
+      setS((prev) => ({
+        ...prev,
+        loadError: `已有因子「${evaluationRunning.factorName}」正在评价，请等待完成后再试。`,
+      }));
       return;
     }
     if (evaluatingThis) return;
 
     setEvaluationRunning({ factorId: id, factorName: detail.name });
-    setLoadError(null);
+    setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
         testSetId: runTestSetId,
@@ -196,7 +147,10 @@ export default function FactorDetailPage() {
       });
       await refreshEvalRow();
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setS((prev) => ({
+        ...prev,
+        loadError: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
       setEvaluationRunning((prev) =>
         prev?.factorId === id ? null : prev,
@@ -205,16 +159,19 @@ export default function FactorDetailPage() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteOpen) return;
-    setDeleting(true);
+    if (!deleteTarget) return;
+    setS((prev) => ({ ...prev, deleting: true }));
     try {
-      await deleteFactor(deleteOpen.id);
-      setDeleteOpen(null);
+      await deleteFactor(deleteTarget.id);
+      setS((prev) => ({ ...prev, deleteTarget: null }));
       router.push("/factors");
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setS((prev) => ({
+        ...prev,
+        loadError: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setDeleting(false);
+      setS((prev) => ({ ...prev, deleting: false }));
     }
   };
 
@@ -236,7 +193,7 @@ export default function FactorDetailPage() {
     );
   }
 
-  if (loadError || !detail) {
+  if (!detail) {
     return (
       <FactorFormPageContainer>
         <Alert variant="destructive">
@@ -288,7 +245,10 @@ export default function FactorDetailPage() {
               value={runTestSetId ?? "__auto__"}
               onValueChange={(v) => {
                 if (!v) return;
-                setRunTestSetId(v === "__auto__" ? null : v);
+                setS((prev) => ({
+                  ...prev,
+                  runTestSetId: v === "__auto__" ? null : v,
+                }));
               }}
               disabled={evaluatingThis || evaluatingOther}
             >
@@ -324,7 +284,10 @@ export default function FactorDetailPage() {
               value={runProfileId ?? "__none__"}
               onValueChange={(v) => {
                 if (!v) return;
-                setRunProfileId(v === "__none__" ? null : v);
+                setS((prev) => ({
+                  ...prev,
+                  runProfileId: v === "__none__" ? null : v,
+                }));
               }}
               disabled={evaluatingThis || evaluatingOther}
             >
@@ -381,7 +344,9 @@ export default function FactorDetailPage() {
               type="button"
               variant="destructive"
               className="gap-1.5"
-              onClick={() => setDeleteOpen(summaryForDelete)}
+              onClick={() =>
+                setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))
+              }
             >
               <Trash2 className="size-4" />
               删除
@@ -390,12 +355,12 @@ export default function FactorDetailPage() {
         </div>
       </div>
 
-      {loadError && (
+      {loadError ? (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/80 shadow-sm">
@@ -537,9 +502,9 @@ export default function FactorDetailPage() {
       </div>
 
       <DeleteFactorDialog
-        target={deleteOpen}
+        target={deleteTarget}
         deleting={deleting}
-        onDismiss={() => setDeleteOpen(null)}
+        onDismiss={() => setS((prev) => ({ ...prev, deleteTarget: null }))}
         onConfirm={confirmDelete}
       />
     </FactorFormPageContainer>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -22,32 +22,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  getQuantAgentApiBase,
-  listEvaluationProfiles,
-  type EvaluationProfilePublic,
-} from "@/lib/quant-agent-api";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
+import { getQuantAgentApiBase } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
+import {
+  evaluationProfilesListAtom,
+  refreshEvaluationProfilesListAtom,
+} from "@/models/evaluation-profile/list-detail.atom";
 
 export default function EvaluationProfilesPage() {
-  const [items, setItems] = useState<EvaluationProfilePublic[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { items, error } = useAtomValue(evaluationProfilesListAtom);
+  const refresh = useSetAtom(refreshEvaluationProfilesListAtom);
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setItems(await listEvaluationProfiles());
-    } catch (e) {
-      setItems(null);
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
+  useEffectMicrotask(() => {
+    void refresh();
+  }, [refresh]);
 
   return (
     <Page>

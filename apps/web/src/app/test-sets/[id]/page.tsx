@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useAtom, useSetAtom } from "jotai";
 import { Pencil, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,12 +15,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
+import { deleteEvaluationTestSet } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import {
-  deleteEvaluationTestSet,
-  getEvaluationTestSet,
-  type EvaluationTestSetPublic,
-} from "@/lib/quant-agent-api";
+  loadTestSetDetailAtomFamily,
+  testSetDetailAtomFamily,
+} from "@/models/evaluation-test-set/panel-detail.atom";
 
 import { DeleteTestSetDialog } from "../ui/delete-test-set-dialog";
 
@@ -34,45 +35,29 @@ export default function TestSetDetailPage() {
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
 
-  const [row, setRow] = useState<EvaluationTestSetPublic | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [state, setState] = useAtom(testSetDetailAtomFamily(id));
+  const load = useSetAtom(loadTestSetDetailAtomFamily(id));
 
-  const load = useCallback(async () => {
-    if (!id) {
-      setError("无效的测试集 id");
-      setLoading(false);
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      setRow(await getEvaluationTestSet(id));
-    } catch (e) {
-      setRow(null);
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
+  useEffectMicrotask(() => {
     void load();
-  }, [load]);
+  }, [id, load]);
+
+  const { row, error, loading, deleteOpen, deleting } = state;
 
   const confirmDelete = async () => {
     if (!row) return;
-    setDeleting(true);
+    setState((s) => ({ ...s, deleting: true }));
     try {
       await deleteEvaluationTestSet(row.id);
-      setDeleteOpen(false);
+      setState((s) => ({ ...s, deleteOpen: false }));
       router.push("/test-sets");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setState((s) => ({
+        ...s,
+        error: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setDeleting(false);
+      setState((s) => ({ ...s, deleting: false }));
     }
   };
 
@@ -133,7 +118,7 @@ export default function TestSetDetailPage() {
             type="button"
             variant="destructive"
             className="gap-1.5"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => setState((s) => ({ ...s, deleteOpen: true }))}
           >
             <Trash2 className="size-4" />
             删除
@@ -252,7 +237,7 @@ export default function TestSetDetailPage() {
       <DeleteTestSetDialog
         target={deleteOpen ? row : null}
         deleting={deleting}
-        onDismiss={() => setDeleteOpen(false)}
+        onDismiss={() => setState((s) => ({ ...s, deleteOpen: false }))}
         onConfirm={confirmDelete}
       />
     </Page>

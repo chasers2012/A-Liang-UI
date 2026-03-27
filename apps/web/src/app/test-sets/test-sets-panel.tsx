@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useAtom, useSetAtom } from "jotai";
 import { FlaskConical, Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,50 +14,41 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
+import { deleteEvaluationTestSet, getQuantAgentApiBase } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import {
-  deleteEvaluationTestSet,
-  getQuantAgentApiBase,
-  listEvaluationTestSets,
-  type EvaluationTestSetPublic,
-} from "@/lib/quant-agent-api";
+  refreshTestSetsPanelAtom,
+  testSetsPanelAtom,
+} from "@/models/evaluation-test-set/panel-detail.atom";
 
 import { DeleteTestSetDialog } from "./ui/delete-test-set-dialog";
 import { TestSetTable } from "./ui/test-set-table";
 
 export function TestSetsPanel() {
-  const [items, setItems] = useState<EvaluationTestSetPublic[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [panel, setPanel] = useAtom(testSetsPanelAtom);
+  const refresh = useSetAtom(refreshTestSetsPanelAtom);
 
-  const [deleteTarget, setDeleteTarget] =
-    useState<EvaluationTestSetPublic | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const refresh = useCallback(async () => {
-    setLoadError(null);
-    try {
-      setItems(await listEvaluationTestSets());
-    } catch (e) {
-      setItems(null);
-      setLoadError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
-  useEffect(() => {
+  useEffectMicrotask(() => {
     void refresh();
   }, [refresh]);
 
+  const { items, loadError, deleteTarget, deleting } = panel;
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setDeleting(true);
+    setPanel((p) => ({ ...p, deleting: true }));
     try {
       await deleteEvaluationTestSet(deleteTarget.id);
-      setDeleteTarget(null);
+      setPanel((p) => ({ ...p, deleteTarget: null }));
       await refresh();
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setPanel((p) => ({
+        ...p,
+        loadError: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setDeleting(false);
+      setPanel((p) => ({ ...p, deleting: false }));
     }
   };
 
@@ -74,7 +65,7 @@ export function TestSetsPanel() {
             配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
               {getQuantAgentApiBase()}
-            </code>{" "}
+            </code>
             读写；点击名称查看完整字段。
           </p>
         </div>
@@ -106,6 +97,9 @@ export function TestSetsPanel() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {items === null && !loadError && (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )}
           {items && items.length === 0 && !loadError && (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-16 text-center">
               <FlaskConical
@@ -127,7 +121,10 @@ export function TestSetsPanel() {
             </div>
           )}
           {items && items.length > 0 && (
-            <TestSetTable items={items} onDelete={setDeleteTarget} />
+            <TestSetTable
+              items={items}
+              onDelete={(t) => setPanel((p) => ({ ...p, deleteTarget: t }))}
+            />
           )}
         </CardContent>
       </Card>
@@ -135,7 +132,7 @@ export function TestSetsPanel() {
       <DeleteTestSetDialog
         target={deleteTarget}
         deleting={deleting}
-        onDismiss={() => setDeleteTarget(null)}
+        onDismiss={() => setPanel((p) => ({ ...p, deleteTarget: null }))}
         onConfirm={confirmDelete}
       />
     </Page>

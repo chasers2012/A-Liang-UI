@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -105,11 +106,7 @@ export default function EditEvaluationProfilePage() {
     }
   }, [id]);
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
+  useEffectMicrotask(() => load(), [load]);
 
   const initialWorkflowForCanvas = useMemo(() => {
     const p = parseEvaluationWorkflowJson(workflowJson);

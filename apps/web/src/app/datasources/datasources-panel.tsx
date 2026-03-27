@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import Link from "next/link";
+import { useAtom, useSetAtom } from "jotai";
 import { Database, Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,74 +15,63 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
-import { cn } from "@/lib/utils";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import {
   ApiError,
-  type DataSourcePublic,
   deleteDatasource,
   getQuantAgentApiBase,
-  listDatasources,
   patchDatasource,
   testDatasource,
+  type DataSourcePublic,
 } from "@/lib/quant-agent-api";
+import { cn } from "@/lib/utils";
+import {
+  datasourcesPanelAtom,
+  refreshDatasourcesPanelAtom,
+} from "@/models/datasource/panel.atom";
 
 import { DatasourceTable } from "./ui/datasource-table";
 import { DeleteDatasourceDialog } from "./ui/delete-datasource-dialog";
 
 export function DatasourcesPanel() {
-  const [items, setItems] = useState<DataSourcePublic[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [testHint, setTestHint] = useState<{
-    id: string;
-    ok: boolean;
-    message: string;
-  } | null>(null);
+  const [panel, setPanel] = useAtom(datasourcesPanelAtom);
+  const refresh = useSetAtom(refreshDatasourcesPanelAtom);
 
-  const [deleteTarget, setDeleteTarget] = useState<DataSourcePublic | null>(
-    null,
-  );
-  const [deleting, setDeleting] = useState(false);
-
-  const refresh = useCallback(async () => {
-    setLoadError(null);
-    try {
-      setItems(await listDatasources());
-    } catch (e) {
-      setItems(null);
-      setLoadError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
-  useEffect(() => {
+  useEffectMicrotask(() => {
     void refresh();
   }, [refresh]);
 
+  const { items, loadError, busyId, testHint, deleteTarget, deleting } = panel;
+
   const withBusy = useCallback(
     async (id: string, fn: () => Promise<unknown>) => {
-      setBusyId(id);
-      setTestHint(null);
+      setPanel((p) => ({ ...p, busyId: id, testHint: null }));
       try {
         await fn();
         await refresh();
       } catch (e) {
-        setLoadError(e instanceof Error ? e.message : String(e));
+        setPanel((p) => ({
+          ...p,
+          loadError: e instanceof Error ? e.message : String(e),
+        }));
       } finally {
-        setBusyId(null);
+        setPanel((p) => ({ ...p, busyId: null }));
       }
     },
-    [refresh],
+    [refresh, setPanel],
   );
 
   const toggleEnabled = (ds: DataSourcePublic, enabled: boolean) =>
     void withBusy(ds.id, () => patchDatasource(ds.id, { enabled }));
 
   const runTest = async (ds: DataSourcePublic) => {
-    setBusyId(ds.id);
-    setTestHint(null);
+    setPanel((p) => ({ ...p, busyId: ds.id, testHint: null }));
     try {
       const r = await testDatasource(ds.id);
-      setTestHint({ id: ds.id, ok: r.ok, message: r.message });
+      setPanel((p) => ({
+        ...p,
+        testHint: { id: ds.id, ok: r.ok, message: r.message },
+      }));
     } catch (e) {
       const msg =
         e instanceof ApiError
@@ -89,23 +79,29 @@ export function DatasourcesPanel() {
           : e instanceof Error
             ? e.message
             : String(e);
-      setTestHint({ id: ds.id, ok: false, message: msg });
+      setPanel((p) => ({
+        ...p,
+        testHint: { id: ds.id, ok: false, message: msg },
+      }));
     } finally {
-      setBusyId(null);
+      setPanel((p) => ({ ...p, busyId: null }));
     }
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setDeleting(true);
+    setPanel((p) => ({ ...p, deleting: true }));
     try {
       await deleteDatasource(deleteTarget.id);
-      setDeleteTarget(null);
+      setPanel((p) => ({ ...p, deleteTarget: null }));
       await refresh();
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setPanel((p) => ({
+        ...p,
+        loadError: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setDeleting(false);
+      setPanel((p) => ({ ...p, deleting: false }));
     }
   };
 
@@ -122,7 +118,7 @@ export function DatasourcesPanel() {
             配置经{" "}
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
               {getQuantAgentApiBase()}
-            </code>{" "}
+            </code>
             读写，落盘于服务端 workspace（
             <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
               QUANT_AGENT_WORKSPACE
@@ -169,6 +165,9 @@ export function DatasourcesPanel() {
           </div>
         </CardHeader>
         <CardContent className="pt-6">
+          {items === null && !loadError && (
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          )}
           {items && items.length === 0 && !loadError && (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-16 text-center">
               <Database
@@ -195,7 +194,7 @@ export function DatasourcesPanel() {
               busyId={busyId}
               onToggleEnabled={toggleEnabled}
               onTest={runTest}
-              onDelete={setDeleteTarget}
+              onDelete={(ds) => setPanel((p) => ({ ...p, deleteTarget: ds }))}
             />
           )}
         </CardContent>
@@ -204,7 +203,7 @@ export function DatasourcesPanel() {
       <DeleteDatasourceDialog
         target={deleteTarget}
         deleting={deleting}
-        onDismiss={() => setDeleteTarget(null)}
+        onDismiss={() => setPanel((p) => ({ ...p, deleteTarget: null }))}
         onConfirm={confirmDelete}
       />
     </Page>

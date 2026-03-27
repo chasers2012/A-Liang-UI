@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Pencil } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,8 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getEvaluationProfile, type EvaluationProfilePublic } from "@/lib/quant-agent-api";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
+import {
+  evaluationProfileDetailAtomFamily,
+  loadEvaluationProfileDetailAtomFamily,
+} from "@/models/evaluation-profile/list-detail.atom";
 
 import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
 
@@ -22,25 +26,12 @@ export default function EvaluationProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
-  const [row, setRow] = useState<EvaluationProfilePublic | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { row, error } = useAtomValue(evaluationProfileDetailAtomFamily(id));
+  const load = useSetAtom(loadEvaluationProfileDetailAtomFamily(id));
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setError(null);
-    try {
-      setRow(await getEvaluationProfile(id));
-    } catch (e) {
-      setRow(null);
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [id]);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
+  useEffectMicrotask(() => {
+    void load();
+  }, [id, load]);
 
   if (!id) {
     return (

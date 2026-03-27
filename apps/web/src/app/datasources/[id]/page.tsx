@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useAtom, useSetAtom } from "jotai";
 import { Pencil, Trash2, Zap } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,15 +16,18 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Page } from "@/components/page";
-import { cn } from "@/lib/utils";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import {
   ApiError,
   deleteDatasource,
-  getDatasource,
   patchDatasource,
   testDatasource,
-  type DataSourcePublic,
 } from "@/lib/quant-agent-api";
+import { cn } from "@/lib/utils";
+import {
+  datasourceDetailAtomFamily,
+  loadDatasourceDetailAtomFamily,
+} from "@/models/datasource/detail.atom";
 
 import { datasourceSummary } from "../datasource-summary";
 import { DeleteDatasourceDialog } from "../ui/delete-datasource-dialog";
@@ -39,59 +42,36 @@ export default function DatasourceDetailPage() {
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
 
-  const [ds, setDs] = useState<DataSourcePublic | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [testHint, setTestHint] = useState<{
-    ok: boolean;
-    message: string;
-  } | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [state, setState] = useAtom(datasourceDetailAtomFamily(id));
+  const load = useSetAtom(loadDatasourceDetailAtomFamily(id));
 
-  const load = useCallback(async () => {
-    if (!id) {
-      setError("无效的 id");
-      setLoading(false);
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      setDs(await getDatasource(id));
-    } catch (e) {
-      setDs(null);
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
+  useEffectMicrotask(() => {
     void load();
-  }, [load]);
+  }, [id, load]);
+
+  const { ds, error, loading, busy, testHint, deleteOpen, deleting } = state;
 
   const withBusy = async (fn: () => Promise<unknown>) => {
-    setBusy(true);
-    setTestHint(null);
+    setState((s) => ({ ...s, busy: true, testHint: null }));
     try {
       await fn();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setState((s) => ({
+        ...s,
+        error: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setBusy(false);
+      setState((s) => ({ ...s, busy: false }));
     }
   };
 
   const runTest = async () => {
     if (!id) return;
-    setBusy(true);
-    setTestHint(null);
+    setState((s) => ({ ...s, busy: true, testHint: null }));
     try {
       const r = await testDatasource(id);
-      setTestHint({ ok: r.ok, message: r.message });
+      setState((s) => ({ ...s, testHint: { ok: r.ok, message: r.message } }));
     } catch (e) {
       const msg =
         e instanceof ApiError
@@ -99,23 +79,26 @@ export default function DatasourceDetailPage() {
           : e instanceof Error
             ? e.message
             : String(e);
-      setTestHint({ ok: false, message: msg });
+      setState((s) => ({ ...s, testHint: { ok: false, message: msg } }));
     } finally {
-      setBusy(false);
+      setState((s) => ({ ...s, busy: false }));
     }
   };
 
   const confirmDelete = async () => {
     if (!ds) return;
-    setDeleting(true);
+    setState((s) => ({ ...s, deleting: true }));
     try {
       await deleteDatasource(ds.id);
-      setDeleteOpen(false);
+      setState((s) => ({ ...s, deleteOpen: false }));
       router.push("/datasources");
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setState((s) => ({
+        ...s,
+        error: e instanceof Error ? e.message : String(e),
+      }));
     } finally {
-      setDeleting(false);
+      setState((s) => ({ ...s, deleting: false }));
     }
   };
 
@@ -194,7 +177,7 @@ export default function DatasourceDetailPage() {
             type="button"
             variant="destructive"
             className="gap-1.5"
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => setState((s) => ({ ...s, deleteOpen: true }))}
           >
             <Trash2 className="size-4" />
             删除
@@ -337,7 +320,7 @@ export default function DatasourceDetailPage() {
       <DeleteDatasourceDialog
         target={deleteOpen ? ds : null}
         deleting={deleting}
-        onDismiss={() => setDeleteOpen(false)}
+        onDismiss={() => setState((s) => ({ ...s, deleteOpen: false }))}
         onConfirm={confirmDelete}
       />
     </Page>

@@ -1,0 +1,81 @@
+/** 因子注册、评价汇总、快照与历史记录 DTO。 */
+
+export interface FactorSummaryPublic {
+  id: string;
+  name: string;
+  group: string;
+  group_label: string;
+  description: string;
+  max_window: number;
+  dependencies: string[];
+  source_path: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FactorDetailPublic extends FactorSummaryPublic {
+  source: string;
+}
+
+export interface FactorEvaluationsAggregatePublic {
+  total_factors: number;
+  evaluated_count: number;
+  unevaluated_count: number;
+  primary_period: string;
+  mean_ic_primary_avg: number | null;
+}
+
+export interface FactorEvaluationRowPublic {
+  factor_id: string;
+  name: string;
+  has_evaluation: boolean;
+  evaluated_at?: string | null;
+  window?: { start?: string | null; end?: string | null } | null;
+  stock_count?: number | null;
+  mean_ic: Record<string, number>;
+  mean_return_spread?: Record<string, number>;
+  error?: string | null;
+  /** Present when the run used a named evaluation profile (with or without workflow nodes). */
+  evaluation_profile_id?: string | null;
+  /** Workflow node id → output socket → value (e.g. period → scalar for IC/spread). */
+  metric_results?: Record<string, unknown>;
+}
+
+export interface FactorEvaluationsSummaryPublic {
+  aggregate: FactorEvaluationsAggregatePublic;
+  rows: FactorEvaluationRowPublic[];
+}
+
+export type FactorCodeSnapshotKind = "auto" | "manual";
+
+export interface FactorCodeSnapshotMeta {
+  name: string;
+  group: string;
+  group_label: string;
+  description: string;
+  max_window: number;
+  dependencies: string[];
+}
+
+export interface FactorCodeSnapshotSummaryPublic {
+  id: string;
+  saved_at: string;
+  kind: FactorCodeSnapshotKind;
+  label?: string | null;
+  meta: FactorCodeSnapshotMeta;
+}
+
+export interface FactorCodeSnapshotDetailPublic extends FactorCodeSnapshotSummaryPublic {
+  source: string;
+}
+
+export interface FactorEvaluationHistoryEntry {
+  id: string;
+  linked_snapshot_id?: string | null;
+  evaluated_at: string;
+  window?: { start?: string | null; end?: string | null } | null;
+  stock_count?: number | null;
+  mean_ic: Record<string, number>;
+  mean_return_spread?: Record<string, number>;
+  error?: string | null;
+}

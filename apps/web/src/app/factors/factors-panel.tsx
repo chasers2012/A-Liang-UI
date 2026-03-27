@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Library, Plus } from "lucide-react";
 
 import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -15,40 +16,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  getQuantAgentApiBase,
-  listFactors,
-  type FactorSummaryPublic,
-} from "@/lib/quant-agent-api";
+import { getQuantAgentApiBase } from "@/lib/quant-agent-api";
+import { factorsListAtom, refreshFactorsListAtom } from "@/models/factor";
 
 import { FactorCardList } from "./ui/factor-card-list";
 import { FactorEvaluationsOverview } from "./ui/factor-evaluations-overview";
 
 export function FactorsPanel() {
-  const [items, setItems] = useState<FactorSummaryPublic[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [evalRefreshKey, setEvalRefreshKey] = useState(0);
-  const skipEvalRefreshBump = useRef(true);
+  const { items, error: loadError } = useAtomValue(factorsListAtom);
+  const refresh = useSetAtom(refreshFactorsListAtom);
 
-  const refresh = useCallback(async () => {
-    setLoadError(null);
-    try {
-      setItems(await listFactors());
-      if (skipEvalRefreshBump.current) {
-        skipEvalRefreshBump.current = false;
-      } else {
-        setEvalRefreshKey((k) => k + 1);
-      }
-    } catch (e) {
-      setItems(null);
-      setLoadError(e instanceof Error ? e.message : String(e));
-    }
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void refresh();
-    });
+  useEffectMicrotask(() => {
+    void refresh();
   }, [refresh]);
 
   const count = items?.length ?? 0;
@@ -158,11 +137,7 @@ export function FactorsPanel() {
                 加载因子列表…
               </div>
             ) : (
-              <FactorEvaluationsOverview
-                refreshKey={evalRefreshKey}
-                factorCount={count}
-                onRefresh={() => setEvalRefreshKey((k) => k + 1)}
-              />
+              <FactorEvaluationsOverview />
             )}
           </CardContent>
         </Card>

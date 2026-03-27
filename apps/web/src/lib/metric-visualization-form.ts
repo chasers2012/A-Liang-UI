@@ -1,4 +1,4 @@
-import type { MetricVisualizationMode } from "@/lib/quant-agent-api";
+import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
 
 export const METRIC_VIZ_MODE_ITEMS: {
   value: MetricVisualizationMode;

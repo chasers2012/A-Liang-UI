@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useAtomValue, useSetAtom } from "jotai";
 import { BarChart3, RefreshCw } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,10 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import {
-  type FactorEvaluationsSummaryPublic,
-  getFactorEvaluationsSummary,
-} from "@/lib/quant-agent-api";
+  bumpFactorsEvalOverviewRevisionAtom,
+  factorEvaluationsOverviewStateAtom,
+  factorsEvalOverviewRevisionAtom,
+  factorsListAtom,
+  loadFactorEvaluationsOverviewAtom,
+} from "@/models/factor";
 
 function formatIsoShort(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -29,37 +33,18 @@ function formatIc(n: number | null | undefined): string {
   return n.toFixed(4);
 }
 
-type Props = {
-  refreshKey: number;
-  factorCount: number;
-  onRefresh?: () => void;
-};
+export function FactorEvaluationsOverview() {
+  const revision = useAtomValue(factorsEvalOverviewRevisionAtom);
+  const listState = useAtomValue(factorsListAtom);
+  const { data, loading, error } = useAtomValue(factorEvaluationsOverviewStateAtom);
+  const loadOverview = useSetAtom(loadFactorEvaluationsOverviewAtom);
+  const bumpRevision = useSetAtom(bumpFactorsEvalOverviewRevisionAtom);
 
-export function FactorEvaluationsOverview({
-  refreshKey,
-  factorCount,
-  onRefresh,
-}: Props) {
-  const [data, setData] = useState<FactorEvaluationsSummaryPublic | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  useEffectMicrotask(() => {
+    void loadOverview();
+  }, [revision, loadOverview]);
 
-  const load = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      setData(await getFactorEvaluationsSummary());
-    } catch (e) {
-      setData(null);
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
+  const factorCount = listState.items?.length ?? 0;
 
   if (loading && !data) {
     return (
@@ -109,20 +94,18 @@ export function FactorEvaluationsOverview({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
-      {onRefresh ? (
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => onRefresh()}
-          >
-            <RefreshCw className="size-3.5" />
-            刷新评价
-          </Button>
-        </div>
-      ) : null}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => bumpRevision()}
+        >
+          <RefreshCw className="size-3.5" />
+          刷新评价
+        </Button>
+      </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border/80 bg-muted/10 px-3 py-2.5">
           <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">

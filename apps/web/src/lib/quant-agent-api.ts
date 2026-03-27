@@ -1,47 +1,27 @@
+import type {
+  DataSourcePublic,
+  EvaluationMetricDetailPublic,
+  EvaluationMetricSummaryPublic,
+  EvaluationProfilePublic,
+  EvaluationTestSetPublic,
+  FactorCodeSnapshotDetailPublic,
+  FactorCodeSnapshotSummaryPublic,
+  FactorDetailPublic,
+  FactorEvaluationHistoryEntry,
+  FactorEvaluationRowPublic,
+  FactorEvaluationsSummaryPublic,
+  FactorSummaryPublic,
+  NodeTypeDefinitionPublic,
+  SqlTableColumnsRequestBody,
+  SqlTableColumnsResponseBody,
+  TestResult,
+} from "@/models";
+
 /** Base URL for quant-agent FastAPI (no trailing slash). */
 export function getQuantAgentApiBase(): string {
   const raw =
     process.env.NEXT_PUBLIC_QUANT_AGENT_API ?? "http://127.0.0.1:8000";
   return raw.replace(/\/$/, "");
-}
-
-export type DataSourceType = "sql" | "csv";
-
-export interface SqlPublic {
-  db_driver: string;
-  db_host: string;
-  db_port: number | null;
-  db_username: string;
-  db_name: string;
-  has_password: boolean;
-  has_legacy_engine_url: boolean;
-  table: string;
-  date_column: string;
-  asset_column: string;
-  column_map: Record<string, string>;
-}
-
-export interface CsvPublic {
-  path: string;
-  date_column: string;
-  asset_column: string;
-  read_csv_kwargs: Record<string, unknown>;
-}
-
-export interface DataSourcePublic {
-  id: string;
-  name: string;
-  type: DataSourceType;
-  enabled: boolean;
-  sql: SqlPublic | null;
-  csv: CsvPublic | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TestResult {
-  ok: boolean;
-  message: string;
 }
 
 export class ApiError extends Error {
@@ -139,21 +119,6 @@ export function testDatasource(id: string): Promise<TestResult> {
   );
 }
 
-export interface SqlTableColumnsRequestBody {
-  datasource_id?: string | null;
-  db_driver: string;
-  db_host: string;
-  db_port?: number | null;
-  db_username: string;
-  db_password: string;
-  db_name: string;
-  table: string;
-}
-
-export interface SqlTableColumnsResponseBody {
-  columns: string[];
-}
-
 export function fetchSqlTableColumns(
   body: SqlTableColumnsRequestBody,
 ): Promise<SqlTableColumnsResponseBody> {
@@ -175,23 +140,6 @@ export function fetchSqlTableColumns(
       }),
     },
   );
-}
-
-export interface FactorSummaryPublic {
-  id: string;
-  name: string;
-  group: string;
-  group_label: string;
-  description: string;
-  max_window: number;
-  dependencies: string[];
-  source_path: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface FactorDetailPublic extends FactorSummaryPublic {
-  source: string;
 }
 
 export function listFactors(): Promise<FactorSummaryPublic[]> {
@@ -225,73 +173,10 @@ export function deleteFactor(id: string): Promise<void> {
   });
 }
 
-export interface FactorEvaluationsAggregatePublic {
-  total_factors: number;
-  evaluated_count: number;
-  unevaluated_count: number;
-  primary_period: string;
-  mean_ic_primary_avg: number | null;
-}
-
-export interface FactorEvaluationRowPublic {
-  factor_id: string;
-  name: string;
-  has_evaluation: boolean;
-  evaluated_at?: string | null;
-  window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
-  mean_ic: Record<string, number>;
-  mean_return_spread?: Record<string, number>;
-  error?: string | null;
-  /** Present when the run used a named evaluation profile (with or without workflow nodes). */
-  evaluation_profile_id?: string | null;
-  /** Workflow node id → output socket → value (e.g. period → scalar for IC/spread). */
-  metric_results?: Record<string, unknown>;
-}
-
-export interface FactorEvaluationsSummaryPublic {
-  aggregate: FactorEvaluationsAggregatePublic;
-  rows: FactorEvaluationRowPublic[];
-}
-
 export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
   return apiFetchJson<FactorEvaluationsSummaryPublic>(
     "/factors/evaluations/summary",
   );
-}
-
-export type FactorCodeSnapshotKind = "auto" | "manual";
-
-export interface FactorCodeSnapshotMeta {
-  name: string;
-  group: string;
-  group_label: string;
-  description: string;
-  max_window: number;
-  dependencies: string[];
-}
-
-export interface FactorCodeSnapshotSummaryPublic {
-  id: string;
-  saved_at: string;
-  kind: FactorCodeSnapshotKind;
-  label?: string | null;
-  meta: FactorCodeSnapshotMeta;
-}
-
-export interface FactorCodeSnapshotDetailPublic extends FactorCodeSnapshotSummaryPublic {
-  source: string;
-}
-
-export interface FactorEvaluationHistoryEntry {
-  id: string;
-  linked_snapshot_id?: string | null;
-  evaluated_at: string;
-  window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
-  mean_ic: Record<string, number>;
-  mean_return_spread?: Record<string, number>;
-  error?: string | null;
 }
 
 export function listFactorSnapshots(
@@ -317,27 +202,6 @@ export function getFactorEvaluationHistory(
   return apiFetchJson<FactorEvaluationHistoryEntry[]>(
     `/factors/${encodeURIComponent(factorId)}/evaluations/history`,
   );
-}
-
-export interface EvaluationTestSetDatasourceBindingPublic {
-  datasource_id: string;
-  datasource_name: string;
-  datasource_type: string;
-  dependencies: string[];
-}
-
-export interface EvaluationTestSetPublic {
-  id: string;
-  name: string;
-  description: string;
-  datasource_bindings: EvaluationTestSetDatasourceBindingPublic[];
-  start: string;
-  end: string;
-  stock_codes: string[];
-  quantiles: number;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export function listEvaluationTestSets(): Promise<EvaluationTestSetPublic[]> {
@@ -397,33 +261,6 @@ export function runFactorEvaluation(
   );
 }
 
-export type MetricVisualizationMode =
-  | "auto"
-  | "bars"
-  | "bars_diverging"
-  | "table"
-  | "json"
-  | "scalar";
-
-export interface MetricVisualizationSpec {
-  mode: MetricVisualizationMode;
-  period_day_keys: boolean;
-}
-
-export interface EvaluationMetricSummaryPublic {
-  id: string;
-  name: string;
-  description: string;
-  source_path: string;
-  created_at: string;
-  updated_at: string;
-  visualization?: MetricVisualizationSpec | null;
-}
-
-export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {
-  source: string;
-}
-
 export function listEvaluationMetrics(): Promise<EvaluationMetricSummaryPublic[]> {
   return apiFetchJson<EvaluationMetricSummaryPublic[]>("/evaluation-metrics");
 }
@@ -459,62 +296,6 @@ export function deleteEvaluationMetric(id: string): Promise<void> {
   return apiFetchJson<void>(`/evaluation-metrics/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
-}
-
-export interface WorkflowNodeDto {
-  id: string;
-  type: string;
-  pos: [number, number];
-  params: Record<string, unknown>;
-}
-
-export interface WorkflowLinkDto {
-  id?: string | null;
-  from_node: string;
-  from_socket: string;
-  to_node: string;
-  to_socket: string;
-}
-
-export interface EvaluationWorkflowDto {
-  nodes: WorkflowNodeDto[];
-  links: WorkflowLinkDto[];
-  viewport?: { x: number; y: number; zoom: number } | null;
-}
-
-export interface EvaluationProfilePrepareDto {
-  forward_return_periods: number[];
-  quantiles: number | null;
-  long_short: boolean;
-  max_loss: number;
-}
-
-export interface EvaluationProfilePublic {
-  id: string;
-  name: string;
-  description: string;
-  test_set_id: string | null;
-  prepare: EvaluationProfilePrepareDto;
-  workflow: EvaluationWorkflowDto;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface NodeTypeSocketPublic {
-  name: string;
-  required: boolean;
-  value_type: string;
-}
-
-export interface NodeTypeDefinitionPublic {
-  type: string;
-  label: string;
-  description: string;
-  inputs: NodeTypeSocketPublic[];
-  outputs: NodeTypeSocketPublic[];
-  user_defined: boolean;
-  metric_id: string | null;
 }
 
 export function listEvaluationProfiles(): Promise<EvaluationProfilePublic[]> {
@@ -559,3 +340,6 @@ export function listEvaluationNodeTypes(): Promise<NodeTypeDefinitionPublic[]> {
     "/evaluation-profiles/node-types",
   );
 }
+
+/** 领域 DTO：也可从 `@/models` 直接引用。 */
+export type * from "@/models";

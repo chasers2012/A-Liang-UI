@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Pencil } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,12 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  getEvaluationMetric,
-  type EvaluationMetricDetailPublic,
-} from "@/lib/quant-agent-api";
+import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { METRIC_VIZ_MODE_ITEMS } from "@/lib/metric-visualization-form";
 import { cn } from "@/lib/utils";
+import {
+  evaluationMetricDetailAtomFamily,
+  loadEvaluationMetricDetailAtomFamily,
+} from "@/models/evaluation-metric/list-detail.atom";
 
 import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
 
@@ -27,25 +28,12 @@ export default function EvaluationMetricDetailPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
-  const [row, setRow] = useState<EvaluationMetricDetailPublic | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { row, error } = useAtomValue(evaluationMetricDetailAtomFamily(id));
+  const load = useSetAtom(loadEvaluationMetricDetailAtomFamily(id));
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    setError(null);
-    try {
-      setRow(await getEvaluationMetric(id));
-    } catch (e) {
-      setRow(null);
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [id]);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void load();
-    });
-  }, [load]);
+  useEffectMicrotask(() => {
+    void load();
+  }, [id, load]);
 
   if (!id) {
     return (
