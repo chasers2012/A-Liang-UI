@@ -13,6 +13,7 @@ evaluate = { workspace = true }
 factor = { workspace = true }
 agent = { workspace = true }
 workspace = { workspace = true }
+custom-code = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*"]
@@ -27,6 +28,7 @@ dev = [
     "evaluate",
     "factor",
     "workspace",
+    "custom-code",
     "psycopg[binary]>=3.1",
 ]
 

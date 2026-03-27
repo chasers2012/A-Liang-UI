@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "custom-code"
+version = "0.1.0"
+description = "Parse and exec custom Python subclasses (factors, metrics, etc.)"
+requires-python = ">=3.10"
+
+[tool.hatch.build.targets.wheel]
+packages = ["custom_code"]

@@ -18,6 +18,7 @@ resolution-markers = [
 members = [
     "agent",
     "csv-datasource",
+    "custom-code",
     "evaluate",
     "factor",
     "quant-agent",
@@ -31,6 +32,7 @@ name = "agent"
 version = "0.1.0"
 source = { editable = "lib/agent" }
 dependencies = [
+    { name = "custom-code" },
     { name = "evaluate" },
     { name = "factor" },
     { name = "langchain" },
@@ -46,6 +48,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "custom-code", editable = "lib/custom_code" },
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "factor", editable = "lib/factor" },
     { name = "langchain", specifier = ">=0.3.0" },
@@ -495,6 +498,11 @@ requires-dist = [
     { name = "factor", editable = "lib/factor" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
+
+[[package]]
+name = "custom-code"
+version = "0.1.0"
+source = { editable = "lib/custom_code" }
 
 [[package]]
 name = "cycler"
@@ -2187,6 +2195,7 @@ dependencies = [
 dev = [
     { name = "agent" },
     { name = "csv-datasource" },
+    { name = "custom-code" },
     { name = "evaluate" },
     { name = "factor" },
     { name = "httpx" },
@@ -2203,6 +2212,7 @@ requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
 dev = [
     { name = "agent", editable = "lib/agent" },
     { name = "csv-datasource", editable = "lib/csv_datasource" },
+    { name = "custom-code", editable = "lib/custom_code" },
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "factor", editable = "lib/factor" },
     { name = "httpx", specifier = ">=0.27.0" },
@@ -2218,6 +2228,7 @@ version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "csv-datasource" },
+    { name = "custom-code" },
     { name = "evaluate" },
     { name = "factor" },
     { name = "fastapi" },
@@ -2234,6 +2245,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "csv-datasource", editable = "lib/csv_datasource" },
+    { name = "custom-code", editable = "lib/custom_code" },
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "factor", editable = "lib/factor" },
     { name = "fastapi", specifier = ">=0.115.0" },
