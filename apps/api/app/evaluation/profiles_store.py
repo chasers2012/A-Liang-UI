@@ -3,6 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.evaluation.profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
+from app.persistence.registry_helpers import (
+    get_first_default_item,
+    get_item_by_id,
+)
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
 REGISTRY_FILENAME = "evaluation_profiles.json"
@@ -29,24 +33,8 @@ def save_file(reg: EvaluationProfilesFile) -> None:
 
 
 def get_by_id(reg: EvaluationProfilesFile, pid: str) -> EvaluationProfileRecord | None:
-    for item in reg.items:
-        if item.id == pid:
-            return item
-    return None
-
-
-def apply_default_uniqueness(items: list[EvaluationProfileRecord]) -> None:
-    default_ids = [i.id for i in items if i.is_default]
-    if len(default_ids) <= 1:
-        return
-    keep = default_ids[-1]
-    for i in items:
-        if i.id != keep:
-            i.is_default = False
+    return get_item_by_id(reg.items, pid)
 
 
 def get_default_profile(reg: EvaluationProfilesFile) -> EvaluationProfileRecord | None:
-    for i in reg.items:
-        if i.is_default:
-            return i
-    return None
+    return get_first_default_item(reg.items)

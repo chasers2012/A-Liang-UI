@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app import datetime_utils
+
 EVALUATION_METRICS_DIR = "evaluation_metrics"
 
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+utc_now_iso = datetime_utils.utc_now_iso
 
 
 def source_relative_path(metric_id: str) -> str:

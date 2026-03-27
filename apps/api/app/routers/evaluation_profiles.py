@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
 from app.evaluation.graph_validate import validate_workflow_graph
-from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS
+from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS, builtin_workflow_type_ids
 from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -39,9 +39,8 @@ def _to_public(rec) -> EvaluationProfilePublic:
 def _validate_workflow_if_needed(wf) -> None:
     if not wf.nodes:
         return
-    allowed = set(BUILTIN_NODE_SPECS.keys())
     try:
-        validate_workflow_graph(wf, allowed_types=allowed)
+        validate_workflow_graph(wf, allowed_types=builtin_workflow_type_ids())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

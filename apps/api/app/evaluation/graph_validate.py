@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
+from collections.abc import Set as AbstractSet
 
 from app.evaluation.node_type_registry import builtin_node_definition, is_builtin_type
 from app.evaluation.profile_schemas import EvaluationWorkflow
@@ -11,7 +12,7 @@ from app.evaluation.profile_schemas import EvaluationWorkflow
 def validate_workflow_graph(  # noqa: C901
     workflow: EvaluationWorkflow,
     *,
-    allowed_types: set[str],
+    allowed_types: AbstractSet[str],
 ) -> None:
     nodes = workflow.nodes
     links = workflow.links

@@ -63,3 +63,8 @@ def builtin_node_definition(node_type: str) -> BuiltinNodeSpec:
 
 def list_builtin_types() -> list[str]:
     return list(BUILTIN_NODE_SPECS.keys())
+
+
+def builtin_workflow_type_ids() -> frozenset[str]:
+    """Node type strings allowed in workflow graph validation (builtin nodes only)."""
+    return frozenset(BUILTIN_NODE_SPECS.keys())

@@ -6,6 +6,10 @@ from app.evaluation.test_set_schemas import (
     EvaluationTestSetRecord,
     EvaluationTestSetsFile,
 )
+from app.persistence.registry_helpers import (
+    get_first_default_item,
+    get_item_by_id,
+)
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
 REGISTRY_FILENAME = "evaluation_test_sets.json"
@@ -59,24 +63,8 @@ def save_file(reg: EvaluationTestSetsFile) -> None:
 
 
 def get_by_id(reg: EvaluationTestSetsFile, ts_id: str) -> EvaluationTestSetRecord | None:
-    for item in reg.items:
-        if item.id == ts_id:
-            return item
-    return None
-
-
-def apply_default_uniqueness(items: list[EvaluationTestSetRecord]) -> None:
-    default_ids = [i.id for i in items if i.is_default]
-    if len(default_ids) <= 1:
-        return
-    keep = default_ids[-1]
-    for i in items:
-        if i.id != keep:
-            i.is_default = False
+    return get_item_by_id(reg.items, ts_id)
 
 
 def get_default_test_set(reg: EvaluationTestSetsFile) -> EvaluationTestSetRecord | None:
-    for i in reg.items:
-        if i.is_default:
-            return i
-    return None
+    return get_first_default_item(reg.items)

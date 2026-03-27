@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app import datetime_utils
+
 FACTORS_DIR = "factors"
 
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+utc_now_iso = datetime_utils.utc_now_iso
 
 
 def default_factor_source(factor_name: str) -> str:

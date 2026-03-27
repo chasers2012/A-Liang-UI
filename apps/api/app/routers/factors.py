@@ -54,6 +54,7 @@ from app.factors.schemas import (
     utc_now_iso,
 )
 from app.factors.validate import validate_factor_name, validate_source_syntax
+from app.http_errors import http_bad_request, http_internal_server_error
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 
@@ -100,7 +101,7 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     try:
         ev_file = load_evaluations_file()
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        http_internal_server_error(e)
 
     reg = load_registry()
     rows: list[FactorEvaluationRowPublic] = []
@@ -170,7 +171,7 @@ def factor_evaluation_history(factor_id: str) -> list[FactorEvaluationHistoryEnt
     try:
         rows = list_history_for_factor(factor_id)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        http_internal_server_error(e)
     return list(reversed(rows))
 
 
@@ -192,7 +193,7 @@ def post_factor_evaluation_run(
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
         from app.evaluation.graph_validate import validate_workflow_graph
-        from app.evaluation.node_type_registry import list_builtin_types
+        from app.evaluation.node_type_registry import builtin_workflow_type_ids
         from app.evaluation.profiles_store import get_by_id as get_profile_by_id
         from app.evaluation.profiles_store import load_file as load_profiles_file
 
@@ -202,9 +203,9 @@ def post_factor_evaluation_run(
             raise HTTPException(status_code=400, detail="评价方案不存在")
         if prof.workflow.nodes:
             try:
-                validate_workflow_graph(prof.workflow, allowed_types=set(list_builtin_types()))
+                validate_workflow_graph(prof.workflow, allowed_types=builtin_workflow_type_ids())
             except ValueError as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
+                http_bad_request(e)
     try:
         snap = run_evaluation_for_factor(
             factor_id,
@@ -212,11 +213,11 @@ def post_factor_evaluation_run(
             evaluation_profile=prof,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        http_bad_request(e)
     try:
         upsert_evaluation_for_factor(factor_id, snap)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        http_internal_server_error(e)
     entry = entry_from_latest_evaluation(snap, linked_snapshot_id=None)
     with contextlib.suppress(ValueError):
         append_history_entry(factor_id, entry)
@@ -248,7 +249,7 @@ def list_factor_snapshots(factor_id: str) -> list[FactorCodeSnapshotSummaryPubli
     try:
         snaps = list_snapshots_for_factor(factor_id)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        http_internal_server_error(e)
     return [
         FactorCodeSnapshotSummaryPublic(
             id=s.id,
@@ -275,7 +276,7 @@ def get_factor_snapshot(
     try:
         snap = get_snapshot(factor_id, snapshot_id)
     except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        http_internal_server_error(e)
     if snap is None:
         raise HTTPException(status_code=404, detail="快照不存在")
     return FactorCodeSnapshotDetailPublic(
@@ -312,7 +313,7 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
     try:
         validate_factor_name(body.name)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        http_bad_request(e)
     fid = new_factor_id()
     now = utc_now_iso()
     rec = body.to_record(fid, now)
@@ -320,7 +321,7 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
     try:
         validate_source_syntax(src)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        http_bad_request(e)
 
     reg = load_registry()
     reg.items.append(rec)
@@ -343,7 +344,7 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:  # no
         try:
             validate_factor_name(str(body.name))
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            http_bad_request(e)
 
     if "max_window" in unset and body.max_window is not None and body.max_window < 1:
         raise HTTPException(status_code=400, detail="max_window 须 >= 1")
@@ -351,13 +352,13 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:  # no
     try:
         _merge_patch(rec, body)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        http_bad_request(e)
 
     if "source" in unset and body.source is not None:
         try:
             validate_source_syntax(body.source)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+            http_bad_request(e)
         old_src = read_source(rec)
         if body.source != old_src:
             write_source(rec, body.source)
@@ -369,7 +370,7 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:  # no
                     kind="auto",
                 )
             except ValueError as e:
-                raise HTTPException(status_code=500, detail=str(e)) from e
+                http_internal_server_error(e)
             try:
                 ev_file = load_evaluations_file()
             except ValueError:

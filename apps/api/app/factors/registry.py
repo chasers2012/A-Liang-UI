@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from workspace import ensure_dir, get_workspace_root
+from workspace import ensure_dir
 
 from app.factors.schemas import FACTORS_DIR, FactorRecord, FactorRegistryFile
+from app.persistence.registry_helpers import get_item_by_id
+from app.persistence.source_files import (
+    delete_source_text_file,
+    read_source_text,
+    write_source_text,
+)
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
 FACTORS_REGISTRY_FILENAME = "factors.json"
@@ -16,14 +22,6 @@ def registry_file_path() -> Path:
 
 def factors_dir_path() -> Path:
     return ensure_dir(FACTORS_DIR)
-
-
-def resolve_source_path(source_path: str) -> Path:
-    """Resolve ``source_path`` (relative to workspace root)."""
-    p = Path(source_path)
-    if p.is_absolute():
-        return p.resolve()
-    return (get_workspace_root() / p).resolve()
 
 
 def load_registry() -> FactorRegistryFile:
@@ -39,30 +37,17 @@ def save_registry(reg: FactorRegistryFile) -> None:
 
 
 def get_by_id(reg: FactorRegistryFile, factor_id: str) -> FactorRecord | None:
-    for item in reg.items:
-        if item.id == factor_id:
-            return item
-    return None
+    return get_item_by_id(reg.items, factor_id)
 
 
 def read_source(rec: FactorRecord) -> str:
-    path = resolve_source_path(rec.source_path)
-    if not path.is_file():
-        return ""
-    return path.read_text(encoding="utf-8")
+    return read_source_text(rec.source_path)
 
 
 def write_source(rec: FactorRecord, source: str) -> None:
     factors_dir_path()
-    path = resolve_source_path(rec.source_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(source, encoding="utf-8", newline="\n")
+    write_source_text(rec.source_path, source)
 
 
 def delete_source_file(rec: FactorRecord) -> None:
-    path = resolve_source_path(rec.source_path)
-    try:
-        if path.is_file():
-            path.unlink()
-    except OSError:
-        pass
+    delete_source_text_file(rec.source_path)

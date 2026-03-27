@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.datetime_utils import utc_now_iso
+
 DataSourceType = Literal["sql", "csv"]
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 class SqlConfigStored(BaseModel):
