@@ -18,6 +18,7 @@
         "build:all": "pnpm --filter web build && pnpm run build:api",
         "build:api": "python apps/api/build.py",
         "lint": "pnpm --filter web lint",
+        "lint:fix": "pnpm --filter web lint:fix",
         "prepare": "husky"
     },
     "devDependencies": {
