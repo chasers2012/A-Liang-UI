@@ -26,16 +26,14 @@ import {
 import { cn } from "@/lib/utils";
 import { factorEvaluationRunningAtom } from "@/lib/factor-evaluation-atoms";
 import {
-  formatEvaluationWindow,
-  formatStockCount,
-} from "@/lib/factor-evaluation-display";
-import {
   deleteFactor,
   getFactor,
   getFactorEvaluationsSummary,
+  listEvaluationMetrics,
   listEvaluationProfiles,
   listEvaluationTestSets,
   runFactorEvaluation,
+  type EvaluationMetricSummaryPublic,
   type EvaluationProfilePublic,
   type EvaluationTestSetPublic,
   type FactorDetailPublic,
@@ -44,15 +42,20 @@ import {
 } from "@/lib/quant-agent-api";
 
 import { DeleteFactorDialog } from "../ui/delete-factor-dialog";
+import {
+  EvaluationProfileMetricResultsPanel,
+  type MetricMetaEntry,
+} from "../ui/evaluation-profile-metric-results";
 import { FactorFormPageContainer } from "../ui/factor-form-page";
 
 function formatIso(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
 }
 
-function formatIc(n: number | undefined): string {
-  if (n === undefined) return "—";
-  return n.toFixed(4);
+function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
+  const m = row.metric_results;
+  if (!m || typeof m !== "object") return false;
+  return Object.keys(m).length > 0;
 }
 
 export default function FactorDetailPage() {
@@ -65,8 +68,6 @@ export default function FactorDetailPage() {
 
   const [detail, setDetail] = useState<FactorDetailPublic | null>(null);
   const [evalRow, setEvalRow] = useState<FactorEvaluationRowPublic | null>(null);
-  const [primaryPeriod, setPrimaryPeriod] = useState("5");
-  const [displayPeriod, setDisplayPeriod] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,20 +78,11 @@ export default function FactorDetailPage() {
   /** null = 自动（服务端：默认测试集 → 环境变量） */
   const [runTestSetId, setRunTestSetId] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<EvaluationProfilePublic[]>([]);
+  const [evaluationMetrics, setEvaluationMetrics] = useState<
+    EvaluationMetricSummaryPublic[]
+  >([]);
   /** null = 不使用评价方案（仅测试集 + 默认 Alphalens 参数） */
   const [runProfileId, setRunProfileId] = useState<string | null>(null);
-
-  const periodKeys = useMemo(() => {
-    const ic = evalRow?.mean_ic;
-    if (!ic || Object.keys(ic).length === 0) return [];
-    return Object.keys(ic).sort((a, b) => Number(a) - Number(b));
-  }, [evalRow?.mean_ic]);
-
-  const periodItemMap = useMemo(() => {
-    const o: Record<string, string> = {};
-    for (const k of periodKeys) o[k] = `${k} 日`;
-    return o;
-  }, [periodKeys]);
 
   const testSetSelectItems = useMemo(() => {
     const o: Record<string, string> = {
@@ -112,17 +104,22 @@ export default function FactorDetailPage() {
     return o;
   }, [profiles]);
 
-  useEffect(() => {
-    if (periodKeys.length === 0) {
-      setDisplayPeriod("");
-      return;
+  const evalProfileForSnapshot = useMemo(() => {
+    const pid = evalRow?.evaluation_profile_id;
+    if (!pid) return null;
+    return profiles.find((p) => p.id === pid) ?? null;
+  }, [evalRow?.evaluation_profile_id, profiles]);
+
+  const metricMetaById = useMemo(() => {
+    const o: Record<string, MetricMetaEntry> = {};
+    for (const m of evaluationMetrics) {
+      o[m.id] = {
+        name: m.name,
+        visualization: m.visualization ?? null,
+      };
     }
-    setDisplayPeriod((prev) => {
-      if (prev && periodKeys.includes(prev)) return prev;
-      if (periodKeys.includes(primaryPeriod)) return primaryPeriod;
-      return periodKeys[0] ?? "";
-    });
-  }, [periodKeys, primaryPeriod]);
+    return o;
+  }, [evaluationMetrics]);
 
   const load = useCallback(async () => {
     if (!id) {
@@ -133,17 +130,18 @@ export default function FactorDetailPage() {
     setLoadError(null);
     setLoading(true);
     try {
-      const [d, summary, ts, pr] = await Promise.all([
+      const [d, summary, ts, pr, metrics] = await Promise.all([
         getFactor(id),
         getFactorEvaluationsSummary(),
         listEvaluationTestSets(),
         listEvaluationProfiles(),
+        listEvaluationMetrics(),
       ]);
       setDetail(d);
-      setPrimaryPeriod(summary.aggregate.primary_period);
       setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
       setTestSets(ts);
       setProfiles(pr);
+      setEvaluationMetrics(metrics);
       setRunTestSetId((prev) => {
         if (prev && ts.some((x) => x.id === prev)) return prev;
         const def = ts.find((t) => t.is_default);
@@ -157,6 +155,7 @@ export default function FactorDetailPage() {
     } catch (e) {
       setDetail(null);
       setEvalRow(null);
+      setEvaluationMetrics([]);
       setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
@@ -166,7 +165,6 @@ export default function FactorDetailPage() {
   const refreshEvalRow = useCallback(async () => {
     if (!id) return;
     const summary = await getFactorEvaluationsSummary();
-    setPrimaryPeriod(summary.aggregate.primary_period);
     setEvalRow(summary.rows.find((r) => r.factor_id === id) ?? null);
   }, [id]);
 
@@ -261,10 +259,6 @@ export default function FactorDetailPage() {
     created_at: detail.created_at,
     updated_at: detail.updated_at,
   };
-
-  const pp = displayPeriod || primaryPeriod;
-  const icPrimary = evalRow?.mean_ic?.[pp];
-  const spreadPrimary = evalRow?.mean_return_spread?.[pp];
 
   return (
     <FactorFormPageContainer>
@@ -452,18 +446,19 @@ export default function FactorDetailPage() {
 
         <Card className="border-border/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">最新评价</CardTitle>
+            <CardTitle className="text-base">方案评价结果</CardTitle>
             <CardDescription>
-              来自{" "}
+              工作流节点输出（快照来自{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.65rem]">
                 config/factor_evaluations.json
               </code>
+              ）
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
             {!evalRow?.has_evaluation ? (
               <p className="text-sm text-muted-foreground">
-                暂无评价快照。可通过 CLI/Agent 写入评价，或在保存代码变更后查看与快照绑定的
+                暂无评价快照。请选择评价方案后点击「运行评价」，或查看
                 <Link
                   href={`/factors/${encodeURIComponent(id)}/history`}
                   className="mx-1 font-medium text-foreground underline-offset-4 hover:underline"
@@ -495,107 +490,36 @@ export default function FactorDetailPage() {
                     {evalRow.error}
                   </p>
                 ) : null}
-                <dl className="grid gap-2 border-t border-border/60 pt-4 text-xs">
-                  <div className="flex flex-wrap gap-x-2 gap-y-1">
-                    <dt className="text-muted-foreground">样本区间</dt>
-                    <dd className="break-all font-mono text-[0.7rem] leading-relaxed tabular-nums">
-                      {formatEvaluationWindow(evalRow.window)}
-                    </dd>
+                {evalRow.evaluation_profile_id ? (
+                  <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">评价方案</span>
+                    <span className="ml-2 font-medium">
+                      {evalProfileForSnapshot?.name ??
+                        evalRow.evaluation_profile_id}
+                    </span>
+                    {!evalProfileForSnapshot && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        （方案可能已删除）
+                      </span>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-x-2 gap-y-1">
-                    <dt className="text-muted-foreground">股票数量</dt>
-                    <dd className="font-mono tabular-nums">
-                      {formatStockCount(evalRow.stock_count)}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Mean IC（{pp}D）
-                    </p>
-                    <p className="font-mono text-lg tabular-nums">
-                      {formatIc(icPrimary)}
-                    </p>
-                  </div>
-                  {periodKeys.length > 1 ? (
-                    <div className="flex flex-col gap-1.5">
-                      <Label
-                        htmlFor="factor-detail-period"
-                        className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        展示周期（主周期 {primaryPeriod}D）
-                      </Label>
-                      <Select
-                        modal={false}
-                        items={periodItemMap}
-                        value={displayPeriod}
-                        onValueChange={(v) => v && setDisplayPeriod(v)}
-                      >
-                        <SelectTrigger
-                          id="factor-detail-period"
-                          size="sm"
-                          className="w-[8.5rem]"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {periodKeys.map((k) => (
-                            <SelectItem key={k} value={k}>
-                              {k} 日
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ) : null}
-                </div>
-                {evalRow.mean_return_spread &&
-                Object.keys(evalRow.mean_return_spread).length > 0 ? (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Return spread（{pp}D）
-                    </p>
-                    <p className="font-mono text-lg tabular-nums">
-                      {formatIc(spreadPrimary)}
-                    </p>
-                    <p className="mb-2 mt-3 text-xs font-medium text-muted-foreground">
-                      各周期 spread
-                    </p>
-                    <ul className="flex flex-wrap gap-2 font-mono text-xs tabular-nums">
-                      {Object.entries(evalRow.mean_return_spread)
-                        .sort(([a], [b]) => Number(a) - Number(b))
-                        .map(([k, v]) => (
-                          <li
-                            key={k}
-                            className="rounded-md border border-border/80 bg-muted/20 px-2 py-1"
-                          >
-                            {k}D: {formatIc(v)}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    该次评价未记录评价方案，无法对齐工作流节点说明。
+                  </p>
+                )}
+                {!evalRow.error &&
+                evalRow.evaluation_profile_id &&
+                !hasWorkflowMetricResults(evalRow) ? (
+                  <p className="text-sm text-muted-foreground">
+                    当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
+                  </p>
                 ) : null}
-                {evalRow.mean_ic &&
-                Object.keys(evalRow.mean_ic).length > 0 ? (
-                  <div>
-                    <p className="mb-2 text-xs font-medium text-muted-foreground">
-                      各周期 Mean IC
-                    </p>
-                    <ul className="flex flex-wrap gap-2 font-mono text-xs tabular-nums">
-                      {Object.entries(evalRow.mean_ic)
-                        .sort(([a], [b]) => Number(a) - Number(b))
-                        .map(([k, v]) => (
-                          <li
-                            key={k}
-                            className="rounded-md border border-border/80 bg-muted/20 px-2 py-1"
-                          >
-                            {k}D: {formatIc(v)}
-                          </li>
-                        ))}
-                    </ul>
-                  </div>
-                ) : null}
+                <EvaluationProfileMetricResultsPanel
+                  metricResults={evalRow.metric_results ?? {}}
+                  profile={evalProfileForSnapshot}
+                  metricMetaById={metricMetaById}
+                />
                 <Link
                   href={`/factors/${encodeURIComponent(id)}/history`}
                   className={cn(

@@ -36,6 +36,14 @@ class FactorEvaluationRowPublic(BaseModel):
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: Optional[str] = None
+    evaluation_profile_id: Optional[str] = Field(
+        default=None,
+        description="Evaluation profile id when this snapshot used a named profile.",
+    )
+    metric_results: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Per workflow node id: output socket name to JSON-serializable payload.",
+    )
 
 
 class FactorEvaluationsAggregatePublic(BaseModel):

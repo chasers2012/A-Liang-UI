@@ -243,6 +243,10 @@ export interface FactorEvaluationRowPublic {
   mean_ic: Record<string, number>;
   mean_return_spread?: Record<string, number>;
   error?: string | null;
+  /** Present when the run used a named evaluation profile (with or without workflow nodes). */
+  evaluation_profile_id?: string | null;
+  /** Workflow node id → output socket → value (e.g. period → scalar for IC/spread). */
+  metric_results?: Record<string, unknown>;
 }
 
 export interface FactorEvaluationsSummaryPublic {
@@ -393,6 +397,19 @@ export function runFactorEvaluation(
   );
 }
 
+export type MetricVisualizationMode =
+  | "auto"
+  | "bars"
+  | "bars_diverging"
+  | "table"
+  | "json"
+  | "scalar";
+
+export interface MetricVisualizationSpec {
+  mode: MetricVisualizationMode;
+  period_day_keys: boolean;
+}
+
 export interface EvaluationMetricSummaryPublic {
   id: string;
   name: string;
@@ -400,6 +417,7 @@ export interface EvaluationMetricSummaryPublic {
   source_path: string;
   created_at: string;
   updated_at: string;
+  visualization?: MetricVisualizationSpec | null;
 }
 
 export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {

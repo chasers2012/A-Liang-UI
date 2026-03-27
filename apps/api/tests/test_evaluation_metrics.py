@@ -8,6 +8,9 @@ def test_evaluation_metrics_crud(client):
     mid = data["id"]
     assert data["name"] == "em_test"
     assert "UserEvaluationMetric" in data["source"]
+    assert data.get("visualization") is not None
+    assert data["visualization"]["mode"] == "auto"
+    assert data["visualization"]["period_day_keys"] is False
 
     r2 = client.get(f"/evaluation-metrics/{mid}")
     assert r2.status_code == 200
@@ -15,10 +18,16 @@ def test_evaluation_metrics_crud(client):
 
     r3 = client.patch(
         f"/evaluation-metrics/{mid}",
-        json={"description": "d1"},
+        json={
+            "description": "d1",
+            "visualization": {"mode": "table", "period_day_keys": True},
+        },
     )
     assert r3.status_code == 200
-    assert r3.json()["description"] == "d1"
+    body3 = r3.json()
+    assert body3["description"] == "d1"
+    assert body3["visualization"]["mode"] == "table"
+    assert body3["visualization"]["period_day_keys"] is True
 
     r4 = client.delete(f"/evaluation-metrics/{mid}")
     assert r4.status_code == 204

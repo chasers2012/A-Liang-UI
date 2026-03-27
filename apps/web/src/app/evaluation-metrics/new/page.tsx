@@ -10,19 +10,33 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createEvaluationMetric } from "@/lib/quant-agent-api";
+import {
+  createEvaluationMetric,
+  type MetricVisualizationMode,
+} from "@/lib/quant-agent-api";
+import { METRIC_VIZ_MODE_ITEMS } from "@/lib/metric-visualization-form";
 
 import { FactorCodeJar } from "@/app/factors/ui/factor-code-jar";
 import {
   FactorFormPageContainer,
   FactorFormPageHeader,
 } from "@/app/factors/ui/factor-form-page";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
+  const [vizMode, setVizMode] =
+    useState<MetricVisualizationMode>("auto");
+  const [vizPeriodDayKeys, setVizPeriodDayKeys] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,6 +49,10 @@ export default function NewEvaluationMetricPage() {
         name: name.trim(),
         description: description.trim(),
         ...(source.trim() ? { source: source.trim() } : {}),
+        visualization: {
+          mode: vizMode,
+          period_day_keys: vizPeriodDayKeys,
+        },
       });
       router.push(`/evaluation-metrics/${encodeURIComponent(created.id)}`);
     } catch (err) {
@@ -74,6 +92,36 @@ export default function NewEvaluationMetricPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
             />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="em-viz">结果可视化</Label>
+            <p className="text-xs text-muted-foreground">
+              可覆盖模板源码中的 VISUALIZATION；因子详情页按此展示该指标的输出。
+            </p>
+            <Select
+              value={vizMode}
+              onValueChange={(v) => v && setVizMode(v as MetricVisualizationMode)}
+            >
+              <SelectTrigger id="em-viz" size="sm" className="max-w-md">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {METRIC_VIZ_MODE_ITEMS.map((it) => (
+                  <SelectItem key={it.value} value={it.value}>
+                    {it.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-input"
+                checked={vizPeriodDayKeys}
+                onChange={(e) => setVizPeriodDayKeys(e.target.checked)}
+              />
+              <span>键名为纯数字时显示为「N 日」</span>
+            </label>
           </div>
         </div>
         <div className="space-y-2">

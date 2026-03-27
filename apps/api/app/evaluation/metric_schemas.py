@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EVALUATION_METRICS_DIR = "evaluation_metrics"
 
@@ -31,6 +31,7 @@ class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
     """
     自定义评价指标：实现 evaluate，输入一般为 factor_data_clean (DataFrame)。
     端口元数据供工作流编辑器校验（类属性，可选）。
+    创建时若未在界面指定可视化，会尝试读取 VISUALIZATION 作为默认。
     """
     INPUT_SOCKETS = [
         {{"name": "clean_factor", "required": True, "value_type": "factor_data_clean"}},
@@ -38,6 +39,7 @@ class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
     OUTPUT_SOCKETS = [
         {{"name": "out", "value_type": "scalar_json"}},
     ]
+    VISUALIZATION = {{"mode": "auto", "period_day_keys": False}}
 
     def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
         _ = clean_factor
@@ -45,13 +47,35 @@ class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
 '''
 
 
+MetricVisualizationMode = Literal[
+    "auto",
+    "bars",
+    "bars_diverging",
+    "table",
+    "json",
+    "scalar",
+]
+
+
+class MetricVisualizationSpec(BaseModel):
+    """How factor-detail UI renders this metric's structured output."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    mode: MetricVisualizationMode = "auto"
+    period_day_keys: bool = False
+
+
 class EvaluationMetricRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     name: str
     description: str = ""
     source_path: str
     created_at: str
     updated_at: str
+    visualization: Optional[MetricVisualizationSpec] = None
 
 
 class EvaluationMetricsRegistryFile(BaseModel):
@@ -63,6 +87,7 @@ class EvaluationMetricCreate(BaseModel):
     name: str
     description: str = ""
     source: Optional[str] = None
+    visualization: Optional[MetricVisualizationSpec] = None
 
     @field_validator("name")
     @classmethod
@@ -80,6 +105,7 @@ class EvaluationMetricCreate(BaseModel):
             source_path=source_relative_path(metric_id),
             created_at=now,
             updated_at=now,
+            visualization=self.visualization,
         )
 
 
@@ -87,6 +113,7 @@ class EvaluationMetricPatch(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     source: Optional[str] = None
+    visualization: Optional[MetricVisualizationSpec] = None
 
 
 class EvaluationMetricSummaryPublic(BaseModel):
@@ -96,6 +123,7 @@ class EvaluationMetricSummaryPublic(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
+    visualization: Optional[MetricVisualizationSpec] = None
 
 
 class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):
@@ -110,6 +138,7 @@ def record_to_summary(rec: EvaluationMetricRecord) -> EvaluationMetricSummaryPub
         source_path=rec.source_path,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
+        visualization=rec.visualization,
     )
 
 

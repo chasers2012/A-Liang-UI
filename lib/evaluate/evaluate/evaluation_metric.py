@@ -18,6 +18,12 @@ class EvaluationMetric(ABC, Generic[TResult]):
 
     Subclasses implement :meth:`evaluate` to compute a scalar, structured record,
     or other result from inputs (e.g. factor values, forward returns, labels).
+
+    Optional class attribute ``VISUALIZATION`` (``dict``) may suggest default UI
+    rendering when the metric is first created; the persisted setting is edited
+    in the API / web UI and stored on the metric record. Example::
+
+        VISUALIZATION = {"mode": "table", "period_day_keys": False}
     """
 
     @abstractmethod

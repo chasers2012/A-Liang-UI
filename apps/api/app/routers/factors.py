@@ -136,6 +136,8 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
                 mean_ic=dict(snap.mean_ic),
                 mean_return_spread=dict(snap.mean_return_spread),
                 error=err,
+                evaluation_profile_id=snap.evaluation_profile_id,
+                metric_results=dict(snap.metric_results),
             )
         )
 
@@ -231,6 +233,8 @@ def post_factor_evaluation_run(
         mean_ic=dict(snap.mean_ic),
         mean_return_spread=dict(snap.mean_return_spread),
         error=err,
+        evaluation_profile_id=snap.evaluation_profile_id,
+        metric_results=dict(snap.metric_results),
     )
 
 
