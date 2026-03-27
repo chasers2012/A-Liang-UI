@@ -1,8 +1,9 @@
-"""LangGraph workflow: ideate -> pseudocode -> codegen -> dry-run -> optional Alphalens -> report."""
+"""LangGraph workflow: ideate -> pseudocode -> codegen -> dry-run -> Alphalens -> report."""
 
 from __future__ import annotations
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from agent.nodes import (
     node_evaluate_alphalens,
@@ -15,6 +16,8 @@ from agent.nodes import (
 )
 from agent.state import FactorDiggingState
 
+__all__ = ["build_factor_digging_graph"]
+
 _MAX_REPAIR_AFTER_FAILURE = 3
 
 
@@ -26,7 +29,7 @@ def _route_after_validate(state: FactorDiggingState) -> str:
     return "finalize"
 
 
-def build_factor_digging_graph():
+def build_factor_digging_graph() -> CompiledStateGraph:
     g: StateGraph = StateGraph(FactorDiggingState)
     g.add_node("init_context", node_init_context)
     g.add_node("ideate", node_ideate)

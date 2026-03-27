@@ -4,6 +4,12 @@ from __future__ import annotations
 
 from factor.dependency_resolver import DependencyResolver
 
+__all__ = [
+    "get_dependency_resolver",
+    "list_registered_dependency_fields",
+    "set_dependency_resolver",
+]
+
 _default_resolver: DependencyResolver | None = None
 
 

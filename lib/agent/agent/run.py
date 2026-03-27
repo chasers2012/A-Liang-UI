@@ -17,8 +17,6 @@ CLI: 因子挖掘 Agent
   FACTOR_AGENT_STOCK_CODES
   FACTOR_AGENT_QUANTILES
   FACTOR_AGENT_SKIP_EVAL=1
-  FACTOR_AGENT_LOG_LEVEL / FACTOR_AGENT_LOG_MAX_BYTES / FACTOR_AGENT_LOG_BACKUP_COUNT
-  FACTOR_AGENT_LLM_LOG_MAX_CHARS
   FACTOR_AGENT_STREAM_OUTPUT / FACTOR_AGENT_STREAM_API / FACTOR_AGENT_STREAM_MAX_CHUNKS
   FACTOR_AGENT_OLLAMA_TIMEOUT
   FACTOR_AGENT_NUM_PREDICT
@@ -59,9 +57,7 @@ def run_factor_digging(
     _load_env()
     from agent.context import set_dependency_resolver
     from agent.graph import build_factor_digging_graph
-    from agent.logging_setup import configure_agent_logging
 
-    configure_agent_logging()
     if dependency_resolver is not None:
         set_dependency_resolver(dependency_resolver)
 
