@@ -68,9 +68,9 @@ export default function EvaluationProfilesPage() {
         </Alert>
       )}
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">方案列表</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>方案列表</CardTitle>
           <CardDescription>
             工作流非空时按图执行；空工作流时仅用本页的 prepare 参数与测试集覆盖
           </CardDescription>

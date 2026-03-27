@@ -229,12 +229,12 @@ function FactorDetailHeaderToolbar(props: {
 function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
   const { detail } = props;
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-        <CardTitle className="text-base">元数据</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>元数据</CardTitle>
         <CardDescription>来自 registry 与源码路径</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 pt-6 text-sm">
+      <CardContent className="space-y-3 text-sm">
         {detail.description ? (
           <p className="leading-relaxed text-muted-foreground">
             {detail.description}
@@ -286,9 +286,9 @@ function FactorEvaluationSnapshotCard(props: {
   const { id, evalRow, evalProfileForSnapshot, metricMetaById } = props;
 
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-        <CardTitle className="text-base">方案评价结果</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle>方案评价结果</CardTitle>
         <CardDescription>
           工作流节点输出（快照来自{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.65rem]">
@@ -297,7 +297,7 @@ function FactorEvaluationSnapshotCard(props: {
           ）
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4 pt-6">
+      <CardContent className="space-y-4">
         {!evalRow?.has_evaluation ? (
           <p className="text-sm text-muted-foreground">
             暂无评价快照。请选择评价方案后点击「运行评价」，或查看
@@ -351,8 +351,8 @@ function FactorEvaluationSnapshotCard(props: {
               </p>
             )}
             {!evalRow.error &&
-            evalRow.evaluation_profile_id &&
-            !hasWorkflowMetricResults(evalRow) ? (
+              evalRow.evaluation_profile_id &&
+              !hasWorkflowMetricResults(evalRow) ? (
               <p className="text-sm text-muted-foreground">
                 当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
               </p>

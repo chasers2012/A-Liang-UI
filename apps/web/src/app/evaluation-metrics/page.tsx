@@ -72,9 +72,9 @@ export default function EvaluationMetricsPage() {
         </Alert>
       )}
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">指标列表</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>指标列表</CardTitle>
           <CardDescription>
             在工作流中使用节点类型 <span className="font-mono">user_metric</span>{" "}
             并设置 <span className="font-mono">params.metric_id</span>

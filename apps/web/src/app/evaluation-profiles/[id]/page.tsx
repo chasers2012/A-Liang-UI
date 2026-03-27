@@ -76,7 +76,7 @@ export default function EvaluationProfileDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">配置摘要</CardTitle>
+          <CardTitle>配置摘要</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
@@ -99,7 +99,7 @@ export default function EvaluationProfileDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">工作流 JSON</CardTitle>
+          <CardTitle>工作流 JSON</CardTitle>
         </CardHeader>
         <CardContent>
           <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">

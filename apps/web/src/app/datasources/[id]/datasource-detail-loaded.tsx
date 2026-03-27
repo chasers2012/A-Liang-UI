@@ -114,12 +114,12 @@ export function DatasourceDetailLoaded({
         </Alert>
       )}
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">状态与标识</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>状态与标识</CardTitle>
           <CardDescription>与列表中开关一致，修改后立即保存</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4">
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">id</dt>
@@ -150,11 +150,11 @@ export function DatasourceDetailLoaded({
       </Card>
 
       {ds.type === "sql" && ds.sql && (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">SQL 配置（公开字段）</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>SQL 配置（公开字段）</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent>
             <dl className="grid gap-3 text-sm">
               <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                 <dt className="text-muted-foreground">db_driver</dt>
@@ -210,11 +210,11 @@ export function DatasourceDetailLoaded({
       )}
 
       {ds.type === "csv" && ds.csv && (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">CSV 配置</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>CSV 配置</CardTitle>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent>
             <dl className="grid gap-3 text-sm">
               <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                 <dt className="text-muted-foreground">path</dt>

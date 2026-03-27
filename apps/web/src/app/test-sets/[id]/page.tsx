@@ -126,12 +126,12 @@ export default function TestSetDetailPage() {
         </div>
       </div>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">标识与时间</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>标识与时间</CardTitle>
           <CardDescription>存储中的完整元数据字段</CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent>
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">id</dt>
@@ -153,14 +153,14 @@ export default function TestSetDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">数据源绑定</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>数据源绑定</CardTitle>
           <CardDescription>
             datasource_id、datasource_name、datasource_type、dependencies
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6">
           {row.datasource_bindings.length === 0 ? (
             <p className="text-sm text-muted-foreground">无绑定</p>
           ) : (
@@ -204,11 +204,11 @@ export default function TestSetDetailPage() {
         </CardContent>
       </Card>
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-          <CardTitle className="text-base">评价参数</CardTitle>
+      <Card>
+        <CardHeader>
+          <CardTitle>评价参数</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent>
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">start</dt>

@@ -76,7 +76,7 @@ export default function EvaluationMetricDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">元数据</CardTitle>
+          <CardTitle>元数据</CardTitle>
           <CardDescription className="font-mono text-xs">{row.source_path}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1 text-sm text-muted-foreground">
@@ -88,7 +88,7 @@ export default function EvaluationMetricDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">结果可视化</CardTitle>
+          <CardTitle>结果可视化</CardTitle>
           <CardDescription>
             因子详情页中工作流「自定义指标」节点的展示方式
           </CardDescription>
@@ -114,7 +114,7 @@ export default function EvaluationMetricDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">源码</CardTitle>
+          <CardTitle>源码</CardTitle>
         </CardHeader>
         <CardContent>
           <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">

@@ -37,9 +37,9 @@ export function FactorCardList({ items }: Props) {
             >
               <Card
                 size="sm"
-                className="gap-0 py-0 shadow-sm ring-1 ring-border/80 transition-colors hover:bg-muted/20"
+                className="py-0 transition-colors hover:bg-muted/20"
               >
-                <CardHeader className="border-0 px-3 py-3 pb-2">
+                <CardHeader className="border-0 bg-transparent px-3 py-3 pb-2 shadow-none">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="min-w-0 flex-1 truncate font-mono text-sm font-semibold tracking-tight">
                       {f.name}
@@ -59,7 +59,7 @@ export function FactorCardList({ items }: Props) {
                   ) : null}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-1.5 px-3 pb-3 pt-0">
+              <CardContent className="space-y-1.5 pt-0 pb-3">
                 {f.dependencies.length > 0 ? (
                   <p
                     className="line-clamp-2 font-mono text-[0.7rem] leading-snug text-muted-foreground"

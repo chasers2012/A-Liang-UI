@@ -153,18 +153,18 @@ export function DatasourcesPanel() {
         </Alert>
       )}
 
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
+      <Card>
+        <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base">已配置的数据源</CardTitle>
+              <CardTitle>已配置的数据源</CardTitle>
               <CardDescription>
                 共 {count} 条；可在列表中快速启用、设默认或测试连接。
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-6">
+        <CardContent>
           {items === null && !loadError && (
             <p className="text-sm text-muted-foreground">加载中…</p>
           )}

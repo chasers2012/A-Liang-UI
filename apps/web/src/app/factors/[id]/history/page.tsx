@@ -145,9 +145,9 @@ function FactorSnapshotsPanel(props: {
     props;
   return (
     <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,14rem)_1fr]">
-      <Card className="min-h-48 border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
-          <CardTitle className="text-sm">快照列表</CardTitle>
+      <Card className="min-h-48" size="sm">
+        <CardHeader>
+          <CardTitle>快照列表</CardTitle>
           <CardDescription className="text-xs">
             新→旧；点击查看源码
           </CardDescription>
@@ -188,9 +188,9 @@ function FactorSnapshotsPanel(props: {
         </CardContent>
       </Card>
 
-      <Card className="min-h-48 border-border/80 shadow-sm">
-        <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
-          <CardTitle className="text-sm">源码（只读）</CardTitle>
+      <Card className="min-h-48" size="sm">
+        <CardHeader>
+          <CardTitle>源码（只读）</CardTitle>
           {detail ? (
             <CardDescription className="text-xs">
               {detail.meta.name} · max_window {detail.meta.max_window}
@@ -240,11 +240,11 @@ function FactorEvaluationsPanel(props: {
   } = props;
 
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="space-y-3 border-b border-border/60 bg-muted/10 py-3">
+    <Card size="sm">
+      <CardHeader className="space-y-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <CardTitle className="text-sm">评价历史</CardTitle>
+            <CardTitle>评价历史</CardTitle>
             <CardDescription className="text-xs">
               保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
             </CardDescription>

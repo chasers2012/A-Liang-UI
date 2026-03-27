@@ -345,12 +345,12 @@ export function TestSetForm({ mode, testSetId }: Props) {
           </Alert>
         ) : null}
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">基本信息</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>基本信息</CardTitle>
             <CardDescription>名称、说明与默认标记</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="ts-name">名称</Label>
               <Input
@@ -386,11 +386,11 @@ export function TestSetForm({ mode, testSetId }: Props) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
+        <Card>
+          <CardHeader>
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <CardTitle className="text-base">数据源绑定</CardTitle>
+                <CardTitle>数据源绑定</CardTitle>
                 <CardDescription>
                   每条绑定对应一个已启用数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
                 </CardDescription>
@@ -401,7 +401,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
+          <CardContent className="space-y-6">
             {form.bindings.map((row, index) => (
               <div
                 key={index}
@@ -488,11 +488,11 @@ export function TestSetForm({ mode, testSetId }: Props) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">评价区间与参数</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>评价区间与参数</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 pt-6">
+          <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="ts-start">开始日期</Label>

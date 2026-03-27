@@ -80,14 +80,14 @@ export function FactorsPanel() {
       )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,30rem)_1fr] lg:items-stretch">
-        <Card className="flex h-full min-h-[min(24rem,50vh)] min-w-0 flex-col border-border/80 shadow-sm lg:min-h-0">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">因子列表</CardTitle>
+        <Card className="flex h-full min-h-[min(24rem,50vh)] min-w-0 flex-col lg:min-h-0">
+          <CardHeader>
+            <CardTitle>因子列表</CardTitle>
             <CardDescription>
               共 {count} 条。点击卡片进入详情，再编辑或查看评价与历史。
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto pt-6">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
             {items === null && !loadError && (
               <div className="flex flex-1 flex-col justify-center py-12 text-center text-sm text-muted-foreground">
                 加载因子列表…
@@ -120,9 +120,9 @@ export function FactorsPanel() {
           </CardContent>
         </Card>
 
-        <Card className="flex h-full min-h-[min(24rem,50vh)] min-w-0 flex-col border-border/80 shadow-sm lg:min-h-0">
-          <CardHeader className="border-b border-border/60 bg-muted/10 pb-4">
-            <CardTitle className="text-base">评价概览</CardTitle>
+        <Card className="flex h-full min-h-[min(24rem,50vh)] min-w-0 flex-col lg:min-h-0">
+          <CardHeader>
+            <CardTitle>评价概览</CardTitle>
             <CardDescription>
               基于 workspace{" "}
               <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">
@@ -131,7 +131,7 @@ export function FactorsPanel() {
               的快照；与左侧列表同步。
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col pt-6">
+          <CardContent className="flex min-h-0 flex-1 flex-col">
             {items === null ? (
               <div className="flex flex-1 flex-col justify-center py-12 text-center text-sm text-muted-foreground">
                 加载因子列表…
