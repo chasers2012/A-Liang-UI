@@ -18,8 +18,9 @@ def source_relative_path(metric_id: str) -> str:
 
 
 def default_metric_source(name: str) -> str:
-    safe = (name or "metric").strip() or "metric"
-    return f'''from __future__ import annotations
+    label = (name or "metric").strip() or "metric"
+    return f'''# metric: {label}
+from __future__ import annotations
 
 from typing import Any
 

@@ -1,1 +1,13 @@
+#!/usr/bin/env sh
+set -e
 pnpm run lint:fix
+
+tmp=$(mktemp)
+trap 'rm -f "$tmp"' EXIT
+git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' > "$tmp" || true
+if [ ! -s "$tmp" ]; then
+	exit 0
+fi
+xargs uv run ruff check --fix < "$tmp"
+xargs uv run ruff format < "$tmp"
+xargs git add < "$tmp"

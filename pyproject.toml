@@ -30,9 +30,26 @@ dev = [
     "workspace",
     "custom-code",
     "psycopg[binary]>=3.1",
+    "ruff>=0.15.8",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["lib", "apps/api/tests"]
 pythonpath = ["apps/api"]
 addopts = ["-ra"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "apps/web",
+    "node_modules",
+]
+
+[tool.ruff.format]
+quote-style = "double"
