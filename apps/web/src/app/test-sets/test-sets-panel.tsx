@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useAtom, useSetAtom } from "jotai";
-import { FlaskConical, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -56,26 +57,17 @@ export function TestSetsPanel() {
 
   return (
     <Page>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            测试集
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {getQuantAgentApiBase()}
-            </code>
-            读写；点击名称查看完整字段。
-          </p>
-        </div>
-        <Link
-          href="/test-sets/new"
-          className={cn(buttonVariants(), "shrink-0 gap-1.5")}
-        >
-          <Plus className="size-4" />
-          新增测试集
-        </Link>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          测试集
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            {getQuantAgentApiBase()}
+          </code>
+          读写；使用「详情」查看完整字段。
+        </p>
       </header>
 
       {loadError && (
@@ -87,38 +79,28 @@ export function TestSetsPanel() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle>已配置的测试集</CardTitle>
-              <CardDescription>
-                共 {count} 条；支持多数据源绑定，详情页展示全部存储字段。
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle>已配置的测试集</CardTitle>
+          <CardDescription>
+            共 {count} 条；支持多数据源绑定，详情页展示全部存储字段。
+          </CardDescription>
+          <CardAction>
+            <Link
+              href="/test-sets/new"
+              className={cn(buttonVariants(), "gap-1.5")}
+            >
+              <Plus className="size-4" />
+              新增测试集
+            </Link>
+          </CardAction>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {items === null && !loadError && (
-            <p className="text-sm text-muted-foreground">加载中…</p>
+            <p className="p-6 text-sm text-muted-foreground">加载中…</p>
           )}
           {items && items.length === 0 && !loadError && (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-16 text-center">
-              <FlaskConical
-                className="size-12 text-muted-foreground/40"
-                strokeWidth={1.25}
-              />
-              <p className="text-sm text-muted-foreground">
-                暂无测试集，点击「新增测试集」开始配置。
-              </p>
-              <Link
-                href="/test-sets/new"
-                className={cn(
-                  buttonVariants({ variant: "secondary", size: "sm" }),
-                  "inline-flex h-7 items-center px-2.5",
-                )}
-              >
-                新增测试集
-              </Link>
-            </div>
+            <p className="p-6 text-sm text-muted-foreground">
+              暂无测试集。请使用上方「新增测试集」开始配置。
+            </p>
           )}
           {items && items.length > 0 && (
             <TestSetTable

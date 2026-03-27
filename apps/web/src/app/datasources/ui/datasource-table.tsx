@@ -38,61 +38,55 @@ export function DatasourceTable({
   onDelete,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-border/80 hover:bg-muted/40">
-            <TableHead className="w-[18%] pl-4 font-medium">名称</TableHead>
-            <TableHead className="w-20 font-medium">类型</TableHead>
-            <TableHead className="font-medium">摘要</TableHead>
-            <TableHead className="w-24 text-center font-medium">启用</TableHead>
-            <TableHead className="w-44 font-medium">更新时间</TableHead>
-            <TableHead className="w-36 pr-4 text-right font-medium">
-              操作
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((ds) => {
-            const summary = datasourceSummary(ds);
-            return (
-              <TableRow
-                key={ds.id}
-                className="border-border/60 transition-colors hover:bg-muted/30"
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-[18%]">名称</TableHead>
+          <TableHead className="w-20">类型</TableHead>
+          <TableHead>摘要</TableHead>
+          <TableHead className="w-24 text-center">启用</TableHead>
+          <TableHead className="w-44">更新时间</TableHead>
+          <TableHead className="w-44 text-right">操作</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((ds) => {
+          const summary = datasourceSummary(ds);
+          return (
+            <TableRow key={ds.id}>
+              <TableCell className="font-mono text-sm">{ds.name}</TableCell>
+              <TableCell>
+                <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {ds.type}
+                </span>
+              </TableCell>
+              <TableCell
+                className="max-w-md truncate text-muted-foreground"
+                title={summary}
               >
-                <TableCell className="pl-4 font-medium">
+                {summary}
+              </TableCell>
+              <TableCell className="text-center">
+                <div className="flex justify-center">
+                  <Switch
+                    checked={ds.enabled}
+                    disabled={busyId === ds.id}
+                    onCheckedChange={(v) => onToggleEnabled(ds, v)}
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground tabular-nums">
+                {formatUpdatedAt(ds.updated_at)}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <Link
                     href={`/datasources/${encodeURIComponent(ds.id)}`}
-                    className="text-foreground underline-offset-4 hover:underline"
+                    className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                   >
-                    {ds.name}
+                    详情
                   </Link>
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {ds.type}
-                  </span>
-                </TableCell>
-                <TableCell
-                  className="max-w-56 truncate font-mono text-xs text-muted-foreground"
-                  title={summary}
-                >
-                  {summary}
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={ds.enabled}
-                      disabled={busyId === ds.id}
-                      onCheckedChange={(v) => onToggleEnabled(ds, v)}
-                    />
-                  </div>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground tabular-nums">
-                  {formatUpdatedAt(ds.updated_at)}
-                </TableCell>
-                <TableCell className="pr-4 text-right">
-                  <div className="flex justify-end gap-0.5">
+                  <div className="flex items-center gap-0.5">
                     <Button
                       type="button"
                       variant="ghost"
@@ -125,12 +119,12 @@ export function DatasourceTable({
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }

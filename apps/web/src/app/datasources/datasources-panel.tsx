@@ -3,12 +3,13 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import { useAtom, useSetAtom } from "jotai";
-import { Database, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -109,34 +110,25 @@ export function DatasourcesPanel() {
 
   return (
     <Page>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            数据源
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            配置经{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {getQuantAgentApiBase()}
-            </code>
-            读写，落盘于服务端 workspace（
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              QUANT_AGENT_WORKSPACE
-            </code>
-            ，默认{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              ~/.quant-agent
-            </code>
-            ）。点击名称查看详情。
-          </p>
-        </div>
-        <Link
-          href="/datasources/new"
-          className={cn(buttonVariants(), "shrink-0 gap-1.5")}
-        >
-          <Plus className="size-4" />
-          新增数据源
-        </Link>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          数据源
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          配置经{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            {getQuantAgentApiBase()}
+          </code>
+          读写，落盘于服务端 workspace（
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            QUANT_AGENT_WORKSPACE
+          </code>
+          ，默认{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            ~/.quant-agent
+          </code>
+          ）。使用「详情」查看完整配置。
+        </p>
       </header>
 
       {loadError && (
@@ -155,38 +147,28 @@ export function DatasourcesPanel() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <CardTitle>已配置的数据源</CardTitle>
-              <CardDescription>
-                共 {count} 条；可在列表中快速启用、设默认或测试连接。
-              </CardDescription>
-            </div>
-          </div>
+          <CardTitle>已配置的数据源</CardTitle>
+          <CardDescription>
+            共 {count} 条；可在列表中快速启用、设默认或测试连接。
+          </CardDescription>
+          <CardAction>
+            <Link
+              href="/datasources/new"
+              className={cn(buttonVariants(), "gap-1.5")}
+            >
+              <Plus className="size-4" />
+              新增数据源
+            </Link>
+          </CardAction>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {items === null && !loadError && (
-            <p className="text-sm text-muted-foreground">加载中…</p>
+            <p className="p-6 text-sm text-muted-foreground">加载中…</p>
           )}
           {items && items.length === 0 && !loadError && (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-16 text-center">
-              <Database
-                className="size-12 text-muted-foreground/40"
-                strokeWidth={1.25}
-              />
-              <p className="text-sm text-muted-foreground">
-                暂无数据源，点击「新增数据源」开始配置。
-              </p>
-              <Link
-                href="/datasources/new"
-                className={cn(
-                  buttonVariants({ variant: "secondary", size: "sm" }),
-                  "inline-flex h-7 items-center px-2.5",
-                )}
-              >
-                新增数据源
-              </Link>
-            </div>
+            <p className="p-6 text-sm text-muted-foreground">
+              暂无数据源。请使用上方「新增数据源」开始配置。
+            </p>
           )}
           {items && items.length > 0 && (
             <DatasourceTable

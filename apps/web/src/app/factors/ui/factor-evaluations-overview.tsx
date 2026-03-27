@@ -155,20 +155,21 @@ export function FactorEvaluationsOverview() {
         </p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border/60">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>因子</TableHead>
-              <TableHead className="text-right">Mean IC ({pp}D)</TableHead>
-              <TableHead className="hidden text-right md:table-cell">
-                Spread ({pp}D)
-              </TableHead>
-              <TableHead className="hidden sm:table-cell">评价时间</TableHead>
-              <TableHead className="text-right">状态</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="rounded-xl border border-border/80 bg-card shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>因子</TableHead>
+                <TableHead className="text-right">Mean IC ({pp}D)</TableHead>
+                <TableHead className="hidden text-right md:table-cell">
+                  Spread ({pp}D)
+                </TableHead>
+                <TableHead className="hidden sm:table-cell">评价时间</TableHead>
+                <TableHead className="text-right">状态</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {rows.map((r) => {
               const ic = r.mean_ic[pp];
               const spread = r.mean_return_spread?.[pp];
@@ -199,7 +200,7 @@ export function FactorEvaluationsOverview() {
                   <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
                     {formatIsoShort(r.evaluated_at ?? null)}
                   </TableCell>
-                  <TableCell className="text-right text-xs">
+                  <TableCell className="whitespace-normal text-right text-xs">
                     <span
                       className={
                         status === "成功"
@@ -223,8 +224,9 @@ export function FactorEvaluationsOverview() {
                 </TableRow>
               );
             })}
-          </TableBody>
-        </Table>
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

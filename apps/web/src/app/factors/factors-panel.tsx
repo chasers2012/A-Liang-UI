@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Library, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,6 +11,7 @@ import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -34,42 +35,33 @@ export function FactorsPanel() {
 
   return (
     <Page>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            因子库
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            因子配置经{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {getQuantAgentApiBase()}
-            </code>{" "}
-            读写，落盘于服务端 workspace（
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              QUANT_AGENT_WORKSPACE
-            </code>
-            ，默认{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              ~/.quant-agent
-            </code>
-            ）下的{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              config/factors.json
-            </code>{" "}
-            与{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              factors/
-            </code>
-            。
-          </p>
-        </div>
-        <Link
-          href="/factors/new"
-          className={cn(buttonVariants(), "shrink-0 gap-1.5")}
-        >
-          <Plus className="size-4" />
-          新增因子
-        </Link>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          因子库
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          因子配置经{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            {getQuantAgentApiBase()}
+          </code>{" "}
+          读写，落盘于服务端 workspace（
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            QUANT_AGENT_WORKSPACE
+          </code>
+          ，默认{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            ~/.quant-agent
+          </code>
+          ）下的{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            config/factors.json
+          </code>{" "}
+          与{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            factors/
+          </code>
+          。
+        </p>
       </header>
 
       {loadError && (
@@ -86,6 +78,15 @@ export function FactorsPanel() {
             <CardDescription>
               共 {count} 条。点击卡片进入详情，再编辑或查看评价与历史。
             </CardDescription>
+            <CardAction>
+              <Link
+                href="/factors/new"
+                className={cn(buttonVariants(), "gap-1.5")}
+              >
+                <Plus className="size-4" />
+                新增因子
+              </Link>
+            </CardAction>
           </CardHeader>
           <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
             {items === null && !loadError && (
@@ -94,23 +95,9 @@ export function FactorsPanel() {
               </div>
             )}
             {items && items.length === 0 && !loadError && (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/5 py-12 text-center">
-                <Library
-                  className="size-10 text-muted-foreground/40"
-                  strokeWidth={1.25}
-                />
-                <p className="px-2 text-sm text-muted-foreground">
-                  暂无因子，前往「新增因子」创建并保存到 workspace。
-                </p>
-                <Link
-                  href="/factors/new"
-                  className={cn(
-                    buttonVariants({ variant: "secondary", size: "sm" }),
-                  )}
-                >
-                  新增因子
-                </Link>
-              </div>
+              <p className="p-6 text-sm text-muted-foreground">
+                暂无因子。请使用上方「新增因子」创建并保存到 workspace。
+              </p>
             )}
             {items && items.length > 0 && (
               <div className="min-w-0">

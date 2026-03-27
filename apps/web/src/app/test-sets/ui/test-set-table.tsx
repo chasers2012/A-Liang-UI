@@ -39,38 +39,33 @@ export function TestSetTable({ items, onDelete }: Props) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="font-medium">名称</TableHead>
-          <TableHead className="font-medium">数据源</TableHead>
-          <TableHead className="font-medium">日期范围</TableHead>
-          <TableHead className="font-medium">股票池</TableHead>
-          <TableHead className="w-20 text-center font-medium">分位</TableHead>
-          <TableHead className="w-24 text-center font-medium">默认</TableHead>
-          <TableHead className="w-20 text-right font-medium">操作</TableHead>
+          <TableHead>名称</TableHead>
+          <TableHead>数据源</TableHead>
+          <TableHead>日期范围</TableHead>
+          <TableHead>股票池</TableHead>
+          <TableHead className="w-20 text-center">分位</TableHead>
+          <TableHead className="w-24 text-center">默认</TableHead>
+          <TableHead className="text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.map((row) => (
           <TableRow key={row.id}>
-            <TableCell className="max-w-48">
-              <Link
-                href={`/test-sets/${encodeURIComponent(row.id)}`}
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                {row.name}
-              </Link>
+            <TableCell className="max-w-48 whitespace-normal">
+              <span className="font-mono text-sm">{row.name}</span>
               {row.description ? (
                 <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                   {row.description}
                 </p>
               ) : null}
             </TableCell>
-            <TableCell className="text-sm">
+            <TableCell className="whitespace-normal text-sm">
               <span className="text-foreground">{datasourceSummary(row)}</span>
             </TableCell>
-            <TableCell className="whitespace-nowrap font-mono text-xs tabular-nums">
+            <TableCell className="font-mono text-xs tabular-nums">
               {row.start} ~ {row.end}
             </TableCell>
-            <TableCell className="text-sm text-muted-foreground">
+            <TableCell className="whitespace-normal text-sm text-muted-foreground">
               {stockSummary(row.stock_codes)}
             </TableCell>
             <TableCell className="text-center font-mono text-sm tabular-nums">
@@ -86,16 +81,24 @@ export function TestSetTable({ items, onDelete }: Props) {
               )}
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="size-8 text-destructive hover:text-destructive"
-                aria-label={`删除 ${row.name}`}
-                onClick={() => onDelete(row)}
-              >
-                <Trash2 className="size-4" />
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Link
+                  href={`/test-sets/${encodeURIComponent(row.id)}`}
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  详情
+                </Link>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-8 text-destructive hover:text-destructive"
+                  aria-label={`删除 ${row.name}`}
+                  onClick={() => onDelete(row)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

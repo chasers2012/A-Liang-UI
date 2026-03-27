@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -40,25 +41,16 @@ export default function EvaluationProfilesPage() {
 
   return (
     <Page>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            评价方案
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            配置评价流程（节点图 JSON）与 Alphalens 参数；运行因子评价时可选用方案。API{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {getQuantAgentApiBase()}
-            </code>
-          </p>
-        </div>
-        <Link
-          href="/evaluation-profiles/new"
-          className={cn(buttonVariants({ variant: "default" }), "gap-1.5 self-start")}
-        >
-          <Plus className="size-4" />
-          新增方案
-        </Link>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          评价方案
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          配置评价流程（节点图 JSON）与 Alphalens 参数；运行因子评价时可选用方案。API{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            {getQuantAgentApiBase()}
+          </code>
+        </p>
       </header>
 
       {error && (
@@ -74,12 +66,23 @@ export default function EvaluationProfilesPage() {
           <CardDescription>
             工作流非空时按图执行；空工作流时仅用本页的 prepare 参数与测试集覆盖
           </CardDescription>
+          <CardAction>
+            <Link
+              href="/evaluation-profiles/new"
+              className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+            >
+              <Plus className="size-4" />
+              新增方案
+            </Link>
+          </CardAction>
         </CardHeader>
         <CardContent className="p-0">
           {!items ? (
             <p className="p-6 text-sm text-muted-foreground">加载中…</p>
           ) : items.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">暂无方案</p>
+            <p className="p-6 text-sm text-muted-foreground">
+              暂无方案。请使用上方「新增方案」开始配置。
+            </p>
           ) : (
             <Table>
               <TableHeader>

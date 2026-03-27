@@ -292,24 +292,18 @@ export function ColumnMapEditor({
 
       {showFullColumnTable ? (
         <div className="overflow-hidden rounded-lg border border-border/80 bg-background/50">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 w-10 pl-3 text-xs font-medium">
-                  启用
-                </TableHead>
-                <TableHead className="h-9 w-[34%] text-xs font-medium">
-                  数据库列
-                </TableHead>
-                <TableHead className="h-9 text-xs font-medium">
-                  映射名称
-                </TableHead>
+          <Table compact>
+            <TableHeader className="[&_tr:hover]:bg-muted/40">
+              <TableRow>
+                <TableHead className="w-10 pl-3">启用</TableHead>
+                <TableHead className="w-[34%]">数据库列</TableHead>
+                <TableHead>映射名称</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row, index) => (
-                <TableRow key={row.column || index} className="border-border/60">
-                  <TableCell className="p-1.5 pl-3 align-middle">
+                <TableRow key={row.column || index}>
+                  <TableCell className="pl-3">
                     <input
                       type="checkbox"
                       className={cn(
@@ -330,12 +324,12 @@ export function ColumnMapEditor({
                       }}
                     />
                   </TableCell>
-                  <TableCell className="p-1.5 align-middle">
+                  <TableCell>
                     <span className="font-mono text-xs text-foreground/90">
                       {row.column}
                     </span>
                   </TableCell>
-                  <TableCell className="p-1.5 pr-2 align-middle">
+                  <TableCell className="pr-2">
                     <Input
                       className="h-8 font-mono text-xs"
                       disabled={row.enabled === false}
@@ -362,24 +356,18 @@ export function ColumnMapEditor({
             </Button>
           </div>
           <div className="overflow-hidden rounded-lg border border-border/80 bg-background/50">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-9 w-[42%] pl-3 text-xs font-medium">
-                    映射名称
-                  </TableHead>
-                  <TableHead className="h-9 w-[42%] text-xs font-medium">
-                    数据库列
-                  </TableHead>
-                  <TableHead className="h-9 w-24 text-right text-xs font-medium">
-                    操作
-                  </TableHead>
+            <Table compact>
+              <TableHeader className="[&_tr:hover]:bg-muted/40">
+                <TableRow>
+                  <TableHead className="w-[42%] pl-3">映射名称</TableHead>
+                  <TableHead className="w-[42%]">数据库列</TableHead>
+                  <TableHead className="w-24 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row, index) => (
-                  <TableRow key={index} className="border-border/60">
-                    <TableCell className="p-1.5 pl-2 align-middle">
+                  <TableRow key={index}>
+                    <TableCell className="pl-2">
                       <Input
                         className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-1"
                         placeholder="如 close"
@@ -389,7 +377,7 @@ export function ColumnMapEditor({
                         }
                       />
                     </TableCell>
-                    <TableCell className="p-1.5 align-middle">
+                    <TableCell>
                       <Input
                         className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-1"
                         placeholder="如 adj_close"
@@ -399,7 +387,7 @@ export function ColumnMapEditor({
                         }
                       />
                     </TableCell>
-                    <TableCell className="p-1.5 pr-2 text-right align-middle">
+                    <TableCell className="pr-2 text-right">
                       <Button
                         type="button"
                         variant="ghost"

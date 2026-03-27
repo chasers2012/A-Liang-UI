@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -40,29 +41,20 @@ export default function EvaluationMetricsPage() {
 
   return (
     <Page>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            评价指标
-          </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            继承 EvaluationMetric 的 Python 实现，落盘 workspace{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              evaluation_metrics/
-            </code>
-            。API{" "}
-            <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {getQuantAgentApiBase()}
-            </code>
-          </p>
-        </div>
-        <Link
-          href="/evaluation-metrics/new"
-          className={cn(buttonVariants({ variant: "default" }), "gap-1.5 self-start")}
-        >
-          <Plus className="size-4" />
-          新增指标
-        </Link>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          评价指标
+        </h1>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          继承 EvaluationMetric 的 Python 实现，落盘 workspace{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            evaluation_metrics/
+          </code>
+          。API{" "}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+            {getQuantAgentApiBase()}
+          </code>
+        </p>
       </header>
 
       {error && (
@@ -79,12 +71,23 @@ export default function EvaluationMetricsPage() {
             在工作流中使用节点类型 <span className="font-mono">user_metric</span>{" "}
             并设置 <span className="font-mono">params.metric_id</span>
           </CardDescription>
+          <CardAction>
+            <Link
+              href="/evaluation-metrics/new"
+              className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+            >
+              <Plus className="size-4" />
+              新增指标
+            </Link>
+          </CardAction>
         </CardHeader>
         <CardContent className="p-0">
           {!items ? (
             <p className="p-6 text-sm text-muted-foreground">加载中…</p>
           ) : items.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">暂无指标</p>
+            <p className="p-6 text-sm text-muted-foreground">
+              暂无指标。请使用上方「新增指标」开始配置。
+            </p>
           ) : (
             <Table>
               <TableHeader>
