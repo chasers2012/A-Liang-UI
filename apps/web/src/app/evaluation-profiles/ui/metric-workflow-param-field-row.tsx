@@ -29,7 +29,7 @@ function BooleanParamRow(props: {
 }) {
   const { label, readOnly, value, onChange } = props;
   return (
-    <label className="flex cursor-pointer items-center gap-2 text-[0.68rem]">
+    <label className="flex cursor-pointer items-center gap-2 text-xs">
       <input
         type="checkbox"
         className="size-3.5 rounded border-input"
@@ -62,7 +62,7 @@ function EnumParamRow(props: {
       : "";
   return (
     <div className="space-y-0.5">
-      <Label className="text-[0.6rem] text-muted-foreground">{label}</Label>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       <Select
         disabled={readOnly || choices.length === 0}
         value={current || "__none__"}
@@ -105,7 +105,7 @@ function NumberParamRow(props: {
       : String(value);
   return (
     <div className="space-y-0.5">
-      <Label className="text-[0.6rem] text-muted-foreground">{label}</Label>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
       <Input
         type="number"
         disabled={readOnly}

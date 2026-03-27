@@ -85,7 +85,7 @@ export function ProfileDetailWorkflowCard(props: {
             />
           )
         ) : (
-          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
+          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-xl border border-border/80 bg-muted/30 p-3 font-mono text-xs leading-relaxed shadow-sm">
             {JSON.stringify(profile.workflow, null, 2)}
           </pre>
         )}

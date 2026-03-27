@@ -1,0 +1,40 @@
+/* LiteGraph — align with app tokens (card / border / foreground) */
+
+.workflow-graph-canvas-root {
+  --lg-node-title: var(--foreground);
+  --lg-node-text: color-mix(in oklch, var(--foreground) 88%, transparent);
+  --lg-link: color-mix(in oklch, var(--muted-foreground) 42%, var(--border));
+}
+
+.workflow-graph-canvas-el.lgraphcanvas {
+  border-radius: inherit;
+  background: transparent !important;
+}
+
+.workflow-graph-canvas-root .lgraphcanvas {
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+
+.litegraph.litecontextmenu {
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent) !important;
+  background-color: color-mix(in oklch, var(--card) 96%, transparent) !important;
+  color: var(--foreground) !important;
+  box-shadow:
+    0 1px 3px color-mix(in oklch, var(--foreground) 8%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--border) 40%, transparent) !important;
+  backdrop-filter: blur(8px);
+}
+
+.litegraph.litecontextmenu .litemenu-entry:hover {
+  background-color: color-mix(in oklch, var(--muted) 75%, transparent) !important;
+  color: var(--foreground) !important;
+}
+
+.workflow-graph-canvas-root.workflow-graph-canvas-root--readonly .lgraphcanvas {
+  cursor: grab;
+}
+
+.workflow-graph-canvas-root.workflow-graph-canvas-root--readonly .lgraphcanvas:active {
+  cursor: grabbing;
+}

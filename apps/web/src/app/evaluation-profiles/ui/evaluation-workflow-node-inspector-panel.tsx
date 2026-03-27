@@ -1,6 +1,5 @@
 "use client";
 
-import type { Node } from "@xyflow/react";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,16 +13,11 @@ import {
   MetricWorkflowParamFieldRow,
   metricWorkflowParamEffectiveValue,
 } from "./metric-workflow-param-field-row";
-import {
-  EVAL_WORKFLOW_NODE_TYPE,
-  type EvalWorkflowNodeData,
-} from "./workflow-rf-utils";
-
-type EvalRFNode = Node<EvalWorkflowNodeData, typeof EVAL_WORKFLOW_NODE_TYPE>;
+import type { EvalWorkflowCanvasNode } from "./workflow-rf-utils";
 
 export function EvaluationWorkflowNodeInspectorPanel(props: {
   readOnly: boolean;
-  node: EvalRFNode | null;
+  node: EvalWorkflowCanvasNode | null;
   workflowParamSpecs: MetricWorkflowParamSpec[];
   onParamChange: (key: string, value: unknown) => void;
   onDeleteNode: () => void;
@@ -38,7 +32,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
 
   if (!node) {
     return (
-      <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
+      <p className="leading-relaxed text-muted-foreground">
         {readOnly ? "点击节点查看类型" : "点击节点以编辑属性"}
       </p>
     );
@@ -46,17 +40,17 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
 
   return (
     <div className="space-y-2">
-      <div className="text-[0.62rem] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {readOnly ? "节点" : "节点属性"}
       </div>
       <div
-        className="break-all font-mono text-[0.58rem] leading-snug text-muted-foreground"
+        className="break-all font-mono text-xs leading-snug text-muted-foreground"
         title={node.data.backendType}
       >
         {node.data.backendType}
       </div>
       {node.data.inputs.length > 0 ? (
-        <div className="overflow-hidden rounded-md border border-border/50">
+        <div className="overflow-hidden rounded-md border border-border/80">
           <IoBlockHeader kind="in" compact />
           <ul className="space-y-1 bg-muted/15 p-1.5">
             {node.data.inputs.map((inp) => (
@@ -66,13 +60,13 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
               >
                 <div className="flex flex-wrap items-center gap-1">
                   <span
-                    className="font-mono text-[0.62rem] font-semibold leading-none text-foreground"
+                    className="font-mono text-xs font-semibold leading-none text-foreground"
                     title={inp.name}
                   >
                     {inp.name}
                   </span>
                   {inp.required ? (
-                    <span className="rounded bg-destructive/12 px-0.5 py-px text-[0.45rem] font-semibold uppercase leading-none text-destructive">
+                    <span className="rounded bg-destructive/12 px-0.5 py-px text-[10px] font-semibold uppercase leading-none text-destructive">
                       必填
                     </span>
                   ) : null}
@@ -87,7 +81,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         </div>
       ) : null}
       {node.data.outputs.length > 0 ? (
-        <div className="overflow-hidden rounded-md border border-border/50">
+        <div className="overflow-hidden rounded-md border border-border/80">
           <IoBlockHeader kind="out" compact />
           <ul className="space-y-1 bg-muted/15 p-1.5">
             {node.data.outputs.map((out) => (
@@ -96,7 +90,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
                 className="flex flex-col items-end rounded border border-border/40 bg-background/70 px-1.5 py-1 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--border)_35%,transparent)]"
               >
                 <span
-                  className="max-w-full truncate font-mono text-[0.62rem] font-semibold leading-none text-foreground"
+                  className="max-w-full truncate font-mono text-xs font-semibold leading-none text-foreground"
                   title={out.name}
                 >
                   {out.name}
@@ -112,8 +106,8 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         </div>
       ) : null}
       {workflowParamSpecs.length > 0 ? (
-        <div className="space-y-2 border-t border-border/50 pt-2">
-          <div className="text-[0.62rem] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="space-y-2 border-t border-border/80 pt-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             指标参数
           </div>
           <div className="space-y-2">
@@ -133,17 +127,17 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         </div>
       ) : null}
       {readOnly ? (
-        <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
+        <p className="leading-relaxed text-muted-foreground">
           只读预览。修改工作流请使用「编辑」。
         </p>
       ) : node.data.backendType.startsWith("metric:") ? (
-        <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
+        <p className="leading-relaxed text-muted-foreground">
           {workflowParamSpecs.length > 0
             ? "其余 params 请在「JSON」模式中编辑。"
             : "指标已绑定到该节点类型。可在指标编辑中配置工作流参数，或使用「JSON」模式编辑 params。"}
         </p>
       ) : (
-        <p className="text-[0.7rem] leading-relaxed text-muted-foreground">
+        <p className="leading-relaxed text-muted-foreground">
           params 请在「JSON」模式中编辑。
         </p>
       )}

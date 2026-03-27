@@ -14,7 +14,7 @@ export function SocketTypeBadge({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full truncate rounded border border-border/50 bg-background/90 px-1 py-px font-mono text-[0.52rem] leading-tight tracking-tight text-muted-foreground shadow-[inset_0_1px_0_0_color-mix(in_oklch,var(--foreground)_4%,transparent)]",
+        "inline-flex max-w-full truncate rounded border border-border/50 bg-background/90 px-1 py-px font-mono text-xs leading-tight tracking-tight text-muted-foreground shadow-[inset_0_1px_0_0_color-mix(in_oklch,var(--foreground)_4%,transparent)]",
         alignEnd && "self-end",
         className,
       )}
@@ -36,7 +36,7 @@ export function IoBlockHeader({
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 border-b border-border/45",
+        "flex items-center gap-1.5 border-b border-border/80",
         compact ? "px-1.5 py-0.5" : "px-2 py-1",
         isIn
           ? "bg-sky-500/[0.06] dark:bg-sky-400/[0.08]"
@@ -53,16 +53,11 @@ export function IoBlockHeader({
         )}
         aria-hidden
       />
-      <span
-        className={cn(
-          "font-semibold tracking-wide text-foreground/85",
-          compact ? "text-[0.55rem]" : "text-[0.6rem]",
-        )}
-      >
+      <span className="text-xs font-semibold tracking-wide text-foreground/85">
         {isIn ? "输入" : "输出"}
       </span>
       {!compact ? (
-        <span className="text-[0.52rem] text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {isIn ? "接入" : "接出"}
         </span>
       ) : null}
