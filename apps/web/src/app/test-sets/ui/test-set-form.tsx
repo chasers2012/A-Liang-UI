@@ -109,19 +109,6 @@ export function parseStockCodesFromText(text: string): string[] {
   return out;
 }
 
-function parseDependencyFields(text: string): string[] {
-  const parts = text.split(/[\s,;，；]+/u);
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const p of parts) {
-    const c = p.trim();
-    if (!c || seen.has(c)) continue;
-    seen.add(c);
-    out.push(c);
-  }
-  return out;
-}
-
 /** 常用行情/量价依赖，与多选框一致；其余名称通过「其它依赖」填写 */
 export const PRESET_DEPENDENCY_FIELDS = [
   "open",
@@ -548,7 +535,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
                 step={1}
                 value={form.quantiles}
                 onChange={(e) => set({ quantiles: e.target.value })}
-                className="max-w-[8rem] font-mono tabular-nums"
+                className="max-w-32 font-mono tabular-nums"
               />
             </div>
           </CardContent>

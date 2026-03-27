@@ -83,7 +83,7 @@ function NumericSeriesBarsPositive({
       {entries.map(([k, v]) => (
         <div key={k} className="flex items-center gap-2 text-xs">
           <span
-            className="min-w-[5rem] max-w-[12rem] shrink-0 truncate font-mono text-muted-foreground tabular-nums"
+            className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
             title={formatSeriesRowKey(k, periodDayStyle)}
           >
             {formatSeriesRowKey(k, periodDayStyle)}
@@ -94,7 +94,7 @@ function NumericSeriesBarsPositive({
               style={{ width: `${(v / maxV) * 100}%` }}
             />
           </div>
-          <span className="w-[4.5rem] shrink-0 text-right font-mono tabular-nums">
+          <span className="w-18 shrink-0 text-right font-mono tabular-nums">
             {v.toFixed(4)}
           </span>
         </div>
@@ -122,7 +122,7 @@ function NumericSeriesBarsDiverging({
         return (
           <div key={k} className="flex items-center gap-2 text-xs">
             <span
-              className="min-w-[5rem] max-w-[12rem] shrink-0 truncate font-mono text-muted-foreground tabular-nums"
+              className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
               title={formatSeriesRowKey(k, periodDayStyle)}
             >
               {formatSeriesRowKey(k, periodDayStyle)}
@@ -141,7 +141,7 @@ function NumericSeriesBarsDiverging({
                 />
               )}
             </div>
-            <span className="w-[4.5rem] shrink-0 text-right font-mono tabular-nums">
+            <span className="w-18 shrink-0 text-right font-mono tabular-nums">
               {v.toFixed(4)}
             </span>
           </div>
@@ -167,7 +167,7 @@ function NumericSeriesBarsAbsFromLeft({
       {entries.map(([k, v]) => (
         <div key={k} className="flex items-center gap-2 text-xs">
           <span
-            className="min-w-[5rem] max-w-[12rem] shrink-0 truncate font-mono text-muted-foreground tabular-nums"
+            className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
             title={formatSeriesRowKey(k, periodDayStyle)}
           >
             {formatSeriesRowKey(k, periodDayStyle)}
@@ -178,7 +178,7 @@ function NumericSeriesBarsAbsFromLeft({
               style={{ width: `${(Math.abs(v) / scale) * 100}%` }}
             />
           </div>
-          <span className="w-[4.5rem] shrink-0 text-right font-mono tabular-nums">
+          <span className="w-18 shrink-0 text-right font-mono tabular-nums">
             {v.toFixed(4)}
           </span>
         </div>

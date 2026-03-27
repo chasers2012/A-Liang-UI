@@ -359,7 +359,7 @@ export default function FactorHistoryPage() {
                     value={selectedPeriod}
                     onValueChange={(v) => v && setSelectedPeriod(v)}
                   >
-                    <SelectTrigger id="eval-period" size="sm" className="w-[8.5rem]">
+                    <SelectTrigger id="eval-period" size="sm" className="w-34">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -389,7 +389,7 @@ export default function FactorHistoryPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>时间</TableHead>
-                      <TableHead className="min-w-[9rem]">样本区间</TableHead>
+                      <TableHead className="min-w-36">样本区间</TableHead>
                       <TableHead className="text-right">股票数</TableHead>
                       <TableHead className="text-right">
                         Mean IC ({pp}D)
@@ -411,7 +411,7 @@ export default function FactorHistoryPage() {
                           <TableCell className="font-mono text-xs whitespace-nowrap">
                             {formatTs(row.evaluated_at)}
                           </TableCell>
-                          <TableCell className="max-w-[14rem] font-mono text-[0.65rem] leading-snug break-all text-muted-foreground">
+                          <TableCell className="max-w-56 font-mono text-[0.65rem] leading-snug break-all text-muted-foreground">
                             {formatEvaluationWindow(row.window)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-xs tabular-nums">
@@ -431,7 +431,7 @@ export default function FactorHistoryPage() {
                               <div className="space-y-1">
                                 <span className="text-destructive">失败</span>
                                 <p
-                                  className="whitespace-pre-wrap break-words font-mono text-[0.65rem] leading-snug text-destructive/90"
+                                  className="whitespace-pre-wrap wrap-break-word font-mono text-[0.65rem] leading-snug text-destructive/90"
                                   title={err}
                                 >
                                   {err}

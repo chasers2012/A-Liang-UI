@@ -46,7 +46,9 @@ export function FactorsPanel() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    queueMicrotask(() => {
+      void refresh();
+    });
   }, [refresh]);
 
   const count = items?.length ?? 0;

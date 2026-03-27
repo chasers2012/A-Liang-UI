@@ -37,7 +37,9 @@ export default function EvaluationProfileDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   if (!id) {

@@ -161,16 +161,7 @@ export function ColumnMapEditor({
       void loadColumnsRef.current();
     }, 480);
     return () => clearTimeout(timer);
-  }, [
-    inspectContext?.datasourceId,
-    inspectContext?.db_driver,
-    inspectContext?.db_host,
-    inspectContext?.db_name,
-    inspectContext?.db_password,
-    inspectContext?.db_port,
-    inspectContext?.db_username,
-    inspectContext?.table,
-  ]);
+  }, [inspectContext]);
 
   const showFullColumnTable = hasLoadedFromDb && rows.length > 0;
 

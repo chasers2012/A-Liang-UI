@@ -275,7 +275,7 @@ export default function FactorDetailPage() {
           </p>
         </div>
         <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-[14rem]">
+          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
             <Label
               htmlFor="factor-eval-test-set"
               className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
@@ -311,7 +311,7 @@ export default function FactorDetailPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-[14rem]">
+          <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
             <Label
               htmlFor="factor-eval-profile"
               className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
@@ -346,46 +346,46 @@ export default function FactorDetailPage() {
             </Select>
           </div>
           <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/factors/${encodeURIComponent(id)}/edit`}
-            className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
-          >
-            <Pencil className="size-4" />
-            编辑
-          </Link>
-          <Link
-            href={`/factors/${encodeURIComponent(id)}/history`}
-            className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
-          >
-            <History className="size-4" />
-            历史
-          </Link>
-          <Button
-            type="button"
-            variant="secondary"
-            className="gap-1.5"
-            disabled={evaluatingThis || evaluatingOther}
-            title={
-              evaluatingOther
-                ? `「${evaluationRunning.factorName}」正在评价中`
-                : undefined
-            }
-            onClick={() => void handleRunEvaluation()}
-          >
-            {evaluatingThis ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : null}
-            {evaluatingThis ? "评价中…" : "运行评价"}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            className="gap-1.5"
-            onClick={() => setDeleteOpen(summaryForDelete)}
-          >
-            <Trash2 className="size-4" />
-            删除
-          </Button>
+            <Link
+              href={`/factors/${encodeURIComponent(id)}/edit`}
+              className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+            >
+              <Pencil className="size-4" />
+              编辑
+            </Link>
+            <Link
+              href={`/factors/${encodeURIComponent(id)}/history`}
+              className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+            >
+              <History className="size-4" />
+              历史
+            </Link>
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-1.5"
+              disabled={evaluatingThis || evaluatingOther}
+              title={
+                evaluatingOther
+                  ? `「${evaluationRunning.factorName}」正在评价中`
+                  : undefined
+              }
+              onClick={() => void handleRunEvaluation()}
+            >
+              {evaluatingThis ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {evaluatingThis ? "评价中…" : "运行评价"}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="gap-1.5"
+              onClick={() => setDeleteOpen(summaryForDelete)}
+            >
+              <Trash2 className="size-4" />
+              删除
+            </Button>
           </div>
         </div>
       </div>
@@ -509,8 +509,8 @@ export default function FactorDetailPage() {
                   </p>
                 )}
                 {!evalRow.error &&
-                evalRow.evaluation_profile_id &&
-                !hasWorkflowMetricResults(evalRow) ? (
+                  evalRow.evaluation_profile_id &&
+                  !hasWorkflowMetricResults(evalRow) ? (
                   <p className="text-sm text-muted-foreground">
                     当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
                   </p>

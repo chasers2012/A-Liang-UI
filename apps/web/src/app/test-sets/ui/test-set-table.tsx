@@ -51,7 +51,7 @@ export function TestSetTable({ items, onDelete }: Props) {
       <TableBody>
         {items.map((row) => (
           <TableRow key={row.id}>
-            <TableCell className="max-w-[12rem]">
+            <TableCell className="max-w-48">
               <Link
                 href={`/test-sets/${encodeURIComponent(row.id)}`}
                 className="font-medium text-foreground underline-offset-4 hover:underline"

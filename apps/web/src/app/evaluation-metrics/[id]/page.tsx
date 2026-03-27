@@ -42,7 +42,9 @@ export default function EvaluationMetricDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   if (!id) {

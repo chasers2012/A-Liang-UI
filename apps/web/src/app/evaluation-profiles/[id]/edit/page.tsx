@@ -71,7 +71,7 @@ export default function EditEvaluationProfilePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void listEvaluationTestSets().then(setTestSets).catch(() => {});
+    void listEvaluationTestSets().then(setTestSets).catch(() => { });
   }, []);
 
   const load = useCallback(async () => {
@@ -106,13 +106,15 @@ export default function EditEvaluationProfilePage() {
   }, [id]);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   const initialWorkflowForCanvas = useMemo(() => {
     const p = parseEvaluationWorkflowJson(workflowJson);
     return p.ok ? p.value : EMPTY_EVALUATION_WORKFLOW;
-  }, [workflowJson, canvasKey]);
+  }, [workflowJson]);
 
   const setWorkflowMode = (next: "canvas" | "json") => {
     if (next === workflowEditMode) return;
@@ -355,7 +357,7 @@ export default function EditEvaluationProfilePage() {
               </Label>
               <Textarea
                 id="ep-e-wf"
-                className="min-h-[12rem] font-mono text-xs"
+                className="min-h-48 font-mono text-xs"
                 value={workflowJson}
                 onChange={(e) => setWorkflowJson(e.target.value)}
                 spellCheck={false}

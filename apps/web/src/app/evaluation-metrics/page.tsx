@@ -46,7 +46,9 @@ export default function EvaluationMetricsPage() {
   }, []);
 
   useEffect(() => {
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [load]);
 
   return (

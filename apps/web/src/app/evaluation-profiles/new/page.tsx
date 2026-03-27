@@ -67,7 +67,7 @@ export default function NewEvaluationProfilePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void listEvaluationTestSets().then(setTestSets).catch(() => {});
+    void listEvaluationTestSets().then(setTestSets).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -76,14 +76,14 @@ export default function NewEvaluationProfilePage() {
         setCatalog(c);
         setMetrics(m);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setWfMetaLoading(false));
   }, []);
 
   const initialWorkflowForCanvas = useMemo(() => {
     const p = parseEvaluationWorkflowJson(workflowJson);
     return p.ok ? p.value : EMPTY_EVALUATION_WORKFLOW;
-  }, [workflowJson, canvasKey]);
+  }, [workflowJson]);
 
   const setWorkflowMode = (next: "canvas" | "json") => {
     if (next === workflowEditMode) return;
@@ -303,7 +303,7 @@ export default function NewEvaluationProfilePage() {
               </Label>
               <Textarea
                 id="ep-wf"
-                className="min-h-[12rem] font-mono text-xs"
+                className="min-h-48 font-mono text-xs"
                 value={workflowJson}
                 onChange={(e) => setWorkflowJson(e.target.value)}
                 spellCheck={false}

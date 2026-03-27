@@ -55,8 +55,10 @@ export function FactorCodeJar({ id, value, onChange, className }: Props) {
   const valueRef = useRef(value);
   const mountGenRef = useRef(0);
 
-  onChangeRef.current = onChange;
-  valueRef.current = value;
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+    valueRef.current = value;
+  });
 
   useLayoutEffect(() => {
     const el = elRef.current;
@@ -107,7 +109,7 @@ export function FactorCodeJar({ id, value, onChange, className }: Props) {
       aria-label="Python 源码"
       className={cn(
         "factor-code-jar-editor",
-        "min-h-[min(50vh,28rem)] w-full overflow-auto rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs leading-relaxed shadow-xs transition-[color,box-shadow] outline-none sm:min-h-[22rem]",
+        "min-h-[min(50vh,28rem)] w-full overflow-auto rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs leading-relaxed shadow-xs transition-[color,box-shadow] outline-none sm:min-h-88",
         "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "dark:bg-input/30",
         className,
