@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
 import pandas as pd
 
@@ -23,10 +22,10 @@ class FactorDataSource(ABC):
     def get_panel(
         self,
         *,
-        fields: List[str],
+        fields: list[str],
         start_date: str,
         end_date: str,
-        stock_codes: Optional[List[str]],
+        stock_codes: list[str] | None,
     ) -> pd.DataFrame:
         """
         Load OHLCV / feature columns for the given range and universe.

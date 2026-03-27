@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
-
 from evaluate import (
     AlphalensFactorEvaluator,
     close_prices_wide,
@@ -32,13 +33,12 @@ class _StaticPanelSource(FactorDataSource):
         mask = np.asarray((d >= sd) & (d <= ed), dtype=bool)
         if stock_codes is not None:
             mask &= df.index.get_level_values("asset").isin(stock_codes)
-        sub = df.loc[mask, list(fields)]
-        return sub
+        return df.loc[mask, list(fields)]
 
 
 class _RankFactor(Factor):
     name = "momentum_rank"
-    dependencies = ["close"]
+    dependencies: ClassVar[list[str]] = ["close"]
     max_window = 1
 
     def calc(self, data: pd.DataFrame) -> pd.Series:

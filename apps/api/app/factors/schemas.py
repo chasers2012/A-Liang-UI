@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -65,7 +64,7 @@ class FactorCreate(BaseModel):
     description: str = ""
     max_window: int = 1
     dependencies: list[str] = Field(default_factory=lambda: ["close"])
-    source: Optional[str] = None
+    source: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -100,13 +99,13 @@ class FactorCreate(BaseModel):
 
 
 class FactorPatch(BaseModel):
-    name: Optional[str] = None
-    group: Optional[str] = None
-    group_label: Optional[str] = None
-    description: Optional[str] = None
-    max_window: Optional[int] = None
-    dependencies: Optional[list[str]] = None
-    source: Optional[str] = None
+    name: str | None = None
+    group: str | None = None
+    group_label: str | None = None
+    description: str | None = None
+    max_window: int | None = None
+    dependencies: list[str] | None = None
+    source: str | None = None
 
 
 class FactorSummaryPublic(BaseModel):

@@ -1,15 +1,13 @@
 from pathlib import Path
 
 import pytest
-
 from csv_datasource import CsvDataSource
 
 
 def test_csv_data_source_wrong_column_names(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
-        "date,asset,close\n"
-        "2025-01-02,AAA,1\n",
+        "date,asset,close\n2025-01-02,AAA,1\n",
         encoding="utf-8",
     )
     ds = CsvDataSource(
@@ -29,9 +27,7 @@ def test_csv_data_source_wrong_column_names(tmp_path: Path):
 def test_csv_data_source_panel(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
-        "d,sym,close\n"
-        "2025-01-02,AAA,10.0\n"
-        "2025-01-03,AAA,11.0\n",
+        "d,sym,close\n2025-01-02,AAA,10.0\n2025-01-03,AAA,11.0\n",
         encoding="utf-8",
     )
 
@@ -55,9 +51,7 @@ def test_csv_data_source_panel(tmp_path: Path):
 def test_csv_data_source_stock_codes_filter(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
-        "date,asset,close\n"
-        "2025-01-02,AAA,1\n"
-        "2025-01-02,BBB,2\n",
+        "date,asset,close\n2025-01-02,AAA,1\n2025-01-02,BBB,2\n",
         encoding="utf-8",
     )
     ds = CsvDataSource(p, date_column="date", asset_column="asset")

@@ -6,14 +6,15 @@ Uses **alphalens-reloaded** (PyPI: ``alphalens-reloaded``); import name remains 
 Aligned with trade-backend ``FactorEvaluator`` flows: clean factor + forward returns,
 IC / quantile metrics via Alphalens ``performance``.
 """
+
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 import alphalens as al
-from factor.factor import Factor
 import pandas as pd
+from factor.factor import Factor
 
 from .alphalens_ic_metric import (
     FactorInformationCoefficientMetric,
@@ -21,8 +22,7 @@ from .alphalens_ic_metric import (
 )
 
 
-def close_prices_wide(price_panel: pd.DataFrame,
-                      close_col: str = "close") -> pd.DataFrame:
+def close_prices_wide(price_panel: pd.DataFrame, close_col: str = "close") -> pd.DataFrame:
     """
     Unstack MultiIndex (date, asset) panel to Alphalens price format: index = date, columns = asset.
     """
@@ -31,15 +31,12 @@ def close_prices_wide(price_panel: pd.DataFrame,
     close_df = price_panel[close_col].unstack(level="asset")
     close_df.columns.name = None
     if not isinstance(close_df.index, pd.DatetimeIndex):
-        try:
+        with contextlib.suppress(TypeError, ValueError):
             close_df.index = pd.to_datetime(close_df.index)
-        except (TypeError, ValueError):
-            pass
     return close_df
 
 
-def compute_forward_return_from_wide(close_df: pd.DataFrame,
-                                     period: int) -> pd.Series:
+def compute_forward_return_from_wide(close_df: pd.DataFrame, period: int) -> pd.Series:
     """Wide close (date × asset) -> forward return Series with MultiIndex (date, asset)."""
     fwd_ret = close_df.pct_change(period).shift(-period)
     fwd_ret = fwd_ret.stack()
@@ -59,7 +56,7 @@ class AlphalensMetrics:
     mean_return_by_quantile: pd.DataFrame
     mean_return_by_quantile_std_error: pd.DataFrame
     mean_return_spread: pd.Series
-    mean_return_spread_std_error: Optional[pd.Series]
+    mean_return_spread_std_error: pd.Series | None
     factor_alpha_beta: pd.DataFrame
     factor_rank_autocorrelation: pd.Series
 
@@ -69,7 +66,7 @@ def _mean_returns_spread(
     std_err: pd.DataFrame,
     upper_quantile: int,
     lower_quantile: int,
-) -> tuple[pd.Series, Optional[pd.Series]]:
+) -> tuple[pd.Series, pd.Series | None]:
     """
     Top-quantile minus bottom-quantile mean forward returns per horizon.
 
@@ -78,10 +75,9 @@ def _mean_returns_spread(
     ``by_date=False`` output uses a flat ``factor_quantile`` index, so we branch.
     """
     if isinstance(mean_ret.index, pd.MultiIndex):
-        return al.performance.compute_mean_returns_spread(mean_ret,
-                                                          upper_quantile,
-                                                          lower_quantile,
-                                                          std_err=std_err)
+        return al.performance.compute_mean_returns_spread(
+            mean_ret, upper_quantile, lower_quantile, std_err=std_err
+        )
     hi = mean_ret.loc[upper_quantile]
     lo = mean_ret.loc[lower_quantile]
     spread = hi - lo
@@ -89,7 +85,7 @@ def _mean_returns_spread(
         return spread, None
     se_hi = std_err.loc[upper_quantile]
     se_lo = std_err.loc[lower_quantile]
-    spread_se = (se_hi**2 + se_lo**2)**0.5
+    spread_se = (se_hi**2 + se_lo**2) ** 0.5
     return spread, spread_se
 
 
@@ -117,8 +113,7 @@ def _alphalens_metrics(
         group_adjust=group_adjust,
         equal_weight=False,
     )
-    rank_ac = al.performance.factor_rank_autocorrelation(factor_data_clean,
-                                                         period=1)
+    rank_ac = al.performance.factor_rank_autocorrelation(factor_data_clean, period=1)
     return AlphalensMetrics(
         ic=ic,
         ic_summary=ic_summary,
@@ -158,15 +153,14 @@ class AlphalensFactorEvaluator:
         self,
         factor: Factor,
         *,
-        start_date: Optional[str],
+        start_date: str | None,
         end_date: str,
-        stock_codes: Optional[List[str]] = None,
+        stock_codes: list[str] | None = None,
         long_short: bool = True,
         close_col: str = "close",
     ) -> None:
         if factor._dependency_resolver is None:
-            raise ValueError(
-                "factor must have dependency_resolver set on the instance")
+            raise ValueError("factor must have dependency_resolver set on the instance")
 
         self.factor = factor
         self._start_date = start_date
@@ -174,7 +168,7 @@ class AlphalensFactorEvaluator:
         self._stock_codes = stock_codes
         self.long_short = long_short
         self.close_col = close_col
-        self._close_wide: Optional[pd.DataFrame] = None
+        self._close_wide: pd.DataFrame | None = None
 
         fields = list(dict.fromkeys(list(factor.dependencies)))
         if close_col not in fields:
@@ -187,27 +181,26 @@ class AlphalensFactorEvaluator:
             window=factor.max_window,
         )
         if self._price_panel.empty:
-            raise ValueError(
-                "Price panel is empty for the given range and resolver")
+            raise ValueError("Price panel is empty for the given range and resolver")
         if close_col not in self._price_panel.columns:
             raise KeyError(
                 f"close_col {close_col!r} missing from loaded panel columns "
-                f"{list(self._price_panel.columns)}")
+                f"{list(self._price_panel.columns)}"
+            )
 
     def alignment_index(self) -> pd.Index:
         return self._price_panel.index
 
     def get_close_wide(self) -> pd.DataFrame:
         if self._close_wide is None:
-            self._close_wide = close_prices_wide(self._price_panel,
-                                                 self.close_col)
+            self._close_wide = close_prices_wide(self._price_panel, self.close_col)
         return self._close_wide
 
     def evaluate_factor(
         self,
         *,
         quantiles: int = 5,
-        periods: Tuple[int, ...] = (1, 5, 10, 20),
+        periods: tuple[int, ...] = (1, 5, 10, 20),
         max_loss: float = 0.5,
         group_adjust: bool = False,
         quantile_returns_demeaned: bool = True,
@@ -218,11 +211,9 @@ class AlphalensFactorEvaluator:
             self._stock_codes,
         )
         if not isinstance(factor_data.index, pd.MultiIndex):
-            raise ValueError(
-                "factor.calculate must return MultiIndex (date, asset)")
+            raise ValueError("factor.calculate must return MultiIndex (date, asset)")
         if factor_data.shape[1] < 1:
-            raise ValueError(
-                "factor.calculate must return at least one column")
+            raise ValueError("factor.calculate must return at least one column")
 
         factor_series = factor_data.iloc[:, 0].dropna()
         close_df = self.get_close_wide()

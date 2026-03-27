@@ -29,10 +29,10 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    "EvaluationMetric",
     "AlphalensEvaluateResult",
     "AlphalensFactorEvaluator",
     "AlphalensMetrics",
+    "EvaluationMetric",
     "FactorInformationCoefficientMetric",
     "MeanInformationCoefficientMetric",
     "close_prices_wide",

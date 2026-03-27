@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -16,10 +16,10 @@ def utc_now_iso() -> str:
 class SqlConfigStored(BaseModel):
     """Stored SQL source. Prefer db_* fields; engine_url is legacy-only."""
 
-    engine_url: Optional[str] = None
+    engine_url: str | None = None
     db_driver: str = "postgresql"
     db_host: str = ""
-    db_port: Optional[int] = None
+    db_port: int | None = None
     db_username: str = ""
     db_password: str = ""
     db_name: str = ""
@@ -43,8 +43,8 @@ class DataSourceRecord(BaseModel):
     name: str
     type: DataSourceType
     enabled: bool = True
-    sql: Optional[SqlConfigStored] = None
-    csv: Optional[CsvConfigStored] = None
+    sql: SqlConfigStored | None = None
+    csv: CsvConfigStored | None = None
     created_at: str
     updated_at: str
 
@@ -72,7 +72,7 @@ class RegistryFile(BaseModel):
 class SqlCreate(BaseModel):
     db_driver: str = "postgresql"
     db_host: str
-    db_port: Optional[int] = None
+    db_port: int | None = None
     db_username: str = ""
     db_password: str = ""
     db_name: str
@@ -104,8 +104,8 @@ class DataSourceCreate(BaseModel):
     name: str
     type: DataSourceType
     enabled: bool = True
-    sql: Optional[SqlCreate] = None
-    csv: Optional[CsvCreate] = None
+    sql: SqlCreate | None = None
+    csv: CsvCreate | None = None
 
     @model_validator(mode="after")
     def _match(self) -> DataSourceCreate:
@@ -169,39 +169,39 @@ class DataSourceCreate(BaseModel):
 
 
 class SqlPatch(BaseModel):
-    engine_url: Optional[str] = None
-    db_driver: Optional[str] = None
-    db_host: Optional[str] = None
-    db_port: Optional[int] = None
-    db_username: Optional[str] = None
-    db_password: Optional[str] = None
-    db_name: Optional[str] = None
-    table: Optional[str] = None
-    date_column: Optional[str] = None
-    asset_column: Optional[str] = None
-    column_map: Optional[dict[str, str]] = None
+    engine_url: str | None = None
+    db_driver: str | None = None
+    db_host: str | None = None
+    db_port: int | None = None
+    db_username: str | None = None
+    db_password: str | None = None
+    db_name: str | None = None
+    table: str | None = None
+    date_column: str | None = None
+    asset_column: str | None = None
+    column_map: dict[str, str] | None = None
 
 
 class CsvPatch(BaseModel):
-    path: Optional[str] = None
-    date_column: Optional[str] = None
-    asset_column: Optional[str] = None
-    read_csv_kwargs: Optional[dict[str, Any]] = None
+    path: str | None = None
+    date_column: str | None = None
+    asset_column: str | None = None
+    read_csv_kwargs: dict[str, Any] | None = None
 
 
 class DataSourcePatch(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    name: Optional[str] = None
-    enabled: Optional[bool] = None
-    sql: Optional[SqlPatch] = None
-    csv: Optional[CsvPatch] = None
+    name: str | None = None
+    enabled: bool | None = None
+    sql: SqlPatch | None = None
+    csv: CsvPatch | None = None
 
 
 class SqlPublic(BaseModel):
     db_driver: str = "postgresql"
     db_host: str = ""
-    db_port: Optional[int] = None
+    db_port: int | None = None
     db_username: str = ""
     db_name: str = ""
     has_password: bool = False
@@ -224,15 +224,15 @@ class DataSourcePublic(BaseModel):
     name: str
     type: DataSourceType
     enabled: bool
-    sql: Optional[SqlPublic] = None
-    csv: Optional[CsvPublic] = None
+    sql: SqlPublic | None = None
+    csv: CsvPublic | None = None
     created_at: str
     updated_at: str
 
 
 def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
-    sql_pub: Optional[SqlPublic] = None
-    csv_pub: Optional[CsvPublic] = None
+    sql_pub: SqlPublic | None = None
+    csv_pub: CsvPublic | None = None
     if rec.type == "sql" and rec.sql:
         s = rec.sql
         legacy = bool((s.engine_url or "").strip())
@@ -276,10 +276,10 @@ class TestResult(BaseModel):
 class SqlTableColumnsRequest(BaseModel):
     """Resolve connection (optional merge from saved datasource) and inspect ``table``."""
 
-    datasource_id: Optional[str] = None
+    datasource_id: str | None = None
     db_driver: str = "postgresql"
     db_host: str = ""
-    db_port: Optional[int] = None
+    db_port: int | None = None
     db_username: str = ""
     db_password: str = ""
     db_name: str = ""

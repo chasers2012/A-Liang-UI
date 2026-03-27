@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -29,7 +29,7 @@ class WorkflowNode(BaseModel):
 
 
 class WorkflowLink(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     from_node: str
     from_socket: str
     to_node: str
@@ -39,14 +39,14 @@ class WorkflowLink(BaseModel):
 class EvaluationWorkflow(BaseModel):
     nodes: list[WorkflowNode] = Field(default_factory=list)
     links: list[WorkflowLink] = Field(default_factory=list)
-    viewport: Optional[WorkflowViewport] = None
+    viewport: WorkflowViewport | None = None
 
 
 class EvaluationProfilePrepare(BaseModel):
     """当 workflow 为空时，与现有 runner 对齐的可选覆盖。"""
 
     forward_return_periods: list[int] = Field(default_factory=lambda: [1, 5, 10, 20])
-    quantiles: Optional[int] = None
+    quantiles: int | None = None
     long_short: bool = True
     max_loss: float = 0.5
 
@@ -55,7 +55,7 @@ class EvaluationProfileRecord(BaseModel):
     id: str
     name: str
     description: str = ""
-    test_set_id: Optional[str] = None
+    test_set_id: str | None = None
     prepare: EvaluationProfilePrepare = Field(default_factory=EvaluationProfilePrepare)
     workflow: EvaluationWorkflow = Field(default_factory=EvaluationWorkflow)
     is_default: bool = False
@@ -71,9 +71,9 @@ class EvaluationProfilesFile(BaseModel):
 class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
-    test_set_id: Optional[str] = None
-    prepare: Optional[EvaluationProfilePrepare] = None
-    workflow: Optional[EvaluationWorkflow] = None
+    test_set_id: str | None = None
+    prepare: EvaluationProfilePrepare | None = None
+    workflow: EvaluationWorkflow | None = None
     is_default: bool = False
 
     @field_validator("name")
@@ -103,19 +103,19 @@ class EvaluationProfileCreate(BaseModel):
 
 
 class EvaluationProfilePatch(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    test_set_id: Optional[str] = None
-    prepare: Optional[EvaluationProfilePrepare] = None
-    workflow: Optional[EvaluationWorkflow] = None
-    is_default: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    test_set_id: str | None = None
+    prepare: EvaluationProfilePrepare | None = None
+    workflow: EvaluationWorkflow | None = None
+    is_default: bool | None = None
 
 
 class EvaluationProfilePublic(BaseModel):
     id: str
     name: str
     description: str
-    test_set_id: Optional[str] = None
+    test_set_id: str | None = None
     prepare: EvaluationProfilePrepare
     workflow: EvaluationWorkflow
     is_default: bool
@@ -136,4 +136,4 @@ class NodeTypeDefinitionPublic(BaseModel):
     inputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
     outputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
     user_defined: bool = False
-    metric_id: Optional[str] = None
+    metric_id: str | None = None

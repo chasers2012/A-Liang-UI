@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -95,14 +94,14 @@ class EvaluationTestSetCreate(BaseModel):
 
 
 class EvaluationTestSetPatch(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    datasource_bindings: Optional[list[EvaluationTestSetDatasourceBindingInput]] = None
-    start: Optional[str] = None
-    end: Optional[str] = None
-    stock_codes: Optional[list[str]] = None
-    quantiles: Optional[int] = None
-    is_default: Optional[bool] = None
+    name: str | None = None
+    description: str | None = None
+    datasource_bindings: list[EvaluationTestSetDatasourceBindingInput] | None = None
+    start: str | None = None
+    end: str | None = None
+    stock_codes: list[str] | None = None
+    quantiles: int | None = None
+    is_default: bool | None = None
 
 
 class EvaluationTestSetDatasourceBindingPublic(BaseModel):

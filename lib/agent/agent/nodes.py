@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -29,7 +29,7 @@ def _log():
     return get_agent_logger(__name__)
 
 
-def node_init_context(state: FactorDiggingState) -> Dict[str, Any]:
+def node_init_context(state: FactorDiggingState) -> dict[str, Any]:
     _log().info("node init_context")
     return {
         "available_fields": list_registered_dependency_fields(),
@@ -38,7 +38,7 @@ def node_init_context(state: FactorDiggingState) -> Dict[str, Any]:
     }
 
 
-def node_ideate(state: FactorDiggingState) -> Dict[str, Any]:
+def node_ideate(state: FactorDiggingState) -> dict[str, Any]:
     _log().info("node ideate")
     fields = state.get("available_fields") or list_registered_dependency_fields()
     fields_txt = ", ".join(fields[:80]) + ("…" if len(fields) > 80 else "")
@@ -57,7 +57,7 @@ def node_ideate(state: FactorDiggingState) -> Dict[str, Any]:
     return {"research_idea": idea}
 
 
-def node_generate_pseudocode(state: FactorDiggingState) -> Dict[str, Any]:
+def node_generate_pseudocode(state: FactorDiggingState) -> dict[str, Any]:
     _log().info("node generate_pseudocode")
     fields = state.get("available_fields") or list_registered_dependency_fields()
     fields_txt = ", ".join(fields[:80]) + ("…" if len(fields) > 80 else "")
@@ -76,7 +76,7 @@ def node_generate_pseudocode(state: FactorDiggingState) -> Dict[str, Any]:
     return {"pseudocode": pseudo}
 
 
-def node_generate_code(state: FactorDiggingState) -> Dict[str, Any]:
+def node_generate_code(state: FactorDiggingState) -> dict[str, Any]:
     fields = state.get("available_fields") or list_registered_dependency_fields()
     fields_txt = ", ".join(fields)
     idea = state.get("research_idea", "")
@@ -99,7 +99,7 @@ def node_generate_code(state: FactorDiggingState) -> Dict[str, Any]:
     return {"factor_source": src, "dry_run_error": None, "repair_count": repair}
 
 
-def node_validate_dry_run(state: FactorDiggingState) -> Dict[str, Any]:
+def node_validate_dry_run(state: FactorDiggingState) -> dict[str, Any]:
     _log().info("node validate_dry_run")
     src = state.get("factor_source") or ""
     if not src:
@@ -120,7 +120,7 @@ def node_validate_dry_run(state: FactorDiggingState) -> Dict[str, Any]:
     start = os.environ.get("FACTOR_AGENT_START_DATE", "2024-06-01")
     end = os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31")
     codes_env = os.environ.get("FACTOR_AGENT_STOCK_CODES", "")
-    stock_codes: Optional[List[str]] = (
+    stock_codes: list[str] | None = (
         [c.strip() for c in codes_env.split(",") if c.strip()] if codes_env else None
     )
 
@@ -148,7 +148,7 @@ def node_validate_dry_run(state: FactorDiggingState) -> Dict[str, Any]:
         return {"dry_run_ok": False, "dry_run_error": f"{e}\n{tb}"}
 
 
-def node_evaluate_alphalens(state: FactorDiggingState) -> Dict[str, Any]:
+def node_evaluate_alphalens(state: FactorDiggingState) -> dict[str, Any]:
     if not state.get("dry_run_ok"):
         _log().info("evaluate_alphalens skipped (dry_run not ok)")
         return {"evaluation_summary": "", "evaluation_error": "跳过评价：校验未通过"}
@@ -177,7 +177,7 @@ def node_evaluate_alphalens(state: FactorDiggingState) -> Dict[str, Any]:
         os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31"),
     )
     codes_env = os.environ.get("FACTOR_AGENT_STOCK_CODES", "")
-    stock_codes: Optional[List[str]] = (
+    stock_codes: list[str] | None = (
         [c.strip() for c in codes_env.split(",") if c.strip()] if codes_env else None
     )
     quantiles = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
@@ -212,7 +212,7 @@ def node_evaluate_alphalens(state: FactorDiggingState) -> Dict[str, Any]:
         return {"evaluation_summary": "", "evaluation_error": f"{e}\n{traceback.format_exc()}"}
 
 
-def node_finalize(state: FactorDiggingState) -> Dict[str, Any]:
+def node_finalize(state: FactorDiggingState) -> dict[str, Any]:
     _log().info("node finalize")
     parts = [
         "## 因子挖掘结果\n",

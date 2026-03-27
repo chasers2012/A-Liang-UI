@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 
-from app.evaluation.profile_schemas import EvaluationWorkflow
 from app.evaluation.node_type_registry import builtin_node_definition, is_builtin_type
+from app.evaluation.profile_schemas import EvaluationWorkflow
 
 
-def validate_workflow_graph(
+def validate_workflow_graph(  # noqa: C901
     workflow: EvaluationWorkflow,
     *,
     allowed_types: set[str],
@@ -41,18 +41,14 @@ def validate_workflow_graph(
         if is_builtin_type(ft):
             bout = {s.name for s in builtin_node_definition(ft).outputs}
             if link.from_socket not in bout:
-                raise ValueError(
-                    f"连线[{li}] 源端口 {link.from_socket!r} 不是 {ft} 的输出"
-                )
+                raise ValueError(f"连线[{li}] 源端口 {link.from_socket!r} 不是 {ft} 的输出")
         if is_builtin_type(tt):
             binp = {s.name for s in builtin_node_definition(tt).inputs}
             if link.to_socket not in binp:
-                raise ValueError(
-                    f"连线[{li}] 目标端口 {link.to_socket!r} 不是 {tt} 的输入"
-                )
+                raise ValueError(f"连线[{li}] 目标端口 {link.to_socket!r} 不是 {tt} 的输入")
 
     adj: dict[str, list[str]] = defaultdict(list)
-    indeg: dict[str, int] = {nid: 0 for nid in by_id}
+    indeg: dict[str, int] = dict.fromkeys(by_id, 0)
     for link in links:
         adj[link.from_node].append(link.to_node)
         indeg[link.to_node] += 1

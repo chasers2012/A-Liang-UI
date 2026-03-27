@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from app.evaluation.test_set_schemas import (
     EvaluationTestSetRecord,
@@ -59,7 +58,7 @@ def save_file(reg: EvaluationTestSetsFile) -> None:
     save_workspace_config(REGISTRY_FILENAME, reg)
 
 
-def get_by_id(reg: EvaluationTestSetsFile, ts_id: str) -> Optional[EvaluationTestSetRecord]:
+def get_by_id(reg: EvaluationTestSetsFile, ts_id: str) -> EvaluationTestSetRecord | None:
     for item in reg.items:
         if item.id == ts_id:
             return item
@@ -76,7 +75,7 @@ def apply_default_uniqueness(items: list[EvaluationTestSetRecord]) -> None:
             i.is_default = False
 
 
-def get_default_test_set(reg: EvaluationTestSetsFile) -> Optional[EvaluationTestSetRecord]:
+def get_default_test_set(reg: EvaluationTestSetsFile) -> EvaluationTestSetRecord | None:
     for i in reg.items:
         if i.is_default:
             return i

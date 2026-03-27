@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 from app.factors.evaluation_schemas import FactorEvaluationWindow
@@ -9,13 +7,13 @@ from app.factors.evaluation_schemas import FactorEvaluationWindow
 
 class FactorEvaluationHistoryEntry(BaseModel):
     id: str
-    linked_snapshot_id: Optional[str] = None
+    linked_snapshot_id: str | None = None
     evaluated_at: str
-    window: Optional[FactorEvaluationWindow] = None
-    stock_count: Optional[int] = None
+    window: FactorEvaluationWindow | None = None
+    stock_count: int | None = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class FactorEvaluationHistoryFile(BaseModel):

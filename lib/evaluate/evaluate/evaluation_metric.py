@@ -4,6 +4,7 @@ Abstract base type for evaluation metrics.
 Concrete metrics subclass :class:`EvaluationMetric` and implement :meth:`evaluate`
 with domain-specific arguments and return values.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class FactorCodeSnapshot(BaseModel):
     id: str
     saved_at: str
     kind: FactorCodeSnapshotKind
-    label: Optional[str] = None
+    label: str | None = None
     source: str
     meta: FactorCodeSnapshotMeta
 
@@ -29,7 +29,7 @@ class FactorCodeSnapshotSummaryPublic(BaseModel):
     id: str
     saved_at: str
     kind: FactorCodeSnapshotKind
-    label: Optional[str] = None
+    label: str | None = None
     meta: FactorCodeSnapshotMeta
 
 

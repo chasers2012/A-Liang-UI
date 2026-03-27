@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Any, Dict, List, Sequence, cast
+from collections.abc import Sequence
+from typing import Any, cast
 
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -23,7 +24,7 @@ def _strip_reasoning_noise(text: str) -> str:
     """Remove some models' reasoning tag blocks so code fences stay clean."""
     if not text:
         return text
-    out: List[str] = []
+    out: list[str] = []
     i = 0
     while i < len(text):
         a = text.find(_THINK_OPEN, i)
@@ -46,9 +47,7 @@ def _streaming_piece_text(chunk: Any) -> str:
         parts: list[str] = []
         for block in content:
             if isinstance(block, dict):
-                if block.get("type") == "text" and block.get("text"):
-                    parts.append(str(block["text"]))
-                elif "text" in block:
+                if (block.get("type") == "text" and block.get("text")) or "text" in block:
                     parts.append(str(block["text"]))
             elif isinstance(block, str):
                 parts.append(block)
@@ -65,9 +64,7 @@ def message_text(msg: Any) -> str:
         parts: list[str] = []
         for block in content:
             if isinstance(block, dict):
-                if block.get("type") == "text" and block.get("text"):
-                    parts.append(str(block["text"]))
-                elif "text" in block:
+                if (block.get("type") == "text" and block.get("text")) or "text" in block:
                     parts.append(str(block["text"]))
             elif isinstance(block, str):
                 parts.append(block)
@@ -99,9 +96,7 @@ def _message_content_str(m: BaseMessage) -> str:
         parts: list[str] = []
         for block in content:
             if isinstance(block, dict):
-                if block.get("type") == "text" and block.get("text"):
-                    parts.append(str(block["text"]))
-                elif "text" in block:
+                if (block.get("type") == "text" and block.get("text")) or "text" in block:
                     parts.append(str(block["text"]))
             elif isinstance(block, str):
                 parts.append(block)
@@ -110,7 +105,7 @@ def _message_content_str(m: BaseMessage) -> str:
 
 
 def _messages_preview(messages: Sequence[BaseMessage]) -> str:
-    parts: List[str] = []
+    parts: list[str] = []
     for m in messages:
         cls = m.__class__.__name__
         parts.append(f"[{cls}]\n{_message_content_str(m)}")
@@ -148,7 +143,7 @@ def _stream_max_chunks() -> int:
 
 def stream_logged(
     llm: BaseChatModel,
-    messages: List[BaseMessage],
+    messages: list[BaseMessage],
     *,
     stage: str,
 ) -> Any:
@@ -234,7 +229,7 @@ def stream_logged(
 
 def invoke_logged(
     llm: BaseChatModel,
-    messages: List[BaseMessage],
+    messages: list[BaseMessage],
     *,
     stage: str,
 ) -> Any:
@@ -287,8 +282,8 @@ def build_chat_llm() -> BaseChatModel:
     elif reasoning_raw in {"1", "true", "yes", "on"}:
         reasoning = True
 
-    client_kwargs: Dict[str, Any] = {"timeout": timeout}
-    kwargs: Dict[str, Any] = {
+    client_kwargs: dict[str, Any] = {"timeout": timeout}
+    kwargs: dict[str, Any] = {
         "temperature": temperature,
         "base_url": base_url.rstrip("/"),
         "num_predict": num_predict,

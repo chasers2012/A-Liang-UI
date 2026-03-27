@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import traceback
-from typing import Optional
 
 import pandas as pd
 from factor import DependencyResolver
@@ -12,13 +11,17 @@ from factor import DependencyResolver
 from app.datasources.registry import get_by_id as ds_get_by_id
 from app.datasources.registry import load_registry as load_datasource_registry
 from app.datasources.schemas import DataSourceRecord
+from app.datasources.sql_url import build_sqlalchemy_url
 from app.evaluation.test_set_schemas import EvaluationTestSetRecord
 from app.evaluation.test_sets_store import (
     get_by_id as test_set_get_by_id,
+)
+from app.evaluation.test_sets_store import (
     get_default_test_set,
+)
+from app.evaluation.test_sets_store import (
     load_file as load_test_sets_file,
 )
-from app.datasources.sql_url import build_sqlalchemy_url
 from app.factors.evaluation_schemas import (
     FactorEvaluationSnapshot,
     FactorEvaluationWindow,
@@ -28,7 +31,7 @@ from app.factors.registry import get_by_id, load_registry, read_source
 from app.factors.schemas import utc_now_iso
 
 
-def _pick_default_datasource() -> Optional[DataSourceRecord]:
+def _pick_default_datasource() -> DataSourceRecord | None:
     reg = load_datasource_registry()
     enabled = [r for r in reg.items if r.enabled]
     if not enabled:
@@ -46,19 +49,19 @@ def _datasource_for_test_set(ds_id: str) -> DataSourceRecord:
     return ds_rec
 
 
-def _stock_codes_from_test_set(codes: list[str]) -> Optional[list[str]]:
+def _stock_codes_from_test_set(codes: list[str]) -> list[str] | None:
     cleaned = [c.strip() for c in codes if str(c).strip()]
     return cleaned if cleaned else None
 
 
 def _resolve_evaluation_context(
-    explicit_test_set_id: Optional[str],
+    explicit_test_set_id: str | None,
 ) -> tuple[
-    Optional[EvaluationTestSetRecord],
-    Optional[DataSourceRecord],
+    EvaluationTestSetRecord | None,
+    DataSourceRecord | None,
     str,
     str,
-    Optional[list[str]],
+    list[str] | None,
     int,
 ]:
     """Resolve test set (if any), legacy single datasource, window, universe, quantiles.
@@ -70,7 +73,7 @@ def _resolve_evaluation_context(
     """
     ts_id = (explicit_test_set_id or "").strip()
     ts_reg = load_test_sets_file()
-    ts_rec: Optional[EvaluationTestSetRecord] = None
+    ts_rec: EvaluationTestSetRecord | None = None
     if ts_id:
         ts_rec = test_set_get_by_id(ts_reg, ts_id)
         if ts_rec is None:
@@ -103,7 +106,7 @@ def _resolve_evaluation_context(
         os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31"),
     )
     codes_env = os.environ.get("FACTOR_AGENT_STOCK_CODES", "")
-    stock_codes: Optional[list[str]] = (
+    stock_codes: list[str] | None = (
         [c.strip() for c in codes_env.split(",") if c.strip()] if codes_env else None
     )
     quantiles = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
@@ -120,7 +123,7 @@ def _series_to_period_dict(s: pd.Series) -> dict[str, float]:
     return out
 
 
-def _stock_count_from_alignment(idx: pd.Index) -> Optional[int]:
+def _stock_count_from_alignment(idx: pd.Index) -> int | None:
     if not isinstance(idx, pd.MultiIndex):
         return None
     try:
@@ -128,7 +131,7 @@ def _stock_count_from_alignment(idx: pd.Index) -> Optional[int]:
     except (KeyError, IndexError, ValueError):
         try:
             lev = idx.get_level_values(-1)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     return int(lev.nunique())
 
@@ -148,8 +151,9 @@ def _build_datasource(rec: DataSourceRecord):
             column_map=dict(rec.sql.column_map),
         )
     if rec.type == "csv" and rec.csv:
-        from app.datasources.registry import resolve_csv_path
         from csv_datasource import CsvDataSource
+
+        from app.datasources.registry import resolve_csv_path
 
         path = resolve_csv_path(rec.csv.path)
         return CsvDataSource(
@@ -161,14 +165,14 @@ def _build_datasource(rec: DataSourceRecord):
     raise ValueError("数据源配置不完整")
 
 
-def build_alphalens_evaluator_for_factor(
-    factor_id: str, *, test_set_id: Optional[str] = None
+def build_alphalens_evaluator_for_factor(  # noqa: C901
+    factor_id: str, *, test_set_id: str | None = None
 ) -> tuple[
-    Optional[FactorEvaluationSnapshot],
-    Optional[object],
+    FactorEvaluationSnapshot | None,
+    object | None,
     FactorEvaluationWindow,
     int,
-    Optional[list[str]],
+    list[str] | None,
 ]:
     """Return (error_snapshot, evaluator, window, quantiles, stock_codes) on success error is None."""
     reg = load_registry()
@@ -176,9 +180,7 @@ def build_alphalens_evaluator_for_factor(
     if rec is None:
         raise ValueError("因子不存在")
 
-    ts_rec, legacy_ds, start, end, stock_codes, quantiles = _resolve_evaluation_context(
-        test_set_id
-    )
+    ts_rec, legacy_ds, start, end, stock_codes, quantiles = _resolve_evaluation_context(test_set_id)
     window = FactorEvaluationWindow(start=start, end=end)
 
     src = read_source(rec)
@@ -288,7 +290,7 @@ def build_alphalens_evaluator_for_factor(
             quantiles,
             stock_codes,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return (
             FactorEvaluationSnapshot(
                 evaluated_at=utc_now_iso(),
@@ -311,7 +313,7 @@ def build_alphalens_evaluator_for_factor(
         matplotlib.use("Agg")
 
         from evaluate import AlphalensFactorEvaluator
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         return (
             FactorEvaluationSnapshot(
                 evaluated_at=utc_now_iso(),
@@ -339,8 +341,8 @@ def build_alphalens_evaluator_for_factor(
 def run_evaluation_for_factor(
     factor_id: str,
     *,
-    test_set_id: Optional[str] = None,
-    evaluation_profile: Optional[object] = None,
+    test_set_id: str | None = None,
+    evaluation_profile: object | None = None,
 ) -> FactorEvaluationSnapshot:
     from app.evaluation.profile_schemas import EvaluationProfileRecord
 
@@ -374,19 +376,15 @@ def run_evaluation_for_factor(
         if evaluation_profile is not None and isinstance(
             evaluation_profile, EvaluationProfileRecord
         ):
-            snap = snap.model_copy(
-                update={"evaluation_profile_id": evaluation_profile.id}
-            )
+            snap = snap.model_copy(update={"evaluation_profile_id": evaluation_profile.id})
         return snap
     assert ev is not None
 
     prep_periods = (1, 5, 10, 20)
-    prep_q: Optional[int] = None
+    prep_q: int | None = None
     long_short = True
     max_loss = 0.5
-    if evaluation_profile is not None and isinstance(
-        evaluation_profile, EvaluationProfileRecord
-    ):
+    if evaluation_profile is not None and isinstance(evaluation_profile, EvaluationProfileRecord):
         pr = evaluation_profile.prepare
         prep_periods = tuple(int(x) for x in pr.forward_return_periods)
         prep_q = pr.quantiles
@@ -420,7 +418,7 @@ def run_evaluation_for_factor(
             error=None,
             evaluation_profile_id=pid,
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         tb = traceback.format_exc()
         return FactorEvaluationSnapshot(
             evaluated_at=utc_now_iso(),

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Mapping, Optional, Union
+from collections.abc import Mapping
 
 import pandas as pd
 from factor.datasource import FactorDataSource
@@ -8,7 +8,7 @@ from sqlalchemy import bindparam, create_engine, text
 from sqlalchemy.engine import Engine
 
 
-def _as_engine(engine: Union[str, Engine]) -> Engine:
+def _as_engine(engine: str | Engine) -> Engine:
     if isinstance(engine, Engine):
         return engine
     return create_engine(engine)
@@ -36,12 +36,12 @@ class SqlDataSource(FactorDataSource):
 
     def __init__(
         self,
-        engine: Union[str, Engine],
+        engine: str | Engine,
         *,
         table: str,
         date_column: str,
         asset_column: str,
-        column_map: Optional[Mapping[str, str]] = None,
+        column_map: Mapping[str, str] | None = None,
     ) -> None:
         self._engine = _as_engine(engine)
         self._table_sql = _quote_ident(self._engine, table)
@@ -52,10 +52,10 @@ class SqlDataSource(FactorDataSource):
     def get_panel(
         self,
         *,
-        fields: List[str],
+        fields: list[str],
         start_date: str,
         end_date: str,
-        stock_codes: Optional[List[str]],
+        stock_codes: list[str] | None,
     ) -> pd.DataFrame:
         load_start = pd.Timestamp(start_date).normalize()
         end_ts = pd.Timestamp(end_date).normalize()
@@ -94,9 +94,7 @@ class SqlDataSource(FactorDataSource):
 
         df = pd.read_sql(stmt, self._engine, params=params)
         if df.empty:
-            empty_idx = pd.MultiIndex.from_arrays(
-                [[], []], names=["date", "asset"]
-            )
+            empty_idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
             return pd.DataFrame(columns=fields, index=empty_idx)
 
         df["date"] = pd.to_datetime(df["date"])
@@ -104,5 +102,4 @@ class SqlDataSource(FactorDataSource):
         for col in fields:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
-        df = df.set_index(["date", "asset"]).sort_index()
-        return df
+        return df.set_index(["date", "asset"]).sort_index()

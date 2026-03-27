@@ -41,9 +41,7 @@ def delete_evaluation_for_factor(factor_id: str) -> None:
     save_evaluations_file(file)
 
 
-def upsert_evaluation_for_factor(
-    factor_id: str, snap: FactorEvaluationSnapshot
-) -> None:
+def upsert_evaluation_for_factor(factor_id: str, snap: FactorEvaluationSnapshot) -> None:
     file = load_evaluations_file()
     file.items[factor_id] = snap
     save_evaluations_file(file)

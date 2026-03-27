@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Tuple, Type
-
 import numpy as np
 import pandas as pd
-from factor.factor import Factor
 from custom_code import load_subclass_from_source, strip_markdown_fences
+from factor.factor import Factor
 
 FACTOR_GLOBALS = {
     "np": np,
@@ -16,7 +14,7 @@ FACTOR_GLOBALS = {
 }
 
 
-def load_factor_class(source: str) -> Tuple[Type[Factor], str]:
+def load_factor_class(source: str) -> tuple[type[Factor], str]:
     """Parse and exec factor source in a restricted namespace."""
     return load_subclass_from_source(
         source,

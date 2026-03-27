@@ -9,14 +9,13 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Optional, Union
 
-PathPart = Union[str, Path]
+PathPart = str | Path
 
 _ENV_WORKSPACE = "QUANT_AGENT_WORKSPACE"
 _DEFAULT_DIRNAME = ".quant-agent"
 
-_runtime_root: Optional[Path] = None
+_runtime_root: Path | None = None
 
 
 def default_workspace_root() -> Path:
@@ -34,7 +33,7 @@ def get_workspace_root() -> Path:
     return default_workspace_root()
 
 
-def set_workspace_root(path: Optional[PathPart]) -> None:
+def set_workspace_root(path: PathPart | None) -> None:
     """Set in-process root; ``None`` clears override (back to env / default)."""
     global _runtime_root
     if path is None:
@@ -61,7 +60,7 @@ def ensure_dir(*parts: PathPart) -> Path:
 class Workspace:
     """Workspace bound to a root (defaults to module ``get_workspace_root()``)."""
 
-    def __init__(self, root: Optional[PathPart] = None):
+    def __init__(self, root: PathPart | None = None):
         if root is None:
             self._root = get_workspace_root()
         else:

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from app.datasources.schemas import utc_now_iso
+from app.evaluation.graph_validate import validate_workflow_graph
+from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS
 from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -9,15 +12,12 @@ from app.evaluation.profile_schemas import (
     NodeTypeDefinitionPublic,
     NodeTypeSocketPublic,
 )
-from app.datasources.schemas import utc_now_iso
 from app.evaluation.profiles_store import (
     apply_default_uniqueness,
     get_by_id,
     load_file,
     save_file,
 )
-from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS
-from app.evaluation.graph_validate import validate_workflow_graph
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -56,15 +56,11 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                 label=spec.label,
                 description=spec.description,
                 inputs=[
-                    NodeTypeSocketPublic(
-                        name=s.name, required=s.required, value_type=s.value_type
-                    )
+                    NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
                     for s in spec.inputs
                 ],
                 outputs=[
-                    NodeTypeSocketPublic(
-                        name=s.name, required=False, value_type=s.value_type
-                    )
+                    NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                     for s in spec.outputs
                 ],
                 user_defined=False,

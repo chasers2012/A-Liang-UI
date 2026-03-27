@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from app.evaluation.profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
@@ -29,7 +28,7 @@ def save_file(reg: EvaluationProfilesFile) -> None:
     )
 
 
-def get_by_id(reg: EvaluationProfilesFile, pid: str) -> Optional[EvaluationProfileRecord]:
+def get_by_id(reg: EvaluationProfilesFile, pid: str) -> EvaluationProfileRecord | None:
     for item in reg.items:
         if item.id == pid:
             return item
@@ -46,7 +45,7 @@ def apply_default_uniqueness(items: list[EvaluationProfileRecord]) -> None:
             i.is_default = False
 
 
-def get_default_profile(reg: EvaluationProfilesFile) -> Optional[EvaluationProfileRecord]:
+def get_default_profile(reg: EvaluationProfilesFile) -> EvaluationProfileRecord | None:
     for i in reg.items:
         if i.is_default:
             return i

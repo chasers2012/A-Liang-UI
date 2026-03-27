@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pandas as pd
 import pytest
-
 from evaluate import (
     compute_factor_values,
     max_lookback,
@@ -13,7 +14,7 @@ from factor import Factor
 
 class _DoubleClose(Factor):
     name = "double_close"
-    dependencies = ["close"]
+    dependencies: ClassVar[list[str]] = ["close"]
     max_window = 1
 
     def calc(self, data: pd.DataFrame) -> pd.Series:
@@ -22,7 +23,7 @@ class _DoubleClose(Factor):
 
 class _NeedsVol(Factor):
     name = "vol_tag"
-    dependencies = ["close", "volume"]
+    dependencies: ClassVar[list[str]] = ["close", "volume"]
     max_window = 5
 
     def calc(self, data: pd.DataFrame) -> pd.Series:

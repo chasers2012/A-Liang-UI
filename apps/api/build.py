@@ -1,4 +1,5 @@
 """Sync deps at repo root with uv (root .venv) and verify app import."""
+
 from __future__ import annotations
 
 import os

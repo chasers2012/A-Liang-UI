@@ -3,10 +3,8 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from app.factors.registry import load_registry, read_source, resolve_source_path
 from app.factors.validate import validate_factor_name, validate_source_syntax
-
 
 MIN_SOURCE = "x = 1\n"
 

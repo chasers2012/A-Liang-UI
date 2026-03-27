@@ -1,6 +1,5 @@
-from sqlalchemy import create_engine, text
-
 from sql_datasource import SqlDataSource
+from sqlalchemy import create_engine, text
 
 
 def test_sql_data_source_sqlite_panel():
@@ -8,10 +7,7 @@ def test_sql_data_source_sqlite_panel():
     with engine.connect() as conn:
         conn.execute(text("CREATE TABLE bars (d TEXT, sym TEXT, c REAL)"))
         conn.execute(
-            text(
-                "INSERT INTO bars VALUES "
-                "('2025-01-02','AAA',10.0),('2025-01-03','AAA',11.0)"
-            )
+            text("INSERT INTO bars VALUES ('2025-01-02','AAA',10.0),('2025-01-03','AAA',11.0)")
         )
         conn.commit()
 

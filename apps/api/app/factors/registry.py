@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
-from workspace import get_workspace_root
+from workspace import ensure_dir, get_workspace_root
 
-from app.factors.schemas import FACTORS_DIR, FactorRegistryFile, FactorRecord
+from app.factors.schemas import FACTORS_DIR, FactorRecord, FactorRegistryFile
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
-from workspace import ensure_dir
 
 FACTORS_REGISTRY_FILENAME = "factors.json"
 
@@ -40,7 +38,7 @@ def save_registry(reg: FactorRegistryFile) -> None:
     save_workspace_config(FACTORS_REGISTRY_FILENAME, reg)
 
 
-def get_by_id(reg: FactorRegistryFile, factor_id: str) -> Optional[FactorRecord]:
+def get_by_id(reg: FactorRegistryFile, factor_id: str) -> FactorRecord | None:
     for item in reg.items:
         if item.id == factor_id:
             return item

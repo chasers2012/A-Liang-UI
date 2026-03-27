@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, TypedDict
+from typing import TypedDict
 
 
 class FactorDiggingState(TypedDict, total=False):
     user_prompt: str
-    available_fields: List[str]
+    available_fields: list[str]
     research_idea: str
     pseudocode: str
     factor_source: str
     factor_class_name: str
-    dry_run_error: Optional[str]
+    dry_run_error: str | None
     repair_count: int
     dry_run_ok: bool
     evaluation_summary: str
-    evaluation_error: Optional[str]
+    evaluation_error: str | None
     final_report: str

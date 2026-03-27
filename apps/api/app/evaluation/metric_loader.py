@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Tuple, Type
-
 import numpy as np
 import pandas as pd
-from evaluate import EvaluationMetric
 from custom_code import load_subclass_from_source
+from evaluate import EvaluationMetric
 
 METRIC_GLOBALS = {
     "np": np,
@@ -16,7 +14,7 @@ METRIC_GLOBALS = {
 }
 
 
-def load_evaluation_metric_class(source: str) -> Tuple[Type[EvaluationMetric], str]:
+def load_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetric], str]:
     return load_subclass_from_source(
         source,
         base=EvaluationMetric,

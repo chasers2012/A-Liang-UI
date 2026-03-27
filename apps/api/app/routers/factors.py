@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.factors.code_snapshot_schemas import (
@@ -19,13 +21,13 @@ from app.factors.evaluation_history_store import (
     entry_from_latest_evaluation,
     list_history_for_factor,
 )
+from app.factors.evaluation_runner import run_evaluation_for_factor
 from app.factors.evaluation_schemas import (
     FactorEvaluationRowPublic,
     FactorEvaluationRunBody,
     FactorEvaluationsAggregatePublic,
     FactorEvaluationsSummaryPublic,
 )
-from app.factors.evaluation_runner import run_evaluation_for_factor
 from app.factors.evaluations_store import (
     delete_evaluation_for_factor,
     load_evaluations_file,
@@ -189,10 +191,10 @@ def post_factor_evaluation_run(
     prof = None
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
+        from app.evaluation.graph_validate import validate_workflow_graph
+        from app.evaluation.node_type_registry import list_builtin_types
         from app.evaluation.profiles_store import get_by_id as get_profile_by_id
         from app.evaluation.profiles_store import load_file as load_profiles_file
-        from app.evaluation.node_type_registry import list_builtin_types
-        from app.evaluation.graph_validate import validate_workflow_graph
 
         preg = load_profiles_file()
         prof = get_profile_by_id(preg, pid)
@@ -200,9 +202,7 @@ def post_factor_evaluation_run(
             raise HTTPException(status_code=400, detail="评价方案不存在")
         if prof.workflow.nodes:
             try:
-                validate_workflow_graph(
-                    prof.workflow, allowed_types=set(list_builtin_types())
-                )
+                validate_workflow_graph(prof.workflow, allowed_types=set(list_builtin_types()))
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
     try:
@@ -218,10 +218,8 @@ def post_factor_evaluation_run(
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
     entry = entry_from_latest_evaluation(snap, linked_snapshot_id=None)
-    try:
+    with contextlib.suppress(ValueError):
         append_history_entry(factor_id, entry)
-    except ValueError:
-        pass
     err_raw = (snap.error or "").strip()
     err: str | None = err_raw or None
     return FactorEvaluationRowPublic(
@@ -332,7 +330,7 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
 
 
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
-def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
+def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:  # noqa: C901
     reg = load_registry()
     rec = get_by_id(reg, factor_id)
     if rec is None:
@@ -383,10 +381,8 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
                         latest,
                         linked_snapshot_id=snap.id,
                     )
-                    try:
+                    with contextlib.suppress(ValueError):
                         append_history_entry(factor_id, entry)
-                    except ValueError:
-                        pass
 
     rec.updated_at = utc_now_iso()
     save_registry(reg)
@@ -402,15 +398,9 @@ def delete_factor(factor_id: str) -> None:
     reg.items = [i for i in reg.items if i.id != factor_id]
     delete_source_file(rec)
     save_registry(reg)
-    try:
+    with contextlib.suppress(ValueError):
         delete_snapshots_for_factor(factor_id)
-    except ValueError:
-        pass
-    try:
+    with contextlib.suppress(ValueError):
         delete_history_for_factor(factor_id)
-    except ValueError:
-        pass
-    try:
+    with contextlib.suppress(ValueError):
         delete_evaluation_for_factor(factor_id)
-    except ValueError:
-        pass

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from workspace import get_workspace_root
 
@@ -27,7 +26,7 @@ def save_registry(reg: RegistryFile) -> None:
     save_workspace_config(REGISTRY_FILENAME, reg)
 
 
-def get_by_id(reg: RegistryFile, ds_id: str) -> Optional[DataSourceRecord]:
+def get_by_id(reg: RegistryFile, ds_id: str) -> DataSourceRecord | None:
     for item in reg.items:
         if item.id == ds_id:
             return item

@@ -23,7 +23,7 @@ from app.datasources.verify import verify_datasource
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
 
-def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:
+def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:  # noqa: C901
     data = patch.model_dump(exclude_unset=True)
     if "name" in data:
         rec.name = data["name"]

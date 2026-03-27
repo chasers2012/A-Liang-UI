@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import Any, Callable, FrozenSet, Optional, TypeVar, Union
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 TBase = TypeVar("TBase")
 
-InvalidMessage = Union[str, Callable[[str], str]]
+InvalidMessage = str | Callable[[str], str]
 
 
 def strip_markdown_fences(src: str) -> str:
@@ -19,7 +20,7 @@ def strip_markdown_fences(src: str) -> str:
     return s.strip()
 
 
-def direct_base_symbol_name(expr: ast.expr) -> Optional[str]:
+def direct_base_symbol_name(expr: ast.expr) -> str | None:
     """Symbol used for direct inheritance, unwrapping generics (e.g. ``M[T]`` → ``M``)."""
     if isinstance(expr, ast.Subscript):
         return direct_base_symbol_name(expr.value)
@@ -30,7 +31,7 @@ def direct_base_symbol_name(expr: ast.expr) -> Optional[str]:
     return None
 
 
-def find_subclass_name(module_ast: ast.Module, base_names: FrozenSet[str]) -> Optional[str]:
+def find_subclass_name(module_ast: ast.Module, base_names: frozenset[str]) -> str | None:
     for node in module_ast.body:
         if not isinstance(node, ast.ClassDef):
             continue
@@ -49,7 +50,7 @@ def load_subclass_from_source(
     exec_filename: str,
     missing_message: str,
     invalid_message: InvalidMessage,
-    base_ast_names: Optional[FrozenSet[str]] = None,
+    base_ast_names: frozenset[str] | None = None,
 ) -> tuple[type[TBase], str]:
     """
     Parse *source*, execute in a copy of *inject_globals*, return ``(cls, name)``.

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from workspace import ensure_dir, get_workspace_root
 
@@ -42,9 +41,7 @@ def save_registry(reg: EvaluationMetricsRegistryFile) -> None:
     save_workspace_config(REGISTRY_FILENAME, reg)
 
 
-def get_by_id(
-    reg: EvaluationMetricsRegistryFile, metric_id: str
-) -> Optional[EvaluationMetricRecord]:
+def get_by_id(reg: EvaluationMetricsRegistryFile, metric_id: str) -> EvaluationMetricRecord | None:
     for item in reg.items:
         if item.id == metric_id:
             return item

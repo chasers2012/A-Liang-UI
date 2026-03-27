@@ -125,23 +125,17 @@ def _merge_patch(rec: EvaluationTestSetRecord, patch: EvaluationTestSetPatch) ->
     if "name" in data and data["name"] is not None:
         rec.name = str(data["name"]).strip()
     if "description" in data:
-        rec.description = (
-            "" if data["description"] is None else str(data["description"]).strip()
-        )
+        rec.description = "" if data["description"] is None else str(data["description"]).strip()
     if "datasource_bindings" in data and data["datasource_bindings"] is not None:
         raw = data["datasource_bindings"]
-        inputs = [
-            EvaluationTestSetDatasourceBindingInput.model_validate(x) for x in raw
-        ]
+        inputs = [EvaluationTestSetDatasourceBindingInput.model_validate(x) for x in raw]
         rec.datasource_bindings = _inputs_to_stored(inputs)
     if "start" in data and data["start"] is not None:
         rec.start = str(data["start"]).strip()
     if "end" in data and data["end"] is not None:
         rec.end = str(data["end"]).strip()
     if "stock_codes" in data and data["stock_codes"] is not None:
-        rec.stock_codes = [
-            c.strip() for c in data["stock_codes"] if str(c).strip()
-        ]
+        rec.stock_codes = [c.strip() for c in data["stock_codes"] if str(c).strip()]
     if "quantiles" in data and data["quantiles"] is not None:
         rec.quantiles = max(2, int(data["quantiles"]))
     if "is_default" in data:
@@ -184,9 +178,7 @@ def create_evaluation_test_set(body: EvaluationTestSetCreate) -> EvaluationTestS
 
 
 @router.patch("/{ts_id}", response_model=EvaluationTestSetPublic)
-def patch_evaluation_test_set(
-    ts_id: str, body: EvaluationTestSetPatch
-) -> EvaluationTestSetPublic:
+def patch_evaluation_test_set(ts_id: str, body: EvaluationTestSetPatch) -> EvaluationTestSetPublic:
     reg = load_file()
     rec = get_by_id(reg, ts_id)
     if rec is None:

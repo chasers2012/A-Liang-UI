@@ -1,4 +1,5 @@
 """Alphalens factor IC as an :class:`~evaluate.evaluation_metric.EvaluationMetric`."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -17,6 +18,7 @@ class FactorInformationCoefficientMetric(EvaluationMetric[pd.DataFrame]):
         input_data: pd.DataFrame,
     ) -> pd.DataFrame:
         import alphalens as al
+
         return al.performance.factor_information_coefficient(
             input_data,
             group_adjust=False,
@@ -24,8 +26,7 @@ class FactorInformationCoefficientMetric(EvaluationMetric[pd.DataFrame]):
         )
 
 
-class MeanInformationCoefficientMetric(EvaluationMetric[pd.Series
-                                                        | pd.DataFrame]):
+class MeanInformationCoefficientMetric(EvaluationMetric[pd.Series | pd.DataFrame]):
     """
     Mean IC via Alphalens ``performance.mean_information_coefficient``.
 
@@ -35,8 +36,7 @@ class MeanInformationCoefficientMetric(EvaluationMetric[pd.Series
     combinations may yield a :class:`pandas.DataFrame`.
     """
 
-    def evaluate(self,
-                 factor_data_clean: pd.DataFrame) -> pd.Series | pd.DataFrame:
+    def evaluate(self, factor_data_clean: pd.DataFrame) -> pd.Series | pd.DataFrame:
         import alphalens as al
 
         return al.performance.mean_information_coefficient(

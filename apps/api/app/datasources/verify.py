@@ -24,7 +24,7 @@ def verify_datasource(rec: DataSourceRecord) -> tuple[bool, str]:
             engine = create_engine(url)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-        except Exception as e:  # noqa: BLE001 — surface message to UI
+        except Exception as e:
             return False, f"SQL 连接失败: {e}"
         return True, "SQL 连接成功。"
 

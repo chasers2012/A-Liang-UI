@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 from logging.handlers import RotatingFileHandler
-from typing import Optional
 
 from workspace import ensure_dir
 
@@ -26,9 +25,9 @@ def _parse_int(name: str, default: int) -> int:
 
 def configure_agent_logging(
     *,
-    level: Optional[int] = None,
-    max_bytes: Optional[int] = None,
-    backup_count: Optional[int] = None,
+    level: int | None = None,
+    max_bytes: int | None = None,
+    backup_count: int | None = None,
 ) -> logging.Logger:
     """
     Configure ``quant_agent.agent`` loggers: console + ``logs/agent/agent.log`` under workspace.
@@ -49,8 +48,14 @@ def configure_agent_logging(
         name = os.environ.get("FACTOR_AGENT_LOG_LEVEL", "INFO").strip().upper()
         level = getattr(logging, name, logging.INFO)
 
-    max_b = max_bytes if max_bytes is not None else _parse_int("FACTOR_AGENT_LOG_MAX_BYTES", 5 * 1024 * 1024)
-    n_back = backup_count if backup_count is not None else _parse_int("FACTOR_AGENT_LOG_BACKUP_COUNT", 5)
+    max_b = (
+        max_bytes
+        if max_bytes is not None
+        else _parse_int("FACTOR_AGENT_LOG_MAX_BYTES", 5 * 1024 * 1024)
+    )
+    n_back = (
+        backup_count if backup_count is not None else _parse_int("FACTOR_AGENT_LOG_BACKUP_COUNT", 5)
+    )
 
     fmt = logging.Formatter(
         "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -82,7 +87,7 @@ def configure_agent_logging(
     return logger
 
 
-def get_agent_logger(name: Optional[str] = None) -> logging.Logger:
+def get_agent_logger(name: str | None = None) -> logging.Logger:
     """Child modules use ``get_agent_logger(__name__)``."""
     configure_agent_logging()
     if not name or name == _LOGGER_NAME:

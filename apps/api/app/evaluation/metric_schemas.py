@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Literal, Optional
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -76,7 +76,7 @@ class EvaluationMetricRecord(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
-    visualization: Optional[MetricVisualizationSpec] = None
+    visualization: MetricVisualizationSpec | None = None
 
 
 class EvaluationMetricsRegistryFile(BaseModel):
@@ -87,8 +87,8 @@ class EvaluationMetricsRegistryFile(BaseModel):
 class EvaluationMetricCreate(BaseModel):
     name: str
     description: str = ""
-    source: Optional[str] = None
-    visualization: Optional[MetricVisualizationSpec] = None
+    source: str | None = None
+    visualization: MetricVisualizationSpec | None = None
 
     @field_validator("name")
     @classmethod
@@ -111,10 +111,10 @@ class EvaluationMetricCreate(BaseModel):
 
 
 class EvaluationMetricPatch(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    source: Optional[str] = None
-    visualization: Optional[MetricVisualizationSpec] = None
+    name: str | None = None
+    description: str | None = None
+    source: str | None = None
+    visualization: MetricVisualizationSpec | None = None
 
 
 class EvaluationMetricSummaryPublic(BaseModel):
@@ -124,7 +124,7 @@ class EvaluationMetricSummaryPublic(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
-    visualization: Optional[MetricVisualizationSpec] = None
+    visualization: MetricVisualizationSpec | None = None
 
 
 class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):

@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class FactorEvaluationWindow(BaseModel):
-    start: Optional[str] = None
-    end: Optional[str] = None
+    start: str | None = None
+    end: str | None = None
 
 
 class FactorEvaluationSnapshot(BaseModel):
     evaluated_at: str
-    window: Optional[FactorEvaluationWindow] = None
-    stock_count: Optional[int] = None
+    window: FactorEvaluationWindow | None = None
+    stock_count: int | None = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
-    error: Optional[str] = None
-    evaluation_profile_id: Optional[str] = None
+    error: str | None = None
+    evaluation_profile_id: str | None = None
     metric_results: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -30,13 +30,13 @@ class FactorEvaluationRowPublic(BaseModel):
     factor_id: str
     name: str
     has_evaluation: bool
-    evaluated_at: Optional[str] = None
-    window: Optional[FactorEvaluationWindow] = None
-    stock_count: Optional[int] = None
+    evaluated_at: str | None = None
+    window: FactorEvaluationWindow | None = None
+    stock_count: int | None = None
     mean_ic: dict[str, float] = Field(default_factory=dict)
     mean_return_spread: dict[str, float] = Field(default_factory=dict)
-    error: Optional[str] = None
-    evaluation_profile_id: Optional[str] = Field(
+    error: str | None = None
+    evaluation_profile_id: str | None = Field(
         default=None,
         description="Evaluation profile id when this snapshot used a named profile.",
     )
@@ -51,7 +51,7 @@ class FactorEvaluationsAggregatePublic(BaseModel):
     evaluated_count: int
     unevaluated_count: int
     primary_period: str
-    mean_ic_primary_avg: Optional[float] = None
+    mean_ic_primary_avg: float | None = None
 
 
 class FactorEvaluationsSummaryPublic(BaseModel):
@@ -60,5 +60,5 @@ class FactorEvaluationsSummaryPublic(BaseModel):
 
 
 class FactorEvaluationRunBody(BaseModel):
-    test_set_id: Optional[str] = None
-    evaluation_profile_id: Optional[str] = None
+    test_set_id: str | None = None
+    evaluation_profile_id: str | None = None

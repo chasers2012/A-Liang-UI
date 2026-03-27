@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import traceback
 from collections import defaultdict, deque
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 from evaluate import MeanInformationCoefficientMetric
 from evaluate.factor_evaluator import _alphalens_metrics
 
 from app.evaluation.metric_loader import load_evaluation_metric_class
-from app.evaluation.profile_schemas import EvaluationProfileRecord
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
 from app.evaluation.metrics_store import read_source as read_metric_source
+from app.evaluation.profile_schemas import EvaluationProfileRecord
 from app.factors.evaluation_runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
@@ -27,7 +27,7 @@ from app.factors.schemas import utc_now_iso
 def _workflow_topological_order(workflow) -> list[str]:
     by_id = {n.id: n for n in workflow.nodes}
     adj: dict[str, list[str]] = defaultdict(list)
-    indeg: dict[str, int] = {nid: 0 for nid in by_id}
+    indeg: dict[str, int] = dict.fromkeys(by_id, 0)
     for link in workflow.links:
         adj[link.from_node].append(link.to_node)
         indeg[link.to_node] += 1
@@ -70,11 +70,11 @@ def _jsonable_metric_value(val: Any) -> Any:
     return val
 
 
-def run_evaluation_profile_workflow(
+def run_evaluation_profile_workflow(  # noqa: C901
     factor_id: str,
     profile: EvaluationProfileRecord,
     *,
-    test_set_id: Optional[str],
+    test_set_id: str | None,
 ) -> FactorEvaluationSnapshot:
     wf = profile.workflow
     err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
@@ -101,7 +101,7 @@ def run_evaluation_profile_workflow(
     outputs: dict[str, dict[str, Any]] = {}
     metric_results: dict[str, Any] = {}
     last_quantiles = base_quantiles
-    n_stocks: Optional[int] = None
+    n_stocks: int | None = None
     merged_mean_ic: dict[str, float] = {}
     merged_spread: dict[str, float] = {}
 
@@ -114,10 +114,7 @@ def run_evaluation_profile_workflow(
             if nt == "prepare_alphalens":
                 periods = tuple(
                     int(x)
-                    for x in (
-                        params.get("forward_return_periods")
-                        or prep.forward_return_periods
-                    )
+                    for x in (params.get("forward_return_periods") or prep.forward_return_periods)
                 )
                 if params.get("quantiles") is not None:
                     last_quantiles = max(2, int(params["quantiles"]))
@@ -184,7 +181,7 @@ def run_evaluation_profile_workflow(
             else:
                 raise ValueError(f"未知节点类型: {nt}")
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         tb = traceback.format_exc()
         return FactorEvaluationSnapshot(
             evaluated_at=utc_now_iso(),

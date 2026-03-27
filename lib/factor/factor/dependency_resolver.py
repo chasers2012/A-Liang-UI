@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 import pandas as pd
 
 from factor.datasource import FactorDataSource
 
 
-def _merge_panels(dfs: List[pd.DataFrame]) -> pd.DataFrame:
+def _merge_panels(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     if not dfs:
         return pd.DataFrame()
     out = dfs[0].sort_index()
@@ -30,9 +28,7 @@ def _trading_lookback_bdays(window: int, *, tail_extra: int = 0) -> int:
     return w + slack + tail_extra
 
 
-def panel_load_start_date(
-    start_date: Optional[str], end_date: str, window: int
-) -> str:
+def panel_load_start_date(start_date: str | None, end_date: str, window: int) -> str:
     """
     Earliest inclusive calendar date (``YYYY-MM-DD``) to pass to
     :meth:`FactorDataSource.get_panel` for the user-visible ``start_date`` /
@@ -76,17 +72,17 @@ class DependencyResolver:
 
     def __init__(self) -> None:
         # field -> FactorDataSource (first registration wins per field)
-        self._field_to_source: Dict[str, FactorDataSource] = {}
+        self._field_to_source: dict[str, FactorDataSource] = {}
         # logical field name -> column name on the registered FactorDataSource
-        self._field_to_physical: Dict[str, str] = {}
+        self._field_to_physical: dict[str, str] = {}
         # stable iteration order of sources as registered
-        self._sources: List[FactorDataSource] = []
+        self._sources: list[FactorDataSource] = []
 
     def register_datasource(
         self,
         source: FactorDataSource,
-        fields: List[str],
-        alias: Optional[Dict[str, str]] = None,
+        fields: list[str],
+        alias: dict[str, str] | None = None,
     ) -> None:
         """
         Register a data source for the given logical dependency field names.
@@ -105,19 +101,19 @@ class DependencyResolver:
                 self._field_to_source[f] = source
                 self._field_to_physical[f] = mapping.get(f, f)
 
-    def source_for_field(self, field: str) -> Optional[FactorDataSource]:
+    def source_for_field(self, field: str) -> FactorDataSource | None:
         return self._field_to_source.get(field)
 
-    def list_registered_fields(self) -> List[str]:
+    def list_registered_fields(self) -> list[str]:
         return sorted(self._field_to_source.keys())
 
     def get_panel(
         self,
         *,
-        fields: List[str],
-        start_date: Optional[str],
+        fields: list[str],
+        start_date: str | None,
         end_date: str,
-        stock_codes: Optional[List[str]],
+        stock_codes: list[str] | None,
         window: int,
     ) -> pd.DataFrame:
         if not fields:
@@ -133,8 +129,8 @@ class DependencyResolver:
 
         load_start = panel_load_start_date(start_date, end_date, window)
 
-        by_source: Dict[int, tuple[FactorDataSource, List[str]]] = {}
-        order: List[int] = []
+        by_source: dict[int, tuple[FactorDataSource, list[str]]] = {}
+        order: list[int] = []
         for f in fields:
             src = self._field_to_source[f]
             key = id(src)
@@ -143,11 +139,11 @@ class DependencyResolver:
                 order.append(key)
             by_source[key][1].append(f)
 
-        parts: List[pd.DataFrame] = []
+        parts: list[pd.DataFrame] = []
         for key in order:
             src, subfields = by_source[key]
-            phys_order: List[str] = []
-            phys_to_logical: Dict[str, str] = {}
+            phys_order: list[str] = []
+            phys_to_logical: dict[str, str] = {}
             for f in subfields:
                 p = self._field_to_physical.get(f, f)
                 if p in phys_to_logical and phys_to_logical[p] != f:

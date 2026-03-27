@@ -9,8 +9,8 @@ from agent.nodes import (
     node_finalize,
     node_generate_code,
     node_generate_pseudocode,
-    node_init_context,
     node_ideate,
+    node_init_context,
     node_validate_dry_run,
 )
 from agent.state import FactorDiggingState

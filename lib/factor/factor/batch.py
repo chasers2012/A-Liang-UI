@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from collections.abc import Sequence
 
 import pandas as pd
 
@@ -9,9 +9,9 @@ from factor.dependency_resolver import panel_load_start_date
 from factor.factor import Factor
 
 
-def merged_dependencies(factors: Sequence[Factor]) -> List[str]:
+def merged_dependencies(factors: Sequence[Factor]) -> list[str]:
     """Union of ``Factor.dependencies`` in first-seen order."""
-    out: List[str] = []
+    out: list[str] = []
     for f in factors:
         for col in f.dependencies:
             if col not in out:
@@ -53,9 +53,9 @@ def compute_factor_values_from_source(
     factors: Sequence[Factor],
     data_source: FactorDataSource,
     *,
-    start_date: Optional[str],
+    start_date: str | None,
     end_date: str,
-    stock_codes: Optional[List[str]] = None,
+    stock_codes: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Load a single panel (merged fields, max lookback) and compute all factors.

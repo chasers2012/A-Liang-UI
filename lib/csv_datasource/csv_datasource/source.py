@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Union
 
 import pandas as pd
 from factor.datasource import FactorDataSource
@@ -22,11 +21,11 @@ class CsvDataSource(FactorDataSource):
 
     def __init__(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         *,
         date_column: str,
         asset_column: str,
-        read_csv_kwargs: Optional[dict] = None,
+        read_csv_kwargs: dict | None = None,
     ) -> None:
         self._path = Path(path)
         self._date_column = date_column
@@ -41,10 +40,10 @@ class CsvDataSource(FactorDataSource):
     def get_panel(
         self,
         *,
-        fields: List[str],
+        fields: list[str],
         start_date: str,
         end_date: str,
-        stock_codes: Optional[List[str]],
+        stock_codes: list[str] | None,
     ) -> pd.DataFrame:
         load_start = pd.Timestamp(start_date).normalize()
         end_ts = pd.Timestamp(end_date).normalize()
@@ -81,15 +80,12 @@ class CsvDataSource(FactorDataSource):
 
         mask = (df["date"] >= load_start) & (df["date"] <= end_ts)
         if stock_codes is not None:
-            codes = set(str(c) for c in stock_codes)
+            codes = {str(c) for c in stock_codes}
             mask &= df["asset"].isin(codes)
         df = df.loc[mask, ["date", "asset", *fields]]
 
         if df.empty:
-            empty_idx = pd.MultiIndex.from_arrays(
-                [[], []], names=["date", "asset"]
-            )
+            empty_idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
             return pd.DataFrame(columns=fields, index=empty_idx)
 
-        df = df.set_index(["date", "asset"]).sort_index()
-        return df
+        return df.set_index(["date", "asset"]).sort_index()

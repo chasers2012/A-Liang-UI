@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -27,12 +27,12 @@ class Factor(ABC):
     group_label: str = "因子"
     description: str = "因子描述"
     max_window: int = 1
-    dependencies: List[str] = ["close"]
+    dependencies: ClassVar[list[str]] = ["close"]
 
     def __init__(
         self,
         *,
-        dependency_resolver: Optional["DependencyResolver"] = None,
+        dependency_resolver: DependencyResolver | None = None,
     ) -> None:
         self._dependency_resolver = dependency_resolver
 
@@ -50,13 +50,13 @@ class Factor(ABC):
         """
         raise NotImplementedError
 
-    def calculate(
+    def calculate(  # noqa: C901
         self,
-        start_date: Optional[str],
+        start_date: str | None,
         end_date: str,
-        stock_codes: Optional[List[str]] = None,
+        stock_codes: list[str] | None = None,
         *,
-        dependency_resolver: Optional["DependencyResolver"] = None,
+        dependency_resolver: DependencyResolver | None = None,
     ) -> pd.DataFrame:
         """
         Load panel data via :class:`DependencyResolver` and run ``calc``.
@@ -79,32 +79,23 @@ class Factor(ABC):
         )
 
         if not isinstance(price_data.index, pd.MultiIndex):
-            raise ValueError(
-                f"Factor {self.name}: price_data must have MultiIndex (date, asset)"
-            )
+            raise ValueError(f"Factor {self.name}: price_data must have MultiIndex (date, asset)")
 
         index_names = price_data.index.names
         if "date" not in index_names or "asset" not in index_names:
-            raise ValueError(
-                f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels"
-            )
+            raise ValueError(f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels")
 
         missing_cols = set(self.dependencies) - set(price_data.columns)
         if missing_cols:
-            raise ValueError(
-                f"Factor {self.name}: missing required columns: {missing_cols}"
-            )
+            raise ValueError(f"Factor {self.name}: missing required columns: {missing_cols}")
 
         result = self.calc(price_data)
 
         if not isinstance(result, (pd.DataFrame, pd.Series)):
-            raise ValueError(
-                f"Factor {self.name}: calc must return a DataFrame or Series")
+            raise ValueError(f"Factor {self.name}: calc must return a DataFrame or Series")
 
         if not isinstance(result.index, pd.MultiIndex):
-            raise ValueError(
-                f"Factor {self.name}: calc result must have MultiIndex (date, asset)"
-            )
+            raise ValueError(f"Factor {self.name}: calc result must have MultiIndex (date, asset)")
 
         if isinstance(result, pd.Series):
             result = pd.DataFrame({self.name: result})
@@ -118,8 +109,7 @@ class Factor(ABC):
         end_dt = pd.to_datetime(end_date) if end_date is not None else None
         if start_date:
             start_dt = pd.to_datetime(start_date)
-            mask = (date_level >= start_dt) & (date_level <= end_dt
-                                               if end_dt is not None else True)
+            mask = (date_level >= start_dt) & (date_level <= end_dt if end_dt is not None else True)
             result = result.loc[mask]
         else:
             dl = result.index.get_level_values("date")
@@ -129,8 +119,7 @@ class Factor(ABC):
                 mask_end = np.ones(len(dl), dtype=bool)
             if mask_end.any():
                 last_day = dl[mask_end].max()
-                result = result.loc[result.index.get_level_values("date") ==
-                                    last_day]
+                result = result.loc[result.index.get_level_values("date") == last_day]
             else:
                 result = result.iloc[0:0]
 
@@ -147,32 +136,23 @@ class Factor(ABC):
             Series, MultiIndex (date, asset), name set to ``name``.
         """
         if not isinstance(price_data.index, pd.MultiIndex):
-            raise ValueError(
-                f"Factor {self.name}: price_data must have MultiIndex (date, asset)"
-            )
+            raise ValueError(f"Factor {self.name}: price_data must have MultiIndex (date, asset)")
 
         index_names = price_data.index.names
         if "date" not in index_names or "asset" not in index_names:
-            raise ValueError(
-                f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels"
-            )
+            raise ValueError(f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels")
 
         missing_cols = set(self.dependencies) - set(price_data.columns)
         if missing_cols:
-            raise ValueError(
-                f"Factor {self.name}: missing required columns: {missing_cols}"
-            )
+            raise ValueError(f"Factor {self.name}: missing required columns: {missing_cols}")
 
         result = self.calc(price_data)
 
         if not isinstance(result, (pd.DataFrame, pd.Series)):
-            raise ValueError(
-                f"Factor {self.name}: calc must return a DataFrame or Series")
+            raise ValueError(f"Factor {self.name}: calc must return a DataFrame or Series")
 
         if not isinstance(result.index, pd.MultiIndex):
-            raise ValueError(
-                f"Factor {self.name}: calc result must have MultiIndex (date, asset)"
-            )
+            raise ValueError(f"Factor {self.name}: calc result must have MultiIndex (date, asset)")
 
         if isinstance(result, pd.DataFrame):
             if len(result.columns) > 0:
@@ -189,11 +169,11 @@ class Factor(ABC):
 
     def __call__(
         self,
-        start_date: Optional[str],
+        start_date: str | None,
         end_date: str,
-        stock_codes: Optional[List[str]] = None,
+        stock_codes: list[str] | None = None,
         *,
-        dependency_resolver: Optional["DependencyResolver"] = None,
+        dependency_resolver: DependencyResolver | None = None,
     ) -> pd.DataFrame:
         return self.calculate(
             start_date,
@@ -204,17 +184,15 @@ class Factor(ABC):
 
     def _load_data(
         self,
-        start_date: Optional[str],
+        start_date: str | None,
         end_date: str,
-        stock_codes: Optional[List[str]] = None,
-        dependencies: Optional[List[str]] = None,
+        stock_codes: list[str] | None = None,
+        dependencies: list[str] | None = None,
         *,
-        dependency_resolver: Optional["DependencyResolver"] = None,
+        dependency_resolver: DependencyResolver | None = None,
     ) -> pd.DataFrame:
-        resolver: Optional["DependencyResolver"] = (
-            dependency_resolver
-            if dependency_resolver is not None
-            else self._dependency_resolver
+        resolver: DependencyResolver | None = (
+            dependency_resolver if dependency_resolver is not None else self._dependency_resolver
         )
         if resolver is None:
             raise ValueError(

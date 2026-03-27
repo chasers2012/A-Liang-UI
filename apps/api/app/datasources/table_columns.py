@@ -85,6 +85,6 @@ def list_table_column_names(sql: SqlConfigStored) -> list[str]:
     insp = inspect(engine)
     try:
         cols = insp.get_columns(tbl, schema=schema)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise ValueError(f"无法读取表列: {e}") from e
     return [str(c["name"]) for c in cols]

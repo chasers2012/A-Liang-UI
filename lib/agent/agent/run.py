@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 from factor.dependency_resolver import DependencyResolver
 
@@ -48,8 +48,8 @@ def _load_env() -> None:
 def run_factor_digging(
     user_prompt: str = "",
     *,
-    dependency_resolver: Optional[DependencyResolver] = None,
-) -> Dict[str, Any]:
+    dependency_resolver: DependencyResolver | None = None,
+) -> dict[str, Any]:
     """
     LangGraph：上下文 -> 立意 -> 伪代码 -> 代码 -> 干跑 ->（可选）Alphalens -> 报告。
     """
