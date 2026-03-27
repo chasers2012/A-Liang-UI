@@ -8,9 +8,7 @@ def test_evaluation_metrics_crud(client):
     mid = data["id"]
     assert data["name"] == "em_test"
     assert "UserEvaluationMetric" in data["source"]
-    assert data.get("visualization") is not None
-    assert data["visualization"]["mode"] == "auto"
-    assert data["visualization"]["period_day_keys"] is False
+    assert data.get("visualization") is None
 
     r2 = client.get(f"/evaluation-metrics/{mid}")
     assert r2.status_code == 200
@@ -18,16 +16,12 @@ def test_evaluation_metrics_crud(client):
 
     r3 = client.patch(
         f"/evaluation-metrics/{mid}",
-        json={
-            "description": "d1",
-            "visualization": {"mode": "table", "period_day_keys": True},
-        },
+        json={"description": "d1"},
     )
     assert r3.status_code == 200
     body3 = r3.json()
     assert body3["description"] == "d1"
-    assert body3["visualization"]["mode"] == "table"
-    assert body3["visualization"]["period_day_keys"] is True
+    assert body3.get("visualization") is None
 
     r4 = client.delete(f"/evaluation-metrics/{mid}")
     assert r4.status_code == 204
@@ -80,7 +74,11 @@ def test_evaluation_profiles_node_types(client):
     rows = r.json()
     types = {x["type"] for x in rows}
     assert "prepare_alphalens" in types
+    assert "viz_auto" in types
+    assert "viz_table" in types
     assert "metric:builtin.mean_ic" in types
+    viz_types = [x for x in types if x.startswith("viz_")]
+    assert len(viz_types) == 6
     for row in rows:
         assert "workflow_parameters" in row
         assert isinstance(row["workflow_parameters"], list)

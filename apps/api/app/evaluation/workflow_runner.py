@@ -16,6 +16,7 @@ from app.evaluation.metric_schemas import (
 )
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.node_type_registry import is_viz_node_type
 from app.evaluation.profile_schemas import EvaluationProfileRecord
 from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 from app.factors.evaluation_runner import (
@@ -273,6 +274,10 @@ def run_evaluation_profile_workflow(
                     outputs=outputs,
                     metric_results=metric_results,
                 )
+            elif is_viz_node_type(nt):
+                val = _resolve_socket(wf, outputs, nid, "in")
+                outputs[nid] = {"out": val}
+                metric_results[nid] = {"out": _jsonable_metric_value(val)}
             elif parse_metric_node_type(nt):
                 mic, sp = _run_metric_node(
                     wf,

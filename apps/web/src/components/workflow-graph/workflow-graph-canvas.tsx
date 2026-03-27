@@ -42,12 +42,17 @@ import {
   reapplyAllWorkflowNodeColors,
   registerWorkflowStepNodeType,
   setCanvasViewport,
+  clientToGraphCoords,
   installLiteGraphContextMenuScrollFix,
 } from "./workflow-graph-litegraph";
 
 import "./workflow-graph-canvas.css";
 
 const DEFAULT_FIT = { padding: 0.14, maxZoom: 1.15, minZoom: 0.08 };
+
+/** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
+export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
+  "application/x-workflow-graph-node-type";
 
 /** LiteGraph 画布上有、但类型声明未列出的字段 */
 type LGraphCanvasChrome = LGraphCanvas & {
@@ -95,7 +100,12 @@ export type WorkflowGraphCanvasProps = {
     cssRoot: HTMLElement | null,
   ) => WorkflowNodeAccent;
   /** 自定义左侧「添加节点」区；不传且非只读时用 `nodeTypes` 生成按钮列表。 */
-  renderPalette?: (ctx: { addNode: (typeKey: string) => void }) => ReactNode;
+  renderPalette?: (ctx: {
+    addNode: (
+      typeKey: string,
+      graphPos?: readonly [number, number],
+    ) => void;
+  }) => ReactNode;
   /** 右侧/底部属性区；不传则不渲染。 */
   renderInspector?: (ctx: WorkflowGraphInspectorRenderContext) => ReactNode;
 };
@@ -441,7 +451,7 @@ const WorkflowGraphCanvasInner = forwardRef<
   );
 
   const addNode = useCallback(
-    (typeKey: string) => {
+    (typeKey: string, graphPos?: readonly [number, number]) => {
       const rt = runtimeRef.current;
       if (!rt || readOnly) return;
       const id = crypto.randomUUID();
@@ -456,16 +466,59 @@ const WorkflowGraphCanvasInner = forwardRef<
       p.workflowNodeId = id;
       p.backendType = typeKey;
       p.params = {};
-      node.pos[0] = 120 + Math.random() * 80;
-      node.pos[1] = 80 + Math.random() * 80;
       const wrap = wrapRef.current;
       applyCatalogToNode(node, catMap.get(typeKey), (t) =>
         nodeColorsRef.current(t, wrap),
       );
+      if (graphPos) {
+        node.pos[0] = graphPos[0] - node.size[0] * 0.5;
+        node.pos[1] = graphPos[1] - node.size[1] * 0.5;
+      } else {
+        node.pos[0] = 120 + Math.random() * 80;
+        node.pos[1] = 80 + Math.random() * 80;
+      }
       rt.graph.add(node);
       rt.canvas.setDirty(true, true);
     },
     [catMap, readOnly],
+  );
+
+  const handleCanvasDragOver = useCallback(
+    (e: React.DragEvent<HTMLCanvasElement>) => {
+      if (readOnly) return;
+      if (
+        ![...e.dataTransfer.types].includes(WORKFLOW_GRAPH_NODE_DRAG_MIME)
+      ) {
+        return;
+      }
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    },
+    [readOnly],
+  );
+
+  const handleCanvasDrop = useCallback(
+    (e: React.DragEvent<HTMLCanvasElement>) => {
+      if (readOnly) return;
+      const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+      if (!typeKey || !catMapRef.current.has(typeKey)) {
+        return;
+      }
+      e.preventDefault();
+      const rt = runtimeRef.current;
+      if (!rt) return;
+      const [gx, gy] = clientToGraphCoords(rt.canvas, e.clientX, e.clientY);
+      addNode(typeKey, [gx, gy]);
+    },
+    [readOnly, addNode],
+  );
+
+  const handlePaletteDragStart = useCallback(
+    (typeKey: string, e: React.DragEvent) => {
+      e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, typeKey);
+      e.dataTransfer.effectAllowed = "copy";
+    },
+    [],
   );
 
   const deleteSelectedNode = useCallback(() => {
@@ -514,8 +567,11 @@ const WorkflowGraphCanvasInner = forwardRef<
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 justify-start border-border bg-card text-xs font-medium shadow-none hover:bg-accent"
+              draggable
+              title="点击添加，或拖到画布"
+              className="h-8 cursor-grab justify-start border-border bg-card text-xs font-medium shadow-none hover:bg-accent active:cursor-grabbing"
               onClick={() => addNode(t.type)}
+              onDragStart={(e) => handlePaletteDragStart(t.type, e)}
             >
               {t.label}
             </Button>
@@ -566,6 +622,8 @@ const WorkflowGraphCanvasInner = forwardRef<
           <canvas
             ref={canvasRef}
             className="workflow-graph-canvas-el block h-full w-full min-h-[280px]"
+            onDragOver={handleCanvasDragOver}
+            onDrop={handleCanvasDrop}
           />
           <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex gap-1">
             <div

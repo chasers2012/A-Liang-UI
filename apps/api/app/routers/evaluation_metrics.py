@@ -9,7 +9,6 @@ from app.evaluation.metric_schemas import (
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
     EvaluationMetricSummaryPublic,
-    MetricVisualizationSpec,
     default_metric_source,
     new_metric_id,
     record_to_summary,
@@ -26,20 +25,6 @@ from app.evaluation.metrics_store import (
 from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
-
-
-def _visualization_from_class(metric_class: type) -> MetricVisualizationSpec | None:
-    raw = getattr(metric_class, "VISUALIZATION", None)
-    if raw is None:
-        return None
-    if isinstance(raw, MetricVisualizationSpec):
-        return raw.model_copy(deep=True)
-    if isinstance(raw, dict):
-        try:
-            return MetricVisualizationSpec.model_validate(raw)
-        except Exception:
-            return None
-    return None
 
 
 def _detail(rec) -> EvaluationMetricDetailPublic:
@@ -114,12 +99,9 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     try:
-        cls, _ = load_evaluation_metric_class(src)
+        load_evaluation_metric_class(src)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-
-    if rec.visualization is None:
-        rec.visualization = _visualization_from_class(cls)
 
     reg = load_registry()
     reg.items.append(rec)
@@ -151,9 +133,6 @@ def patch_evaluation_metric(
         _merge_patch(rec, body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-
-    if "visualization" in unset:
-        rec.visualization = body.visualization
 
     if "workflow_parameters" in unset and body.workflow_parameters is not None:
         rec.workflow_parameters = list(body.workflow_parameters)

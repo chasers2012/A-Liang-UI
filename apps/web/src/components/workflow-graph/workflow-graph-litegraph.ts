@@ -394,6 +394,19 @@ export function setCanvasViewport(
   canvas.setDirty(true, true);
 }
 
+/** 浏览器视口坐标 → LiteGraph 图坐标（与 `adjustMouseEvent` / `canvasX` 一致）。 */
+export function clientToGraphCoords(
+  lgc: LGraphCanvas,
+  clientX: number,
+  clientY: number,
+): [number, number] {
+  const b = lgc.canvas.getBoundingClientRect();
+  const x = clientX - b.left;
+  const y = clientY - b.top;
+  const out = lgc.convertCanvasToOffset([x, y]);
+  return [out[0], out[1]];
+}
+
 const FIT_OPTS = { padding: 0.14, maxZoom: 1.15, minZoom: 0.08 };
 
 export function fitWorkflowGraphView(

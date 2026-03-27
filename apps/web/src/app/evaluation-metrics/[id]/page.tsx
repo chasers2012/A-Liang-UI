@@ -15,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { METRIC_VIZ_MODE_ITEMS } from "@/lib/metric-visualization-form";
 import { cn } from "@/lib/utils";
 import {
   evaluationMetricDetailAtomFamily,
@@ -83,32 +82,6 @@ export default function EvaluationMetricDetailPage() {
           <p>id: {row.id}</p>
           <p>创建: {row.created_at}</p>
           <p>更新: {row.updated_at}</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>结果可视化</CardTitle>
-          <CardDescription>
-            因子详情页中工作流「自定义指标」节点的展示方式
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          {row.visualization ? (
-            <>
-              <p>
-                <span className="text-foreground">模式：</span>
-                {METRIC_VIZ_MODE_ITEMS.find((x) => x.value === row.visualization?.mode)
-                  ?.label ?? row.visualization.mode}
-              </p>
-              <p>
-                <span className="text-foreground">数字键显示为「N 日」：</span>
-                {row.visualization.period_day_keys ? "是" : "否"}
-              </p>
-            </>
-          ) : (
-            <p>未在注册表中保存配置；创建时若未指定，可能来自源码中的 VISUALIZATION。</p>
-          )}
         </CardContent>
       </Card>
 

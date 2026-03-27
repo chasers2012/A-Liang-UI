@@ -108,7 +108,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
       {workflowParamSpecs.length > 0 ? (
         <div className="space-y-2 border-t border-border/80 pt-2">
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            指标参数
+            节点参数
           </div>
           <div className="space-y-2">
             {workflowParamSpecs.map((spec) => (
@@ -130,11 +130,14 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         <p className="leading-relaxed text-muted-foreground">
           只读预览。修改工作流请使用「编辑」。
         </p>
+      ) : workflowParamSpecs.length > 0 ? (
+        <p className="leading-relaxed text-muted-foreground">
+          其余 params 请在「JSON」模式中编辑。
+        </p>
       ) : node.data.backendType.startsWith("metric:") ? (
         <p className="leading-relaxed text-muted-foreground">
-          {workflowParamSpecs.length > 0
-            ? "其余 params 请在「JSON」模式中编辑。"
-            : "指标已绑定到该节点类型。可在指标编辑中配置工作流参数，或使用「JSON」模式编辑 params。"}
+          指标已绑定到该节点类型。可在指标编辑中配置工作流参数，或使用「JSON」模式编辑
+          params。
         </p>
       ) : (
         <p className="leading-relaxed text-muted-foreground">

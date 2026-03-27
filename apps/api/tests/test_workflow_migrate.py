@@ -31,6 +31,23 @@ def test_migrate_legacy_mean_ic():
     assert out.nodes[0].type == metric_node_type("builtin.mean_ic")
 
 
+def test_migrate_result_visualization_to_viz_node():
+    wf = EvaluationWorkflow(
+        nodes=[
+            WorkflowNode(
+                id="v",
+                type="result_visualization",
+                pos=[0, 0],
+                params={"mode": "table", "period_day_keys": True, "x": 1},
+            ),
+        ],
+        links=[],
+    )
+    out = migrate_evaluation_workflow(wf)
+    assert out.nodes[0].type == "viz_table"
+    assert out.nodes[0].params == {"period_day_keys": True, "x": 1}
+
+
 def test_list_evaluation_metrics_has_builtin(client):
     r = client.get("/evaluation-metrics")
     assert r.status_code == 200

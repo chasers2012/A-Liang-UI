@@ -521,10 +521,7 @@ export default function FactorDetailPage() {
   const metricMetaById = useMemo(() => {
     const o: Record<string, MetricMetaEntry> = {};
     for (const m of evaluationMetrics) {
-      o[m.id] = {
-        name: m.name,
-        visualization: m.visualization ?? null,
-      };
+      o[m.id] = { name: m.name };
     }
     return o;
   }, [evaluationMetrics]);

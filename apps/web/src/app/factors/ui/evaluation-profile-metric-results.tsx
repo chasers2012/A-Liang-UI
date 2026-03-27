@@ -5,15 +5,24 @@ import type {
   MetricVisualizationSpec,
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
+import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   prepare_alphalens: "计算因子",
+  result_visualization: "结果可视化",
+  viz_auto: "可视化·自动",
+  viz_bars: "可视化·条形图",
+  viz_bars_diverging: "可视化·双向条形图",
+  viz_table: "可视化·表格",
+  viz_json: "可视化·JSON",
+  viz_scalar: "可视化·单值",
   mean_information_coefficient: "平均 IC",
   mean_return_spread: "多空收益差",
   user_metric: "自定义指标",
 };
 
 const METRIC_NODE_PREFIX = "metric:";
+const VIZ_NODE_PREFIX = "viz_";
 
 
 const SOCKET_LABELS: Record<string, string> = {
@@ -21,11 +30,20 @@ const SOCKET_LABELS: Record<string, string> = {
   mean_return_spread: "多空收益差",
   out: "指标输出",
   clean_factor: "因子数据",
+  in: "可视化输入",
 };
+
+const VIZ_MODES: readonly MetricVisualizationMode[] = [
+  "auto",
+  "bars",
+  "bars_diverging",
+  "table",
+  "json",
+  "scalar",
+] as const;
 
 export type MetricMetaEntry = {
   name: string;
-  visualization?: MetricVisualizationSpec | null;
 };
 
 function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
@@ -49,12 +67,69 @@ function metricDisplayName(
   return metricMetaById?.[metricId]?.name ?? null;
 }
 
-function vizForUserMetric(
-  metricId: string | null,
-  metricMetaById: Record<string, MetricMetaEntry> | undefined,
+function isVizWorkflowNodeType(t: string | undefined): boolean {
+  if (!t) return false;
+  return t === "result_visualization" || t.startsWith(VIZ_NODE_PREFIX);
+}
+
+/** 旧版单一可视化节点：mode 在 params 里（迁移后多为 viz_* 类型）。 */
+function vizSpecFromLegacyResultVizParams(
+  params: Record<string, unknown> | undefined,
+): MetricVisualizationSpec {
+  const rawMode = params?.mode;
+  const mode: MetricVisualizationMode =
+    typeof rawMode === "string" &&
+    (VIZ_MODES as readonly string[]).includes(rawMode)
+      ? (rawMode as MetricVisualizationMode)
+      : "auto";
+  const pdk = params?.period_day_keys;
+  return {
+    mode,
+    period_day_keys: typeof pdk === "boolean" ? pdk : false,
+  };
+}
+
+function vizSpecFromVizNode(
+  node: WorkflowNodeDto | undefined,
+): MetricVisualizationSpec {
+  const t = node?.type ?? "";
+  const pdk = node?.params?.period_day_keys;
+  const period_day_keys = typeof pdk === "boolean" ? pdk : false;
+  if (t === "result_visualization") {
+    return vizSpecFromLegacyResultVizParams(node?.params);
+  }
+  if (t.startsWith(VIZ_NODE_PREFIX)) {
+    const rest = t.slice(VIZ_NODE_PREFIX.length);
+    const mode: MetricVisualizationMode = (VIZ_MODES as readonly string[]).includes(
+      rest,
+    )
+      ? (rest as MetricVisualizationMode)
+      : "auto";
+    return { mode, period_day_keys };
+  }
+  return { mode: "auto", period_day_keys: false };
+}
+
+/** 指标某输出端口若接到可视化（viz_*）节点，则展示配置取自该节点类型与 params。 */
+function vizFromDownstreamResultViz(
+  profile: EvaluationProfilePublic | undefined,
+  metricNodeId: string,
+  fromSocket: string,
 ): MetricVisualizationSpec | null {
-  if (!metricId) return null;
-  return metricMetaById?.[metricId]?.visualization ?? null;
+  if (!profile?.workflow?.links?.length) return null;
+  const nodesById = new Map(
+    (profile.workflow.nodes ?? []).map((n) => [n.id, n]),
+  );
+  for (const link of profile.workflow.links) {
+    if (link.from_node !== metricNodeId || link.from_socket !== fromSocket) {
+      continue;
+    }
+    if (link.to_socket !== "in") continue;
+    const to = nodesById.get(link.to_node);
+    if (!to || !isVizWorkflowNodeType(to.type)) continue;
+    return vizSpecFromVizNode(to);
+  }
+  return null;
 }
 
 function isNumericRecord(v: unknown): v is Record<string, number> {
@@ -322,6 +397,9 @@ function outputSectionLabel(
   node: WorkflowNodeDto | undefined,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
 ): string {
+  if (socketKey === "out" && isVizWorkflowNodeType(node?.type)) {
+    return "展示输出";
+  }
   if (socketKey === "out") {
     const mid = metricIdFromNode(node);
     const nm = metricDisplayName(mid, metricMetaById);
@@ -345,6 +423,13 @@ function periodDayStyleForSocket(
   }
   if (
     node?.type?.startsWith(METRIC_NODE_PREFIX) &&
+    socketKey === "out" &&
+    viz?.period_day_keys
+  ) {
+    return true;
+  }
+  if (
+    isVizWorkflowNodeType(node?.type) &&
     socketKey === "out" &&
     viz?.period_day_keys
   ) {
@@ -393,7 +478,7 @@ function renderScalarNumber(val: number, viz: MetricVisualizationSpec | null) {
 export function EvaluationProfileMetricResultsPanel(props: {
   metricResults: Record<string, unknown>;
   profile?: EvaluationProfilePublic | null;
-  /** Per metric id: display name and optional visualization config */
+  /** Per metric id: display name（用于 `metric:*` 节点标题） */
   metricMetaById?: Record<string, MetricMetaEntry>;
 }) {
   const { metricResults, profile, metricMetaById } = props;
@@ -404,8 +489,6 @@ export function EvaluationProfileMetricResultsPanel(props: {
     const outs = asObjectRecord(metricResults[nid]);
     if (!outs) return null;
     const node = profile?.workflow?.nodes?.find((x) => x.id === nid);
-    const mid = metricIdFromNode(node);
-    const userViz = vizForUserMetric(mid, metricMetaById);
     const entries = Object.entries(outs).filter(([sk, val]) => {
       if (sk === "clean_factor" && val === "[DataFrame]") return false;
       return true;
@@ -426,8 +509,13 @@ export function EvaluationProfileMetricResultsPanel(props: {
               node,
               metricMetaById,
             );
-            const socketViz =
-              socketKey === "out" && mid ? userViz : null;
+            const socketViz = isVizWorkflowNodeType(node?.type)
+              ? vizSpecFromVizNode(node)
+              : vizFromDownstreamResultViz(
+                  profile ?? undefined,
+                  nid,
+                  socketKey,
+                );
             const periodDay = periodDayStyleForSocket(
               socketKey,
               node,

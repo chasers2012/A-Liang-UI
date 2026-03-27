@@ -10,6 +10,8 @@ _LEGACY_TYPE_TO_METRIC_ID: dict[str, str] = {
     "mean_return_spread": "builtin.mean_return_spread",
 }
 
+_VIZ_MODES = frozenset({"auto", "bars", "bars_diverging", "table", "json", "scalar"})
+
 
 def _strip_metric_id_param(params: dict) -> dict:
     return {k: v for k, v in dict(params or {}).items() if k != "metric_id"}
@@ -45,6 +47,21 @@ def migrate_evaluation_workflow(workflow: EvaluationWorkflow) -> EvaluationWorkf
                     )
                 )
                 changed = True
+        elif t == "result_visualization":
+            params = dict(n.params or {})
+            mode = params.pop("mode", "auto")
+            mode_s = str(mode).strip() if mode is not None else "auto"
+            if mode_s not in _VIZ_MODES:
+                mode_s = "auto"
+            new_nodes.append(
+                n.model_copy(
+                    update={
+                        "type": f"viz_{mode_s}",
+                        "params": params,
+                    }
+                )
+            )
+            changed = True
         else:
             new_nodes.append(n)
     if not changed:

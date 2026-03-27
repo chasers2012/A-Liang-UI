@@ -4,8 +4,10 @@ from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
 from app.evaluation.graph_validate import validate_workflow_graph
+from app.evaluation.metric_schemas import RESULT_VIZ_NODE_WORKFLOW_PARAMETERS
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.node_type_registry import sorted_viz_node_type_ids
 from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -73,9 +75,29 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
             metric_id=None,
         )
     )
+    for vid in sorted_viz_node_type_ids():
+        vs = workflow_node_definition(vid)
+        out.append(
+            NodeTypeDefinitionPublic(
+                type=vs.type,
+                label=vs.label,
+                description=vs.description,
+                inputs=[
+                    NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
+                    for s in vs.inputs
+                ],
+                outputs=[
+                    NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
+                    for s in vs.outputs
+                ],
+                workflow_parameters=list(RESULT_VIZ_NODE_WORKFLOW_PARAMETERS),
+                user_defined=False,
+                metric_id=None,
+            )
+        )
     allowed = all_workflow_node_type_ids()
     for nt in sorted(allowed):
-        if nt == "prepare_alphalens":
+        if nt == "prepare_alphalens" or nt.startswith("viz_"):
             continue
         spec = workflow_node_definition(nt)
         mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None

@@ -23,6 +23,7 @@ export { buildNodeDisplayData, catalogToMap } from "./graph-model";
 
 export {
   WorkflowGraphCanvas,
+  WORKFLOW_GRAPH_NODE_DRAG_MIME,
   type WorkflowGraphCanvasHandle,
   type WorkflowGraphCanvasProps,
   type WorkflowGraphInspectorRenderContext,
@@ -34,6 +35,7 @@ export {
   applyHiDpiToLGraphCanvas,
   applyWorkflowLiteGraphPaintFromCss,
   canvasCssPixelSize,
+  clientToGraphCoords,
   configureLiteGraphGlobals,
   installLiteGraphContextMenuScrollFix,
   defaultWorkflowNodeColors,

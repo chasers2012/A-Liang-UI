@@ -32,7 +32,7 @@ class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
     """
     自定义评价指标：实现 evaluate，输入一般为 factor_data_clean (DataFrame)。
     端口元数据供工作流编辑器校验（类属性，可选）。
-    创建时若未在界面指定可视化，会尝试读取 VISUALIZATION 作为默认。
+    结果展示请在评价方案工作流中用「结果可视化」节点配置。
     """
     INPUT_SOCKETS = [
         {{"name": "clean_factor", "required": True, "value_type": "factor_data_clean"}},
@@ -40,7 +40,6 @@ class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
     OUTPUT_SOCKETS = [
         {{"name": "out", "value_type": "scalar_json"}},
     ]
-    VISUALIZATION = {{"mode": "auto", "period_day_keys": False}}
 
     def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
         _ = clean_factor
@@ -131,6 +130,16 @@ def validate_workflow_parameters_list(items: list[MetricWorkflowParamSpec]) -> N
         raise ValueError("workflow_parameters 存在重复的 key")
 
 
+RESULT_VIZ_NODE_WORKFLOW_PARAMETERS: list[MetricWorkflowParamSpec] = [
+    MetricWorkflowParamSpec(
+        key="period_day_keys",
+        label="周期键显示为「N 日」",
+        type="boolean",
+        default=False,
+    ),
+]
+
+
 class EvaluationMetricRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -154,7 +163,6 @@ class EvaluationMetricCreate(BaseModel):
     name: str
     description: str = ""
     source: str | None = None
-    visualization: MetricVisualizationSpec | None = None
     workflow_parameters: list[MetricWorkflowParamSpec] = Field(default_factory=list)
 
     @field_validator("name")
@@ -178,7 +186,7 @@ class EvaluationMetricCreate(BaseModel):
             source_path=source_relative_path(metric_id),
             created_at=now,
             updated_at=now,
-            visualization=self.visualization,
+            visualization=None,
             builtin=False,
             workflow_parameters=list(self.workflow_parameters),
         )
@@ -188,7 +196,6 @@ class EvaluationMetricPatch(BaseModel):
     name: str | None = None
     description: str | None = None
     source: str | None = None
-    visualization: MetricVisualizationSpec | None = None
     workflow_parameters: list[MetricWorkflowParamSpec] | None = None
 
     @model_validator(mode="after")
@@ -222,7 +229,7 @@ def record_to_summary(rec: EvaluationMetricRecord) -> EvaluationMetricSummaryPub
         source_path=rec.source_path,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
-        visualization=rec.visualization,
+        visualization=None,
         builtin=rec.builtin,
         workflow_parameters=list(rec.workflow_parameters or []),
     )
