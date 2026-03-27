@@ -6,6 +6,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, field_validator
 
 from app.datasources.schemas import utc_now_iso
+from app.evaluation.metric_schemas import MetricWorkflowParamSpec
 
 
 class WorkflowViewport(BaseModel):
@@ -135,5 +136,6 @@ class NodeTypeDefinitionPublic(BaseModel):
     description: str = ""
     inputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
     outputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
+    workflow_parameters: list[MetricWorkflowParamSpec] = Field(default_factory=list)
     user_defined: bool = False
     metric_id: str | None = None

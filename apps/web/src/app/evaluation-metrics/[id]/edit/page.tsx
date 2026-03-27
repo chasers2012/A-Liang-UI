@@ -16,6 +16,9 @@ import {
   type MetricVisualizationMode,
 } from "@/lib/quant-agent-api";
 import { METRIC_VIZ_MODE_ITEMS } from "@/lib/metric-visualization-form";
+import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
+
+import { MetricWorkflowParamsSchemaEditor } from "../../ui/metric-workflow-params-schema-editor";
 
 import { FactorCodeJar } from "@/app/factors/ui/factor-code-jar";
 import {
@@ -41,6 +44,9 @@ export default function EditEvaluationMetricPage() {
   const [vizMode, setVizMode] =
     useState<MetricVisualizationMode>("auto");
   const [vizPeriodDayKeys, setVizPeriodDayKeys] = useState(false);
+  const [workflowParams, setWorkflowParams] = useState<
+    MetricWorkflowParamSpec[]
+  >([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +66,9 @@ export default function EditEvaluationMetricPage() {
       const v = d.visualization;
       setVizMode(v?.mode ?? "auto");
       setVizPeriodDayKeys(Boolean(v?.period_day_keys));
+      setWorkflowParams(
+        Array.isArray(d.workflow_parameters) ? d.workflow_parameters : [],
+      );
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -77,6 +86,16 @@ export default function EditEvaluationMetricPage() {
     setFormError(null);
     setSubmitting(true);
     try {
+      const normalizedWp = workflowParams
+        .filter((p) => p.key.trim())
+        .map((p) => ({
+          ...p,
+          key: p.key.trim(),
+          label: (p.label || "").trim() || p.key.trim(),
+          enum_values: p.type === "enum" ? p.enum_values : [],
+          minimum: p.type === "number" ? p.minimum : null,
+          maximum: p.type === "number" ? p.maximum : null,
+        }));
       await patchEvaluationMetric(id, {
         name: name.trim(),
         description: description.trim(),
@@ -85,6 +104,7 @@ export default function EditEvaluationMetricPage() {
           mode: vizMode,
           period_day_keys: vizPeriodDayKeys,
         },
+        workflow_parameters: normalizedWp,
       });
       router.push(`/evaluation-metrics/${encodeURIComponent(id)}`);
     } catch (err) {
@@ -190,6 +210,11 @@ export default function EditEvaluationMetricPage() {
             </label>
           </div>
         </div>
+        <MetricWorkflowParamsSchemaEditor
+          value={workflowParams}
+          onChange={setWorkflowParams}
+          disabled={builtinReadOnly}
+        />
         <div className="space-y-2">
           <Label>源码</Label>
           <FactorCodeJar

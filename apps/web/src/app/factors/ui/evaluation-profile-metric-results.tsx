@@ -7,7 +7,7 @@ import type {
 } from "@/lib/quant-agent-api";
 
 const NODE_TYPE_LABELS: Record<string, string> = {
-  prepare_alphalens: "准备 Alphalens",
+  prepare_alphalens: "计算因子",
   mean_information_coefficient: "平均 IC",
   mean_return_spread: "多空收益差",
   user_metric: "自定义指标",

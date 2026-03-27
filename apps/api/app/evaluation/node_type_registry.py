@@ -24,8 +24,8 @@ class BuiltinNodeSpec:
 BUILTIN_NODE_SPECS: dict[str, BuiltinNodeSpec] = {
     "prepare_alphalens": BuiltinNodeSpec(
         type="prepare_alphalens",
-        label="准备 Alphalens",
-        description="根据因子与数据源生成 factor_data_clean",
+        label="计算因子",
+        description="根据因子与数据源计算并生成 factor_data_clean",
         inputs=(),
         outputs=(SocketSpec("clean_factor", False, "factor_data_clean"),),
     ),

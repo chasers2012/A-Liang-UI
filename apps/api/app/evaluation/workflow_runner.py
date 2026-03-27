@@ -10,6 +10,12 @@ import pandas as pd
 
 from app.evaluation.builtin_metric_registry import parse_metric_node_type
 from app.evaluation.evaluation_metric_resolve import resolve_evaluation_metric
+from app.evaluation.metric_schemas import (
+    RESERVED_METRIC_WORKFLOW_PARAM_KEYS,
+    MetricWorkflowParamSpec,
+)
+from app.evaluation.metrics_store import get_by_id as metric_get_by_id
+from app.evaluation.metrics_store import load_registry as load_metrics_registry
 from app.evaluation.profile_schemas import EvaluationProfileRecord
 from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 from app.factors.evaluation_runner import (
@@ -67,6 +73,86 @@ def _jsonable_metric_value(val: Any) -> Any:
     return val
 
 
+def _coerce_metric_param_number(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+    if val is None or val == "":
+        return None
+    try:
+        x = float(val)
+    except (TypeError, ValueError):
+        try:
+            x = float(spec.default) if spec.default is not None else None
+        except (TypeError, ValueError):
+            return None
+    if x is None:
+        return None
+    if spec.minimum is not None:
+        x = max(x, float(spec.minimum))
+    if spec.maximum is not None:
+        x = min(x, float(spec.maximum))
+    return int(x) if float(x).is_integer() else x
+
+
+def _coerce_metric_param_boolean(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+    if val is None or val == "":
+        return None if spec.default is None else bool(spec.default)
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(val)
+
+
+def _coerce_metric_param_enum(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+    choices = list(spec.enum_values)
+    if not choices:
+        return None
+    s = str(val).strip() if val is not None and val != "" else ""
+    if not s and spec.default is not None:
+        s = str(spec.default).strip()
+    if s in choices:
+        return s
+    return choices[0]
+
+
+def _coerce_metric_param_value(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+    if spec.type == "number":
+        return _coerce_metric_param_number(spec, val)
+    if spec.type == "boolean":
+        return _coerce_metric_param_boolean(spec, val)
+    if spec.type == "enum":
+        return _coerce_metric_param_enum(spec, val)
+    return None
+
+
+def _metric_evaluate_kwargs(
+    metric_id: str,
+    raw_params: dict[str, Any],
+    *,
+    quantiles: int,
+) -> dict[str, Any]:
+    reg = load_metrics_registry()
+    mrec = metric_get_by_id(reg, metric_id)
+    specs = list(mrec.workflow_parameters) if mrec is not None else []
+    raw = dict(raw_params or {})
+    out: dict[str, Any] = {"quantiles": quantiles}
+    if not specs:
+        for k, v in raw.items():
+            if k in RESERVED_METRIC_WORKFLOW_PARAM_KEYS:
+                continue
+            out[k] = v
+        return out
+    for spec in specs:
+        key = spec.key
+        if key in RESERVED_METRIC_WORKFLOW_PARAM_KEYS:
+            continue
+        val = raw.get(key, spec.default)
+        coerced = _coerce_metric_param_value(spec, val)
+        if coerced is None:
+            continue
+        out[key] = coerced
+    return out
+
+
 def _node_prepare_alphalens(
     nid: str,
     node,
@@ -116,8 +202,8 @@ def _run_metric_node(
     if not isinstance(fdc, pd.DataFrame):
         raise TypeError("clean_factor 须为 DataFrame")
     inst = resolved.metric_class()
-    params = dict(node.params or {})
-    raw = inst.evaluate(fdc, quantiles=last_quantiles, **params)  # type: ignore[call-arg]
+    kwargs = _metric_evaluate_kwargs(mid, dict(node.params or {}), quantiles=last_quantiles)
+    raw = inst.evaluate(fdc, **kwargs)  # type: ignore[call-arg]
     sock = resolved.primary_output_socket
     out_val = _jsonable_metric_value(raw)
     outputs[nid] = {sock: raw}

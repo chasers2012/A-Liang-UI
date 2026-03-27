@@ -68,6 +68,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                 NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                 for s in prep.outputs
             ],
+            workflow_parameters=[],
             user_defined=False,
             metric_id=None,
         )
@@ -79,6 +80,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
         spec = workflow_node_definition(nt)
         mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
         mrec = metric_get_by_id(metrics_reg, mid) if mid else None
+        wp = list(mrec.workflow_parameters) if mrec is not None else []
         out.append(
             NodeTypeDefinitionPublic(
                 type=spec.type,
@@ -92,6 +94,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                     NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                     for s in spec.outputs
                 ],
+                workflow_parameters=wp,
                 user_defined=bool(mid and mrec is not None and not mrec.builtin),
                 metric_id=mid,
             )

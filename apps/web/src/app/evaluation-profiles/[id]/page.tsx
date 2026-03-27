@@ -21,6 +21,7 @@ import {
 } from "@/models/evaluation-profile/list-detail.atom";
 
 import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
+import { ProfileDetailWorkflowCard } from "../ui/profile-detail-workflow-card";
 
 export default function EvaluationProfileDetailPage() {
   const params = useParams<{ id: string }>();
@@ -74,16 +75,7 @@ export default function EvaluationProfileDetailPage() {
         </Link>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>工作流 JSON</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
-            {JSON.stringify(row.workflow, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
+      <ProfileDetailWorkflowCard profile={row} profileId={id} />
 
       <Card>
         <CardHeader>

@@ -9,7 +9,9 @@ import {
 } from "react";
 import {
   Background,
+  BackgroundVariant,
   Controls,
+  ConnectionLineType,
   MiniMap,
   Panel,
   ReactFlow,
@@ -25,8 +27,6 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Trash2 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import type {
   EvaluationWorkflowDto,
@@ -42,52 +42,181 @@ import {
   nodesEdgesToWorkflow,
   workflowToNodesEdges,
 } from "./workflow-rf-utils";
+import {
+  IoBlockHeader,
+  SocketTypeBadge,
+} from "./evaluation-workflow-canvas-io";
+import { EvaluationWorkflowNodeInspectorPanel } from "./evaluation-workflow-node-inspector-panel";
+
+import "./evaluation-workflow-canvas.css";
 
 type EvalRFNode = Node<EvalWorkflowNodeData, typeof EVAL_WORKFLOW_NODE_TYPE>;
 
+const DEFAULT_EDGE_OPTIONS = {
+  type: "smoothstep" as const,
+  style: {
+    stroke: "color-mix(in oklch, var(--muted-foreground) 42%, var(--border))",
+    strokeWidth: 2,
+  },
+};
+
+const FIT_VIEW_OPTIONS = { padding: 0.14, maxZoom: 1.15, minZoom: 0.08 };
+
+function workflowNodeAccentClass(backendType: string): string {
+  if (backendType === "prepare_alphalens") {
+    return "bg-emerald-600 dark:bg-emerald-500";
+  }
+  if (backendType.startsWith("metric:")) {
+    return "bg-sky-600 dark:bg-sky-500";
+  }
+  if (backendType === "user_metric") {
+    return "bg-violet-600 dark:bg-violet-500";
+  }
+  return "bg-muted-foreground/55";
+}
+
+const HANDLE_CN =
+  "!z-[2] !h-2.5 !w-2.5 !border-2 !border-background !transition-transform duration-150 group-hover:scale-110";
+
 function EvalWorkflowNode({ data, selected }: NodeProps<EvalRFNode>) {
   const { label, inputs, outputs, backendType } = data;
+  const accent = workflowNodeAccentClass(backendType);
   return (
     <div
       className={cn(
-        "relative min-w-[150px] rounded-md border border-border bg-card px-2 py-2 text-xs shadow-sm",
-        selected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
+        "group relative min-w-[160px] max-w-[248px] overflow-visible rounded-lg border border-border/90 bg-card text-[0.7rem] shadow-sm transition-shadow duration-200",
+        selected
+          ? "border-primary/35 shadow-md ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
+          : "hover:border-border hover:shadow-md",
       )}
     >
-      <div className="truncate font-medium">{label}</div>
-      <div className="truncate font-mono text-[0.65rem] text-muted-foreground">
-        {backendType}
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 z-0 w-[3px] rounded-l-[inherit]",
+          accent,
+        )}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "relative z-[1] overflow-hidden rounded-t-lg px-2.5 py-1.5 pl-[11px]",
+          inputs.length === 0 && outputs.length === 0 && "rounded-b-lg",
+        )}
+      >
+        <div className="truncate text-[0.75rem] font-semibold leading-tight tracking-tight">
+          {label}
+        </div>
+        <div
+          className="mt-px truncate font-mono text-[0.58rem] leading-tight text-muted-foreground"
+          title={backendType}
+        >
+          {backendType}
+        </div>
       </div>
-      {inputs.map((inp, i) => (
-        <Handle
-          key={`in-${inp.name}`}
-          type="target"
-          position={Position.Left}
-          id={inp.name}
-          className="h-2.5! w-2.5! border-2! border-border! bg-background!"
-          style={{
-            top:
-              inputs.length === 1
-                ? "50%"
-                : `${((i + 1) / (inputs.length + 1)) * 100}%`,
-          }}
-        />
-      ))}
-      {outputs.map((out, i) => (
-        <Handle
-          key={`out-${out.name}`}
-          type="source"
-          position={Position.Right}
-          id={out.name}
-          className="h-2.5! w-2.5! border-2! border-border! bg-primary!"
-          style={{
-            top:
-              outputs.length === 1
-                ? "50%"
-                : `${((i + 1) / (outputs.length + 1)) * 100}%`,
-          }}
-        />
-      ))}
+
+      {inputs.length > 0 ? (
+        <div
+          className={cn(
+            "relative z-[1] border-t border-border/50",
+            outputs.length === 0 && "overflow-hidden rounded-b-lg",
+          )}
+        >
+          <IoBlockHeader kind="in" compact />
+          <div className="space-y-0 bg-muted/[0.12] px-1 py-0.5">
+            {inputs.map((inp, idx) => (
+              <div
+                key={`in-${inp.name}`}
+                className={cn(
+                  "relative px-0.5 py-px",
+                  idx > 0 && "mt-px border-t border-border/20 pt-0.5",
+                )}
+              >
+                <div
+                  className={cn(
+                    "relative flex items-center rounded bg-background/55 py-1 pl-3 pr-1.5 shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--border)_60%,transparent)]",
+                    "dark:bg-background/25",
+                  )}
+                >
+                  <Handle
+                    type="target"
+                    position={Position.Left}
+                    id={inp.name}
+                    className={cn(
+                      HANDLE_CN,
+                      "!absolute !left-0 !top-1/2 !-translate-x-1/2 !translate-y-1/2 !bg-sky-600 dark:!bg-sky-500",
+                    )}
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-px">
+                    <div className="flex min-w-0 items-center gap-1">
+                      <span
+                        className="truncate font-mono text-[0.62rem] font-semibold leading-none text-foreground"
+                        title={inp.name}
+                      >
+                        {inp.name}
+                      </span>
+                      {inp.required ? (
+                        <span
+                          className="shrink-0 rounded bg-destructive/12 px-0.5 py-px text-[0.45rem] font-semibold uppercase leading-none text-destructive"
+                          title="必填"
+                        >
+                          必填
+                        </span>
+                      ) : null}
+                    </div>
+                    <SocketTypeBadge valueType={inp.value_type} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {outputs.length > 0 ? (
+        <div className="relative z-[1] overflow-hidden rounded-b-lg border-t border-border/50">
+          <IoBlockHeader kind="out" compact />
+          <div className="space-y-0 bg-muted/[0.12] px-1 py-0.5">
+            {outputs.map((out, idx) => (
+              <div
+                key={`out-${out.name}`}
+                className={cn(
+                  "relative px-0.5 py-px",
+                  idx > 0 && "mt-px border-t border-border/20 pt-0.5",
+                )}
+              >
+                <div
+                  className={cn(
+                    "relative flex items-center rounded bg-background/55 py-1 pl-1.5 pr-3 text-right shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--border)_60%,transparent)]",
+                    "dark:bg-background/25",
+                  )}
+                >
+                  <div className="flex min-w-0 flex-1 flex-col items-end gap-px text-right">
+                    <span
+                      className="max-w-full truncate font-mono text-[0.62rem] font-semibold leading-none text-foreground"
+                      title={out.name}
+                    >
+                      {out.name}
+                    </span>
+                    <SocketTypeBadge
+                      valueType={out.value_type}
+                      alignEnd
+                    />
+                  </div>
+                  <Handle
+                    type="source"
+                    position={Position.Right}
+                    id={out.name}
+                    className={cn(
+                      HANDLE_CN,
+                      "!absolute !right-0 !top-1/2 !translate-x-1/2 !-translate-y-1/2 !bg-emerald-600 shadow-sm dark:!bg-emerald-500",
+                    )}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -102,13 +231,15 @@ export type EvaluationWorkflowCanvasHandle = {
 type InnerProps = {
   catalog: NodeTypeDefinitionPublic[];
   initialWorkflow: EvaluationWorkflowDto;
+  /** 仅浏览：不可增删改连线与拖拽节点（仍平移/缩放）。 */
+  readOnly?: boolean;
 };
 
 const WorkflowCanvasInner = forwardRef<
   EvaluationWorkflowCanvasHandle,
   InnerProps
 >(function WorkflowCanvasInner(
-  { catalog, initialWorkflow },
+  { catalog, initialWorkflow, readOnly = false },
   ref,
 ) {
   const catMap = useMemo(() => catalogToMap(catalog), [catalog]);
@@ -146,7 +277,7 @@ const WorkflowCanvasInner = forwardRef<
             zoom: w.viewport.zoom,
           });
         } else {
-          fitView({ padding: 0.2 });
+          fitView(FIT_VIEW_OPTIONS);
         }
       });
     },
@@ -164,6 +295,7 @@ const WorkflowCanvasInner = forwardRef<
         addEdge(
           {
             ...p,
+            ...DEFAULT_EDGE_OPTIONS,
             id: `e-${p.source}-${p.sourceHandle ?? ""}-${p.target}-${p.targetHandle ?? ""}-${eds.length}`,
           },
           eds,
@@ -173,6 +305,35 @@ const WorkflowCanvasInner = forwardRef<
   );
 
   const selectedNode = nodes.find((n) => n.id === selectedId);
+
+  const selectedTypeDef = useMemo(
+    () =>
+      selectedNode
+        ? catalog.find((c) => c.type === selectedNode.data.backendType)
+        : undefined,
+    [catalog, selectedNode],
+  );
+  const workflowParamSpecs = selectedTypeDef?.workflow_parameters ?? [];
+
+  const patchSelectedParams = useCallback(
+    (key: string, value: unknown) => {
+      if (!selectedId) return;
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== selectedId) return n;
+          const d = n.data;
+          const next = { ...d.params };
+          if (value === "" || value === undefined) {
+            delete next[key];
+          } else {
+            next[key] = value;
+          }
+          return { ...n, data: { ...d, params: next } };
+        }),
+      );
+    },
+    [selectedId, setNodes],
+  );
 
   const addNode = useCallback(
     (backendType: string) => {
@@ -207,76 +368,95 @@ const WorkflowCanvasInner = forwardRef<
   }, [selectedId, setNodes, setEdges]);
 
   return (
-    <div className="flex h-[min(520px,70vh)] min-h-[320px] flex-col gap-2 sm:flex-row">
-      <div className="flex w-full shrink-0 flex-col gap-2 sm:w-44">
-        <p className="text-xs font-medium text-muted-foreground">添加节点</p>
-        <div className="flex max-h-48 flex-wrap gap-1 overflow-y-auto sm:max-h-none sm:flex-col">
-          {catalog.map((t) => (
-            <Button
-              key={t.type}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 justify-start text-xs"
-              onClick={() => addNode(t.type)}
-            >
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="relative min-h-[280px] flex-1 rounded-md border border-border">
+    <div
+      className={cn(
+        "flex h-[min(560px,72vh)] min-h-[320px] flex-col gap-3",
+        !readOnly && "sm:flex-row",
+      )}
+    >
+      {!readOnly ? (
+        <aside className="flex w-full shrink-0 flex-col gap-2 rounded-xl border border-border/70 bg-muted/20 p-3 shadow-sm sm:w-[11.5rem]">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            添加节点
+          </p>
+          <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto pr-0.5 sm:max-h-none sm:flex-col sm:gap-1">
+            {catalog.map((t) => (
+              <Button
+                key={t.type}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 justify-start border-border/80 bg-background/80 text-xs font-medium shadow-none hover:bg-accent/60"
+                onClick={() => addNode(t.type)}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        </aside>
+      ) : null}
+      <div
+        className={cn(
+          "evaluation-wf-canvas relative min-h-[300px] flex-1 overflow-hidden rounded-xl border border-border/80 bg-gradient-to-br from-muted/25 via-background to-muted/20 shadow-inner ring-1 ring-black/[0.04] dark:from-muted/15 dark:via-background dark:to-muted/10 dark:ring-white/[0.06]",
+          readOnly && "evaluation-wf-canvas--readonly",
+        )}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
+          onConnect={readOnly ? undefined : onConnect}
           onNodeClick={(_, n) => setSelectedId(n.id)}
           onPaneClick={() => setSelectedId(null)}
           nodeTypes={nodeTypes}
+          defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
+          connectionLineType={ConnectionLineType.SmoothStep}
           fitView
-          snapToGrid
+          fitViewOptions={FIT_VIEW_OPTIONS}
+          proOptions={{ hideAttribution: true }}
+          snapToGrid={!readOnly}
           snapGrid={[12, 12]}
-          deleteKeyCode={["Backspace", "Delete"]}
-          className="bg-muted/20"
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          elementsSelectable
+          edgesReconnectable={!readOnly}
+          deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+          className="bg-transparent"
         >
-          <Background />
-          <Controls />
-          <MiniMap zoomable pannable className="bg-card!" />
+          <Background
+            id="eval-wf-dots"
+            variant={BackgroundVariant.Dots}
+            gap={22}
+            size={1.1}
+            color="var(--border)"
+            className="opacity-[0.65] dark:opacity-90"
+          />
+          <Controls
+            showInteractive={false}
+            className="!m-3 !shadow-none"
+          />
+          <MiniMap
+            zoomable
+            pannable
+            className="!mb-3 !ml-3 !rounded-xl !border-0 !shadow-none"
+            maskColor="color-mix(in oklch, var(--background) 72%, transparent)"
+            nodeColor="color-mix(in oklch, var(--muted) 88%, var(--foreground))"
+            nodeStrokeColor="var(--border)"
+            nodeStrokeWidth={2}
+            nodeBorderRadius={6}
+          />
           <Panel
             position="top-right"
-            className="m-2 max-w-[240px] rounded-md border border-border bg-card p-2 text-xs shadow-md"
+            className="m-3 max-w-[min(260px,calc(100%-1.5rem))] rounded-lg border border-border/70 bg-card/92 p-2.5 text-[0.7rem] shadow-lg backdrop-blur-md"
           >
-            {selectedNode ? (
-              <div className="space-y-2">
-                <div className="font-medium">节点属性</div>
-                <div className="font-mono text-[0.65rem] text-muted-foreground">
-                  {selectedNode.data.backendType}
-                </div>
-                {selectedNode.data.backendType.startsWith("metric:") ? (
-                  <p className="text-muted-foreground text-[0.7rem] leading-relaxed">
-                    指标已绑定到该节点类型。可选参数请在「JSON」模式中编辑。
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground text-[0.65rem]">
-                    params 请在「JSON」模式中编辑。
-                  </p>
-                )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="w-full gap-1"
-                  onClick={deleteSelected}
-                >
-                  <Trash2 className="size-3.5" />
-                  删除节点
-                </Button>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">点击节点以编辑属性</p>
-            )}
+            <EvaluationWorkflowNodeInspectorPanel
+              readOnly={readOnly}
+              node={selectedNode ?? null}
+              workflowParamSpecs={workflowParamSpecs}
+              onParamChange={patchSelectedParams}
+              onDeleteNode={deleteSelected}
+            />
           </Panel>
         </ReactFlow>
       </div>

@@ -155,6 +155,9 @@ def patch_evaluation_metric(
     if "visualization" in unset:
         rec.visualization = body.visualization
 
+    if "workflow_parameters" in unset and body.workflow_parameters is not None:
+        rec.workflow_parameters = list(body.workflow_parameters)
+
     if "source" in unset and body.source is not None:
         _validate_and_write_source(rec, body.source)
 
