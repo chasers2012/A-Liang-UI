@@ -165,7 +165,133 @@ def _build_datasource(rec: DataSourceRecord):
     raise ValueError("数据源配置不完整")
 
 
-def build_alphalens_evaluator_for_factor(  # noqa: C901
+def _eval_failure_tuple(
+    error: str,
+    *,
+    window: FactorEvaluationWindow,
+    quantiles: int,
+    stock_codes: list[str] | None,
+) -> tuple[
+    FactorEvaluationSnapshot,
+    None,
+    FactorEvaluationWindow,
+    int,
+    list[str] | None,
+]:
+    snap = FactorEvaluationSnapshot(
+        evaluated_at=utc_now_iso(),
+        window=window,
+        mean_ic={},
+        mean_return_spread={},
+        error=error,
+    )
+    return snap, None, window, quantiles, stock_codes
+
+
+def _register_test_set_bindings(
+    resolver: DependencyResolver,
+    ts_rec: EvaluationTestSetRecord,
+    deps: list[str],
+    *,
+    window: FactorEvaluationWindow,
+    quantiles: int,
+    stock_codes: list[str] | None,
+) -> tuple[FactorEvaluationSnapshot, None, FactorEvaluationWindow, int, list[str] | None] | None:
+    binds = list(ts_rec.datasource_bindings)
+    if not binds:
+        return _eval_failure_tuple(
+            "测试集未配置数据源绑定",
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
+        )
+    n_b = len(binds)
+    for b in binds:
+        ds_rec = _datasource_for_test_set(b.datasource_id)
+        panel_src = _build_datasource(ds_rec)
+        fields = [x.strip() for x in b.dependencies if str(x).strip()]
+        if not fields:
+            if n_b > 1:
+                return _eval_failure_tuple(
+                    "测试集含多个数据源时，每条绑定须填写 dependencies",
+                    window=window,
+                    quantiles=quantiles,
+                    stock_codes=stock_codes,
+                )
+            fields = list(deps)
+        resolver.register_datasource(panel_src, fields)
+    missing = [f for f in deps if resolver.source_for_field(f) is None]
+    if missing:
+        return _eval_failure_tuple(
+            f"测试集数据源未覆盖因子依赖: {missing}",
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
+        )
+    return None
+
+
+def _build_dependency_resolver(
+    ts_rec: EvaluationTestSetRecord | None,
+    legacy_ds: DataSourceRecord | None,
+    deps: list[str],
+    *,
+    window: FactorEvaluationWindow,
+    quantiles: int,
+    stock_codes: list[str] | None,
+) -> tuple[
+    DependencyResolver | None,
+    tuple[
+        FactorEvaluationSnapshot,
+        None,
+        FactorEvaluationWindow,
+        int,
+        list[str] | None,
+    ]
+    | None,
+]:
+    resolver = DependencyResolver()
+    try:
+        if ts_rec is not None:
+            err = _register_test_set_bindings(
+                resolver,
+                ts_rec,
+                deps,
+                window=window,
+                quantiles=quantiles,
+                stock_codes=stock_codes,
+            )
+            if err is not None:
+                return None, err
+        else:
+            assert legacy_ds is not None
+            panel_src = _build_datasource(legacy_ds)
+            resolver.register_datasource(panel_src, deps)
+    except ValueError as e:
+        return None, _eval_failure_tuple(
+            str(e), window=window, quantiles=quantiles, stock_codes=stock_codes
+        )
+    except Exception as e:
+        return None, _eval_failure_tuple(
+            f"数据源初始化失败: {e}",
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
+        )
+    return resolver, None
+
+
+def _import_alphalens_evaluator():
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    from evaluate import AlphalensFactorEvaluator
+
+    return AlphalensFactorEvaluator
+
+
+def build_alphalens_evaluator_for_factor(
     factor_id: str, *, test_set_id: str | None = None
 ) -> tuple[
     FactorEvaluationSnapshot | None,
@@ -187,145 +313,36 @@ def build_alphalens_evaluator_for_factor(  # noqa: C901
     try:
         cls, _ = load_factor_class(src)
     except ValueError as e:
-        return (
-            FactorEvaluationSnapshot(
-                evaluated_at=utc_now_iso(),
-                window=window,
-                mean_ic={},
-                mean_return_spread={},
-                error=str(e),
-            ),
-            None,
-            window,
-            quantiles,
-            stock_codes,
+        return _eval_failure_tuple(
+            str(e), window=window, quantiles=quantiles, stock_codes=stock_codes
         )
 
     deps = list(cls.dependencies)
     if not deps:
-        return (
-            FactorEvaluationSnapshot(
-                evaluated_at=utc_now_iso(),
-                window=window,
-                mean_ic={},
-                mean_return_spread={},
-                error="因子 dependencies 为空",
-            ),
-            None,
-            window,
-            quantiles,
-            stock_codes,
+        return _eval_failure_tuple(
+            "因子 dependencies 为空",
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
         )
 
-    resolver = DependencyResolver()
-    try:
-        if ts_rec is not None:
-            binds = list(ts_rec.datasource_bindings)
-            if not binds:
-                return (
-                    FactorEvaluationSnapshot(
-                        evaluated_at=utc_now_iso(),
-                        window=window,
-                        mean_ic={},
-                        mean_return_spread={},
-                        error="测试集未配置数据源绑定",
-                    ),
-                    None,
-                    window,
-                    quantiles,
-                    stock_codes,
-                )
-            n_b = len(binds)
-            for b in binds:
-                ds_rec = _datasource_for_test_set(b.datasource_id)
-                panel_src = _build_datasource(ds_rec)
-                fields = [x.strip() for x in b.dependencies if str(x).strip()]
-                if not fields:
-                    if n_b > 1:
-                        return (
-                            FactorEvaluationSnapshot(
-                                evaluated_at=utc_now_iso(),
-                                window=window,
-                                mean_ic={},
-                                mean_return_spread={},
-                                error="测试集含多个数据源时，每条绑定须填写 dependencies",
-                            ),
-                            None,
-                            window,
-                            quantiles,
-                            stock_codes,
-                        )
-                    fields = list(deps)
-                resolver.register_datasource(panel_src, fields)
-            missing = [f for f in deps if resolver.source_for_field(f) is None]
-            if missing:
-                return (
-                    FactorEvaluationSnapshot(
-                        evaluated_at=utc_now_iso(),
-                        window=window,
-                        mean_ic={},
-                        mean_return_spread={},
-                        error=f"测试集数据源未覆盖因子依赖: {missing}",
-                    ),
-                    None,
-                    window,
-                    quantiles,
-                    stock_codes,
-                )
-        else:
-            assert legacy_ds is not None
-            panel_src = _build_datasource(legacy_ds)
-            resolver.register_datasource(panel_src, deps)
-    except ValueError as e:
-        return (
-            FactorEvaluationSnapshot(
-                evaluated_at=utc_now_iso(),
-                window=window,
-                mean_ic={},
-                mean_return_spread={},
-                error=str(e),
-            ),
-            None,
-            window,
-            quantiles,
-            stock_codes,
-        )
-    except Exception as e:
-        return (
-            FactorEvaluationSnapshot(
-                evaluated_at=utc_now_iso(),
-                window=window,
-                mean_ic={},
-                mean_return_spread={},
-                error=f"数据源初始化失败: {e}",
-            ),
-            None,
-            window,
-            quantiles,
-            stock_codes,
-        )
+    resolver, fail = _build_dependency_resolver(
+        ts_rec, legacy_ds, deps, window=window, quantiles=quantiles, stock_codes=stock_codes
+    )
+    if fail is not None:
+        return fail
+    assert resolver is not None
 
     inst = cls(dependency_resolver=resolver)
 
     try:
-        import matplotlib
-
-        matplotlib.use("Agg")
-
-        from evaluate import AlphalensFactorEvaluator
+        AlphalensFactorEvaluator = _import_alphalens_evaluator()
     except Exception as e:
-        return (
-            FactorEvaluationSnapshot(
-                evaluated_at=utc_now_iso(),
-                window=window,
-                mean_ic={},
-                mean_return_spread={},
-                error=f"评价依赖未就绪: {e}",
-            ),
-            None,
-            window,
-            quantiles,
-            stock_codes,
+        return _eval_failure_tuple(
+            f"评价依赖未就绪: {e}",
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
         )
 
     ev = AlphalensFactorEvaluator(

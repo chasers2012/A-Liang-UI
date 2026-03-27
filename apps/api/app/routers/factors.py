@@ -90,6 +90,65 @@ def _merge_patch(rec, patch: FactorPatch) -> None:
         rec.dependencies = deps
 
 
+def _patch_factor_validate_and_merge(
+    rec: FactorRecord,
+    body: FactorPatch,
+    unset: dict,
+) -> None:
+    if "name" in unset:
+        if body.name is None or not str(body.name).strip():
+            raise HTTPException(status_code=400, detail="name 不能为空")
+        try:
+            validate_factor_name(str(body.name))
+        except ValueError as e:
+            http_bad_request(e)
+
+    if "max_window" in unset and body.max_window is not None and body.max_window < 1:
+        raise HTTPException(status_code=400, detail="max_window 须 >= 1")
+
+    try:
+        _merge_patch(rec, body)
+    except ValueError as e:
+        http_bad_request(e)
+
+
+def _apply_source_change_with_snapshot(
+    factor_id: str,
+    rec: FactorRecord,
+    new_source: str,
+) -> None:
+    try:
+        validate_source_syntax(new_source)
+    except ValueError as e:
+        http_bad_request(e)
+    old_src = read_source(rec)
+    if new_source == old_src:
+        return
+    write_source(rec, new_source)
+    try:
+        snap = append_code_snapshot(
+            factor_id,
+            rec,
+            new_source,
+            kind="auto",
+        )
+    except ValueError as e:
+        http_internal_server_error(e)
+    try:
+        ev_file = load_evaluations_file()
+    except ValueError:
+        pass
+    else:
+        latest = ev_file.items.get(factor_id)
+        if latest is not None:
+            entry = entry_from_latest_evaluation(
+                latest,
+                linked_snapshot_id=snap.id,
+            )
+            with contextlib.suppress(ValueError):
+                append_history_entry(factor_id, entry)
+
+
 @router.get("", response_model=list[FactorSummaryPublic])
 def list_factors() -> list[FactorSummaryPublic]:
     reg = load_registry()
@@ -331,59 +390,17 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
 
 
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
-def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:  # noqa: C901
+def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
     reg = load_registry()
     rec = get_by_id(reg, factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
 
     unset = body.model_dump(exclude_unset=True)
-    if "name" in unset:
-        if body.name is None or not str(body.name).strip():
-            raise HTTPException(status_code=400, detail="name 不能为空")
-        try:
-            validate_factor_name(str(body.name))
-        except ValueError as e:
-            http_bad_request(e)
-
-    if "max_window" in unset and body.max_window is not None and body.max_window < 1:
-        raise HTTPException(status_code=400, detail="max_window 须 >= 1")
-
-    try:
-        _merge_patch(rec, body)
-    except ValueError as e:
-        http_bad_request(e)
+    _patch_factor_validate_and_merge(rec, body, unset)
 
     if "source" in unset and body.source is not None:
-        try:
-            validate_source_syntax(body.source)
-        except ValueError as e:
-            http_bad_request(e)
-        old_src = read_source(rec)
-        if body.source != old_src:
-            write_source(rec, body.source)
-            try:
-                snap = append_code_snapshot(
-                    factor_id,
-                    rec,
-                    body.source,
-                    kind="auto",
-                )
-            except ValueError as e:
-                http_internal_server_error(e)
-            try:
-                ev_file = load_evaluations_file()
-            except ValueError:
-                pass
-            else:
-                latest = ev_file.items.get(factor_id)
-                if latest is not None:
-                    entry = entry_from_latest_evaluation(
-                        latest,
-                        linked_snapshot_id=snap.id,
-                    )
-                    with contextlib.suppress(ValueError):
-                        append_history_entry(factor_id, entry)
+        _apply_source_change_with_snapshot(factor_id, rec, body.source)
 
     rec.updated_at = utc_now_iso()
     save_registry(reg)

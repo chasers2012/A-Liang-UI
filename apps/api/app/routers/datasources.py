@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.registry import get_by_id, load_registry, save_registry
@@ -8,6 +10,7 @@ from app.datasources.schemas import (
     DataSourcePatch,
     DataSourcePublic,
     DataSourceRecord,
+    SqlConfigStored,
     SqlTableColumnsRequest,
     SqlTableColumnsResponse,
     TestResult,
@@ -23,7 +26,69 @@ from app.datasources.verify import verify_datasource
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
 
-def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:  # noqa: C901
+def _merge_sql_engine_url(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
+    if "engine_url" not in sp:
+        return
+    v = sp["engine_url"]
+    if v is None or (isinstance(v, str) and not v.strip()):
+        sql.engine_url = None
+    else:
+        sql.engine_url = str(v).strip()
+
+
+def _merge_sql_credentials(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
+    if "db_driver" in sp and sp["db_driver"] is not None:
+        sql.db_driver = str(sp["db_driver"])
+    if "db_host" in sp:
+        hv = sp["db_host"]
+        sql.db_host = "" if hv is None else str(hv)
+        if sql.db_host.strip():
+            sql.engine_url = None
+    if "db_port" in sp:
+        sql.db_port = sp["db_port"]
+    if "db_username" in sp:
+        uv = sp["db_username"]
+        sql.db_username = "" if uv is None else str(uv)
+    if "db_password" in sp:
+        pv = sp["db_password"]
+        sql.db_password = "" if pv is None else str(pv)
+    if "db_name" in sp:
+        nv = sp["db_name"]
+        sql.db_name = "" if nv is None else str(nv)
+        if sql.db_name.strip():
+            sql.engine_url = None
+
+
+def _merge_sql_table_mapping(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
+    if "table" in sp and sp["table"] is not None:
+        sql.table = str(sp["table"])
+    if "date_column" in sp and sp["date_column"] is not None:
+        sql.date_column = str(sp["date_column"])
+    if "asset_column" in sp and sp["asset_column"] is not None:
+        sql.asset_column = str(sp["asset_column"])
+    if "column_map" in sp and sp["column_map"] is not None:
+        sql.column_map = dict(sp["column_map"])
+
+
+def _merge_sql_subpatch(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
+    _merge_sql_engine_url(sql, sp)
+    _merge_sql_credentials(sql, sp)
+    _merge_sql_table_mapping(sql, sp)
+
+
+def _merge_csv_subpatch(rec: DataSourceRecord, cp: dict[str, Any]) -> None:
+    assert rec.csv is not None
+    if "path" in cp:
+        rec.csv.path = cp["path"]
+    if "date_column" in cp:
+        rec.csv.date_column = cp["date_column"]
+    if "asset_column" in cp:
+        rec.csv.asset_column = cp["asset_column"]
+    if "read_csv_kwargs" in cp:
+        rec.csv.read_csv_kwargs = dict(cp["read_csv_kwargs"])
+
+
+def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data:
         rec.name = data["name"]
@@ -31,52 +96,9 @@ def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:  # noqa
         rec.enabled = data["enabled"]
 
     if rec.type == "sql" and rec.sql and "sql" in data:
-        sp = data["sql"]
-        if "engine_url" in sp:
-            v = sp["engine_url"]
-            if v is None or (isinstance(v, str) and not v.strip()):
-                rec.sql.engine_url = None
-            else:
-                rec.sql.engine_url = str(v).strip()
-        if "db_driver" in sp and sp["db_driver"] is not None:
-            rec.sql.db_driver = str(sp["db_driver"])
-        if "db_host" in sp:
-            hv = sp["db_host"]
-            rec.sql.db_host = "" if hv is None else str(hv)
-            if rec.sql.db_host.strip():
-                rec.sql.engine_url = None
-        if "db_port" in sp:
-            rec.sql.db_port = sp["db_port"]
-        if "db_username" in sp:
-            uv = sp["db_username"]
-            rec.sql.db_username = "" if uv is None else str(uv)
-        if "db_password" in sp:
-            pv = sp["db_password"]
-            rec.sql.db_password = "" if pv is None else str(pv)
-        if "db_name" in sp:
-            nv = sp["db_name"]
-            rec.sql.db_name = "" if nv is None else str(nv)
-            if rec.sql.db_name.strip():
-                rec.sql.engine_url = None
-        if "table" in sp and sp["table"] is not None:
-            rec.sql.table = str(sp["table"])
-        if "date_column" in sp and sp["date_column"] is not None:
-            rec.sql.date_column = str(sp["date_column"])
-        if "asset_column" in sp and sp["asset_column"] is not None:
-            rec.sql.asset_column = str(sp["asset_column"])
-        if "column_map" in sp and sp["column_map"] is not None:
-            rec.sql.column_map = dict(sp["column_map"])
-
+        _merge_sql_subpatch(rec.sql, data["sql"])
     if rec.type == "csv" and rec.csv and "csv" in data:
-        cp = data["csv"]
-        if "path" in cp:
-            rec.csv.path = cp["path"]
-        if "date_column" in cp:
-            rec.csv.date_column = cp["date_column"]
-        if "asset_column" in cp:
-            rec.csv.asset_column = cp["asset_column"]
-        if "read_csv_kwargs" in cp:
-            rec.csv.read_csv_kwargs = dict(cp["read_csv_kwargs"])
+        _merge_csv_subpatch(rec, data["csv"])
 
 
 @router.get("", response_model=list[DataSourcePublic])

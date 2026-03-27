@@ -5,6 +5,7 @@ from pathlib import Path
 from workspace import ensure_dir
 
 from app.factors.schemas import FACTORS_DIR, FactorRecord, FactorRegistryFile
+from app.persistence import source_files
 from app.persistence.registry_helpers import get_item_by_id
 from app.persistence.source_files import (
     delete_source_text_file,
@@ -12,6 +13,8 @@ from app.persistence.source_files import (
     write_source_text,
 )
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
+
+resolve_source_path = source_files.resolve_source_path
 
 FACTORS_REGISTRY_FILENAME = "factors.json"
 

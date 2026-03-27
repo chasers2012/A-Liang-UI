@@ -6,11 +6,11 @@ from app.evaluation.test_set_schemas import (
     EvaluationTestSetRecord,
     EvaluationTestSetsFile,
 )
-from app.persistence.registry_helpers import (
-    get_first_default_item,
-    get_item_by_id,
-)
+from app.persistence import registry_helpers
+from app.persistence.registry_helpers import get_first_default_item, get_item_by_id
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
+
+apply_default_uniqueness = registry_helpers.apply_default_uniqueness
 
 REGISTRY_FILENAME = "evaluation_test_sets.json"
 
