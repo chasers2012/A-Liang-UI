@@ -1,9 +1,32 @@
-/* LiteGraph — align with app tokens (card / border / foreground) */
+/* LiteGraph：Canvas 绘制色从 --lg-* 读取（workflow-graph-theme / applyWorkflowLiteGraphPaintFromCss）；DOM UI 在此覆盖 litegraph.css */
 
 .workflow-graph-canvas-root {
-  --lg-node-title: var(--foreground);
-  --lg-node-text: color-mix(in oklch, var(--foreground) 88%, transparent);
-  --lg-link: color-mix(in oklch, var(--muted-foreground) 42%, var(--border));
+  /* 节点块（title 条 / 正文 / 选中描边） */
+  --lg-node-color: var(--card);
+  --lg-node-bg: var(--card);
+  --lg-node-box: var(--border);
+  --lg-node-title-text: var(--foreground);
+  --lg-node-body-text: var(--muted-foreground);
+  /* 选中时标题条文字：亮色下用 primary 比 primary-foreground 更易读（条为 card 浅色） */
+  --lg-node-selected-title: var(--primary);
+  --lg-node-outline: var(--ring);
+  /* 连线 */
+  --lg-link: var(--foreground);
+  /* 悬停关联连线高亮（替代 LiteGraph 硬编码 #FFF） */
+  --lg-link-highlight: var(--primary);
+  --lg-link-connecting: color-mix(in oklch, var(--primary) 85%, var(--foreground));
+  --lg-link-event: var(--primary);
+  /* 插槽 */
+  --lg-socket-off: color-mix(in oklch, var(--muted-foreground) 55%, var(--border));
+  --lg-socket-on: var(--primary);
+  /* 背景点阵（Canvas） */
+  --lg-grid-dot: color-mix(in oklch, var(--border) 72%, transparent);
+  /* 节点卡片 Canvas 阴影（LiteGraph DEFAULT_SHADOW_COLOR + render_shadows） */
+  --lg-node-shadow: color-mix(in oklch, var(--foreground) 14%, transparent);
+}
+
+.dark .workflow-graph-canvas-root {
+  --lg-node-shadow: color-mix(in oklch, oklch(0.08 0 0) 55%, transparent);
 }
 
 .workflow-graph-canvas-el.lgraphcanvas {
@@ -15,22 +38,379 @@
   font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
 }
 
+/* —— 右键菜单：对齐 shadcn ContextMenuContent / Item / Separator / Label —— */
 .litegraph.litecontextmenu {
-  border-radius: var(--radius-lg);
-  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent) !important;
-  background-color: color-mix(in oklch, var(--card) 96%, transparent) !important;
-  color: var(--foreground) !important;
+  z-index: 50;
+  min-width: 8rem;
+  max-height: min(24rem, 100vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  /* litegraph.css 对背景/阴影使用了 !important，需覆盖 */
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground);
+  padding: 0.25rem;
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
   box-shadow:
-    0 1px 3px color-mix(in oklch, var(--foreground) 8%, transparent),
-    0 0 0 1px color-mix(in oklch, var(--border) 40%, transparent) !important;
-  backdrop-filter: blur(8px);
+    0 4px 6px -1px color-mix(in oklch, var(--foreground) 7%, transparent),
+    0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent) !important;
 }
 
-.litegraph.litecontextmenu .litemenu-entry:hover {
-  background-color: color-mix(in oklch, var(--muted) 75%, transparent) !important;
+.litegraph.litecontextmenu.dark {
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground);
+}
+
+/* ContextMenuLabel */
+.litegraph.litecontextmenu .litemenu-title {
+  margin: 0;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1rem;
+  color: var(--muted-foreground);
+  background-color: transparent !important;
+  border-bottom: none !important;
+  cursor: default;
+}
+
+.litegraph.litecontextmenu .litemenu-title img {
+  margin: 0 0.375rem 0 0;
+  vertical-align: middle;
+  opacity: 0.8;
+}
+
+/* ContextMenuItem */
+.litegraph.litecontextmenu .litemenu-entry {
+  margin: 0.125rem 0;
+  padding: 0.375rem 0.5rem;
+  border-radius: calc(var(--radius-md) * 0.75);
+  color: var(--popover-foreground);
+  cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  outline: none;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.litegraph.litecontextmenu .litemenu-entry.submenu,
+.litegraph.litecontextmenu.dark .litemenu-entry.submenu {
+  background-color: transparent !important;
+}
+
+.litegraph.litecontextmenu .litemenu-entry:hover:not(.disabled):not(.separator) {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+.litegraph.litecontextmenu .litemenu-entry:focus-visible:not(.disabled):not(.separator) {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring) 45%, transparent);
+}
+
+/* ContextMenuSeparator */
+.litegraph.litecontextmenu .litemenu-entry.separator {
+  display: block;
+  height: 1px;
+  margin: 0.25rem -0.25rem;
+  padding: 0 !important;
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  background-color: var(--border) !important;
+  background-image: none !important;
+  cursor: default !important;
+  pointer-events: none;
+}
+
+/* Submenu row：去掉默认 cyan，右侧留白给 chevron */
+.litegraph.litecontextmenu .litemenu-entry.has_submenu {
+  border-right: none !important;
+  padding-right: 1.75rem;
+}
+
+.litegraph.litecontextmenu .litemenu-entry .more {
+  margin-left: auto;
+  float: none;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.litegraph.litecontextmenu .litemenu-entry .icon {
+  flex-shrink: 0;
+}
+
+.litegraph.litecontextmenu .litemenu-entry.checked .icon {
+  background-color: var(--primary) !important;
+  border-radius: 2px;
+}
+
+.litegraph.litecontextmenu .litemenu-entry .property_name {
+  color: inherit;
+  min-width: 4.5rem;
+}
+
+.litegraph.litecontextmenu .litemenu-entry .property_value {
+  margin-left: auto;
+  min-width: 4rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+  color: var(--foreground);
+  text-align: right;
+}
+
+.litegraph.litecontextmenu .litemenu-entry:hover:not(.disabled):not(.separator)
+  .property_value {
+  border-color: color-mix(in oklch, var(--border) 70%, var(--accent));
+  background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+}
+
+.litegraph.litecontextmenu .litemenu-entry.disabled {
+  pointer-events: none;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+/* 子菜单浮层（litemenubar-panel）：对齐 ContextMenuSubContent */
+.litegraph.litecontextmenu.litemenubar-panel {
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground);
+  font-size: 0.875rem;
+  box-shadow:
+    0 4px 6px -1px color-mix(in oklch, var(--foreground) 7%, transparent),
+    0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent) !important;
+}
+
+.litegraph .litemenubar ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background-color: transparent;
+}
+
+.litegraph .litemenubar li {
+  border-radius: calc(var(--radius-md) * 0.75);
+  font-size: 0.875rem;
+  color: var(--popover-foreground);
+  padding: 0.375rem 0.5rem;
+  cursor: default;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+.litegraph .litemenubar li:hover {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.litegraph .litegraph .litemenubar-panel {
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
+  background-color: var(--popover) !important;
+  color: var(--popover-foreground);
+  font-size: 0.875rem;
+  box-shadow:
+    0 4px 6px -1px color-mix(in oklch, var(--foreground) 7%, transparent),
+    0 2px 4px -2px color-mix(in oklch, var(--foreground) 5%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent) !important;
+}
+
+/* 其它 .litegraph 区域内的 litemenu-entry（如部分对话框内嵌） */
+.litegraph .litemenu-entry:not(.separator) {
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+
+.litegraph .litemenu-entry .property_name {
+  color: inherit;
+}
+
+.litegraph .litemenu-entry .property_value {
+  color: inherit;
+}
+
+.litegraph .litemenu-entry.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* —— 搜索框（若开启 allow_searchbox） —— */
+.litegraph.litesearchbox {
+  background-color: var(--popover) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--popover-foreground) !important;
+  box-shadow: 0 8px 32px color-mix(in oklch, var(--foreground) 14%, transparent) !important;
+}
+
+.litegraph.litesearchbox input,
+.litegraph.litesearchbox select {
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.litegraph.litesearchbox .name {
   color: var(--foreground) !important;
 }
 
+.litegraph.litesearchbox .helper {
+  color: var(--muted-foreground) !important;
+}
+
+.litegraph.lite-search-item {
+  color: var(--popover-foreground) !important;
+}
+
+.litegraph.lite-search-item.not_in_filter {
+  color: var(--muted-foreground) !important;
+  opacity: 0.45;
+}
+
+.litegraph.lite-search-item:hover,
+.litegraph.lite-search-item.selected {
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
+}
+
+/* —— 节点属性等对话框（根节点 class 含 litegraph + dialog） —— */
+.litegraph.dialog {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  color: var(--card-foreground) !important;
+  box-shadow:
+    0 12px 40px color-mix(in oklch, var(--foreground) 16%, transparent),
+    0 0 0 1px color-mix(in oklch, var(--border) 45%, transparent) !important;
+}
+
+.litegraph.dialog .dialog-header {
+  background-color: color-mix(in oklch, var(--muted) 35%, transparent) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.litegraph.dialog .dialog-header .dialog-title {
+  color: var(--foreground) !important;
+}
+
+.litegraph.dialog .dialog-content,
+.litegraph.dialog .dialog-alt-content {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+.litegraph.dialog .dialog-footer {
+  border-top-color: var(--border) !important;
+  background-color: var(--card) !important;
+}
+
+.litegraph.dialog .close {
+  color: var(--muted-foreground) !important;
+}
+
+.litegraph.dialog .close:hover {
+  color: var(--foreground) !important;
+  background-color: var(--accent) !important;
+}
+
+.litegraph.dialog .node_type {
+  color: var(--primary) !important;
+}
+
+.litegraph.dialog .node_desc,
+.litegraph.dialog .dialog-content h3 {
+  color: var(--muted-foreground) !important;
+}
+
+.litegraph.dialog .separator {
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border),
+    transparent
+  ) !important;
+}
+
+.litegraph.dialog .property {
+  border-color: transparent !important;
+}
+
+.litegraph.dialog .property:hover {
+  background-color: var(--muted) !important;
+}
+
+.litegraph.dialog .property_name {
+  color: var(--muted-foreground) !important;
+}
+
+.litegraph.dialog .property:hover .property_name {
+  color: var(--foreground) !important;
+}
+
+.litegraph.dialog .property_value {
+  color: var(--foreground) !important;
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.litegraph.dialog .btn {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.litegraph.dialog .btn:hover {
+  background-color: color-mix(in oklch, var(--secondary) 88%, var(--foreground)) !important;
+}
+
+.litegraph.dialog .btn.delete:hover {
+  background-color: color-mix(in oklch, var(--destructive) 18%, transparent) !important;
+  color: var(--destructive) !important;
+  border-color: color-mix(in oklch, var(--destructive) 35%, var(--border)) !important;
+}
+
+.litegraph .subgraph_property {
+  border-color: var(--border) !important;
+}
+
+.litegraph .subgraph_property:hover {
+  background-color: var(--muted) !important;
+}
+
+.litegraph .subgraph_property span.name {
+  color: var(--foreground) !important;
+}
+
+.litegraph .subgraph_property span.type {
+  color: var(--muted-foreground) !important;
+}
+
+.litegraph .subgraph_property input {
+  background-color: var(--background) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* 只读：平移手势 */
 .workflow-graph-canvas-root.workflow-graph-canvas-root--readonly .lgraphcanvas {
   cursor: grab;
 }

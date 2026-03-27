@@ -12,7 +12,6 @@ import {
   WorkflowGraphCanvas,
   type WorkflowGraphCanvasHandle,
   type WorkflowGraphState,
-  type WorkflowNodeAccent,
   type WorkflowNodeTypeDefinition,
 } from "@/components/workflow-graph";
 import { cn } from "@/lib/utils";
@@ -34,19 +33,6 @@ export type EvaluationWorkflowCanvasProps = {
   readOnly?: boolean;
   className?: string;
 };
-
-function evaluationWorkflowNodeColors(backendType: string): WorkflowNodeAccent {
-  if (backendType === "prepare_alphalens") {
-    return { color: "#059669", bgcolor: "#0f172a", boxcolor: "#047857" };
-  }
-  if (backendType.startsWith("metric:")) {
-    return { color: "#0284c7", bgcolor: "#0f172a", boxcolor: "#0369a1" };
-  }
-  if (backendType === "user_metric") {
-    return { color: "#7c3aed", bgcolor: "#0f172a", boxcolor: "#6d28d9" };
-  }
-  return { color: "#64748b", bgcolor: "#0f172a", boxcolor: "#475569" };
-}
 
 function toWorkflowNodeTypes(
   catalog: NodeTypeDefinitionPublic[],
@@ -139,7 +125,6 @@ const EvaluationWorkflowCanvasInner = forwardRef<
       nodeTypes={nodeTypes}
       initialGraph={initialGraph}
       readOnly={readOnly}
-      nodeColors={evaluationWorkflowNodeColors}
       renderInspector={(ctx) => (
         <EvaluationWorkflowNodeInspectorPanel
           readOnly={ctx.readOnly}

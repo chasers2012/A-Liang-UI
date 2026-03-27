@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -16,6 +17,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 import { catalogToMap } from "./graph-model";
 import type {
@@ -24,9 +26,11 @@ import type {
   WorkflowNodeAccent,
   WorkflowNodeTypeDefinition,
 } from "./types";
+import { readWorkflowGridDotColor } from "./workflow-graph-theme";
 import {
   applyCatalogToNode,
   applyHiDpiToLGraphCanvas,
+  applyWorkflowLiteGraphPaintFromCss,
   configureLiteGraphGlobals,
   defaultWorkflowNodeColors,
   findNodeByWorkflowId,
@@ -35,13 +39,30 @@ import {
   liteGraphNodeToSelectedNode,
   loadWorkflowStateIntoGraph,
   LITEGRAPH_WORKFLOW_STEP_TYPE,
+  reapplyAllWorkflowNodeColors,
   registerWorkflowStepNodeType,
   setCanvasViewport,
+  installLiteGraphContextMenuScrollFix,
 } from "./workflow-graph-litegraph";
 
 import "./workflow-graph-canvas.css";
 
 const DEFAULT_FIT = { padding: 0.14, maxZoom: 1.15, minZoom: 0.08 };
+
+/** LiteGraph 画布上有、但类型声明未列出的字段 */
+type LGraphCanvasChrome = LGraphCanvas & {
+  read_only: boolean;
+  allow_interaction: boolean;
+};
+
+function shouldBlockProcessKeyInWorkflowReadOnly(e: KeyboardEvent): boolean {
+  if (e.keyCode === 46 || e.keyCode === 8) return true;
+  if (e.ctrlKey || e.metaKey) {
+    const k = e.keyCode;
+    if (k === 65 || k === 67 || k === 86 || k === 88) return true;
+  }
+  return false;
+}
 
 export type WorkflowGraphInspectorRenderContext = {
   readOnly: boolean;
@@ -65,8 +86,14 @@ export type WorkflowGraphCanvasProps = {
   className?: string;
   /** 包住 canvas + 缩放条的外层（渐变边框等） */
   canvasAreaClassName?: string;
-  /** 节点配色；默认中性灰蓝。 */
-  nodeColors?: (typeKey: string) => WorkflowNodeAccent;
+  /**
+   * 节点配色；颜色请在 `workflow-graph-canvas.css` 的 `--lg-node-*` 上定义，
+   * `cssRoot` 为画布内层容器（用于 `closest('.workflow-graph-canvas-root')`）。
+   */
+  nodeColors?: (
+    typeKey: string,
+    cssRoot: HTMLElement | null,
+  ) => WorkflowNodeAccent;
   /** 自定义左侧「添加节点」区；不传且非只读时用 `nodeTypes` 生成按钮列表。 */
   renderPalette?: (ctx: { addNode: (typeKey: string) => void }) => ReactNode;
   /** 右侧/底部属性区；不传则不渲染。 */
@@ -97,12 +124,6 @@ function drawDotGrid(
   ctx.globalAlpha = 1;
 }
 
-function readBorderColor(el: HTMLElement | null): string {
-  if (!el) return "#94a3b8";
-  const v = getComputedStyle(el).getPropertyValue("--border").trim();
-  return v || "#94a3b8";
-}
-
 const WorkflowGraphCanvasInner = forwardRef<
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps
@@ -122,20 +143,30 @@ const WorkflowGraphCanvasInner = forwardRef<
   ref,
 ) {
   const catMap = useMemo(() => catalogToMap(nodeTypes), [nodeTypes]);
+  const catMapRef = useRef(catMap);
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const runtimeRef = useRef<GraphRuntime | null>(null);
   const readOnlyRef = useRef(readOnly);
   const initialGraphRef = useRef(initialGraph);
-  const nodeColorsRef = useRef(nodeColors);
+  const nodeColorsRef = useRef(
+    nodeColors ?? defaultWorkflowNodeColors,
+  );
   const fitOptsRef = useRef(fitViewOptions);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    catMapRef.current = catMap;
+  }, [catMap]);
+
+  useEffect(() => installLiteGraphContextMenuScrollFix(), []);
 
   useEffect(() => {
     readOnlyRef.current = readOnly;
   }, [readOnly]);
 
   useEffect(() => {
-    nodeColorsRef.current = nodeColors;
+    nodeColorsRef.current = nodeColors ?? defaultWorkflowNodeColors;
   }, [nodeColors]);
 
   useEffect(() => {
@@ -180,6 +211,7 @@ const WorkflowGraphCanvasInner = forwardRef<
     const graph = new LGraph();
     graph.config = {
       ...(graph.config ?? {}),
+      workflowCanvas: true,
       align_to_grid: !readOnlyRef.current,
       workflowReadOnly: readOnlyRef.current,
     };
@@ -200,12 +232,21 @@ const WorkflowGraphCanvasInner = forwardRef<
     graphCanvas.allow_searchbox = false;
     graphCanvas.allow_dragnodes = !readOnlyRef.current;
     graphCanvas.allow_reconnect_links = !readOnlyRef.current;
+    /* 不用 read_only：会跳过整段节点 mousedown，只读时无法点选节点看属性 */
+    const canvasChrome = graphCanvas as LGraphCanvasChrome;
+    canvasChrome.read_only = false;
+    canvasChrome.allow_interaction = !readOnlyRef.current;
     graphCanvas.multi_select = false;
     graphCanvas.show_info = false;
     graphCanvas.render_canvas_border = false;
+    graphCanvas.render_connections_border = false;
+    graphCanvas.render_connections_shadows = false;
+    graphCanvas.render_shadows = true;
+
+    applyWorkflowLiteGraphPaintFromCss(wrap, graphCanvas);
 
     graphCanvas.onDrawBackground = (ctx, visible) => {
-      drawDotGrid(ctx, visible, dotGridGap, readBorderColor(wrap));
+      drawDotGrid(ctx, visible, dotGridGap, readWorkflowGridDotColor(wrap));
     };
 
     const baseProcessKey = graphCanvas.processKey.bind(graphCanvas);
@@ -214,13 +255,13 @@ const WorkflowGraphCanvasInner = forwardRef<
       const ro = Boolean(
         (g.config as { workflowReadOnly?: boolean })?.workflowReadOnly,
       );
-      if (
-        ro &&
-        e.type === "keydown" &&
-        (e.keyCode === 46 || e.keyCode === 8)
-      ) {
+      if (ro && e.type === "keydown") {
         const t = e.target as HTMLElement;
-        if (t?.localName !== "input" && t?.localName !== "textarea") {
+        if (
+          t?.localName !== "input" &&
+          t?.localName !== "textarea" &&
+          shouldBlockProcessKeyInWorkflowReadOnly(e)
+        ) {
           e.preventDefault();
           return false;
         }
@@ -244,11 +285,16 @@ const WorkflowGraphCanvasInner = forwardRef<
       graph,
       initialGraphRef.current,
       catMap,
-      (t) => nodeColorsRef.current(t),
+      (t) => nodeColorsRef.current(t, wrap),
+      {
+        workflowCanvas: true,
+        workflowReadOnly: readOnlyRef.current,
+        align_to_grid: !readOnlyRef.current,
+      },
     );
     requestAnimationFrame(() => {
       graphCanvas.resize();
-      graphCanvas.default_link_color = readBorderColor(wrap);
+      applyWorkflowLiteGraphPaintFromCss(wrap, graphCanvas);
       const g0 = initialGraphRef.current;
       if (g0.viewport) {
         setCanvasViewport(graphCanvas, g0.viewport);
@@ -273,12 +319,61 @@ const WorkflowGraphCanvasInner = forwardRef<
     if (!rt) return;
     rt.graph.config = {
       ...(rt.graph.config ?? {}),
+      workflowCanvas: true,
       align_to_grid: !readOnly,
       workflowReadOnly: readOnly,
     };
     rt.canvas.allow_dragnodes = !readOnly;
     rt.canvas.allow_reconnect_links = !readOnly;
+    const c = rt.canvas as LGraphCanvasChrome;
+    c.read_only = false;
+    c.allow_interaction = !readOnly;
   }, [readOnly]);
+
+  const syncCanvasThemeFromDom = useCallback(() => {
+    const wrap = wrapRef.current;
+    const rt = runtimeRef.current;
+    if (!wrap || !rt) return;
+    reapplyAllWorkflowNodeColors(
+      rt.graph,
+      catMapRef.current,
+      wrap,
+      (t, el) => nodeColorsRef.current(t, el),
+    );
+    applyWorkflowLiteGraphPaintFromCss(wrap, rt.canvas);
+    rt.canvas.setDirty(true, true);
+  }, []);
+
+  /**
+   * html `class` 在 next-themes 里异步更新，双 rAF + MutationObserver 后再读 CSS 变量。
+   */
+  useLayoutEffect(() => {
+    let raf1 = 0;
+    let raf2 = 0;
+    const scheduleSync = () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          syncCanvasThemeFromDom();
+        });
+      });
+    };
+
+    scheduleSync();
+
+    const el = document.documentElement;
+    const mo = new MutationObserver(() => {
+      scheduleSync();
+    });
+    mo.observe(el, { attributes: true, attributeFilter: ["class"] });
+
+    return () => {
+      mo.disconnect();
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [resolvedTheme, nodeColors, syncCanvasThemeFromDom]);
 
   const getGraph = useCallback((): WorkflowGraphState => {
     const rt = runtimeRef.current;
@@ -292,9 +387,18 @@ const WorkflowGraphCanvasInner = forwardRef<
     (g: WorkflowGraphState) => {
       const rt = runtimeRef.current;
       if (!rt) return;
+      const wrap = wrapRef.current;
       loadWorkflowStateIntoGraph(rt.graph, g, catMap, (t) =>
-        nodeColorsRef.current(t),
+        nodeColorsRef.current(t, wrap),
+        {
+          workflowCanvas: true,
+          workflowReadOnly: readOnlyRef.current,
+          align_to_grid: !readOnlyRef.current,
+        },
       );
+      if (wrap) {
+        applyWorkflowLiteGraphPaintFromCss(wrap, rt.canvas);
+      }
       setSelectedId(null);
       setInspectorNode(null);
       requestAnimationFrame(() => {
@@ -354,7 +458,10 @@ const WorkflowGraphCanvasInner = forwardRef<
       p.params = {};
       node.pos[0] = 120 + Math.random() * 80;
       node.pos[1] = 80 + Math.random() * 80;
-      applyCatalogToNode(node, catMap.get(typeKey), nodeColorsRef.current);
+      const wrap = wrapRef.current;
+      applyCatalogToNode(node, catMap.get(typeKey), (t) =>
+        nodeColorsRef.current(t, wrap),
+      );
       rt.graph.add(node);
       rt.canvas.setDirty(true, true);
     },
@@ -393,8 +500,11 @@ const WorkflowGraphCanvasInner = forwardRef<
 
   const defaultPalette =
     !readOnly && renderPalette === undefined ? (
-      <aside className="flex w-full shrink-0 flex-col gap-2 rounded-xl border border-border/80 bg-muted/10 p-3 text-sm shadow-sm sm:w-[11.5rem]">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <aside
+        data-slot="workflow-graph-palette"
+        className="flex w-full shrink-0 flex-col gap-2.5 rounded-xl border border-border bg-card p-3 text-sm shadow-sm sm:w-[11.75rem]"
+      >
+        <p className="border-b border-border/80 pb-2 text-xs font-semibold text-foreground">
           添加节点
         </p>
         <div className="flex max-h-48 flex-wrap gap-1.5 overflow-y-auto pr-0.5 sm:max-h-none sm:flex-col sm:gap-1">
@@ -404,7 +514,7 @@ const WorkflowGraphCanvasInner = forwardRef<
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 justify-start border-border/80 bg-background text-xs font-medium shadow-none hover:bg-accent/60"
+              className="h-8 justify-start border-border bg-card text-xs font-medium shadow-none hover:bg-accent"
               onClick={() => addNode(t.type)}
             >
               {t.label}
@@ -437,16 +547,17 @@ const WorkflowGraphCanvasInner = forwardRef<
 
   return (
     <div
+      data-slot="workflow-graph-layout"
       className={cn(
         "flex min-h-[320px] flex-col gap-3",
-        paletteContent != null && "sm:flex-row",
+        paletteContent != null && "sm:flex-row sm:gap-4",
         className,
       )}
     >
       {paletteContent}
       <div
         className={cn(
-          "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/30 text-sm shadow-sm",
+          "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
           readOnly && "workflow-graph-canvas-root--readonly",
           canvasAreaClassName,
         )}
@@ -457,12 +568,15 @@ const WorkflowGraphCanvasInner = forwardRef<
             className="workflow-graph-canvas-el block h-full w-full min-h-[280px]"
           />
           <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex gap-1">
-            <div className="pointer-events-auto flex flex-col overflow-hidden rounded-md border border-border/80 bg-card shadow-sm backdrop-blur-sm">
+            <div
+              data-slot="workflow-graph-zoom"
+              className="pointer-events-auto flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
+            >
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-none border-b border-border/60"
+                className="h-8 w-8 rounded-none border-b border-border"
                 onClick={() => zoomBy(1.15)}
                 aria-label="放大"
               >
@@ -472,7 +586,7 @@ const WorkflowGraphCanvasInner = forwardRef<
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-none border-b border-border/60"
+                className="h-8 w-8 rounded-none border-b border-border"
                 onClick={() => zoomBy(1 / 1.15)}
                 aria-label="缩小"
               >
@@ -492,7 +606,7 @@ const WorkflowGraphCanvasInner = forwardRef<
           </div>
         </div>
         {inspectorContent ? (
-          <div className="workflow-graph-inspector shrink-0 border-t border-border/80 bg-card p-3 text-xs sm:absolute sm:right-3 sm:top-3 sm:max-w-[min(280px,calc(100%-1.5rem))] sm:rounded-lg sm:border sm:border-border/80 sm:shadow-sm sm:backdrop-blur-sm">
+          <div className="workflow-graph-inspector shrink-0 border-t border-border bg-card p-3 text-card-foreground text-xs sm:absolute sm:right-3 sm:top-3 sm:max-w-[min(280px,calc(100%-1.5rem))] sm:rounded-lg sm:border sm:border-border sm:shadow-md sm:backdrop-blur-md">
             {inspectorContent}
           </div>
         ) : null}
