@@ -6,10 +6,6 @@ from dataclasses import dataclass
 
 from evaluate import EvaluationMetric
 
-from app.evaluation.builtin_metric_registry import (
-    BUILTIN_METRICS,
-    is_builtin_metric_id,
-)
 from app.evaluation.metric_loader import load_evaluation_metric_class
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
@@ -36,23 +32,18 @@ def resolve_evaluation_metric(metric_id: str) -> ResolvedEvaluationMetric:
     mid = (metric_id or "").strip()
     if not mid:
         raise ValueError("metric_id 不能为空")
-    if is_builtin_metric_id(mid):
-        e = BUILTIN_METRICS[mid]
-        return ResolvedEvaluationMetric(
-            metric_class=e.metric_class,
-            primary_output_socket=e.primary_output_socket,
-            snapshot_field=e.snapshot_field,
-        )
     reg = load_metrics_registry()
     rec = metric_get_by_id(reg, mid)
     if rec is None:
         raise ValueError(f"评价指标不存在: {mid}")
     src = read_metric_source(rec)
     cls, _ = load_evaluation_metric_class(src)
+    _sf = getattr(cls, "SNAPSHOT_FIELD", None)
+    snapshot_field = _sf if _sf in ("mean_ic", "mean_return_spread") else None
     return ResolvedEvaluationMetric(
         metric_class=cls,
         primary_output_socket=_primary_output_from_class(cls),
-        snapshot_field=None,
+        snapshot_field=snapshot_field,
     )
 
 

@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from app.evaluation.builtin_metric_registry import (
-    BUILTIN_METRICS,
-    is_builtin_metric_id,
-    metric_node_type,
-    parse_metric_node_type,
-)
+from app.evaluation.builtin_metric_registry import metric_node_type, parse_metric_node_type
 from app.evaluation.evaluation_metric_resolve import try_resolve_evaluation_metric
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
@@ -16,8 +11,6 @@ from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS, BuiltinNodeSpe
 
 def all_workflow_node_type_ids() -> frozenset[str]:
     out: set[str] = set(BUILTIN_NODE_SPECS.keys())
-    for mid in BUILTIN_METRICS:
-        out.add(metric_node_type(mid))
     reg = load_metrics_registry()
     for item in reg.items:
         out.add(metric_node_type(item.id))
@@ -66,15 +59,6 @@ def workflow_node_definition(node_type: str) -> BuiltinNodeSpec:
     mid = parse_metric_node_type(nt)
     if mid is None:
         raise KeyError(nt)
-    if is_builtin_metric_id(mid):
-        e = BUILTIN_METRICS[mid]
-        return BuiltinNodeSpec(
-            type=metric_node_type(mid),
-            label=e.label,
-            description=e.description,
-            inputs=(SocketSpec("clean_factor", True, "factor_data_clean"),),
-            outputs=(SocketSpec(e.primary_output_socket, False, "scalar_json"),),
-        )
     resolved = try_resolve_evaluation_metric(mid)
     if resolved is None:
         raise KeyError(nt)

@@ -22,4 +22,11 @@ def load_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetric], s
         exec_filename="<evaluation_metric>",
         missing_message="源码中未找到继承 EvaluationMetric 的类",
         invalid_message=lambda n: f"{n} 不是有效的 EvaluationMetric 子类",
+        base_ast_names=frozenset(
+            {
+                "EvaluationMetric",
+                "MeanInformationCoefficientMetric",
+                "MeanReturnSpreadMetric",
+            }
+        ),
     )

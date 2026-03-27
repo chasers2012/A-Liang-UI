@@ -34,10 +34,12 @@ import {
   type EvaluationTestSetPublic,
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
+import type { EvaluationWorkflowCanvasHandle } from "../../ui/evaluation-workflow-canvas";
 import {
-  EvaluationWorkflowCanvas,
-  type EvaluationWorkflowCanvasHandle,
-} from "../../ui/evaluation-workflow-canvas";
+  ProfileEditorMainSectionSwitch,
+  ProfilePrepareFieldsGridCompact,
+  ProfileWorkflowEditorBlock,
+} from "../../ui/profile-editor-main-section";
 
 import {
   FactorFormPageContainer,
@@ -65,6 +67,9 @@ export default function EditEvaluationProfilePage() {
   const [longShort, setLongShort] = useState(true);
   const [maxLoss, setMaxLoss] = useState("0.5");
   const [workflowJson, setWorkflowJson] = useState("{}");
+  const [mainSection, setMainSection] = useState<"workflow" | "prepare">(
+    "workflow",
+  );
   const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">(
     "canvas",
   );
@@ -269,90 +274,41 @@ export default function EditEvaluationProfilePage() {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="ep-e-periods">持有期 periods</Label>
-            <Input
-              id="ep-e-periods"
-              className="font-mono text-sm"
-              value={periodsCsv}
-              onChange={(e) => setPeriodsCsv(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ep-e-q">quantiles</Label>
-            <Input
-              id="ep-e-q"
-              className="font-mono text-sm"
-              value={quantiles}
-              onChange={(e) => setQuantiles(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ep-e-ml">max_loss</Label>
-            <Input
-              id="ep-e-ml"
-              className="font-mono text-sm"
-              value={maxLoss}
-              onChange={(e) => setMaxLoss(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2 pt-8">
-            <Switch
-              id="ep-e-ls"
-              checked={longShort}
-              onCheckedChange={(v) => setLongShort(Boolean(v))}
-            />
-            <Label htmlFor="ep-e-ls" className="font-normal">
-              long_short
-            </Label>
-          </div>
-        </div>
+        <ProfileEditorMainSectionSwitch
+          mainSection={mainSection}
+          onMainSection={setMainSection}
+        />
 
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Label className="shrink-0">工作流</Label>
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                variant={workflowEditMode === "canvas" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setWorkflowMode("canvas")}
-              >
-                画布
-              </Button>
-              <Button
-                type="button"
-                variant={workflowEditMode === "json" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setWorkflowMode("json")}
-              >
-                JSON
-              </Button>
-            </div>
-          </div>
-          {workflowEditMode === "canvas" ? (
-            <EvaluationWorkflowCanvas
-              key={canvasKey}
-              ref={canvasRef}
-              catalog={catalog}
-              initialWorkflow={initialWorkflowForCanvas}
-            />
-          ) : (
-            <>
-              <Label htmlFor="ep-e-wf" className="sr-only">
-                工作流 JSON
-              </Label>
-              <Textarea
-                id="ep-e-wf"
-                className="min-h-48 font-mono text-xs"
-                value={workflowJson}
-                onChange={(e) => setWorkflowJson(e.target.value)}
-                spellCheck={false}
-              />
-            </>
-          )}
-        </div>
+        {mainSection === "prepare" ? (
+          <ProfilePrepareFieldsGridCompact
+            ids={{
+              periods: "ep-e-periods",
+              quantiles: "ep-e-q",
+              maxLoss: "ep-e-ml",
+              longShort: "ep-e-ls",
+            }}
+            periodsCsv={periodsCsv}
+            onPeriodsCsv={setPeriodsCsv}
+            quantiles={quantiles}
+            onQuantiles={setQuantiles}
+            maxLoss={maxLoss}
+            onMaxLoss={setMaxLoss}
+            longShort={longShort}
+            onLongShort={setLongShort}
+          />
+        ) : (
+          <ProfileWorkflowEditorBlock
+            workflowJson={workflowJson}
+            onWorkflowJson={setWorkflowJson}
+            workflowJsonFieldId="ep-e-wf"
+            workflowEditMode={workflowEditMode}
+            onWorkflowMode={setWorkflowMode}
+            canvasKey={canvasKey}
+            canvasRef={canvasRef}
+            catalog={catalog}
+            initialWorkflow={initialWorkflowForCanvas}
+          />
+        )}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={submitting || !name.trim()}>

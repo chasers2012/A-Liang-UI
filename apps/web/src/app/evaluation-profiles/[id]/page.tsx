@@ -76,6 +76,17 @@ export default function EvaluationProfileDetailPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>工作流 JSON</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
+            {JSON.stringify(row.workflow, null, 2)}
+          </pre>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>配置摘要</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
@@ -94,17 +105,6 @@ export default function EvaluationProfileDetailPage() {
               {row.prepare.quantiles ?? "null"} ls={String(row.prepare.long_short)}
             </span>
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>工作流 JSON</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
-            {JSON.stringify(row.workflow, null, 2)}
-          </pre>
         </CardContent>
       </Card>
     </FactorFormPageContainer>

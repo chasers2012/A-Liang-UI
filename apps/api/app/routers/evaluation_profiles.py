@@ -3,8 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.builtin_metric_registry import is_builtin_metric_id
 from app.evaluation.graph_validate import validate_workflow_graph
+from app.evaluation.metrics_store import get_by_id as metric_get_by_id
+from app.evaluation.metrics_store import load_registry as load_metrics_registry
 from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -51,6 +52,7 @@ def _validate_workflow_if_needed(wf) -> None:
 
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
+    metrics_reg = load_metrics_registry()
     out: list[NodeTypeDefinitionPublic] = []
     prep = workflow_node_definition("prepare_alphalens")
     out.append(
@@ -76,6 +78,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
             continue
         spec = workflow_node_definition(nt)
         mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
+        mrec = metric_get_by_id(metrics_reg, mid) if mid else None
         out.append(
             NodeTypeDefinitionPublic(
                 type=spec.type,
@@ -89,7 +92,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                     NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                     for s in spec.outputs
                 ],
-                user_defined=bool(mid and not is_builtin_metric_id(mid)),
+                user_defined=bool(mid and mrec is not None and not mrec.builtin),
                 metric_id=mid,
             )
         )

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.builtin_metric_registry import BUILTIN_METRICS, is_builtin_metric_id
+from app.evaluation.builtin_metric_registry import is_builtin_metric_id
 from app.evaluation.metric_loader import load_evaluation_metric_class
 from app.evaluation.metric_schemas import (
-    BUILTIN_METRIC_SOURCE_PLACEHOLDER,
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -28,8 +27,6 @@ from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 
-_BUILTIN_TS = "1970-01-01T00:00:00+00:00"
-
 
 def _visualization_from_class(metric_class: type) -> MetricVisualizationSpec | None:
     raw = getattr(metric_class, "VISUALIZATION", None)
@@ -43,24 +40,6 @@ def _visualization_from_class(metric_class: type) -> MetricVisualizationSpec | N
         except Exception:
             return None
     return None
-
-
-def _builtin_summaries() -> list[EvaluationMetricSummaryPublic]:
-    out: list[EvaluationMetricSummaryPublic] = []
-    for e in BUILTIN_METRICS.values():
-        out.append(
-            EvaluationMetricSummaryPublic(
-                id=e.metric_id,
-                name=e.label,
-                description=e.description,
-                source_path=f"builtin://{e.metric_id}",
-                created_at=_BUILTIN_TS,
-                updated_at=_BUILTIN_TS,
-                visualization=None,
-                builtin=True,
-            )
-        )
-    return out
 
 
 def _detail(rec) -> EvaluationMetricDetailPublic:
@@ -100,29 +79,19 @@ def _validate_and_write_source(rec, source: str) -> None:
     write_source(rec, source)
 
 
+def _metric_sort_key(rec) -> tuple[bool, str]:
+    return (not rec.builtin, rec.name)
+
+
 @router.get("", response_model=list[EvaluationMetricSummaryPublic])
 def list_evaluation_metrics() -> list[EvaluationMetricSummaryPublic]:
     reg = load_registry()
-    return _builtin_summaries() + [record_to_summary(i) for i in reg.items]
+    items = sorted(reg.items, key=_metric_sort_key)
+    return [record_to_summary(i) for i in items]
 
 
 @router.get("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def get_evaluation_metric(metric_id: str) -> EvaluationMetricDetailPublic:
-    if is_builtin_metric_id(metric_id):
-        e = BUILTIN_METRICS[metric_id]
-        s = EvaluationMetricSummaryPublic(
-            id=e.metric_id,
-            name=e.label,
-            description=e.description,
-            source_path=f"builtin://{e.metric_id}",
-            created_at=_BUILTIN_TS,
-            updated_at=_BUILTIN_TS,
-            visualization=_visualization_from_class(e.metric_class),
-            builtin=True,
-        )
-        return EvaluationMetricDetailPublic(
-            **s.model_dump(), source=BUILTIN_METRIC_SOURCE_PLACEHOLDER
-        )
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:
@@ -159,16 +128,20 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     return _detail(rec)
 
 
+def _is_protected_builtin(rec, metric_id: str) -> bool:
+    return rec.builtin or is_builtin_metric_id(metric_id)
+
+
 @router.patch("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def patch_evaluation_metric(
     metric_id: str, body: EvaluationMetricPatch
 ) -> EvaluationMetricDetailPublic:
-    if is_builtin_metric_id(metric_id):
-        raise HTTPException(status_code=400, detail="内置指标不可修改")
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
+    if _is_protected_builtin(rec, metric_id):
+        raise HTTPException(status_code=400, detail="内置指标不可修改")
 
     unset = body.model_dump(exclude_unset=True)
     if "name" in unset:
@@ -192,12 +165,12 @@ def patch_evaluation_metric(
 
 @router.delete("/{metric_id}", status_code=204)
 def delete_evaluation_metric(metric_id: str) -> None:
-    if is_builtin_metric_id(metric_id):
-        raise HTTPException(status_code=400, detail="内置指标不可删除")
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
+    if _is_protected_builtin(rec, metric_id):
+        raise HTTPException(status_code=400, detail="内置指标不可删除")
     reg.items = [i for i in reg.items if i.id != metric_id]
     delete_source_file(rec)
     save_registry(reg)

@@ -29,11 +29,16 @@ def metrics_dir_path() -> Path:
 
 
 def load_registry() -> EvaluationMetricsRegistryFile:
-    return load_workspace_config(
+    reg = load_workspace_config(
         REGISTRY_FILENAME,
         EvaluationMetricsRegistryFile,
         default_factory=EvaluationMetricsRegistryFile,
     )
+    from app.evaluation.builtin_metrics_seed import ensure_builtin_metrics_seeded
+
+    if ensure_builtin_metrics_seeded(reg):
+        save_registry(reg)
+    return reg
 
 
 def save_registry(reg: EvaluationMetricsRegistryFile) -> None:

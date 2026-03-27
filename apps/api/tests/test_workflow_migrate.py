@@ -38,3 +38,23 @@ def test_list_evaluation_metrics_has_builtin(client):
     assert "builtin.mean_ic" in ids
     builtins = [x for x in r.json() if x.get("builtin")]
     assert len(builtins) >= 2
+
+
+def test_builtin_metric_detail_has_workspace_source(client):
+    r = client.get("/evaluation-metrics/builtin.mean_ic")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["source_path"] == "evaluation_metrics/builtin.mean_ic.py"
+    assert "BuiltinMeanICMetric" in body["source"]
+    assert body.get("builtin") is True
+
+
+def test_patch_builtin_metric_forbidden(client):
+    r = client.patch("/evaluation-metrics/builtin.mean_ic", json={"description": "x"})
+    assert r.status_code == 400
+    assert "内置" in r.json()["detail"]
+
+
+def test_delete_builtin_metric_forbidden(client):
+    r = client.delete("/evaluation-metrics/builtin.mean_ic")
+    assert r.status_code == 400
