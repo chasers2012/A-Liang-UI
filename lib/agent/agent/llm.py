@@ -1,7 +1,8 @@
-"""Chat LLM: local Ollama via ``init_chat_model``."""
+"""Chat LLM via ``init_chat_model`` (Ollama default; optional OpenAI from config/env)."""
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from collections.abc import Sequence
@@ -257,23 +258,94 @@ def _parse_int_env(name: str, default: int) -> int:
         return default
 
 
+def _read_agent_llm_workspace_file() -> dict[str, Any]:
+    """``config/agent_llm.json`` from workspace (optional; web UI writes this)."""
+    from workspace import workspace_path
+
+    path = workspace_path("config", "agent_llm.json")
+    if not path.is_file():
+        return {}
+    try:
+        raw = path.read_text(encoding="utf-8")
+        if not raw.strip():
+            return {}
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _cfg_str(cfg: dict[str, Any], key: str) -> str | None:
+    v = cfg.get(key)
+    if isinstance(v, str) and v.strip():
+        return v.strip()
+    return None
+
+
 def build_chat_llm() -> BaseChatModel:
     """
-    ``init_chat_model("ollama:<model>", ...)``.
+    Chat model from ``init_chat_model`` (Ollama or OpenAI).
 
-    Env:
-      FACTOR_AGENT_MODEL / OLLAMA_MODEL (default qwen3.5:9b)
-      OLLAMA_BASE_URL (default http://127.0.0.1:11434)
+    Resolution order: environment variables, then ``config/agent_llm.json``
+    (saved from the Agent page), then defaults. Default provider is Ollama with
+    model ``qwen3.5:9b``.
+
+    Env (override file):
+      FACTOR_AGENT_LLM_PROVIDER   ollama | openai
+      FACTOR_AGENT_MODEL / OLLAMA_MODEL
+      OLLAMA_BASE_URL
+      OPENAI_API_KEY
+      OPENAI_BASE_URL
       FACTOR_AGENT_TEMPERATURE (default 1)
       FACTOR_AGENT_OLLAMA_TIMEOUT (seconds, default 600)
       FACTOR_AGENT_NUM_PREDICT (-1 = no limit)
       FACTOR_AGENT_OLLAMA_REASONING 0/1
     """
+    cfg = _read_agent_llm_workspace_file()
     temperature = float(os.environ.get("FACTOR_AGENT_TEMPERATURE", "1"))
-    model = os.environ.get("FACTOR_AGENT_MODEL") or os.environ.get("OLLAMA_MODEL", "qwen3.5:9b")
-    base_url = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+
+    prov_raw = (
+        os.environ.get("FACTOR_AGENT_LLM_PROVIDER", "").strip().lower()
+        or _cfg_str(cfg, "provider")
+        or "ollama"
+    )
+    provider = prov_raw if prov_raw in {"ollama", "openai"} else "ollama"
+
+    model = (
+        os.environ.get("FACTOR_AGENT_MODEL")
+        or os.environ.get("OLLAMA_MODEL")
+        or _cfg_str(cfg, "model")
+        or "qwen3.5:9b"
+    )
+
+    if provider == "openai":
+        api_key = (os.environ.get("OPENAI_API_KEY") or "").strip() or None
+        if api_key is None:
+            api_key = _cfg_str(cfg, "api_key")
+        if not api_key:
+            raise ValueError(
+                "OpenAI 提供方需要 API 密钥：设置环境变量 OPENAI_API_KEY，"
+                "或在 Web Agent 页面保存 api_key（写入 config/agent_llm.json）。"
+            )
+        openai_kwargs: dict[str, Any] = {
+            "temperature": temperature,
+            "api_key": api_key,
+        }
+        ob = os.environ.get("OPENAI_BASE_URL", "").strip()
+        if ob:
+            openai_kwargs["base_url"] = ob.rstrip("/")
+        else:
+            fu = _cfg_str(cfg, "openai_base_url")
+            if fu:
+                openai_kwargs["base_url"] = fu.rstrip("/")
+        llm = init_chat_model(f"openai:{model}", **openai_kwargs)
+        return cast(BaseChatModel, llm)
+
     timeout = _parse_float("FACTOR_AGENT_OLLAMA_TIMEOUT", 600.0)
     num_predict = _parse_int_env("FACTOR_AGENT_NUM_PREDICT", -1)
+
+    ob_env = os.environ.get("OLLAMA_BASE_URL", "").strip()
+    base_url = ob_env or (_cfg_str(cfg, "ollama_base_url") or "http://127.0.0.1:11434")
 
     reasoning_raw = os.environ.get("FACTOR_AGENT_OLLAMA_REASONING", "").strip().lower()
     reasoning: bool | None = None

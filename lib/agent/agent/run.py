@@ -6,8 +6,11 @@ CLI: 因子挖掘 Agent
   uv run python -m agent.run "基于换手率与动量构造反转因子"
 
 环境变量（与 trade-backend addons.agent 对齐）:
+  FACTOR_AGENT_LLM_PROVIDER   ollama（默认）| openai
   FACTOR_AGENT_MODEL / OLLAMA_MODEL
   OLLAMA_BASE_URL
+  OPENAI_API_KEY / OPENAI_BASE_URL（provider=openai 时）
+  另：工作区 ``config/agent_llm.json`` 可由 Web Agent 页面写入，env 优先覆盖。
   FACTOR_AGENT_TEMPERATURE
   FACTOR_AGENT_START_DATE / FACTOR_AGENT_END_DATE
   FACTOR_AGENT_EVAL_START / FACTOR_AGENT_EVAL_END

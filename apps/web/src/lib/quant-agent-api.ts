@@ -1,4 +1,5 @@
 import type {
+  AgentLlmSettingsPublic,
   DataSourcePublic,
   EvaluationMetricDetailPublic,
   EvaluationMetricSummaryPublic,
@@ -75,6 +76,19 @@ export async function apiFetchJson<T>(
     return undefined as T;
   }
   return res.json() as Promise<T>;
+}
+
+export function getAgentLlmSettings(): Promise<AgentLlmSettingsPublic> {
+  return apiFetchJson<AgentLlmSettingsPublic>("/agent/llm-settings");
+}
+
+export function putAgentLlmSettings(
+  body: AgentLlmSettingsPublic,
+): Promise<AgentLlmSettingsPublic> {
+  return apiFetchJson<AgentLlmSettingsPublic>("/agent/llm-settings", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
 export function listDatasources(): Promise<DataSourcePublic[]> {
