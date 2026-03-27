@@ -26,10 +26,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   createEvaluationProfile,
-  listEvaluationMetrics,
   listEvaluationNodeTypes,
   listEvaluationTestSets,
-  type EvaluationMetricSummaryPublic,
   type EvaluationTestSetPublic,
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
@@ -68,7 +66,6 @@ export default function NewEvaluationProfilePage() {
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
   const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
-  const [metrics, setMetrics] = useState<EvaluationMetricSummaryPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
   const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +76,9 @@ export default function NewEvaluationProfilePage() {
   }, []);
 
   useEffect(() => {
-    void Promise.all([listEvaluationNodeTypes(), listEvaluationMetrics()])
-      .then(([c, m]) => {
+    void listEvaluationNodeTypes()
+      .then((c) => {
         setCatalog(c);
-        setMetrics(m);
       })
       .catch(() => { })
       .finally(() => setWfMetaLoading(false));
@@ -297,7 +293,6 @@ export default function NewEvaluationProfilePage() {
               key={canvasKey}
               ref={canvasRef}
               catalog={catalog}
-              metrics={metrics}
               initialWorkflow={initialWorkflowForCanvas}
             />
           ) : (

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from app.evaluation.builtin_metric_registry import BUILTIN_METRICS, is_builtin_metric_id
 from app.evaluation.metric_loader import load_evaluation_metric_class
 from app.evaluation.metric_schemas import (
+    BUILTIN_METRIC_SOURCE_PLACEHOLDER,
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -26,6 +28,8 @@ from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 
+_BUILTIN_TS = "1970-01-01T00:00:00+00:00"
+
 
 def _visualization_from_class(metric_class: type) -> MetricVisualizationSpec | None:
     raw = getattr(metric_class, "VISUALIZATION", None)
@@ -39,6 +43,24 @@ def _visualization_from_class(metric_class: type) -> MetricVisualizationSpec | N
         except Exception:
             return None
     return None
+
+
+def _builtin_summaries() -> list[EvaluationMetricSummaryPublic]:
+    out: list[EvaluationMetricSummaryPublic] = []
+    for e in BUILTIN_METRICS.values():
+        out.append(
+            EvaluationMetricSummaryPublic(
+                id=e.metric_id,
+                name=e.label,
+                description=e.description,
+                source_path=f"builtin://{e.metric_id}",
+                created_at=_BUILTIN_TS,
+                updated_at=_BUILTIN_TS,
+                visualization=None,
+                builtin=True,
+            )
+        )
+    return out
 
 
 def _detail(rec) -> EvaluationMetricDetailPublic:
@@ -57,14 +79,50 @@ def _merge_patch(rec, patch: EvaluationMetricPatch) -> None:
         rec.description = (data["description"] or "").strip()
 
 
+def _validate_http_name_for_patch(body: EvaluationMetricPatch) -> None:
+    if body.name is None or not str(body.name).strip():
+        raise HTTPException(status_code=400, detail="name 不能为空")
+    try:
+        validate_factor_name(str(body.name))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+def _validate_and_write_source(rec, source: str) -> None:
+    try:
+        validate_source_syntax(source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    try:
+        load_evaluation_metric_class(source)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    write_source(rec, source)
+
+
 @router.get("", response_model=list[EvaluationMetricSummaryPublic])
 def list_evaluation_metrics() -> list[EvaluationMetricSummaryPublic]:
     reg = load_registry()
-    return [record_to_summary(i) for i in reg.items]
+    return _builtin_summaries() + [record_to_summary(i) for i in reg.items]
 
 
 @router.get("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def get_evaluation_metric(metric_id: str) -> EvaluationMetricDetailPublic:
+    if is_builtin_metric_id(metric_id):
+        e = BUILTIN_METRICS[metric_id]
+        s = EvaluationMetricSummaryPublic(
+            id=e.metric_id,
+            name=e.label,
+            description=e.description,
+            source_path=f"builtin://{e.metric_id}",
+            created_at=_BUILTIN_TS,
+            updated_at=_BUILTIN_TS,
+            visualization=_visualization_from_class(e.metric_class),
+            builtin=True,
+        )
+        return EvaluationMetricDetailPublic(
+            **s.model_dump(), source=BUILTIN_METRIC_SOURCE_PLACEHOLDER
+        )
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:
@@ -105,6 +163,8 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
 def patch_evaluation_metric(
     metric_id: str, body: EvaluationMetricPatch
 ) -> EvaluationMetricDetailPublic:
+    if is_builtin_metric_id(metric_id):
+        raise HTTPException(status_code=400, detail="内置指标不可修改")
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:
@@ -112,12 +172,7 @@ def patch_evaluation_metric(
 
     unset = body.model_dump(exclude_unset=True)
     if "name" in unset:
-        if body.name is None or not str(body.name).strip():
-            raise HTTPException(status_code=400, detail="name 不能为空")
-        try:
-            validate_factor_name(str(body.name))
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
+        _validate_http_name_for_patch(body)
 
     try:
         _merge_patch(rec, body)
@@ -128,15 +183,7 @@ def patch_evaluation_metric(
         rec.visualization = body.visualization
 
     if "source" in unset and body.source is not None:
-        try:
-            validate_source_syntax(body.source)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        try:
-            load_evaluation_metric_class(body.source)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e)) from e
-        write_source(rec, body.source)
+        _validate_and_write_source(rec, body.source)
 
     rec.updated_at = utc_now_iso()
     save_registry(reg)
@@ -145,6 +192,8 @@ def patch_evaluation_metric(
 
 @router.delete("/{metric_id}", status_code=204)
 def delete_evaluation_metric(metric_id: str) -> None:
+    if is_builtin_metric_id(metric_id):
+        raise HTTPException(status_code=400, detail="内置指标不可删除")
     reg = load_registry()
     rec = get_by_id(reg, metric_id)
     if rec is None:

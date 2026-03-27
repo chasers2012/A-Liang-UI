@@ -7,14 +7,11 @@ from collections import defaultdict, deque
 from typing import Any
 
 import pandas as pd
-from evaluate import MeanInformationCoefficientMetric
-from evaluate.factor_evaluator import _alphalens_metrics
 
-from app.evaluation.metric_loader import load_evaluation_metric_class
-from app.evaluation.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics_store import load_registry as load_metrics_registry
-from app.evaluation.metrics_store import read_source as read_metric_source
+from app.evaluation.builtin_metric_registry import parse_metric_node_type
+from app.evaluation.evaluation_metric_resolve import resolve_evaluation_metric
 from app.evaluation.profile_schemas import EvaluationProfileRecord
+from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 from app.factors.evaluation_runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
@@ -102,72 +99,41 @@ def _node_prepare_alphalens(
     return last_quantiles, n_stocks
 
 
-def _node_mean_information_coefficient(
+def _run_metric_node(
     wf,
     nid: str,
-    outputs: dict[str, dict[str, Any]],
-    metric_results: dict[str, Any],
-) -> dict[str, float]:
-    fdc = _resolve_socket(wf, outputs, nid, "clean_factor")
-    if not isinstance(fdc, pd.DataFrame):
-        raise TypeError("clean_factor 须为 DataFrame")
-    series = MeanInformationCoefficientMetric().evaluate(fdc)
-    if isinstance(series, pd.DataFrame):
-        series = series.iloc[:, 0]
-    mic = _series_to_period_dict(series)
-    outputs[nid] = {"mean_ic": series}
-    metric_results[nid] = {"mean_ic": mic}
-    return mic
-
-
-def _node_mean_return_spread(
-    wf,
-    nid: str,
+    node,
     *,
     last_quantiles: int,
     outputs: dict[str, dict[str, Any]],
     metric_results: dict[str, Any],
-) -> dict[str, float]:
-    fdc = _resolve_socket(wf, outputs, nid, "clean_factor")
-    if not isinstance(fdc, pd.DataFrame):
-        raise TypeError("clean_factor 须为 DataFrame")
-    metrics = _alphalens_metrics(
-        fdc,
-        quantiles=last_quantiles,
-        group_adjust=False,
-        quantile_returns_demeaned=True,
-    )
-    spread = _series_to_period_dict(metrics.mean_return_spread)
-    outputs[nid] = {"mean_return_spread": metrics.mean_return_spread}
-    metric_results[nid] = {"mean_return_spread": spread}
-    return spread
-
-
-def _node_user_metric(
-    wf,
-    nid: str,
-    node,
-    outputs: dict[str, dict[str, Any]],
-    metric_results: dict[str, Any],
-) -> None:
-    params = dict(node.params or {})
-    fdc = _resolve_socket(wf, outputs, nid, "clean_factor")
-    if not isinstance(fdc, pd.DataFrame):
-        raise TypeError("clean_factor 须为 DataFrame")
-    mid = str(params.get("metric_id") or "").strip()
+) -> tuple[dict[str, float] | None, dict[str, float] | None]:
+    mid = parse_metric_node_type(node.type)
     if not mid:
-        raise ValueError("user_metric 节点须设置 params.metric_id")
-    mreg = load_metrics_registry()
-    mrec = metric_get_by_id(mreg, mid)
-    if mrec is None:
-        raise ValueError(f"评价指标不存在: {mid}")
-    src = read_metric_source(mrec)
-    cls, _ = load_evaluation_metric_class(src)
-    inst = cls()
-    raw = inst.evaluate(fdc)  # type: ignore[call-arg]
+        raise ValueError(f"非指标节点: {node.type!r}")
+    resolved = resolve_evaluation_metric(mid)
+    fdc = _resolve_socket(wf, outputs, nid, "clean_factor")
+    if not isinstance(fdc, pd.DataFrame):
+        raise TypeError("clean_factor 须为 DataFrame")
+    inst = resolved.metric_class()
+    params = dict(node.params or {})
+    raw = inst.evaluate(fdc, quantiles=last_quantiles, **params)  # type: ignore[call-arg]
+    sock = resolved.primary_output_socket
     out_val = _jsonable_metric_value(raw)
-    outputs[nid] = {"out": raw}
-    metric_results[nid] = {"out": out_val}
+    outputs[nid] = {sock: raw}
+    metric_results[nid] = {sock: out_val}
+    mic_merge: dict[str, float] | None = None
+    spread_merge: dict[str, float] | None = None
+    if resolved.snapshot_field == "mean_ic":
+        series = raw
+        if isinstance(series, pd.DataFrame):
+            series = series.iloc[:, 0]
+        if isinstance(series, pd.Series):
+            mic_merge = _series_to_period_dict(series)
+    elif resolved.snapshot_field == "mean_return_spread":
+        if isinstance(raw, pd.Series):
+            spread_merge = _series_to_period_dict(raw)
+    return mic_merge, spread_merge
 
 
 def run_evaluation_profile_workflow(
@@ -176,6 +142,7 @@ def run_evaluation_profile_workflow(
     *,
     test_set_id: str | None,
 ) -> FactorEvaluationSnapshot:
+    profile = profile.model_copy(update={"workflow": migrate_evaluation_workflow(profile.workflow)})
     wf = profile.workflow
     err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
         factor_id, test_set_id=test_set_id
@@ -220,20 +187,19 @@ def run_evaluation_profile_workflow(
                     outputs=outputs,
                     metric_results=metric_results,
                 )
-            elif nt == "mean_information_coefficient":
-                merged_mean_ic = _node_mean_information_coefficient(
-                    wf, nid, outputs, metric_results
-                )
-            elif nt == "mean_return_spread":
-                merged_spread = _node_mean_return_spread(
+            elif parse_metric_node_type(nt):
+                mic, sp = _run_metric_node(
                     wf,
                     nid,
+                    node,
                     last_quantiles=last_quantiles,
                     outputs=outputs,
                     metric_results=metric_results,
                 )
-            elif nt == "user_metric":
-                _node_user_metric(wf, nid, node, outputs, metric_results)
+                if mic is not None:
+                    merged_mean_ic = mic
+                if sp is not None:
+                    merged_spread = sp
             else:
                 raise ValueError(f"未知节点类型: {nt}")
 

@@ -28,16 +28,7 @@ import "@xyflow/react/dist/style.css";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type {
-  EvaluationMetricSummaryPublic,
   EvaluationWorkflowDto,
   NodeTypeDefinitionPublic,
   WorkflowNodeDto,
@@ -110,7 +101,6 @@ export type EvaluationWorkflowCanvasHandle = {
 
 type InnerProps = {
   catalog: NodeTypeDefinitionPublic[];
-  metrics: EvaluationMetricSummaryPublic[];
   initialWorkflow: EvaluationWorkflowDto;
 };
 
@@ -118,7 +108,7 @@ const WorkflowCanvasInner = forwardRef<
   EvaluationWorkflowCanvasHandle,
   InnerProps
 >(function WorkflowCanvasInner(
-  { catalog, metrics, initialWorkflow },
+  { catalog, initialWorkflow },
   ref,
 ) {
   const catMap = useMemo(() => catalogToMap(catalog), [catalog]);
@@ -191,7 +181,7 @@ const WorkflowCanvasInner = forwardRef<
         id,
         type: backendType,
         pos: [120 + Math.random() * 80, 80 + Math.random() * 80],
-        params: backendType === "user_metric" ? { metric_id: "" } : {},
+        params: {},
       };
       const data = enrichNodeData(wfNode, catMap);
       setNodes((ns) => [
@@ -205,26 +195,6 @@ const WorkflowCanvasInner = forwardRef<
       ]);
     },
     [catMap, setNodes],
-  );
-
-  const updateSelectedParams = useCallback(
-    (patch: Record<string, unknown>) => {
-      if (!selectedId) return;
-      setNodes((ns) =>
-        ns.map((n) =>
-          n.id === selectedId
-            ? {
-              ...n,
-              data: {
-                ...n.data,
-                params: { ...n.data.params, ...patch },
-              },
-            }
-            : n,
-        ),
-      );
-    },
-    [selectedId, setNodes],
   );
 
   const deleteSelected = useCallback(() => {
@@ -284,36 +254,13 @@ const WorkflowCanvasInner = forwardRef<
                 <div className="font-mono text-[0.65rem] text-muted-foreground">
                   {selectedNode.data.backendType}
                 </div>
-                {selectedNode.data.backendType === "user_metric" ? (
-                  <div className="space-y-1">
-                    <Label className="text-[0.65rem]">metric_id</Label>
-                    <Select
-                      value={
-                        String(selectedNode.data.params.metric_id ?? "") ||
-                        "__none__"
-                      }
-                      onValueChange={(v) =>
-                        updateSelectedParams({
-                          metric_id: v === "__none__" ? "" : v,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="选择指标" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">（未选）</SelectItem>
-                        {metrics.map((m) => (
-                          <SelectItem key={m.id} value={m.id}>
-                            {m.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {selectedNode.data.backendType.startsWith("metric:") ? (
+                  <p className="text-muted-foreground text-[0.7rem] leading-relaxed">
+                    指标已绑定到该节点类型。可选参数请在「JSON」模式中编辑。
+                  </p>
                 ) : (
-                  <p className="text-muted-foreground">
-                    其他节点的 params 请在「JSON」模式中编辑。
+                  <p className="text-muted-foreground text-[0.65rem]">
+                    params 请在「JSON」模式中编辑。
                   </p>
                 )}
                 <Button

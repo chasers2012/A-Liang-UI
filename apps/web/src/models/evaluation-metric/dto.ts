@@ -21,6 +21,7 @@ export interface EvaluationMetricSummaryPublic {
   created_at: string;
   updated_at: string;
   visualization?: MetricVisualizationSpec | null;
+  builtin?: boolean;
 }
 
 export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {

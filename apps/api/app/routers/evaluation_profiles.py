@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
+from app.evaluation.builtin_metric_registry import is_builtin_metric_id
 from app.evaluation.graph_validate import validate_workflow_graph
-from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS, builtin_workflow_type_ids
 from app.evaluation.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -18,18 +18,21 @@ from app.evaluation.profiles_store import (
     load_file,
     save_file,
 )
+from app.evaluation.workflow_graph_types import all_workflow_node_type_ids, workflow_node_definition
+from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
 
 def _to_public(rec) -> EvaluationProfilePublic:
+    wf = migrate_evaluation_workflow(rec.workflow)
     return EvaluationProfilePublic(
         id=rec.id,
         name=rec.name,
         description=rec.description,
         test_set_id=rec.test_set_id,
         prepare=rec.prepare,
-        workflow=rec.workflow,
+        workflow=wf,
         is_default=rec.is_default,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
@@ -39,8 +42,9 @@ def _to_public(rec) -> EvaluationProfilePublic:
 def _validate_workflow_if_needed(wf) -> None:
     if not wf.nodes:
         return
+    wf = migrate_evaluation_workflow(wf)
     try:
-        validate_workflow_graph(wf, allowed_types=builtin_workflow_type_ids())
+        validate_workflow_graph(wf, allowed_types=all_workflow_node_type_ids())
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -48,7 +52,30 @@ def _validate_workflow_if_needed(wf) -> None:
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
     out: list[NodeTypeDefinitionPublic] = []
-    for spec in BUILTIN_NODE_SPECS.values():
+    prep = workflow_node_definition("prepare_alphalens")
+    out.append(
+        NodeTypeDefinitionPublic(
+            type=prep.type,
+            label=prep.label,
+            description=prep.description,
+            inputs=[
+                NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
+                for s in prep.inputs
+            ],
+            outputs=[
+                NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
+                for s in prep.outputs
+            ],
+            user_defined=False,
+            metric_id=None,
+        )
+    )
+    allowed = all_workflow_node_type_ids()
+    for nt in sorted(allowed):
+        if nt == "prepare_alphalens":
+            continue
+        spec = workflow_node_definition(nt)
+        mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
         out.append(
             NodeTypeDefinitionPublic(
                 type=spec.type,
@@ -62,8 +89,8 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                     NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                     for s in spec.outputs
                 ],
-                user_defined=False,
-                metric_id=None,
+                user_defined=bool(mid and not is_builtin_metric_id(mid)),
+                metric_id=mid,
             )
         )
     return out
@@ -86,9 +113,10 @@ def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
 
 @router.post("", response_model=EvaluationProfilePublic)
 def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfilePublic:
-    if body.workflow:
-        _validate_workflow_if_needed(body.workflow)
     rec = body.to_record()
+    if rec.workflow.nodes:
+        rec = rec.model_copy(update={"workflow": migrate_evaluation_workflow(rec.workflow)})
+    _validate_workflow_if_needed(rec.workflow)
     reg = load_file()
     reg.items.append(rec)
     if rec.is_default:
@@ -120,7 +148,7 @@ def patch_evaluation_profile(
         rec.prepare = body.prepare
     if "workflow" in data and body.workflow is not None:
         _validate_workflow_if_needed(body.workflow)
-        rec.workflow = body.workflow
+        rec.workflow = migrate_evaluation_workflow(body.workflow)
     if "is_default" in data and body.is_default is not None:
         rec.is_default = body.is_default
 

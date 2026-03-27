@@ -14,6 +14,7 @@ _ALPHALENS_EXPORTS = frozenset(
         "AlphalensMetrics",
         "FactorInformationCoefficientMetric",
         "MeanInformationCoefficientMetric",
+        "MeanReturnSpreadMetric",
         "close_prices_wide",
         "compute_forward_return_from_wide",
     }
@@ -35,6 +36,7 @@ __all__ = [
     "EvaluationMetric",
     "FactorInformationCoefficientMetric",
     "MeanInformationCoefficientMetric",
+    "MeanReturnSpreadMetric",
     "close_prices_wide",
     "compute_factor_values",
     "compute_factor_values_from_source",

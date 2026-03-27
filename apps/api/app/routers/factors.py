@@ -252,9 +252,10 @@ def post_factor_evaluation_run(
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
         from app.evaluation.graph_validate import validate_workflow_graph
-        from app.evaluation.node_type_registry import builtin_workflow_type_ids
         from app.evaluation.profiles_store import get_by_id as get_profile_by_id
         from app.evaluation.profiles_store import load_file as load_profiles_file
+        from app.evaluation.workflow_graph_types import all_workflow_node_type_ids
+        from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 
         preg = load_profiles_file()
         prof = get_profile_by_id(preg, pid)
@@ -262,7 +263,8 @@ def post_factor_evaluation_run(
             raise HTTPException(status_code=400, detail="评价方案不存在")
         if prof.workflow.nodes:
             try:
-                validate_workflow_graph(prof.workflow, allowed_types=builtin_workflow_type_ids())
+                wf = migrate_evaluation_workflow(prof.workflow)
+                validate_workflow_graph(wf, allowed_types=all_workflow_node_type_ids())
             except ValueError as e:
                 http_bad_request(e)
     try:

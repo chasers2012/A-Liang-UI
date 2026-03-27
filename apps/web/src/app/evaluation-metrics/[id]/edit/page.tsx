@@ -45,6 +45,7 @@ export default function EditEvaluationMetricPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [builtinReadOnly, setBuiltinReadOnly] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -52,6 +53,7 @@ export default function EditEvaluationMetricPage() {
     setLoading(true);
     try {
       const d = await getEvaluationMetric(id);
+      setBuiltinReadOnly(Boolean(d.builtin));
       setName(d.name);
       setDescription(d.description);
       setSource(d.source);
@@ -71,7 +73,7 @@ export default function EditEvaluationMetricPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id) return;
+    if (!id || builtinReadOnly) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -123,6 +125,12 @@ export default function EditEvaluationMetricPage() {
 
   return (
     <FactorFormPageContainer>
+      {builtinReadOnly && (
+        <Alert className="mb-4">
+          <AlertTitle>只读</AlertTitle>
+          <AlertDescription>内置指标不可在此编辑。</AlertDescription>
+        </Alert>
+      )}
       <FactorFormPageHeader title="编辑评价指标" />
       <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
         {formError && (
@@ -191,7 +199,7 @@ export default function EditEvaluationMetricPage() {
           />
         </div>
         <div className="flex gap-2">
-          <Button type="submit" disabled={submitting || !name.trim()}>
+          <Button type="submit" disabled={submitting || !name.trim() || builtinReadOnly}>
             {submitting ? "保存中…" : "保存"}
           </Button>
           <Link

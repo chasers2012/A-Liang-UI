@@ -41,4 +41,4 @@ def test_evaluation_profiles_node_types(client):
     assert r.status_code == 200
     types = {x["type"] for x in r.json()}
     assert "prepare_alphalens" in types
-    assert "mean_information_coefficient" in types
+    assert "metric:builtin.mean_ic" in types

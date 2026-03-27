@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from collections.abc import Set as AbstractSet
 
-from app.evaluation.node_type_registry import builtin_node_definition, is_builtin_type
 from app.evaluation.profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
+from app.evaluation.workflow_graph_types import workflow_node_definition_or_fail
 
 
 def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNode]:
@@ -45,14 +45,14 @@ def _validate_link_sockets(
 ) -> None:
     ft = by_id[link.from_node].type
     tt = by_id[link.to_node].type
-    if is_builtin_type(ft):
-        bout = {s.name for s in builtin_node_definition(ft).outputs}
-        if link.from_socket not in bout:
-            raise ValueError(f"连线[{li}] 源端口 {link.from_socket!r} 不是 {ft} 的输出")
-    if is_builtin_type(tt):
-        binp = {s.name for s in builtin_node_definition(tt).inputs}
-        if link.to_socket not in binp:
-            raise ValueError(f"连线[{li}] 目标端口 {link.to_socket!r} 不是 {tt} 的输入")
+    fdef = workflow_node_definition_or_fail(ft)
+    bout = {s.name for s in fdef.outputs}
+    if link.from_socket not in bout:
+        raise ValueError(f"连线[{li}] 源端口 {link.from_socket!r} 不是 {ft} 的输出")
+    tdef = workflow_node_definition_or_fail(tt)
+    binp = {s.name for s in tdef.inputs}
+    if link.to_socket not in binp:
+        raise ValueError(f"连线[{li}] 目标端口 {link.to_socket!r} 不是 {tt} 的输入")
 
 
 def _validate_links(links: list[WorkflowLink], by_id: dict[str, WorkflowNode]) -> None:
@@ -95,5 +95,7 @@ def validate_workflow_graph(
     links = workflow.links
     by_id = _validate_unique_node_ids(nodes)
     _validate_node_types(nodes, allowed_types)
+    for n in nodes:
+        workflow_node_definition_or_fail(n.type)
     _validate_links(links, by_id)
     _assert_workflow_acyclic(nodes, links, by_id)

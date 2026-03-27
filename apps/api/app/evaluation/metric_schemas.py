@@ -11,6 +11,8 @@ EVALUATION_METRICS_DIR = "evaluation_metrics"
 
 utc_now_iso = datetime_utils.utc_now_iso
 
+BUILTIN_METRIC_SOURCE_PLACEHOLDER = "# 内置指标，源码在 evaluate 包中，仅作只读占位。\n"
+
 
 def source_relative_path(metric_id: str) -> str:
     return f"{EVALUATION_METRICS_DIR}/{metric_id}.py"
@@ -124,6 +126,7 @@ class EvaluationMetricSummaryPublic(BaseModel):
     created_at: str
     updated_at: str
     visualization: MetricVisualizationSpec | None = None
+    builtin: bool = False
 
 
 class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):
@@ -139,6 +142,7 @@ def record_to_summary(rec: EvaluationMetricRecord) -> EvaluationMetricSummaryPub
         created_at=rec.created_at,
         updated_at=rec.updated_at,
         visualization=rec.visualization,
+        builtin=False,
     )
 
 

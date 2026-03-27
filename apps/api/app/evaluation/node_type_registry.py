@@ -1,4 +1,4 @@
-"""Builtin workflow node types (inputs/outputs for validation and UI)."""
+"""Static prepare node spec; metric nodes use metric:<id> (see workflow_graph_types)."""
 
 from __future__ import annotations
 
@@ -29,42 +29,16 @@ BUILTIN_NODE_SPECS: dict[str, BuiltinNodeSpec] = {
         inputs=(),
         outputs=(SocketSpec("clean_factor", False, "factor_data_clean"),),
     ),
-    "mean_information_coefficient": BuiltinNodeSpec(
-        type="mean_information_coefficient",
-        label="平均 IC",
-        description="各持有期平均信息系数（Alphalens）",
-        inputs=(SocketSpec("clean_factor", True, "factor_data_clean"),),
-        outputs=(SocketSpec("mean_ic", False, "scalar_json"),),
-    ),
-    "mean_return_spread": BuiltinNodeSpec(
-        type="mean_return_spread",
-        label="多空收益差",
-        description="分位多空平均收益差（按持有期）",
-        inputs=(SocketSpec("clean_factor", True, "factor_data_clean"),),
-        outputs=(SocketSpec("mean_return_spread", False, "scalar_json"),),
-    ),
-    "user_metric": BuiltinNodeSpec(
-        type="user_metric",
-        label="自定义指标",
-        description="引用指标库中的 EvaluationMetric 实现",
-        inputs=(SocketSpec("clean_factor", True, "factor_data_clean"),),
-        outputs=(SocketSpec("out", False, "scalar_json"),),
-    ),
 }
 
 
-def is_builtin_type(node_type: str) -> bool:
-    return node_type in BUILTIN_NODE_SPECS
+def is_prepare_node_type(node_type: str) -> bool:
+    return node_type == "prepare_alphalens"
 
 
 def builtin_node_definition(node_type: str) -> BuiltinNodeSpec:
     return BUILTIN_NODE_SPECS[node_type]
 
 
-def list_builtin_types() -> list[str]:
+def list_prepare_node_types() -> list[str]:
     return list(BUILTIN_NODE_SPECS.keys())
-
-
-def builtin_workflow_type_ids() -> frozenset[str]:
-    """Node type strings allowed in workflow graph validation (builtin nodes only)."""
-    return frozenset(BUILTIN_NODE_SPECS.keys())

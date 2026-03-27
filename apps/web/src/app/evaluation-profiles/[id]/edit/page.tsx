@@ -28,11 +28,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   getEvaluationProfile,
-  listEvaluationMetrics,
   listEvaluationNodeTypes,
   listEvaluationTestSets,
   patchEvaluationProfile,
-  type EvaluationMetricSummaryPublic,
   type EvaluationTestSetPublic,
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
@@ -73,7 +71,6 @@ export default function EditEvaluationProfilePage() {
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
   const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
-  const [metrics, setMetrics] = useState<EvaluationMetricSummaryPublic[]>([]);
   const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,13 +86,11 @@ export default function EditEvaluationProfilePage() {
     setLoadError(null);
     setLoading(true);
     try {
-      const [d, nodeTypes, metricList] = await Promise.all([
+      const [d, nodeTypes] = await Promise.all([
         getEvaluationProfile(id),
         listEvaluationNodeTypes(),
-        listEvaluationMetrics(),
       ]);
       setCatalog(nodeTypes);
-      setMetrics(metricList);
       setName(d.name);
       setDescription(d.description);
       setTestSetId(d.test_set_id ?? "__none__");
@@ -341,7 +336,6 @@ export default function EditEvaluationProfilePage() {
               key={canvasKey}
               ref={canvasRef}
               catalog={catalog}
-              metrics={metrics}
               initialWorkflow={initialWorkflowForCanvas}
             />
           ) : (

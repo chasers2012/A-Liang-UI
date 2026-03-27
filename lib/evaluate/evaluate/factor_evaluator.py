@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass
+from typing import Any
 
 import alphalens as al
 import pandas as pd
@@ -20,6 +21,7 @@ from .alphalens_ic_metric import (
     FactorInformationCoefficientMetric,
     MeanInformationCoefficientMetric,
 )
+from .evaluation_metric import EvaluationMetric
 
 
 def close_prices_wide(price_panel: pd.DataFrame, close_col: str = "close") -> pd.DataFrame:
@@ -125,6 +127,24 @@ def _alphalens_metrics(
         factor_alpha_beta=alpha_beta,
         factor_rank_autocorrelation=rank_ac,
     )
+
+
+class MeanReturnSpreadMetric(EvaluationMetric[pd.Series]):
+    """Mean long-short quantile spread per period (AlphalensMetrics.mean_return_spread)."""
+
+    def evaluate(
+        self,
+        factor_data_clean: pd.DataFrame,
+        *,
+        quantiles: int,
+        **kwargs: Any,
+    ) -> pd.Series:
+        return _alphalens_metrics(
+            factor_data_clean,
+            quantiles=quantiles,
+            group_adjust=False,
+            quantile_returns_demeaned=True,
+        ).mean_return_spread
 
 
 @dataclass

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 
 from .evaluation_metric import EvaluationMetric
@@ -36,7 +38,8 @@ class MeanInformationCoefficientMetric(EvaluationMetric[pd.Series | pd.DataFrame
     combinations may yield a :class:`pandas.DataFrame`.
     """
 
-    def evaluate(self, factor_data_clean: pd.DataFrame) -> pd.Series | pd.DataFrame:
+    def evaluate(self, factor_data_clean: pd.DataFrame, **kwargs: Any) -> pd.Series | pd.DataFrame:
+        _ = kwargs
         import alphalens as al
 
         return al.performance.mean_information_coefficient(

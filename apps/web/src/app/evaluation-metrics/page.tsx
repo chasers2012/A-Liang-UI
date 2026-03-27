@@ -68,8 +68,7 @@ export default function EvaluationMetricsPage() {
         <CardHeader>
           <CardTitle>指标列表</CardTitle>
           <CardDescription>
-            在工作流中使用节点类型 <span className="font-mono">user_metric</span>{" "}
-            并设置 <span className="font-mono">params.metric_id</span>
+            在工作流画布中从「添加节点」选择具体指标（节点类型为 <span className="font-mono">metric:&lt;指标id&gt;</span>）
           </CardDescription>
           <CardAction>
             <Link

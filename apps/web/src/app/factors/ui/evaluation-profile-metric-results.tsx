@@ -13,6 +13,9 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   user_metric: "自定义指标",
 };
 
+const METRIC_NODE_PREFIX = "metric:";
+
+
 const SOCKET_LABELS: Record<string, string> = {
   mean_ic: "平均 IC",
   mean_return_spread: "多空收益差",
@@ -26,9 +29,16 @@ export type MetricMetaEntry = {
 };
 
 function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
-  if (node?.type !== "user_metric" || !node.params) return null;
-  const mid = node.params.metric_id;
-  return typeof mid === "string" && mid.trim() ? mid.trim() : null;
+  if (!node?.type) return null;
+  if (node.type.startsWith(METRIC_NODE_PREFIX)) {
+    const id = node.type.slice(METRIC_NODE_PREFIX.length).trim();
+    return id || null;
+  }
+  if (node.type === "user_metric" && node.params) {
+    const mid = node.params.metric_id;
+    return typeof mid === "string" && mid.trim() ? mid.trim() : null;
+  }
+  return null;
 }
 
 function metricDisplayName(
@@ -334,7 +344,7 @@ function periodDayStyleForSocket(
     return true;
   }
   if (
-    node?.type === "user_metric" &&
+    node?.type?.startsWith(METRIC_NODE_PREFIX) &&
     socketKey === "out" &&
     viz?.period_day_keys
   ) {
