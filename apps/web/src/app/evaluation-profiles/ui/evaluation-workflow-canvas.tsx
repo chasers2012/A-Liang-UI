@@ -73,7 +73,7 @@ function EvalWorkflowNode({ data, selected }: NodeProps<EvalRFNode>) {
           type="target"
           position={Position.Left}
           id={inp.name}
-          className="!h-2.5 !w-2.5 !border-2 !border-border !bg-background"
+          className="h-2.5! w-2.5! border-2! border-border! bg-background!"
           style={{
             top:
               inputs.length === 1
@@ -88,7 +88,7 @@ function EvalWorkflowNode({ data, selected }: NodeProps<EvalRFNode>) {
           type="source"
           position={Position.Right}
           id={out.name}
-          className="!h-2.5 !w-2.5 !border-2 !border-border !bg-primary"
+          className="h-2.5! w-2.5! border-2! border-border! bg-primary!"
           style={{
             top:
               outputs.length === 1
@@ -214,12 +214,12 @@ const WorkflowCanvasInner = forwardRef<
         ns.map((n) =>
           n.id === selectedId
             ? {
-                ...n,
-                data: {
-                  ...n.data,
-                  params: { ...n.data.params, ...patch },
-                },
-              }
+              ...n,
+              data: {
+                ...n.data,
+                params: { ...n.data.params, ...patch },
+              },
+            }
             : n,
         ),
       );
@@ -273,7 +273,7 @@ const WorkflowCanvasInner = forwardRef<
         >
           <Background />
           <Controls />
-          <MiniMap zoomable pannable className="!bg-card" />
+          <MiniMap zoomable pannable className="bg-card!" />
           <Panel
             position="top-right"
             className="m-2 max-w-[240px] rounded-md border border-border bg-card p-2 text-xs shadow-md"

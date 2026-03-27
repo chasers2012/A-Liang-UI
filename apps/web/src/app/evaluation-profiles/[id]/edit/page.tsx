@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -41,7 +48,9 @@ import {
 import {
   EMPTY_EVALUATION_WORKFLOW,
   parseEvaluationWorkflowJson,
+  parseMaxLoss,
   parsePeriodsCsv,
+  parseQuantilesInput,
 } from "../../ui/profile-form-shared";
 
 export default function EditEvaluationProfilePage() {
@@ -109,8 +118,11 @@ export default function EditEvaluationProfilePage() {
   useEffectMicrotask(() => load(), [load]);
 
   const initialWorkflowForCanvas = useMemo(() => {
-    const p = parseEvaluationWorkflowJson(workflowJson);
-    return p.ok ? p.value : EMPTY_EVALUATION_WORKFLOW;
+    try {
+      return parseEvaluationWorkflowJson(workflowJson);
+    } catch {
+      return EMPTY_EVALUATION_WORKFLOW;
+    }
   }, [workflowJson]);
 
   const setWorkflowMode = (next: "canvas" | "json") => {
@@ -120,9 +132,10 @@ export default function EditEvaluationProfilePage() {
       if (w) setWorkflowJson(JSON.stringify(w, null, 2));
     }
     if (workflowEditMode === "json" && next === "canvas") {
-      const p = parseEvaluationWorkflowJson(workflowJson);
-      if (!p.ok) {
-        setFormError(p.error);
+      try {
+        parseEvaluationWorkflowJson(workflowJson);
+      } catch (e) {
+        setFormError(e instanceof Error ? e.message : String(e));
         return;
       }
       setFormError(null);
@@ -131,7 +144,7 @@ export default function EditEvaluationProfilePage() {
     setWorkflowEditMode(next);
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!id) return;
     setFormError(null);
@@ -140,31 +153,15 @@ export default function EditEvaluationProfilePage() {
       setFormError("请填写至少一个 forward_return_periods");
       return;
     }
-    let workflow: unknown;
-    if (workflowEditMode === "canvas") {
-      workflow = canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW;
-    } else {
-      const p = parseEvaluationWorkflowJson(workflowJson);
-      if (!p.ok) {
-        setFormError(p.error);
-        return;
-      }
-      workflow = p.value;
-    }
-    const ml = Number(maxLoss);
-    if (Number.isNaN(ml)) {
-      setFormError("max_loss 须为数字");
-      return;
-    }
-    const qRaw = quantiles.trim();
-    const q = qRaw === "" ? null : Number(qRaw);
-    if (qRaw !== "" && (Number.isNaN(q) || q === null || q < 2)) {
-      setFormError("quantiles 须为空或 >= 2 的整数");
-      return;
-    }
 
     setSubmitting(true);
     try {
+      const workflow =
+        workflowEditMode === "canvas"
+          ? canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW
+          : parseEvaluationWorkflowJson(workflowJson);
+      const ml = parseMaxLoss(maxLoss);
+      const q = parseQuantilesInput(quantiles);
       await patchEvaluationProfile(id, {
         name: name.trim(),
         description: description.trim(),

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -40,7 +46,9 @@ import {
   DEFAULT_WORKFLOW_JSON,
   EMPTY_EVALUATION_WORKFLOW,
   parseEvaluationWorkflowJson,
+  parseMaxLoss,
   parsePeriodsCsv,
+  parseQuantilesInput,
 } from "../ui/profile-form-shared";
 
 export default function NewEvaluationProfilePage() {
@@ -81,8 +89,11 @@ export default function NewEvaluationProfilePage() {
   }, []);
 
   const initialWorkflowForCanvas = useMemo(() => {
-    const p = parseEvaluationWorkflowJson(workflowJson);
-    return p.ok ? p.value : EMPTY_EVALUATION_WORKFLOW;
+    try {
+      return parseEvaluationWorkflowJson(workflowJson);
+    } catch {
+      return EMPTY_EVALUATION_WORKFLOW;
+    }
   }, [workflowJson]);
 
   const setWorkflowMode = (next: "canvas" | "json") => {
@@ -92,9 +103,10 @@ export default function NewEvaluationProfilePage() {
       if (w) setWorkflowJson(JSON.stringify(w, null, 2));
     }
     if (workflowEditMode === "json" && next === "canvas") {
-      const p = parseEvaluationWorkflowJson(workflowJson);
-      if (!p.ok) {
-        setError(p.error);
+      try {
+        parseEvaluationWorkflowJson(workflowJson);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
         return;
       }
       setError(null);
@@ -103,7 +115,7 @@ export default function NewEvaluationProfilePage() {
     setWorkflowEditMode(next);
   };
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     const periods = parsePeriodsCsv(periodsCsv);
@@ -112,25 +124,17 @@ export default function NewEvaluationProfilePage() {
       return;
     }
     let workflow: unknown;
-    if (workflowEditMode === "canvas") {
-      workflow = canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW;
-    } else {
-      const p = parseEvaluationWorkflowJson(workflowJson);
-      if (!p.ok) {
-        setError(p.error);
-        return;
-      }
-      workflow = p.value;
-    }
-    const ml = Number(maxLoss);
-    if (Number.isNaN(ml)) {
-      setError("max_loss 须为数字");
-      return;
-    }
-    const qRaw = quantiles.trim();
-    const q = qRaw === "" ? null : Number(qRaw);
-    if (qRaw !== "" && (Number.isNaN(q) || q === null || q < 2)) {
-      setError("quantiles 须为空或 >= 2 的整数");
+    let ml: number;
+    let q: number | null;
+    try {
+      workflow =
+        workflowEditMode === "canvas"
+          ? canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW
+          : parseEvaluationWorkflowJson(workflowJson);
+      ml = parseMaxLoss(maxLoss);
+      q = parseQuantilesInput(quantiles);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
       return;
     }
 

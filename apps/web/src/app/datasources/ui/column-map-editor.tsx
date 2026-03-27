@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +67,38 @@ type Props = {
   inspectContext: InspectContext | null;
 };
 
+function loadColumnsPreflightError(ctx: InspectContext): string | null {
+  if (!ctx.table.trim()) return "请先填写表名";
+  const host = ctx.db_host.trim();
+  const dbName = ctx.db_name.trim();
+  if (!ctx.datasourceId && (!host || !dbName)) {
+    return "请先填写主机与数据库名";
+  }
+  return null;
+}
+
+type PortParseOutcome =
+  | { ok: true; port: number | null | undefined }
+  | { ok: false };
+
+function tryParsePortForColumnLoad(
+  portStr: string,
+  generation: number,
+  loadGenerationRef: MutableRefObject<number>,
+  setLoadColsError: (msg: string | null) => void,
+  setLoadingCols: (v: boolean) => void,
+): PortParseOutcome {
+  try {
+    return { ok: true, port: parseOptionalPort(portStr) };
+  } catch (e) {
+    if (generation === loadGenerationRef.current) {
+      setLoadColsError(e instanceof Error ? e.message : String(e));
+      setLoadingCols(false);
+    }
+    return { ok: false };
+  }
+}
+
 export function ColumnMapEditor({
   rows,
   dateColumn,
@@ -94,31 +133,27 @@ export function ColumnMapEditor({
 
   const loadColumns = useCallback(async () => {
     if (!inspectContext) return;
-    const t = inspectContext.table.trim();
-    if (!t) {
-      setLoadColsError("请先填写表名");
+    const preflight = loadColumnsPreflightError(inspectContext);
+    if (preflight) {
+      setLoadColsError(preflight);
       return;
     }
+    const t = inspectContext.table.trim();
     const host = inspectContext.db_host.trim();
     const dbName = inspectContext.db_name.trim();
-    if (!inspectContext.datasourceId && (!host || !dbName)) {
-      setLoadColsError("请先填写主机与数据库名");
-      return;
-    }
     const generation = ++loadGenerationRef.current;
     setLoadColsError(null);
     setLoadingCols(true);
     try {
-      let dbPort: number | null | undefined;
-      try {
-        dbPort = parseOptionalPort(inspectContext.db_port);
-      } catch (e) {
-        if (generation === loadGenerationRef.current) {
-          setLoadColsError(e instanceof Error ? e.message : String(e));
-          setLoadingCols(false);
-        }
-        return;
-      }
+      const portOutcome = tryParsePortForColumnLoad(
+        inspectContext.db_port,
+        generation,
+        loadGenerationRef,
+        setLoadColsError,
+        setLoadingCols,
+      );
+      if (!portOutcome.ok) return;
+      const dbPort = portOutcome.port;
       const { columns } = await fetchSqlTableColumns({
         datasource_id: inspectContext.datasourceId,
         db_driver: inspectContext.db_driver,

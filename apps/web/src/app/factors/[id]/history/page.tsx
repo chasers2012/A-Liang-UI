@@ -65,6 +65,367 @@ function sortedPeriodKeys(rows: FactorEvaluationHistoryEntry[]): string[] {
   return [...s].sort((a, b) => Number(a) - Number(b));
 }
 
+function FactorHistoryHeader(props: { id: string; factorName: string }) {
+  const { id, factorName } = props;
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+          历史版本
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-mono text-xs">{factorName}</span>
+          {" · "}
+          代码快照与评价记录来自 workspace{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+            config/factor_code_snapshots.json
+          </code>{" "}
+          与{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+            config/factor_evaluation_history.json
+          </code>
+          。
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={`/factors/${encodeURIComponent(id)}/edit`}
+          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+        >
+          编辑源码
+        </Link>
+        <Link
+          href="/factors"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+        >
+          因子库
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function FactorHistoryTabBar(props: {
+  tab: "snapshots" | "evaluations";
+  onTab: (t: "snapshots" | "evaluations") => void;
+}) {
+  const { tab, onTab } = props;
+  return (
+    <div className="flex gap-2 border-b border-border/60 pb-2">
+      <Button
+        type="button"
+        variant={tab === "snapshots" ? "secondary" : "ghost"}
+        size="sm"
+        className="gap-1.5"
+        onClick={() => onTab("snapshots")}
+      >
+        <History className="size-4" />
+        代码快照
+      </Button>
+      <Button
+        type="button"
+        variant={tab === "evaluations" ? "secondary" : "ghost"}
+        size="sm"
+        onClick={() => onTab("evaluations")}
+      >
+        评价历史
+      </Button>
+    </div>
+  );
+}
+
+function FactorSnapshotsPanel(props: {
+  snapshots: FactorCodeSnapshotSummaryPublic[];
+  selectedId: string | null;
+  onSelectSnapshot: (snapshotId: string) => void;
+  detail: FactorCodeSnapshotDetailPublic | null;
+  detailError: string | null;
+}) {
+  const { snapshots, selectedId, onSelectSnapshot, detail, detailError } =
+    props;
+  return (
+    <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,14rem)_1fr]">
+      <Card className="min-h-48 border-border/80 shadow-sm">
+        <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
+          <CardTitle className="text-sm">快照列表</CardTitle>
+          <CardDescription className="text-xs">
+            新→旧；点击查看源码
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto p-2">
+          {snapshots.length === 0 ? (
+            <p className="px-2 py-4 text-xs text-muted-foreground">
+              暂无快照。保存代码且源码变更时会自动生成。
+            </p>
+          ) : (
+            snapshots.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => onSelectSnapshot(s.id)}
+                className={cn(
+                  "w-full rounded-md border px-2 py-2 text-left text-xs transition-colors",
+                  selectedId === s.id
+                    ? "border-primary/40 bg-muted/40"
+                    : "border-transparent hover:bg-muted/30",
+                )}
+              >
+                <div className="font-mono text-[0.65rem] text-muted-foreground">
+                  {formatTs(s.saved_at)}
+                </div>
+                <div className="mt-0.5 font-medium">
+                  {s.kind === "manual" ? (
+                    <span className="text-foreground">
+                      {s.label ?? "手动"}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">自动</span>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="min-h-48 border-border/80 shadow-sm">
+        <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
+          <CardTitle className="text-sm">源码（只读）</CardTitle>
+          {detail ? (
+            <CardDescription className="text-xs">
+              {detail.meta.name} · max_window {detail.meta.max_window}
+            </CardDescription>
+          ) : null}
+        </CardHeader>
+        <CardContent className="p-0">
+          {detailError ? (
+            <Alert variant="destructive" className="m-4">
+              <AlertDescription>{detailError}</AlertDescription>
+            </Alert>
+          ) : null}
+          {detail && !detailError ? (
+            <pre className="max-h-[min(60vh,32rem)] overflow-auto p-4 font-mono text-xs leading-relaxed">
+              {detail.source}
+            </pre>
+          ) : null}
+          {!detail && !detailError && selectedId ? (
+            <p className="p-4 text-sm text-muted-foreground">加载源码…</p>
+          ) : null}
+          {!selectedId && snapshots.length > 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">请选择快照</p>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function FactorEvaluationsPanel(props: {
+  periodKeys: string[];
+  periodItemMap: Record<string, string>;
+  primaryPeriod: string;
+  selectedPeriod: string;
+  onPeriodChange: (v: string) => void;
+  evalHistory: FactorEvaluationHistoryEntry[];
+  displayPeriod: string;
+}) {
+  const {
+    periodKeys,
+    periodItemMap,
+    primaryPeriod,
+    selectedPeriod,
+    onPeriodChange,
+    evalHistory,
+    displayPeriod,
+  } = props;
+
+  return (
+    <Card className="border-border/80 shadow-sm">
+      <CardHeader className="space-y-3 border-b border-border/60 bg-muted/10 py-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-sm">评价历史</CardTitle>
+            <CardDescription className="text-xs">
+              保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
+            </CardDescription>
+          </div>
+          {periodKeys.length > 0 ? (
+            <div className="flex flex-col gap-1.5 sm:items-end">
+              <Label
+                htmlFor="eval-period"
+                className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+              >
+                展示周期（主周期 {primaryPeriod}D）
+              </Label>
+              <Select
+                modal={false}
+                items={periodItemMap}
+                value={selectedPeriod}
+                onValueChange={(v) => {
+                  if (v) onPeriodChange(v);
+                }}
+              >
+                <SelectTrigger id="eval-period" size="sm" className="w-34">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodKeys.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {k} 日
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="p-0">
+        {evalHistory.length === 0 ? (
+          <p className="p-6 text-sm text-muted-foreground">
+            暂无评价历史。配置{" "}
+            <code className="rounded bg-muted px-1 font-mono text-xs">
+              factor_evaluations.json
+            </code>{" "}
+            并在保存代码变更后查看绑定记录。
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>时间</TableHead>
+                  <TableHead className="min-w-36">样本区间</TableHead>
+                  <TableHead className="text-right">股票数</TableHead>
+                  <TableHead className="text-right">
+                    Mean IC ({displayPeriod}D)
+                  </TableHead>
+                  <TableHead className="text-right">
+                    Return spread ({displayPeriod}D)
+                  </TableHead>
+                  <TableHead>关联快照</TableHead>
+                  <TableHead>状态</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {evalHistory.map((row) => {
+                  const ic = row.mean_ic[displayPeriod];
+                  const spread = row.mean_return_spread?.[displayPeriod];
+                  const err = row.error?.trim();
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {formatTs(row.evaluated_at)}
+                      </TableCell>
+                      <TableCell className="max-w-56 font-mono text-[0.65rem] leading-snug break-all text-muted-foreground">
+                        {formatEvaluationWindow(row.window)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
+                        {formatStockCount(row.stock_count)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
+                        {err ? "—" : formatMetric(ic)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs tabular-nums">
+                        {err ? "—" : formatMetric(spread)}
+                      </TableCell>
+                      <TableCell className="max-w-32 truncate font-mono text-[0.65rem] text-muted-foreground">
+                        {row.linked_snapshot_id ?? "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[min(24rem,40vw)] text-xs">
+                        {err ? (
+                          <div className="space-y-1">
+                            <span className="text-destructive">失败</span>
+                            <p
+                              className="whitespace-pre-wrap wrap-break-word font-mono text-[0.65rem] leading-snug text-destructive/90"
+                              title={err}
+                            >
+                              {err}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-emerald-600 dark:text-emerald-400">
+                            成功
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FactorHistoryMain(props: {
+  id: string;
+  factorName: string;
+  tab: "snapshots" | "evaluations";
+  onTab: (t: "snapshots" | "evaluations") => void;
+  snapshots: FactorCodeSnapshotSummaryPublic[];
+  selectedId: string | null;
+  onSelectSnapshot: (snapshotId: string) => void;
+  detail: FactorCodeSnapshotDetailPublic | null;
+  detailError: string | null;
+  periodKeys: string[];
+  periodItemMap: Record<string, string>;
+  primaryPeriod: string;
+  selectedPeriod: string;
+  onPeriodChange: (v: string) => void;
+  evalHistory: FactorEvaluationHistoryEntry[];
+  displayPeriod: string;
+}) {
+  const {
+    id,
+    factorName,
+    tab,
+    onTab,
+    snapshots,
+    selectedId,
+    onSelectSnapshot,
+    detail,
+    detailError,
+    periodKeys,
+    periodItemMap,
+    primaryPeriod,
+    selectedPeriod,
+    onPeriodChange,
+    evalHistory,
+    displayPeriod,
+  } = props;
+
+  return (
+    <>
+      <FactorHistoryHeader id={id} factorName={factorName} />
+      <FactorHistoryTabBar tab={tab} onTab={onTab} />
+      {tab === "snapshots" ? (
+        <FactorSnapshotsPanel
+          snapshots={snapshots}
+          selectedId={selectedId}
+          onSelectSnapshot={onSelectSnapshot}
+          detail={detail}
+          detailError={detailError}
+        />
+      ) : null}
+      {tab === "evaluations" ? (
+        <FactorEvaluationsPanel
+          periodKeys={periodKeys}
+          periodItemMap={periodItemMap}
+          primaryPeriod={primaryPeriod}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={onPeriodChange}
+          evalHistory={evalHistory}
+          displayPeriod={displayPeriod}
+        />
+      ) : null}
+    </>
+  );
+}
+
 export default function FactorHistoryPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
@@ -199,260 +560,28 @@ export default function FactorHistoryPage() {
     );
   }
 
-  const pp = selectedPeriod || primaryPeriod;
+  const displayPeriod = selectedPeriod || primaryPeriod;
 
   return (
     <FactorFormPageContainer>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            历史版本
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-mono text-xs">{factorName}</span>
-            {" · "}
-            代码快照与评价记录来自 workspace{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-              config/factor_code_snapshots.json
-            </code>{" "}
-            与{" "}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-              config/factor_evaluation_history.json
-            </code>
-            。
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/factors/${encodeURIComponent(id)}/edit`}
-            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-          >
-            编辑源码
-          </Link>
-          <Link
-            href="/factors"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            因子库
-          </Link>
-        </div>
-      </div>
-
-      <div className="flex gap-2 border-b border-border/60 pb-2">
-        <Button
-          type="button"
-          variant={tab === "snapshots" ? "secondary" : "ghost"}
-          size="sm"
-          className="gap-1.5"
-          onClick={() => setTab("snapshots")}
-        >
-          <History className="size-4" />
-          代码快照
-        </Button>
-        <Button
-          type="button"
-          variant={tab === "evaluations" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setTab("evaluations")}
-        >
-          评价历史
-        </Button>
-      </div>
-
-      {tab === "snapshots" && (
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,14rem)_1fr]">
-          <Card className="min-h-48 border-border/80 shadow-sm">
-            <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
-              <CardTitle className="text-sm">快照列表</CardTitle>
-              <CardDescription className="text-xs">
-                新→旧；点击查看源码
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto p-2">
-              {snapshots.length === 0 ? (
-                <p className="px-2 py-4 text-xs text-muted-foreground">
-                  暂无快照。保存代码且源码变更时会自动生成。
-                </p>
-              ) : (
-                snapshots.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedId(s.id)}
-                    className={cn(
-                      "w-full rounded-md border px-2 py-2 text-left text-xs transition-colors",
-                      selectedId === s.id
-                        ? "border-primary/40 bg-muted/40"
-                        : "border-transparent hover:bg-muted/30",
-                    )}
-                  >
-                    <div className="font-mono text-[0.65rem] text-muted-foreground">
-                      {formatTs(s.saved_at)}
-                    </div>
-                    <div className="mt-0.5 font-medium">
-                      {s.kind === "manual" ? (
-                        <span className="text-foreground">
-                          {s.label ?? "手动"}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">自动</span>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="min-h-48 border-border/80 shadow-sm">
-            <CardHeader className="border-b border-border/60 bg-muted/10 py-3">
-              <CardTitle className="text-sm">源码（只读）</CardTitle>
-              {detail && (
-                <CardDescription className="text-xs">
-                  {detail.meta.name} · max_window {detail.meta.max_window}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent className="p-0">
-              {detailError && (
-                <Alert variant="destructive" className="m-4">
-                  <AlertDescription>{detailError}</AlertDescription>
-                </Alert>
-              )}
-              {detail && !detailError && (
-                <pre className="max-h-[min(60vh,32rem)] overflow-auto p-4 font-mono text-xs leading-relaxed">
-                  {detail.source}
-                </pre>
-              )}
-              {!detail && !detailError && selectedId && (
-                <p className="p-4 text-sm text-muted-foreground">加载源码…</p>
-              )}
-              {!selectedId && snapshots.length > 0 && (
-                <p className="p-4 text-sm text-muted-foreground">请选择快照</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {tab === "evaluations" && (
-        <Card className="border-border/80 shadow-sm">
-          <CardHeader className="space-y-3 border-b border-border/60 bg-muted/10 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <CardTitle className="text-sm">评价历史</CardTitle>
-                <CardDescription className="text-xs">
-                  保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
-                </CardDescription>
-              </div>
-              {periodKeys.length > 0 ? (
-                <div className="flex flex-col gap-1.5 sm:items-end">
-                  <Label
-                    htmlFor="eval-period"
-                    className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-                  >
-                    展示周期（主周期 {primaryPeriod}D）
-                  </Label>
-                  <Select
-                    modal={false}
-                    items={periodItemMap}
-                    value={selectedPeriod}
-                    onValueChange={(v) => v && setSelectedPeriod(v)}
-                  >
-                    <SelectTrigger id="eval-period" size="sm" className="w-34">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {periodKeys.map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {k} 日
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {evalHistory.length === 0 ? (
-              <p className="p-6 text-sm text-muted-foreground">
-                暂无评价历史。配置{" "}
-                <code className="rounded bg-muted px-1 font-mono text-xs">
-                  factor_evaluations.json
-                </code>{" "}
-                并在保存代码变更后查看绑定记录。
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>时间</TableHead>
-                      <TableHead className="min-w-36">样本区间</TableHead>
-                      <TableHead className="text-right">股票数</TableHead>
-                      <TableHead className="text-right">
-                        Mean IC ({pp}D)
-                      </TableHead>
-                      <TableHead className="text-right">
-                        Return spread ({pp}D)
-                      </TableHead>
-                      <TableHead>关联快照</TableHead>
-                      <TableHead>状态</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {evalHistory.map((row) => {
-                      const ic = row.mean_ic[pp];
-                      const spread = row.mean_return_spread?.[pp];
-                      const err = row.error?.trim();
-                      return (
-                        <TableRow key={row.id}>
-                          <TableCell className="font-mono text-xs whitespace-nowrap">
-                            {formatTs(row.evaluated_at)}
-                          </TableCell>
-                          <TableCell className="max-w-56 font-mono text-[0.65rem] leading-snug break-all text-muted-foreground">
-                            {formatEvaluationWindow(row.window)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {formatStockCount(row.stock_count)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {err ? "—" : formatMetric(ic)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs tabular-nums">
-                            {err ? "—" : formatMetric(spread)}
-                          </TableCell>
-                          <TableCell className="max-w-32 truncate font-mono text-[0.65rem] text-muted-foreground">
-                            {row.linked_snapshot_id ?? "—"}
-                          </TableCell>
-                          <TableCell className="max-w-[min(24rem,40vw)] text-xs">
-                            {err ? (
-                              <div className="space-y-1">
-                                <span className="text-destructive">失败</span>
-                                <p
-                                  className="whitespace-pre-wrap wrap-break-word font-mono text-[0.65rem] leading-snug text-destructive/90"
-                                  title={err}
-                                >
-                                  {err}
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-emerald-600 dark:text-emerald-400">
-                                成功
-                              </span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <FactorHistoryMain
+        id={id}
+        factorName={factorName}
+        tab={tab}
+        onTab={setTab}
+        snapshots={snapshots}
+        selectedId={selectedId}
+        onSelectSnapshot={setSelectedId}
+        detail={detail}
+        detailError={detailError}
+        periodKeys={periodKeys}
+        periodItemMap={periodItemMap}
+        primaryPeriod={primaryPeriod}
+        selectedPeriod={selectedPeriod}
+        onPeriodChange={setSelectedPeriod}
+        evalHistory={evalHistory}
+        displayPeriod={displayPeriod}
+      />
     </FactorFormPageContainer>
   );
 }
