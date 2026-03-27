@@ -1,7 +1,5 @@
 import type { FactorDetailPublic } from "@/lib/quant-agent-api";
 
-import { defaultFactorSource } from "./factor-template";
-
 export type FactorFormState = {
   name: string;
   group: string;
@@ -12,16 +10,16 @@ export type FactorFormState = {
   source: string;
 };
 
+/** Initial shell; `source` is filled from GET /factors/default-source on the new-factor page. */
 export function emptyForm(): FactorFormState {
-  const name = "my_factor";
   return {
-    name,
+    name: "my_factor",
     group: "custom",
     group_label: "自定义",
     description: "在此实现 calc",
     max_window: "2",
     dependencies_csv: "close",
-    source: defaultFactorSource(name),
+    source: "",
   };
 }
 

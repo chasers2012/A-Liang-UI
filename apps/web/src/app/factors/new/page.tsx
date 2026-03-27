@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  createFactor,
-} from "@/lib/quant-agent-api";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createFactor, getFactorDefaultSource } from "@/lib/quant-agent-api";
 
 import {
   bodyFromForm,
@@ -18,6 +17,7 @@ import {
   FactorFormHintAlert,
   FactorFormPageContainer,
   FactorFormPageHeader,
+  FactorFormLoading,
   FactorFormSubmitRow,
 } from "../ui/factor-form-page";
 
@@ -26,6 +26,31 @@ export default function NewFactorPage() {
   const [form, setForm] = useState<FactorFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { source } = await getFactorDefaultSource("my_factor");
+        if (!cancelled) {
+          setForm((prev) => ({ ...prev, source }));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setBootstrapError(
+            e instanceof Error ? e.message : "无法加载默认因子源码模板",
+          );
+        }
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,9 +71,25 @@ export default function NewFactorPage() {
     }
   };
 
+  if (bootstrapping) {
+    return (
+      <FactorFormPageContainer>
+        <FactorFormPageHeader title="新增因子" />
+        <FactorFormLoading />
+      </FactorFormPageContainer>
+    );
+  }
+
   return (
     <FactorFormPageContainer>
       <FactorFormPageHeader title="新增因子" />
+
+      {bootstrapError ? (
+        <Alert variant="destructive" className="mb-2">
+          <AlertTitle>默认模板加载失败</AlertTitle>
+          <AlertDescription>{bootstrapError}</AlertDescription>
+        </Alert>
+      ) : null}
 
       <FactorFormHintAlert>
         保存成功后将进入该因子的详情页。因子文件名为{" "}

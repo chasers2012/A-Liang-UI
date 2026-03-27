@@ -17,6 +17,11 @@ export interface FactorDetailPublic extends FactorSummaryPublic {
   source: string;
 }
 
+/** GET /factors/default-source — bootstrap editor from server template. */
+export interface FactorDefaultSourcePublic {
+  source: string;
+}
+
 export interface FactorEvaluationsAggregatePublic {
   total_factors: number;
   evaluated_count: number;

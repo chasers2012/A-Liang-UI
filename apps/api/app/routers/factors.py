@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.factors.code_snapshot_schemas import (
     FactorCodeSnapshotDetailPublic,
@@ -41,6 +41,7 @@ from app.factors.registry import (
 )
 from app.factors.schemas import (
     FactorCreate,
+    FactorDefaultSourcePublic,
     FactorDetailPublic,
     FactorPatch,
     FactorRecord,
@@ -287,6 +288,16 @@ def get_factor_snapshot(
         meta=snap.meta,
         source=snap.source,
     )
+
+
+@router.get("/default-source", response_model=FactorDefaultSourcePublic)
+def get_default_factor_source(
+    name: str | None = Query(
+        default=None,
+        description="Embedded as UserFactor.name in the template; empty uses my_factor",
+    ),
+) -> FactorDefaultSourcePublic:
+    return FactorDefaultSourcePublic(source=default_factor_source(name or ""))
 
 
 @router.get("/{factor_id}", response_model=FactorDetailPublic)

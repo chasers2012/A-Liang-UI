@@ -34,6 +34,19 @@ def test_list_empty(client):
     assert r.json() == []
 
 
+def test_default_source(client):
+    r = client.get("/factors/default-source")
+    assert r.status_code == 200
+    data = r.json()
+    assert "source" in data
+    assert "UserFactor" in data["source"]
+    assert 'name = "my_factor"' in data["source"]
+
+    r2 = client.get("/factors/default-source?name=alpha_demo")
+    assert r2.status_code == 200
+    assert 'name = "alpha_demo"' in r2.json()["source"]
+
+
 def test_create_roundtrip_files(workspace_tmp, client):
     r = client.post(
         "/factors",

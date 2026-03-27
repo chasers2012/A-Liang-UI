@@ -6,6 +6,7 @@ import type {
   EvaluationTestSetPublic,
   FactorCodeSnapshotDetailPublic,
   FactorCodeSnapshotSummaryPublic,
+  FactorDefaultSourcePublic,
   FactorDetailPublic,
   FactorEvaluationHistoryEntry,
   FactorEvaluationRowPublic,
@@ -148,6 +149,16 @@ export function listFactors(): Promise<FactorSummaryPublic[]> {
 
 export function getFactor(id: string): Promise<FactorDetailPublic> {
   return apiFetchJson<FactorDetailPublic>(`/factors/${encodeURIComponent(id)}`);
+}
+
+export function getFactorDefaultSource(
+  name?: string,
+): Promise<FactorDefaultSourcePublic> {
+  const q =
+    name !== undefined && name !== ""
+      ? `?name=${encodeURIComponent(name)}`
+      : "";
+  return apiFetchJson<FactorDefaultSourcePublic>(`/factors/default-source${q}`);
 }
 
 export function createFactor(body: unknown): Promise<FactorDetailPublic> {

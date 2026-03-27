@@ -126,6 +126,12 @@ class FactorDetailPublic(FactorSummaryPublic):
     source: str
 
 
+class FactorDefaultSourcePublic(BaseModel):
+    """Editor bootstrap: Python skeleton from :func:`default_factor_source`."""
+
+    source: str
+
+
 def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
     return FactorSummaryPublic(
         id=rec.id,
