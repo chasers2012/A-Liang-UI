@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-
-from workspace import ensure_dir, workspace_path
 
 from app.factors.code_snapshot_schemas import (
     FactorCodeSnapshot,
@@ -12,8 +9,8 @@ from app.factors.code_snapshot_schemas import (
     FactorCodeSnapshotKind,
 )
 from app.factors.schemas import FactorRecord, new_factor_id, utc_now_iso
+from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-CONFIG_DIR = "config"
 FACTOR_CODE_SNAPSHOTS_FILENAME = "factor_code_snapshots.json"
 
 MAX_SNAPSHOTS_PER_FACTOR = 100
@@ -21,30 +18,20 @@ MAX_SNAPSHOTS_HARD_CAP = 150
 
 
 def snapshots_file_path() -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, FACTOR_CODE_SNAPSHOTS_FILENAME)
+    return workspace_config_path(FACTOR_CODE_SNAPSHOTS_FILENAME)
 
 
 def load_snapshots_file() -> FactorCodeSnapshotsFile:
-    path = snapshots_file_path()
-    if not path.is_file():
-        return FactorCodeSnapshotsFile()
-    raw = path.read_text(encoding="utf-8")
-    if not raw.strip():
-        return FactorCodeSnapshotsFile()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"factor_code_snapshots.json: invalid JSON ({e})") from e
-    return FactorCodeSnapshotsFile.model_validate(data)
+    return load_workspace_config(
+        FACTOR_CODE_SNAPSHOTS_FILENAME,
+        FactorCodeSnapshotsFile,
+        default_factory=FactorCodeSnapshotsFile,
+        json_error_label="factor_code_snapshots.json",
+    )
 
 
 def save_snapshots_file(data: FactorCodeSnapshotsFile) -> None:
-    path = snapshots_file_path()
-    path.write_text(
-        json.dumps(data.model_dump(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    save_workspace_config(FACTOR_CODE_SNAPSHOTS_FILENAME, data)
 
 
 def _meta_from_record(rec: FactorRecord) -> FactorCodeSnapshotMeta:

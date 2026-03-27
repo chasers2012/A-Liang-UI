@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-
-from workspace import ensure_dir, workspace_path
 
 from app.factors.evaluation_history_schemas import (
     FactorEvaluationHistoryEntry,
@@ -11,36 +8,26 @@ from app.factors.evaluation_history_schemas import (
 )
 from app.factors.evaluation_schemas import FactorEvaluationSnapshot
 from app.factors.schemas import new_factor_id
+from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-CONFIG_DIR = "config"
 FACTOR_EVALUATION_HISTORY_FILENAME = "factor_evaluation_history.json"
 
 
 def history_file_path() -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, FACTOR_EVALUATION_HISTORY_FILENAME)
+    return workspace_config_path(FACTOR_EVALUATION_HISTORY_FILENAME)
 
 
 def load_evaluation_history_file() -> FactorEvaluationHistoryFile:
-    path = history_file_path()
-    if not path.is_file():
-        return FactorEvaluationHistoryFile()
-    raw = path.read_text(encoding="utf-8")
-    if not raw.strip():
-        return FactorEvaluationHistoryFile()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"factor_evaluation_history.json: invalid JSON ({e})") from e
-    return FactorEvaluationHistoryFile.model_validate(data)
+    return load_workspace_config(
+        FACTOR_EVALUATION_HISTORY_FILENAME,
+        FactorEvaluationHistoryFile,
+        default_factory=FactorEvaluationHistoryFile,
+        json_error_label="factor_evaluation_history.json",
+    )
 
 
 def save_evaluation_history_file(data: FactorEvaluationHistoryFile) -> None:
-    path = history_file_path()
-    path.write_text(
-        json.dumps(data.model_dump(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    save_workspace_config(FACTOR_EVALUATION_HISTORY_FILENAME, data)
 
 
 def append_history_entry(

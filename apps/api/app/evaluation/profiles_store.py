@@ -1,37 +1,31 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Optional
 
-from workspace import ensure_dir, workspace_path
-
 from app.evaluation.profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
+from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-CONFIG_DIR = "config"
 REGISTRY_FILENAME = "evaluation_profiles.json"
 
 
 def registry_file_path() -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, REGISTRY_FILENAME)
+    return workspace_config_path(REGISTRY_FILENAME)
 
 
 def load_file() -> EvaluationProfilesFile:
-    path = registry_file_path()
-    if not path.is_file():
-        return EvaluationProfilesFile()
-    raw = path.read_text(encoding="utf-8")
-    if not raw.strip():
-        return EvaluationProfilesFile()
-    return EvaluationProfilesFile.model_validate(json.loads(raw))
+    return load_workspace_config(
+        REGISTRY_FILENAME,
+        EvaluationProfilesFile,
+        default_factory=EvaluationProfilesFile,
+    )
 
 
 def save_file(reg: EvaluationProfilesFile) -> None:
-    path = registry_file_path()
-    path.write_text(
-        json.dumps(reg.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+    save_workspace_config(
+        REGISTRY_FILENAME,
+        reg,
+        model_dump_kwargs={"mode": "json"},
     )
 
 

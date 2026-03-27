@@ -1,23 +1,19 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Optional
-
-from workspace import ensure_dir, workspace_path
 
 from app.evaluation.test_set_schemas import (
     EvaluationTestSetRecord,
     EvaluationTestSetsFile,
 )
+from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-CONFIG_DIR = "config"
 REGISTRY_FILENAME = "evaluation_test_sets.json"
 
 
 def registry_file_path() -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, REGISTRY_FILENAME)
+    return workspace_config_path(REGISTRY_FILENAME)
 
 
 def _migrate_raw_to_v2(data: dict) -> dict:
@@ -50,25 +46,17 @@ def _migrate_raw_to_v2(data: dict) -> dict:
 
 
 def load_file() -> EvaluationTestSetsFile:
-    path = registry_file_path()
-    if not path.is_file():
-        return EvaluationTestSetsFile()
-    raw = path.read_text(encoding="utf-8")
-    if not raw.strip():
-        return EvaluationTestSetsFile()
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        return EvaluationTestSetsFile()
-    data = _migrate_raw_to_v2(data)
-    return EvaluationTestSetsFile.model_validate(data)
+    return load_workspace_config(
+        REGISTRY_FILENAME,
+        EvaluationTestSetsFile,
+        default_factory=EvaluationTestSetsFile,
+        migrate_raw=_migrate_raw_to_v2,
+        non_dict_returns_default=True,
+    )
 
 
 def save_file(reg: EvaluationTestSetsFile) -> None:
-    path = registry_file_path()
-    path.write_text(
-        json.dumps(reg.model_dump(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    save_workspace_config(REGISTRY_FILENAME, reg)
 
 
 def get_by_id(reg: EvaluationTestSetsFile, ts_id: str) -> Optional[EvaluationTestSetRecord]:

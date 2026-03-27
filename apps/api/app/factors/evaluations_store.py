@@ -1,22 +1,18 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-
-from workspace import ensure_dir, workspace_path
 
 from app.factors.evaluation_schemas import (
     FactorEvaluationsFile,
     FactorEvaluationSnapshot,
 )
+from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-CONFIG_DIR = "config"
 FACTOR_EVALUATIONS_FILENAME = "factor_evaluations.json"
 
 
 def evaluations_file_path() -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, FACTOR_EVALUATIONS_FILENAME)
+    return workspace_config_path(FACTOR_EVALUATIONS_FILENAME)
 
 
 def load_evaluations_file() -> FactorEvaluationsFile:
@@ -25,25 +21,16 @@ def load_evaluations_file() -> FactorEvaluationsFile:
     Missing or whitespace-only file -> empty items.
     Raises ValueError on invalid JSON or schema validation failure.
     """
-    path = evaluations_file_path()
-    if not path.is_file():
-        return FactorEvaluationsFile()
-    raw = path.read_text(encoding="utf-8")
-    if not raw.strip():
-        return FactorEvaluationsFile()
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"factor_evaluations.json: invalid JSON ({e})") from e
-    return FactorEvaluationsFile.model_validate(data)
+    return load_workspace_config(
+        FACTOR_EVALUATIONS_FILENAME,
+        FactorEvaluationsFile,
+        default_factory=FactorEvaluationsFile,
+        json_error_label="factor_evaluations.json",
+    )
 
 
 def save_evaluations_file(data: FactorEvaluationsFile) -> None:
-    path = evaluations_file_path()
-    path.write_text(
-        json.dumps(data.model_dump(), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    save_workspace_config(FACTOR_EVALUATIONS_FILENAME, data)
 
 
 def delete_evaluation_for_factor(factor_id: str) -> None:
