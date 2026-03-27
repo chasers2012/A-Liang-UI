@@ -32,11 +32,7 @@ import {
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationWorkflowCanvasHandle } from "../ui/evaluation-workflow-canvas";
-import {
-  ProfileEditorMainSectionSwitch,
-  ProfilePrepareFieldsGrid,
-  ProfileWorkflowEditorBlock,
-} from "../ui/profile-editor-main-section";
+import { ProfileWorkflowEditorBlock } from "../ui/profile-editor-main-section";
 
 import {
   FactorFormPageContainer,
@@ -46,9 +42,6 @@ import {
   DEFAULT_WORKFLOW_JSON,
   EMPTY_EVALUATION_WORKFLOW,
   parseEvaluationWorkflowJson,
-  parseMaxLoss,
-  parsePeriodsCsv,
-  parseQuantilesInput,
 } from "../ui/profile-form-shared";
 
 export default function NewEvaluationProfilePage() {
@@ -57,14 +50,7 @@ export default function NewEvaluationProfilePage() {
   const [description, setDescription] = useState("");
   const [testSetId, setTestSetId] = useState<string>("__none__");
   const [isDefault, setIsDefault] = useState(false);
-  const [periodsCsv, setPeriodsCsv] = useState("1,5,10,20");
-  const [quantiles, setQuantiles] = useState("");
-  const [longShort, setLongShort] = useState(true);
-  const [maxLoss, setMaxLoss] = useState("0.5");
   const [workflowJson, setWorkflowJson] = useState(DEFAULT_WORKFLOW_JSON);
-  const [mainSection, setMainSection] = useState<"workflow" | "prepare">(
-    "workflow",
-  );
   const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">(
     "canvas",
   );
@@ -119,21 +105,12 @@ export default function NewEvaluationProfilePage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    const periods = parsePeriodsCsv(periodsCsv);
-    if (periods.length === 0) {
-      setError("请填写至少一个 forward_return_periods");
-      return;
-    }
     let workflow: unknown;
-    let ml: number;
-    let q: number | null;
     try {
       workflow =
         workflowEditMode === "canvas"
           ? canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW
           : parseEvaluationWorkflowJson(workflowJson);
-      ml = parseMaxLoss(maxLoss);
-      q = parseQuantilesInput(quantiles);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       return;
@@ -146,12 +123,6 @@ export default function NewEvaluationProfilePage() {
         description: description.trim(),
         test_set_id: testSetId === "__none__" ? null : testSetId,
         is_default: isDefault,
-        prepare: {
-          forward_return_periods: periods,
-          quantiles: q,
-          long_short: longShort,
-          max_loss: ml,
-        },
         workflow,
       });
       router.push(`/evaluation-profiles/${encodeURIComponent(created.id)}`);
@@ -225,43 +196,21 @@ export default function NewEvaluationProfilePage() {
           </div>
         </div>
 
-        <ProfileEditorMainSectionSwitch
-          mainSection={mainSection}
-          onMainSection={setMainSection}
+        <p className="text-xs text-muted-foreground">
+          持有期、分位数、max_loss、long_short 等请在画布上选中「计算因子」节点，在右侧节点参数中编辑。
+        </p>
+        <ProfileWorkflowEditorBlock
+          workflowJson={workflowJson}
+          onWorkflowJson={setWorkflowJson}
+          workflowJsonFieldId="ep-wf"
+          workflowEditMode={workflowEditMode}
+          onWorkflowMode={setWorkflowMode}
+          wfMetaLoading={wfMetaLoading}
+          canvasKey={canvasKey}
+          canvasRef={canvasRef}
+          catalog={catalog}
+          initialWorkflow={initialWorkflowForCanvas}
         />
-
-        {mainSection === "prepare" ? (
-          <ProfilePrepareFieldsGrid
-            ids={{
-              periods: "ep-periods",
-              quantiles: "ep-q",
-              maxLoss: "ep-ml",
-              longShort: "ep-ls",
-            }}
-            periodsCsv={periodsCsv}
-            onPeriodsCsv={setPeriodsCsv}
-            quantiles={quantiles}
-            onQuantiles={setQuantiles}
-            quantilesPlaceholder="留空"
-            maxLoss={maxLoss}
-            onMaxLoss={setMaxLoss}
-            longShort={longShort}
-            onLongShort={setLongShort}
-          />
-        ) : (
-          <ProfileWorkflowEditorBlock
-            workflowJson={workflowJson}
-            onWorkflowJson={setWorkflowJson}
-            workflowJsonFieldId="ep-wf"
-            workflowEditMode={workflowEditMode}
-            onWorkflowMode={setWorkflowMode}
-            wfMetaLoading={wfMetaLoading}
-            canvasKey={canvasKey}
-            canvasRef={canvasRef}
-            catalog={catalog}
-            initialWorkflow={initialWorkflowForCanvas}
-          />
-        )}
 
         <div className="flex gap-2">
           <Button type="submit" disabled={submitting || !name.trim()}>

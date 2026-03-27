@@ -51,7 +51,6 @@ export type TestSetFormState = {
   start: string;
   end: string;
   stock_codes_text: string;
-  quantiles: string;
   is_default: boolean;
 };
 
@@ -63,7 +62,6 @@ export function emptyTestSetForm(): TestSetFormState {
     start: "2023-01-01",
     end: "2024-12-31",
     stock_codes_text: "",
-    quantiles: "5",
     is_default: false,
   };
 }
@@ -91,7 +89,6 @@ export function hydrateTestSetForm(row: EvaluationTestSetPublic): TestSetFormSta
     stock_codes_text: row.stock_codes.length
       ? row.stock_codes.join("\n")
       : "",
-    quantiles: String(row.quantiles),
     is_default: row.is_default,
   };
 }
@@ -253,11 +250,6 @@ export function TestSetForm({ mode, testSetId }: Props) {
         }
       }
     }
-    const q = parseInt(form.quantiles, 10);
-    if (Number.isNaN(q) || q < 2) {
-      setFormError("分位数须为不小于 2 的整数");
-      return;
-    }
     const stock_codes = parseStockCodesFromText(form.stock_codes_text);
     const datasource_bindings = form.bindings.map((b) => ({
       datasource_id: b.datasource_id.trim(),
@@ -270,7 +262,6 @@ export function TestSetForm({ mode, testSetId }: Props) {
       start: form.start.trim(),
       end: form.end.trim(),
       stock_codes,
-      quantiles: q,
       is_default: form.is_default,
     };
     setSubmitting(true);
@@ -524,18 +515,6 @@ export function TestSetForm({ mode, testSetId }: Props) {
                 placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
                 rows={4}
                 className="min-h-0 resize-y font-mono text-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ts-quantiles">分位数</Label>
-              <Input
-                id="ts-quantiles"
-                type="number"
-                min={2}
-                step={1}
-                value={form.quantiles}
-                onChange={(e) => set({ quantiles: e.target.value })}
-                className="max-w-32 font-mono tabular-nums"
               />
             </div>
           </CardContent>

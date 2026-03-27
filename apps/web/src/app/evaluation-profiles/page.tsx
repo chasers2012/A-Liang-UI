@@ -64,7 +64,7 @@ export default function EvaluationProfilesPage() {
         <CardHeader>
           <CardTitle>方案列表</CardTitle>
           <CardDescription>
-            工作流非空时按图执行；空工作流时仅用本页的 prepare 参数与测试集覆盖
+            评价按工作流图执行；准备参数在「计算因子」节点上配置
           </CardDescription>
           <CardAction>
             <Link

@@ -41,7 +41,6 @@ def test_evaluation_test_sets_crud(client, workspace_tmp):
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": [],
-            "quantiles": 5,
             "is_default": False,
         },
     )
@@ -56,7 +55,6 @@ def test_evaluation_test_sets_crud(client, workspace_tmp):
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": ["A", "B"],
-            "quantiles": 5,
             "is_default": True,
         },
     )
@@ -73,11 +71,10 @@ def test_evaluation_test_sets_crud(client, workspace_tmp):
 
     r3 = client.patch(
         f"/evaluation-test-sets/{ts_id}",
-        json={"name": "t1x", "quantiles": 4},
+        json={"name": "t1x"},
     )
     assert r3.status_code == 200
     assert r3.json()["name"] == "t1x"
-    assert r3.json()["quantiles"] == 4
 
     cfg = workspace_tmp / "config" / "evaluation_test_sets.json"
     assert cfg.is_file()
@@ -110,7 +107,6 @@ def test_evaluation_run_with_test_set_id(client, workspace_tmp, monkeypatch):
             "start": "2099-01-01",
             "end": "2099-12-31",
             "stock_codes": [],
-            "quantiles": 5,
             "is_default": False,
         },
     )

@@ -13,7 +13,7 @@ export interface MetricVisualizationSpec {
   period_day_keys: boolean;
 }
 
-export type MetricWorkflowParamType = "number" | "boolean" | "enum";
+export type MetricWorkflowParamType = "number" | "boolean" | "enum" | "string";
 
 /** 与后端 ``MetricWorkflowParamSpec`` 一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
 export interface MetricWorkflowParamSpec {

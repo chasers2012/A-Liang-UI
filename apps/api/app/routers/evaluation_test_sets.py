@@ -57,7 +57,6 @@ def _to_public(rec: EvaluationTestSetRecord, reg_ds) -> EvaluationTestSetPublic:
         start=rec.start,
         end=rec.end,
         stock_codes=list(rec.stock_codes),
-        quantiles=rec.quantiles,
         is_default=rec.is_default,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
@@ -136,8 +135,6 @@ def _merge_patch(rec: EvaluationTestSetRecord, patch: EvaluationTestSetPatch) ->
         rec.end = str(data["end"]).strip()
     if "stock_codes" in data and data["stock_codes"] is not None:
         rec.stock_codes = [c.strip() for c in data["stock_codes"] if str(c).strip()]
-    if "quantiles" in data and data["quantiles"] is not None:
-        rec.quantiles = max(2, int(data["quantiles"]))
     if "is_default" in data:
         rec.is_default = bool(data["is_default"])
 

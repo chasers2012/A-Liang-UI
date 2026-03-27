@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.datasources.schemas import utc_now_iso
 
@@ -15,6 +15,8 @@ class EvaluationTestSetDatasourceBindingStored(BaseModel):
 
 
 class EvaluationTestSetRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     name: str
     description: str = ""
@@ -24,7 +26,6 @@ class EvaluationTestSetRecord(BaseModel):
     start: str
     end: str
     stock_codes: list[str] = Field(default_factory=list)
-    quantiles: int = 5
     is_default: bool = False
     created_at: str
     updated_at: str
@@ -50,13 +51,14 @@ class EvaluationTestSetDatasourceBindingInput(BaseModel):
 
 
 class EvaluationTestSetCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str
     description: str = ""
     datasource_bindings: list[EvaluationTestSetDatasourceBindingInput]
     start: str
     end: str
     stock_codes: list[str] = Field(default_factory=list)
-    quantiles: int = 5
     is_default: bool = False
 
     @field_validator("stock_codes", mode="before")
@@ -86,7 +88,6 @@ class EvaluationTestSetCreate(BaseModel):
             start=self.start.strip(),
             end=self.end.strip(),
             stock_codes=[c.strip() for c in self.stock_codes if str(c).strip()],
-            quantiles=max(2, int(self.quantiles)),
             is_default=self.is_default,
             created_at=now,
             updated_at=now,
@@ -94,13 +95,14 @@ class EvaluationTestSetCreate(BaseModel):
 
 
 class EvaluationTestSetPatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str | None = None
     description: str | None = None
     datasource_bindings: list[EvaluationTestSetDatasourceBindingInput] | None = None
     start: str | None = None
     end: str | None = None
     stock_codes: list[str] | None = None
-    quantiles: int | None = None
     is_default: bool | None = None
 
 
@@ -119,7 +121,6 @@ class EvaluationTestSetPublic(BaseModel):
     start: str
     end: str
     stock_codes: list[str]
-    quantiles: int
     is_default: bool
     created_at: str
     updated_at: str

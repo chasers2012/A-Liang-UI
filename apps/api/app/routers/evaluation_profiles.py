@@ -4,7 +4,10 @@ from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
 from app.evaluation.graph_validate import validate_workflow_graph
-from app.evaluation.metric_schemas import RESULT_VIZ_NODE_WORKFLOW_PARAMETERS
+from app.evaluation.metric_schemas import (
+    PREPARE_ALPHALENS_WORKFLOW_PARAMETERS,
+    RESULT_VIZ_NODE_WORKFLOW_PARAMETERS,
+)
 from app.evaluation.metrics_store import get_by_id as metric_get_by_id
 from app.evaluation.metrics_store import load_registry as load_metrics_registry
 from app.evaluation.node_type_registry import sorted_viz_node_type_ids
@@ -28,7 +31,7 @@ router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
 
 def _to_public(rec) -> EvaluationProfilePublic:
-    wf = migrate_evaluation_workflow(rec.workflow)
+    wf = migrate_evaluation_workflow(rec.workflow, profile_prepare=rec.prepare)
     return EvaluationProfilePublic(
         id=rec.id,
         name=rec.name,
@@ -70,7 +73,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
                 NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
                 for s in prep.outputs
             ],
-            workflow_parameters=[],
+            workflow_parameters=list(PREPARE_ALPHALENS_WORKFLOW_PARAMETERS),
             user_defined=False,
             metric_id=None,
         )
@@ -142,8 +145,14 @@ def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
 @router.post("", response_model=EvaluationProfilePublic)
 def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfilePublic:
     rec = body.to_record()
-    if rec.workflow.nodes:
-        rec = rec.model_copy(update={"workflow": migrate_evaluation_workflow(rec.workflow)})
+    rec = rec.model_copy(
+        update={
+            "workflow": migrate_evaluation_workflow(
+                rec.workflow,
+                profile_prepare=rec.prepare,
+            ),
+        }
+    )
     _validate_workflow_if_needed(rec.workflow)
     reg = load_file()
     reg.items.append(rec)
@@ -176,7 +185,10 @@ def patch_evaluation_profile(
         rec.prepare = body.prepare
     if "workflow" in data and body.workflow is not None:
         _validate_workflow_if_needed(body.workflow)
-        rec.workflow = migrate_evaluation_workflow(body.workflow)
+        rec.workflow = migrate_evaluation_workflow(
+            body.workflow,
+            profile_prepare=rec.prepare,
+        )
     if "is_default" in data and body.is_default is not None:
         rec.is_default = body.is_default
 

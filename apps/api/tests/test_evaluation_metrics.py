@@ -79,6 +79,8 @@ def test_evaluation_profiles_node_types(client):
     assert "metric:builtin.mean_ic" in types
     viz_types = [x for x in types if x.startswith("viz_")]
     assert len(viz_types) == 6
+    prep_row = next(x for x in rows if x["type"] == "prepare_alphalens")
+    assert len(prep_row["workflow_parameters"]) >= 4
     for row in rows:
         assert "workflow_parameters" in row
         assert isinstance(row["workflow_parameters"], list)

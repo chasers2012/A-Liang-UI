@@ -91,6 +91,29 @@ function EnumParamRow(props: {
   );
 }
 
+function StringParamRow(props: {
+  label: string;
+  readOnly: boolean;
+  value: unknown;
+  onChange: (v: unknown) => void;
+}) {
+  const { label, readOnly, value, onChange } = props;
+  const s =
+    value === null || value === undefined ? "" : String(value);
+  return (
+    <div className="space-y-0.5">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Input
+        type="text"
+        disabled={readOnly}
+        className="h-7 font-mono text-xs"
+        value={s}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
 function NumberParamRow(props: {
   label: string;
   spec: MetricWorkflowParamSpec;
@@ -148,6 +171,16 @@ export function MetricWorkflowParamFieldRow(props: {
       <EnumParamRow
         label={label}
         choices={spec.enum_values ?? []}
+        readOnly={readOnly}
+        value={value}
+        onChange={onChange}
+      />
+    );
+  }
+  if (spec.type === "string") {
+    return (
+      <StringParamRow
+        label={label}
         readOnly={readOnly}
         value={value}
         onChange={onChange}

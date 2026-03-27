@@ -43,7 +43,6 @@ export function TestSetTable({ items, onDelete }: Props) {
           <TableHead>数据源</TableHead>
           <TableHead>日期范围</TableHead>
           <TableHead>股票池</TableHead>
-          <TableHead className="w-20 text-center">分位</TableHead>
           <TableHead className="w-24 text-center">默认</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
@@ -67,9 +66,6 @@ export function TestSetTable({ items, onDelete }: Props) {
             </TableCell>
             <TableCell className="whitespace-normal text-sm text-muted-foreground">
               {stockSummary(row.stock_codes)}
-            </TableCell>
-            <TableCell className="text-center font-mono text-sm tabular-nums">
-              {row.quantiles}
             </TableCell>
             <TableCell className="text-center">
               {row.is_default ? (

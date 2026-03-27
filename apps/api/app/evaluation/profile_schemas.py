@@ -44,7 +44,7 @@ class EvaluationWorkflow(BaseModel):
 
 
 class EvaluationProfilePrepare(BaseModel):
-    """当 workflow 为空时，与现有 runner 对齐的可选覆盖。"""
+    """历史字段：用于将旧方案中的准备参数一次性合并进「计算因子」节点 params；新方案以节点为准。"""
 
     forward_return_periods: list[int] = Field(default_factory=lambda: [1, 5, 10, 20])
     quantiles: int | None = None

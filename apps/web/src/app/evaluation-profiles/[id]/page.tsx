@@ -90,12 +90,8 @@ export default function EvaluationProfileDetailPage() {
             <span className="text-muted-foreground">测试集 id：</span>
             <span className="font-mono">{row.test_set_id ?? "—"}</span>
           </p>
-          <p>
-            <span className="text-muted-foreground">prepare：</span>
-            <span className="font-mono text-xs">
-              periods={JSON.stringify(row.prepare.forward_return_periods)} q=
-              {row.prepare.quantiles ?? "null"} ls={String(row.prepare.long_short)}
-            </span>
+          <p className="text-muted-foreground">
+            Alphalens 持有期、分位数等在工作流「计算因子」节点的节点参数中查看与编辑。
           </p>
         </CardContent>
       </Card>

@@ -22,6 +22,7 @@ const TYPE_ITEMS: { value: MetricWorkflowParamType; label: string }[] = [
   { value: "number", label: "数值" },
   { value: "boolean", label: "布尔" },
   { value: "enum", label: "枚举（字符串）" },
+  { value: "string", label: "字符串" },
 ];
 
 function emptyRow(): MetricWorkflowParamSpec {
@@ -96,10 +97,20 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                   value={row.type}
                   disabled={disabled}
                   onValueChange={(v) => {
-                    if (v === "number" || v === "boolean" || v === "enum") {
+                    if (
+                      v === "number" ||
+                      v === "boolean" ||
+                      v === "enum" ||
+                      v === "string"
+                    ) {
                       updateRow(index, {
                         type: v,
-                        default: v === "boolean" ? false : null,
+                        default:
+                          v === "boolean"
+                            ? false
+                            : v === "string"
+                              ? ""
+                              : null,
                         enum_values: v === "enum" ? row.enum_values : [],
                         minimum: v === "number" ? row.minimum : null,
                         maximum: v === "number" ? row.maximum : null,
@@ -240,6 +251,23 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                     }
                   />
                 </div>
+              </div>
+            ) : null}
+            {row.type === "string" ? (
+              <div className="space-y-1">
+                <Label className="text-xs">默认值</Label>
+                <Input
+                  className="h-8 font-mono text-xs"
+                  disabled={disabled}
+                  value={
+                    row.default === null || row.default === undefined
+                      ? ""
+                      : String(row.default)
+                  }
+                  onChange={(e) =>
+                    updateRow(index, { default: e.target.value })
+                  }
+                />
               </div>
             ) : null}
           </div>

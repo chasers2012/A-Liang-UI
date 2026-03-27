@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import re
 import traceback
 from collections import defaultdict, deque
 from typing import Any
@@ -115,6 +117,17 @@ def _coerce_metric_param_enum(spec: MetricWorkflowParamSpec, val: Any) -> Any:
     return choices[0]
 
 
+def _coerce_metric_param_string(spec: MetricWorkflowParamSpec, val: Any) -> str | None:
+    if val is None or val == "":
+        if spec.default is None:
+            return None
+        return str(spec.default)
+    s = str(val).strip()
+    if not s:
+        return None if spec.default is None else str(spec.default)
+    return s
+
+
 def _coerce_metric_param_value(spec: MetricWorkflowParamSpec, val: Any) -> Any:
     if spec.type == "number":
         return _coerce_metric_param_number(spec, val)
@@ -122,6 +135,8 @@ def _coerce_metric_param_value(spec: MetricWorkflowParamSpec, val: Any) -> Any:
         return _coerce_metric_param_boolean(spec, val)
     if spec.type == "enum":
         return _coerce_metric_param_enum(spec, val)
+    if spec.type == "string":
+        return _coerce_metric_param_string(spec, val)
     return None
 
 
@@ -154,26 +169,39 @@ def _metric_evaluate_kwargs(
     return out
 
 
+def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
+    if isinstance(raw, list):
+        out = tuple(int(float(x)) for x in raw)
+        return out if out else (1, 5, 10, 20)
+    s = str(raw).strip() if raw is not None and raw != "" else "1,5,10,20"
+    parts = [p.strip() for p in re.split(r"[,，\s]+", s) if p.strip()]
+    if not parts:
+        return (1, 5, 10, 20)
+    return tuple(int(float(x)) for x in parts)
+
+
 def _node_prepare_alphalens(
     nid: str,
     node,
     ev,
-    prep,
     *,
     last_quantiles: int,
     outputs: dict[str, dict[str, Any]],
     metric_results: dict[str, Any],
 ) -> tuple[int, int | None]:
     params = dict(node.params or {})
-    periods = tuple(
-        int(x) for x in (params.get("forward_return_periods") or prep.forward_return_periods)
-    )
-    if params.get("quantiles") is not None:
-        last_quantiles = max(2, int(params["quantiles"]))
-    elif prep.quantiles is not None:
-        last_quantiles = max(2, int(prep.quantiles))
-    ls = bool(params.get("long_short", prep.long_short))
-    ml = float(params.get("max_loss", prep.max_loss))
+    periods = _forward_periods_tuple(params.get("forward_return_periods"))
+    q_raw = params.get("alphalens_quantiles", params.get("quantiles"))
+    if isinstance(q_raw, (int, float)) and not isinstance(q_raw, bool):
+        last_quantiles = max(2, int(q_raw))
+    elif q_raw is not None and str(q_raw).strip() != "":
+        with contextlib.suppress(TypeError, ValueError):
+            last_quantiles = max(2, int(float(str(q_raw).strip())))
+    ls = bool(params.get("long_short", True))
+    try:
+        ml = float(params.get("max_loss", 0.5))
+    except (TypeError, ValueError):
+        ml = 0.5
     ev.long_short = ls
     out = ev.evaluate_factor(
         quantiles=last_quantiles,
@@ -229,7 +257,14 @@ def run_evaluation_profile_workflow(
     *,
     test_set_id: str | None,
 ) -> FactorEvaluationSnapshot:
-    profile = profile.model_copy(update={"workflow": migrate_evaluation_workflow(profile.workflow)})
+    profile = profile.model_copy(
+        update={
+            "workflow": migrate_evaluation_workflow(
+                profile.workflow,
+                profile_prepare=profile.prepare,
+            ),
+        }
+    )
     wf = profile.workflow
     err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
         factor_id, test_set_id=test_set_id
@@ -238,7 +273,6 @@ def run_evaluation_profile_workflow(
         return err.model_copy(update={"evaluation_profile_id": profile.id})
 
     assert ev is not None
-    prep = profile.prepare
     by_id = {n.id: n for n in wf.nodes}
     try:
         order = _workflow_topological_order(wf)
@@ -269,7 +303,6 @@ def run_evaluation_profile_workflow(
                     nid,
                     node,
                     ev,
-                    prep,
                     last_quantiles=last_quantiles,
                     outputs=outputs,
                     metric_results=metric_results,

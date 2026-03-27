@@ -82,7 +82,7 @@ BUILTIN_NODE_SPECS: dict[str, BuiltinNodeSpec] = {
     "prepare_alphalens": BuiltinNodeSpec(
         type="prepare_alphalens",
         label="计算因子",
-        description="根据因子与数据源计算并生成 factor_data_clean",
+        description="根据因子与数据源计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
         inputs=(),
         outputs=(SocketSpec("clean_factor", False, "factor_data_clean"),),
     ),

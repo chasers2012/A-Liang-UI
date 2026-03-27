@@ -15,7 +15,6 @@ export interface EvaluationTestSetPublic {
   start: string;
   end: string;
   stock_codes: string[];
-  quantiles: number;
   is_default: boolean;
   created_at: string;
   updated_at: string;

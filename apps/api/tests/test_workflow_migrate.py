@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from app.evaluation.builtin_metric_registry import metric_node_type
-from app.evaluation.profile_schemas import EvaluationWorkflow, WorkflowNode
+from app.evaluation.profile_schemas import (
+    EvaluationProfilePrepare,
+    EvaluationWorkflow,
+    WorkflowNode,
+)
 from app.evaluation.workflow_migrate import migrate_evaluation_workflow
 
 
@@ -29,6 +33,26 @@ def test_migrate_legacy_mean_ic():
     )
     out = migrate_evaluation_workflow(wf)
     assert out.nodes[0].type == metric_node_type("builtin.mean_ic")
+
+
+def test_stamp_prepare_alphalens_from_profile_prepare():
+    wf = EvaluationWorkflow(
+        nodes=[
+            WorkflowNode(id="p", type="prepare_alphalens", pos=[0, 0], params={}),
+        ],
+        links=[],
+    )
+    prep = EvaluationProfilePrepare(
+        forward_return_periods=[2, 4],
+        quantiles=7,
+        long_short=False,
+        max_loss=0.25,
+    )
+    out = migrate_evaluation_workflow(wf, profile_prepare=prep)
+    assert out.nodes[0].params["forward_return_periods"] == "2,4"
+    assert out.nodes[0].params["alphalens_quantiles"] == "7"
+    assert out.nodes[0].params["long_short"] is False
+    assert out.nodes[0].params["max_loss"] == 0.25
 
 
 def test_migrate_result_visualization_to_viz_node():

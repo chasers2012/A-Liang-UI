@@ -64,7 +64,9 @@ def _resolve_evaluation_context(
     list[str] | None,
     int,
 ]:
-    """Resolve test set (if any), legacy single datasource, window, universe, quantiles.
+    """Resolve test set (if any), legacy single datasource, window, universe, default quantiles.
+
+    Alphalens 分位数由环境变量 ``FACTOR_AGENT_QUANTILES``（默认 5）决定，不再从测试集读取。
 
     Order: explicit test_set_id → workspace default test set → env + default datasource.
 
@@ -83,13 +85,14 @@ def _resolve_evaluation_context(
 
     if ts_rec is not None:
         stock_codes = _stock_codes_from_test_set(list(ts_rec.stock_codes))
+        q_default = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
         return (
             ts_rec,
             None,
             ts_rec.start,
             ts_rec.end,
             stock_codes,
-            max(2, int(ts_rec.quantiles)),
+            max(2, q_default),
         )
 
     ds_rec = _pick_default_datasource()

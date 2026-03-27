@@ -77,7 +77,7 @@ class MetricWorkflowParamSpec(BaseModel):
 
     key: str
     label: str = ""
-    type: Literal["number", "boolean", "enum"] = "number"
+    type: Literal["number", "boolean", "enum", "string"] = "number"
     default: Any | None = None
     minimum: float | int | None = None
     maximum: float | int | None = None
@@ -136,6 +136,35 @@ RESULT_VIZ_NODE_WORKFLOW_PARAMETERS: list[MetricWorkflowParamSpec] = [
         label="周期键显示为「N 日」",
         type="boolean",
         default=False,
+    ),
+]
+
+PREPARE_ALPHALENS_WORKFLOW_PARAMETERS: list[MetricWorkflowParamSpec] = [
+    MetricWorkflowParamSpec(
+        key="forward_return_periods",
+        label="持有期 periods（逗号分隔）",
+        type="string",
+        default="1,5,10,20",
+    ),
+    MetricWorkflowParamSpec(
+        key="alphalens_quantiles",
+        label="分位数（留空则用环境变量 FACTOR_AGENT_QUANTILES，默认 5）",
+        type="string",
+        default="",
+    ),
+    MetricWorkflowParamSpec(
+        key="long_short",
+        label="多空 long_short",
+        type="boolean",
+        default=True,
+    ),
+    MetricWorkflowParamSpec(
+        key="max_loss",
+        label="max_loss",
+        type="number",
+        default=0.5,
+        minimum=0.0,
+        maximum=10.0,
     ),
 ]
 
