@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError, postAgentChat } from "@/lib/quant-agent-api";
+import { ApiError, postAgentChatStream } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import type { AgentChatMessagePublic } from "@/models";
 
@@ -177,9 +177,22 @@ function AiChatMessageList({
                   {seg.assistant ? (
                     <>
                       <span className="sr-only">助手：</span>
-                      <p className="whitespace-pre-wrap wrap-break-word">
-                        {seg.assistant.content}
-                      </p>
+                      {seg.assistant.content === "" &&
+                      isSending &&
+                      isLastSegment ? (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2
+                            className="size-4 shrink-0 animate-spin"
+                            aria-hidden
+                          />
+                          正在生成…
+                        </div>
+                      ) : null}
+                      {seg.assistant.content !== "" ? (
+                        <p className="whitespace-pre-wrap wrap-break-word">
+                          {seg.assistant.content}
+                        </p>
+                      ) : null}
                     </>
                   ) : showPending ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -283,21 +296,34 @@ export function HomeAiChat() {
         ? historyForApi.map(({ role, content }) => ({ role, content }))
         : [{ role: "user", content: trimmed }];
 
-    setMessages((prev) => [...prev, userTurn]);
+    const assistantId = createId();
+    setMessages((prev) => [
+      ...prev,
+      userTurn,
+      { id: assistantId, role: "assistant", content: "" },
+    ]);
     setInput("");
     setIsSending(true);
 
     try {
-      const res = await postAgentChat({ messages: payload });
-      setMessages((prev) => [
-        ...prev,
-        { id: createId(), role: "assistant", content: res.content },
-      ]);
+      await postAgentChatStream({ messages: payload }, {
+        onDelta: (delta) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: m.content + delta }
+                : m,
+            ),
+          );
+        },
+      });
     } catch (e) {
       const msg =
         e instanceof ApiError ? e.message : "请求失败，请检查 API 与网络。";
       setErrorText(msg);
-      setMessages((prev) => prev.filter((m) => m.id !== userTurn.id));
+      setMessages((prev) =>
+        prev.filter((m) => m.id !== userTurn.id && m.id !== assistantId),
+      );
       setInput(trimmed);
     } finally {
       setIsSending(false);

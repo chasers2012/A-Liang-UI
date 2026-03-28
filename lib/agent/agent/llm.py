@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from collections.abc import Iterator
 from typing import Any, cast
 
 from langchain.chat_models import init_chat_model
@@ -14,6 +15,7 @@ from langchain_core.messages import AIMessage, BaseMessage
 __all__ = [
     "build_chat_llm",
     "invoke_llm",
+    "iter_llm_stream_text_deltas",
     "message_text",
     "stream_llm",
 ]
@@ -146,6 +148,56 @@ def stream_llm(
 
     out_text = message_text(full_chunk)
     return AIMessage(content=out_text)
+
+
+def iter_llm_stream_text_deltas(
+    llm: BaseChatModel,
+    messages: list[BaseMessage],
+    *,
+    stage: str,
+    force_stream: bool = False,
+) -> Iterator[str]:
+    """
+    Yield incremental assistant text from ``llm.stream`` (or one chunk from ``invoke``).
+
+    ``force_stream=True`` (used by HTTP SSE) always calls ``llm.stream`` so chunks reach
+    the client even when stdout is not a TTY (e.g. uvicorn). Otherwise mirrors
+    :func:`stream_llm` env for ``invoke`` vs ``stream``.
+    """
+    show = _stream_output_enabled()
+    use_stream = force_stream or _use_stream_iterator()
+
+    if not use_stream:
+        out = llm.invoke(messages)
+        out_text = message_text(out)
+        if show:
+            sys.stdout.write(f"\n[LLM {stage}]\n{out_text}\n")
+            sys.stdout.flush()
+        if out_text:
+            yield out_text
+        return
+
+    if show:
+        sys.stdout.write(f"\n[LLM {stage}]\n")
+        sys.stdout.flush()
+
+    cap = _stream_max_chunks()
+    for i, chunk in enumerate(llm.stream(messages)):
+        if i >= cap:
+            raise RuntimeError(
+                f"LLM stream [{stage}] 超过 FACTOR_AGENT_STREAM_MAX_CHUNKS={cap}，"
+                "疑似流异常未结束，已中止。"
+            )
+        piece = _streaming_piece_text(chunk)
+        if show and piece:
+            sys.stdout.write(piece)
+            sys.stdout.flush()
+        if piece:
+            yield piece
+
+    if show:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 def invoke_llm(

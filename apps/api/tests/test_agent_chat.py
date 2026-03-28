@@ -26,3 +26,28 @@ def test_agent_chat_returns_assistant_text(client, monkeypatch):
     data = r.json()
     assert data["role"] == "assistant"
     assert data["content"] == "hi from test"
+
+
+def test_agent_chat_stream_sse(client, monkeypatch):
+    def fake_build():
+        return object()
+
+    def fake_iter(_llm, _messages, *, stage: str, force_stream: bool = False):
+        assert stage == "chat"
+        assert force_stream is True
+        yield "hi"
+        yield " there"
+
+    monkeypatch.setattr("agent.llm.build_chat_llm", fake_build)
+    monkeypatch.setattr("agent.llm.iter_llm_stream_text_deltas", fake_iter)
+
+    r = client.post(
+        "/agent/chat/stream",
+        json={"messages": [{"role": "user", "content": "hello"}]},
+    )
+    assert r.status_code == 200
+    assert r.headers.get("content-type", "").startswith("text/event-stream")
+    body = r.text
+    assert "hi" in body
+    assert "there" in body
+    assert '"done": true' in body

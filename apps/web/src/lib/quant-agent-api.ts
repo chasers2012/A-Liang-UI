@@ -105,6 +105,80 @@ export function postAgentChat(
   });
 }
 
+type AgentChatSseParsed =
+  | { kind: "delta"; text: string }
+  | { kind: "done" }
+  | { kind: "error"; message: string }
+  | { kind: "skip" };
+
+function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
+  const dataLines = block
+    .split("\n")
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.replace(/^data:\s?/, "").trim());
+  if (dataLines.length === 0) return { kind: "skip" };
+  const payload = dataLines.join("\n");
+  if (!payload) return { kind: "skip" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {
+    return { kind: "skip" };
+  }
+  if (typeof parsed !== "object" || parsed === null) return { kind: "skip" };
+  const o = parsed as Record<string, unknown>;
+  if (typeof o.error === "string") return { kind: "error", message: o.error };
+  if (o.done === true) return { kind: "done" };
+  if (typeof o.delta === "string" && o.delta.length > 0) {
+    return { kind: "delta", text: o.delta };
+  }
+  return { kind: "skip" };
+}
+
+/**
+ * POST ``/agent/chat/stream`` (SSE). Invokes ``onDelta`` for each text chunk; throws ``ApiError`` on HTTP or stream ``error`` events.
+ */
+export async function postAgentChatStream(
+  body: AgentChatRequestPublic,
+  options: { onDelta: (text: string) => void },
+): Promise<void> {
+  const url = `${getQuantAgentApiBase()}/agent/chat/stream`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(parseDetail(text), res.status);
+  }
+  const reader = res.body?.getReader();
+  if (!reader) {
+    throw new ApiError("响应无正文", res.status || 502);
+  }
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    for (;;) {
+      const sep = buffer.indexOf("\n\n");
+      if (sep === -1) break;
+      const block = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+      const ev = parseAgentChatSseBlock(block);
+      if (ev.kind === "skip") continue;
+      if (ev.kind === "error") throw new ApiError(ev.message, 502);
+      if (ev.kind === "done") return;
+      options.onDelta(ev.text);
+    }
+  }
+}
+
 export function listAgentWorkflows(): Promise<AgentWorkflowSummaryPublic[]> {
   return apiFetchJson<AgentWorkflowSummaryPublic[]>("/agent/workflows");
 }
