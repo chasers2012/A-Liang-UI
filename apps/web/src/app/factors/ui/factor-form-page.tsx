@@ -91,10 +91,7 @@ export function FactorFormLoadError({ message }: { message: string }) {
   );
 }
 
+/** 仅主体内容；外层由页面用 `FactorFormPageContainer`（`Page`）包裹。 */
 export function FactorFormLoading() {
-  return (
-    <FactorFormPageContainer>
-      <p className="text-sm text-muted-foreground">加载中…</p>
-    </FactorFormPageContainer>
-  );
+  return <p className="text-sm text-muted-foreground">加载中…</p>;
 }

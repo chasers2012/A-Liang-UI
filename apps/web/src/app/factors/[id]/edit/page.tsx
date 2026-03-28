@@ -81,7 +81,14 @@ export default function EditFactorPage() {
   };
 
   if (loading) {
-    return <FactorFormLoading />;
+    return (
+      <FactorFormPageContainer
+        title="编辑因子"
+        description={factorFormPageDescription()}
+      >
+        <FactorFormLoading />
+      </FactorFormPageContainer>
+    );
   }
 
   if (loadError) {
