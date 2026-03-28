@@ -248,7 +248,9 @@ export function buildAppHeaderBreadcrumbs(
   return withMenuSection(pathname, [{ label: "页面" }]);
 }
 
-/** 非顶层时提供返回上一级 href；顶层为 null */
+/**
+ * 是否应在顶栏显示「返回」：非 null 表示可显示（具体 URL 仅用于推导，实际为 history back）。
+ */
 export function headerBackHref(pathname: string): string | null {
   if (isTopLevelPath(pathname)) return null;
 

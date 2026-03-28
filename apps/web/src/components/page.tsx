@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 
@@ -11,7 +10,7 @@ import {
 } from "@/components/app-header-nav";
 import { PageAppHeaderContext } from "@/components/page-app-header-context";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -37,8 +36,9 @@ export type PageProps = {
   /** 是否显示顶栏面包屑与返回（默认 true）。 */
   showAppHeader?: boolean;
   /**
-   * 顶栏「返回」链接：未传时由子树（如带 `cancelHref` 的 `PageFormHeaderActions`）自动抑制；
-   * `true` 强制显示，`false` 强制隐藏（仍须有面包屑导航解析出的返回路径）。
+   * 顶栏「返回」：未传时由子树（如带 `cancelHref` 的 `PageFormHeaderActions`）自动抑制；
+   * `true` 强制显示，`false` 强制隐藏（仍须满足面包屑解析出的可返回页条件）。
+   * 点击后为浏览器历史后退，不再跳转到固定 href。
    */
   showAppHeaderBack?: boolean;
   /** 顶栏右侧操作区（如保存/取消），与面包屑、返回同一行。 */
@@ -60,8 +60,9 @@ function PageChrome({
   showAppHeaderBack,
   action,
 }: PageChromeProps) {
+  const router = useRouter();
   const headerCrumbs = buildAppHeaderBreadcrumbs(pathname);
-  const backHref = headerBackHref(pathname);
+  const canHeaderBack = headerBackHref(pathname) != null;
   const showHeader = title != null || description != null;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] =
@@ -71,7 +72,7 @@ function PageChrome({
   }, []);
 
   const showBackLink =
-    backHref != null &&
+    canHeaderBack &&
     (showAppHeaderBack === true ||
       (showAppHeaderBack !== false && !backLinkSuppressedByAction));
 
@@ -88,19 +89,16 @@ function PageChrome({
               <PageBreadcrumb items={headerCrumbs} variant="header" />
             </div>
             {showBackLink ? (
-              <Link
-                href={backHref}
-                className={cn(
-                  buttonVariants({
-                    variant: "outline",
-                    size: "sm",
-                  }),
-                  "shrink-0 gap-1.5",
-                )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                onClick={() => router.back()}
               >
                 <ArrowLeft className="size-4" aria-hidden />
                 返回
-              </Link>
+              </Button>
             ) : null}
             {action != null ? (
               <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
