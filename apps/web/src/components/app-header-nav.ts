@@ -1,7 +1,12 @@
 import type { PageBreadcrumbItem } from "@/components/page-breadcrumb";
 
+const FACTOR_SECTION_HREF = "/sections/factors";
+const DATA_SECTION_HREF = "/sections/data";
+
 const TOP_LEVEL = new Set([
   "/",
+  FACTOR_SECTION_HREF,
+  DATA_SECTION_HREF,
   "/factors",
   "/evaluation-metrics",
   "/evaluation-profiles",
@@ -15,6 +20,8 @@ const TOP_LEVEL = new Set([
 /** Exact pathname → single crumb (list/home pages). */
 const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   "/": [{ label: "首页" }],
+  [FACTOR_SECTION_HREF]: [{ label: "因子" }],
+  [DATA_SECTION_HREF]: [{ label: "数据" }],
   "/factors": [{ label: "因子库" }],
   "/evaluation-metrics": [{ label: "评价指标" }],
   "/evaluation-profiles": [{ label: "评价方案" }],
@@ -24,6 +31,41 @@ const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   "/backtest": [{ label: "回测" }],
   "/agent": [{ label: "Agent" }],
 };
+
+function withMenuSection(
+  pathname: string,
+  items: PageBreadcrumbItem[],
+): PageBreadcrumbItem[] {
+  if (pathname === FACTOR_SECTION_HREF || pathname === DATA_SECTION_HREF) {
+    return items;
+  }
+
+  if (
+    items[0]?.href === FACTOR_SECTION_HREF ||
+    items[0]?.href === DATA_SECTION_HREF
+  ) {
+    return items;
+  }
+
+  const factorChild =
+    pathname === "/factors" ||
+    pathname.startsWith("/factors/") ||
+    pathname.startsWith("/evaluation-metrics") ||
+    pathname.startsWith("/evaluation-profiles");
+
+  if (factorChild) {
+    return [{ href: FACTOR_SECTION_HREF, label: "因子" }, ...items];
+  }
+
+  const dataChild =
+    pathname.startsWith("/datasources") || pathname.startsWith("/test-sets");
+
+  if (dataChild) {
+    return [{ href: DATA_SECTION_HREF, label: "数据" }, ...items];
+  }
+
+  return items;
+}
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -148,10 +190,10 @@ export function buildAppHeaderBreadcrumbs(
   pathname: string,
 ): PageBreadcrumbItem[] {
   const exact = EXACT_HEADER_CRUMBS[pathname];
-  if (exact) return exact;
+  if (exact) return withMenuSection(pathname, exact);
 
   const factors = factorsHeaderBreadcrumbs(pathname);
-  if (factors) return factors;
+  if (factors) return withMenuSection(pathname, factors);
 
   const metrics = standardResourceBreadcrumbs(
     pathname,
@@ -159,7 +201,7 @@ export function buildAppHeaderBreadcrumbs(
     "评价指标",
     "详情",
   );
-  if (metrics) return metrics;
+  if (metrics) return withMenuSection(pathname, metrics);
 
   const profiles = standardResourceBreadcrumbs(
     pathname,
@@ -167,7 +209,7 @@ export function buildAppHeaderBreadcrumbs(
     "评价方案",
     "详情",
   );
-  if (profiles) return profiles;
+  if (profiles) return withMenuSection(pathname, profiles);
 
   const datasources = standardResourceBreadcrumbs(
     pathname,
@@ -175,7 +217,7 @@ export function buildAppHeaderBreadcrumbs(
     "数据源",
     "数据源详情",
   );
-  if (datasources) return datasources;
+  if (datasources) return withMenuSection(pathname, datasources);
 
   const testSets = standardResourceBreadcrumbs(
     pathname,
@@ -183,18 +225,18 @@ export function buildAppHeaderBreadcrumbs(
     "测试集",
     "测试集详情",
   );
-  if (testSets) return testSets;
+  if (testSets) return withMenuSection(pathname, testSets);
 
   const strategies = prefixSectionBreadcrumbs(pathname, "/strategies", "策略");
-  if (strategies) return strategies;
+  if (strategies) return withMenuSection(pathname, strategies);
 
   const backtest = prefixSectionBreadcrumbs(pathname, "/backtest", "回测");
-  if (backtest) return backtest;
+  if (backtest) return withMenuSection(pathname, backtest);
 
   const agent = prefixSectionBreadcrumbs(pathname, "/agent", "Agent");
-  if (agent) return agent;
+  if (agent) return withMenuSection(pathname, agent);
 
-  return [{ label: "页面" }];
+  return withMenuSection(pathname, [{ label: "页面" }]);
 }
 
 /** 非顶层时提供返回上一级 href；顶层为 null */

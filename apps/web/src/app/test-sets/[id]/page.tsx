@@ -94,19 +94,11 @@ export default function TestSetDetailPage() {
   }
 
   return (
-    <Page>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {row.name}
-          </h1>
-          {row.description ? (
-            <p className="text-sm text-muted-foreground">{row.description}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground/70">无说明</p>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+    <Page
+      title={row.name}
+      description={row.description || "无说明"}
+      action={
+        <>
           <Link
             href={`/test-sets/${encodeURIComponent(id)}/edit`}
             className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
@@ -123,9 +115,9 @@ export default function TestSetDetailPage() {
             <Trash2 className="size-4" />
             删除
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>标识与时间</CardTitle>

@@ -59,25 +59,22 @@ export function DatasourceDetailLoaded({
   const summary = datasourceSummary(ds);
 
   return (
-    <Page>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              {ds.name}
-            </h1>
-            <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-              {ds.type}
-            </span>
-          </div>
-          <p
-            className="font-mono text-xs text-muted-foreground break-all"
-            title={summary}
-          >
-            {summary}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+    <Page
+      title={
+        <span className="flex flex-wrap items-center gap-2">
+          {ds.name}
+          <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            {ds.type}
+          </span>
+        </span>
+      }
+      description={
+        <span className="font-mono text-xs break-all" title={summary}>
+          {summary}
+        </span>
+      }
+      action={
+        <>
           <Button
             type="button"
             variant="secondary"
@@ -104,9 +101,9 @@ export function DatasourceDetailLoaded({
             <Trash2 className="size-4" />
             删除
           </Button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       {testHint && (
         <Alert variant={testHint.ok ? "default" : "destructive"}>
           <AlertTitle>连接测试</AlertTitle>

@@ -2,28 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  Bot,
-  ChevronRight,
-  Database,
-  GitBranch,
-  LayoutDashboard,
-  Layers,
-  Library,
-  LineChart,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Table2,
-  TableProperties,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Sidebar,
@@ -42,7 +20,15 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  type SidebarNavLeaf,
+  type SidebarNavMainItem,
+  sidebarNav,
+} from "@/lib/sidebar-nav";
 import { cn } from "@/lib/utils";
+
+export type { SidebarNavLeaf, SidebarNavMainItem };
+export { sidebarNav };
 
 function isNavActive(url: string, pathname: string) {
   if (url === "#") return false;
@@ -50,50 +36,8 @@ function isNavActive(url: string, pathname: string) {
   return pathname === url || pathname.startsWith(`${url}/`);
 }
 
-export type SidebarNavLeaf = {
-  title: string;
-  url: string;
-  /** 可选；未设置时由当前路径计算高亮 */
-  isActive?: boolean;
-  icon: LucideIcon;
-};
-
-export type SidebarNavMainItem = {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  items?: SidebarNavLeaf[];
-};
-
-export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
-  navMain: [
-    { title: "首页", url: "/", icon: LayoutDashboard },
-    {
-      title: "因子",
-      url: "#",
-      icon: Layers,
-      items: [
-        { title: "因子库", url: "/factors", icon: Library },
-        { title: "评价方案", url: "/evaluation-profiles", icon: Table2 },
-        { title: "评价指标", url: "/evaluation-metrics", icon: LineChart },
-      ],
-    },
-    {
-      title: "数据",
-      url: "#",
-      icon: TableProperties,
-      items: [
-        { title: "数据源", url: "/datasources", icon: Database },
-        { title: "数据集", url: "/test-sets", icon: Table2 },
-      ],
-    },
-    { title: "策略", url: "/strategies", icon: GitBranch },
-    { title: "回测", url: "/backtest", icon: LineChart },
-    { title: "Agent", url: "/agent", icon: Bot },
-  ],
-};
-
 function navSectionActive(item: SidebarNavMainItem, pathname: string) {
+  if (isNavActive(item.url, pathname)) return true;
   return item.items?.some((sub) => isNavActive(sub.url, pathname)) ?? false;
 }
 
@@ -104,29 +48,6 @@ function leafActive(leaf: SidebarNavLeaf, pathname: string) {
 
 function SidebarNavFromConfig({ navMain }: { navMain: SidebarNavMainItem[] }) {
   const pathname = usePathname();
-  const [idleOpenBySection, setIdleOpenBySection] = useState<
-    Record<string, boolean>
-  >({});
-
-  const sectionOpen = (item: SidebarNavMainItem) => {
-    if (!item.items?.length) return false;
-    const active = navSectionActive(item, pathname);
-    const idle = idleOpenBySection[item.title] ?? true;
-    return active || idle;
-  };
-
-  const setSectionOpen = (item: SidebarNavMainItem, open: boolean) => {
-    if (navSectionActive(item, pathname)) return;
-    setIdleOpenBySection((prev) => ({ ...prev, [item.title]: open }));
-  };
-
-  const toggleSection = (item: SidebarNavMainItem) => {
-    if (navSectionActive(item, pathname)) return;
-    setIdleOpenBySection((prev) => ({
-      ...prev,
-      [item.title]: !(prev[item.title] ?? true),
-    }));
-  };
 
   return (
     <SidebarMenu className="gap-1">
@@ -151,58 +72,40 @@ function SidebarNavFromConfig({ navMain }: { navMain: SidebarNavMainItem[] }) {
           );
         }
 
-        const open = sectionOpen(item);
         const sectionActive = navSectionActive(item, pathname);
 
         return (
-          <Collapsible
-            key={item.title}
-            open={open}
-            onOpenChange={(next) => setSectionOpen(item, next)}
-          >
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => toggleSection(item)}
-                aria-expanded={open}
-                render={
-                  <button type="button">
-                    <Icon className="size-4 shrink-0" aria-hidden />
-                    <span>{item.title}</span>
-                    <ChevronRight
-                      className={cn(
-                        "ml-auto size-4 shrink-0 transition-transform duration-200 group-data-[collapsible=icon]:hidden",
-                        open && "rotate-90",
-                      )}
-                      aria-hidden
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton
+              render={
+                <Link href={item.url}>
+                  <Icon aria-hidden />
+                  <span>{item.title}</span>
+                </Link>
+              }
+              isActive={sectionActive}
+              tooltip={item.title}
+            />
+            <SidebarMenuSub className="mt-1">
+              {item.items.map((sub) => {
+                const SubIcon = sub.icon;
+                const subActive = leafActive(sub, pathname);
+                return (
+                  <SidebarMenuSubItem key={sub.url}>
+                    <SidebarMenuSubButton
+                      render={
+                        <Link href={sub.url}>
+                          <SubIcon aria-hidden />
+                          <span>{sub.title}</span>
+                        </Link>
+                      }
+                      isActive={subActive}
                     />
-                  </button>
-                }
-                isActive={sectionActive}
-                tooltip={item.title}
-              />
-              <CollapsibleContent>
-                <SidebarMenuSub className="mt-1">
-                  {item.items.map((sub) => {
-                    const SubIcon = sub.icon;
-                    const subActive = leafActive(sub, pathname);
-                    return (
-                      <SidebarMenuSubItem key={sub.url}>
-                        <SidebarMenuSubButton
-                          render={
-                            <Link href={sub.url}>
-                              <SubIcon aria-hidden />
-                              <span>{sub.title}</span>
-                            </Link>
-                          }
-                          isActive={subActive}
-                        />
-                      </SidebarMenuSubItem>
-                    );
-                  })}
-                </SidebarMenuSub>
-              </CollapsibleContent>
-            </SidebarMenuItem>
-          </Collapsible>
+                  </SidebarMenuSubItem>
+                );
+              })}
+            </SidebarMenuSub>
+          </SidebarMenuItem>
         );
       })}
     </SidebarMenu>
@@ -210,23 +113,20 @@ function SidebarNavFromConfig({ navMain }: { navMain: SidebarNavMainItem[] }) {
 }
 
 function AppSidebar() {
-  const { toggleSidebar, state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile } = useSidebar();
+  const collapsed = !isMobile && state === "collapsed";
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader
         className={cn(
-          "flex h-14 shrink-0 flex-row items-center gap-2 border-b border-sidebar-border",
-          collapsed ? "justify-center" : "px-2",
+          "flex h-14 shrink-0 flex-row items-center border-b border-sidebar-border px-2",
+          collapsed && "hidden",
         )}
       >
-        {!collapsed && (
-          <span className="min-w-0 flex-1 truncate px-2 text-sm font-semibold">
-            quant-agent
-          </span>
-        )}
-        <ThemeToggle />
+        <span className="min-w-0 flex-1 truncate px-2 text-sm font-semibold">
+          quant-agent
+        </span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -237,17 +137,13 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border">
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-9 w-full justify-end hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          onClick={toggleSidebar}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
-        >
-          {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-        </Button>
+      <SidebarFooter
+        className={cn(
+          "mt-auto shrink-0 flex-row items-center border-t border-sidebar-border",
+          collapsed ? "justify-center" : "justify-end",
+        )}
+      >
+        <ThemeToggle />
       </SidebarFooter>
     </Sidebar>
   );

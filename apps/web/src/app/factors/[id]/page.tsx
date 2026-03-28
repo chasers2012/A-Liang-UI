@@ -58,9 +58,8 @@ function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
   return Object.keys(m).length > 0;
 }
 
-function FactorDetailHeaderToolbar(props: {
+function FactorDetailHeaderActions(props: {
   id: string;
-  detail: FactorDetailPublic;
   testSets: EvaluationTestSetPublic[];
   profiles: EvaluationProfilePublic[];
   testSetSelectItems: Record<string, string>;
@@ -77,7 +76,6 @@ function FactorDetailHeaderToolbar(props: {
 }) {
   const {
     id,
-    detail,
     testSets,
     profiles,
     testSetSelectItems,
@@ -96,19 +94,7 @@ function FactorDetailHeaderToolbar(props: {
   const selectDisabled = evaluatingThis || evaluatingOther;
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0 space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          <span className="font-mono">{detail.name}</span>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {detail.group}
-          {detail.group_label && detail.group_label !== detail.group
-            ? ` · ${detail.group_label}`
-            : null}
-        </p>
-      </div>
-      <div className="flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end">
+    <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
         <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
           <Label
             htmlFor="factor-eval-test-set"
@@ -221,7 +207,6 @@ function FactorDetailHeaderToolbar(props: {
             删除
           </Button>
         </div>
-      </div>
     </div>
   );
 }
@@ -384,19 +369,6 @@ function FactorDetailLoadedView(props: {
   detail: FactorDetailPublic;
   loadError: string | null;
   evalRow: FactorEvaluationRowPublic | null;
-  testSets: EvaluationTestSetPublic[];
-  profiles: EvaluationProfilePublic[];
-  testSetSelectItems: Record<string, string>;
-  profileSelectItems: Record<string, string>;
-  runTestSetId: string | null;
-  runProfileId: string | null;
-  evaluatingThis: boolean;
-  evaluatingOther: boolean;
-  otherEvaluatingFactorName: string | undefined;
-  onTestSetSelectValue: (raw: string) => void;
-  onProfileSelectValue: (raw: string) => void;
-  onRunEvaluation: () => void;
-  onRequestDelete: () => void;
   evalProfileForSnapshot: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
 }) {
@@ -405,43 +377,12 @@ function FactorDetailLoadedView(props: {
     detail,
     loadError,
     evalRow,
-    testSets,
-    profiles,
-    testSetSelectItems,
-    profileSelectItems,
-    runTestSetId,
-    runProfileId,
-    evaluatingThis,
-    evaluatingOther,
-    otherEvaluatingFactorName,
-    onTestSetSelectValue,
-    onProfileSelectValue,
-    onRunEvaluation,
-    onRequestDelete,
     evalProfileForSnapshot,
     metricMetaById,
   } = props;
 
   return (
     <>
-      <FactorDetailHeaderToolbar
-        id={id}
-        detail={detail}
-        testSets={testSets}
-        profiles={profiles}
-        testSetSelectItems={testSetSelectItems}
-        profileSelectItems={profileSelectItems}
-        runTestSetId={runTestSetId}
-        runProfileId={runProfileId}
-        evaluatingThis={evaluatingThis}
-        evaluatingOther={evaluatingOther}
-        otherEvaluatingFactorName={otherEvaluatingFactorName}
-        onTestSetSelectValue={onTestSetSelectValue}
-        onProfileSelectValue={onProfileSelectValue}
-        onRunEvaluation={onRunEvaluation}
-        onRequestDelete={onRequestDelete}
-      />
-
       {loadError ? (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
@@ -622,39 +563,54 @@ export default function FactorDetailPage() {
   };
 
   return (
-    <FactorFormPageContainer>
+    <FactorFormPageContainer
+      title={<span className="font-mono">{detail.name}</span>}
+      description={
+        <>
+          {detail.group}
+          {detail.group_label && detail.group_label !== detail.group
+            ? ` · ${detail.group_label}`
+            : null}
+        </>
+      }
+      action={
+        <FactorDetailHeaderActions
+          id={id}
+          testSets={testSets}
+          profiles={profiles}
+          testSetSelectItems={testSetSelectItems}
+          profileSelectItems={profileSelectItems}
+          runTestSetId={runTestSetId}
+          runProfileId={runProfileId}
+          evaluatingThis={evaluatingThis}
+          evaluatingOther={evaluatingOther}
+          otherEvaluatingFactorName={
+            evaluatingOther ? evaluationRunning?.factorName : undefined
+          }
+          onTestSetSelectValue={(v) =>
+            setS((prev) => ({
+              ...prev,
+              runTestSetId: v === "__auto__" ? null : v,
+            }))
+          }
+          onProfileSelectValue={(v) =>
+            setS((prev) => ({
+              ...prev,
+              runProfileId: v === "__none__" ? null : v,
+            }))
+          }
+          onRunEvaluation={() => void handleRunEvaluation()}
+          onRequestDelete={() =>
+            setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))
+          }
+        />
+      }
+    >
       <FactorDetailLoadedView
         id={id}
         detail={detail}
         loadError={loadError}
         evalRow={evalRow}
-        testSets={testSets}
-        profiles={profiles}
-        testSetSelectItems={testSetSelectItems}
-        profileSelectItems={profileSelectItems}
-        runTestSetId={runTestSetId}
-        runProfileId={runProfileId}
-        evaluatingThis={evaluatingThis}
-        evaluatingOther={evaluatingOther}
-        otherEvaluatingFactorName={
-          evaluatingOther ? evaluationRunning?.factorName : undefined
-        }
-        onTestSetSelectValue={(v) =>
-          setS((prev) => ({
-            ...prev,
-            runTestSetId: v === "__auto__" ? null : v,
-          }))
-        }
-        onProfileSelectValue={(v) =>
-          setS((prev) => ({
-            ...prev,
-            runProfileId: v === "__none__" ? null : v,
-          }))
-        }
-        onRunEvaluation={() => void handleRunEvaluation()}
-        onRequestDelete={() =>
-          setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))
-        }
         evalProfileForSnapshot={evalProfileForSnapshot}
         metricMetaById={metricMetaById}
       />

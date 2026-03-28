@@ -56,25 +56,19 @@ export default function EvaluationProfileDetailPage() {
   }
 
   return (
-    <FactorFormPageContainer>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            {row.name}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {row.description || "无描述"}
-          </p>
-        </div>
+    <FactorFormPageContainer
+      title={row.name}
+      description={row.description || "无描述"}
+      action={
         <Link
           href={`/evaluation-profiles/${encodeURIComponent(id)}/edit`}
-          className={cn(buttonVariants({ variant: "default" }), "gap-1.5 self-start")}
+          className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
         >
           <Pencil className="size-4" />
           编辑
         </Link>
-      </div>
-
+      }
+    >
       <ProfileDetailWorkflowCard profile={row} profileId={id} />
 
       <Card>

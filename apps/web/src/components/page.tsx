@@ -12,6 +12,7 @@ import {
 import { PageAppHeaderContext } from "@/components/page-app-header-context";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { buttonVariants } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 const gapClass = {
@@ -79,10 +80,13 @@ function PageChrome({
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         {showAppHeader ? (
           <header
-            className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-sidebar px-6 py-2 md:px-8"
+            className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-sidebar px-3 py-2"
             role="banner"
           >
-            <PageBreadcrumb items={headerCrumbs} variant="header" />
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <SidebarTrigger className="shrink-0" />
+              <PageBreadcrumb items={headerCrumbs} variant="header" />
+            </div>
             {showBackLink ? (
               <Link
                 href={backHref}

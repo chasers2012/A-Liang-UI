@@ -65,46 +65,6 @@ function sortedPeriodKeys(rows: FactorEvaluationHistoryEntry[]): string[] {
   return [...s].sort((a, b) => Number(a) - Number(b));
 }
 
-function FactorHistoryHeader(props: { id: string; factorName: string }) {
-  const { id, factorName } = props;
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          历史版本
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <span className="font-mono text-xs">{factorName}</span>
-          {" · "}
-          代码快照与评价记录来自 workspace{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            config/factor_code_snapshots.json
-          </code>{" "}
-          与{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            config/factor_evaluation_history.json
-          </code>
-          。
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href={`/factors/${encodeURIComponent(id)}/edit`}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
-          编辑源码
-        </Link>
-        <Link
-          href="/factors"
-          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-        >
-          因子库
-        </Link>
-      </div>
-    </div>
-  );
-}
-
 function FactorHistoryTabBar(props: {
   tab: "snapshots" | "evaluations";
   onTab: (t: "snapshots" | "evaluations") => void;
@@ -362,8 +322,6 @@ function FactorEvaluationsPanel(props: {
 }
 
 function FactorHistoryMain(props: {
-  id: string;
-  factorName: string;
   tab: "snapshots" | "evaluations";
   onTab: (t: "snapshots" | "evaluations") => void;
   snapshots: FactorCodeSnapshotSummaryPublic[];
@@ -380,8 +338,6 @@ function FactorHistoryMain(props: {
   displayPeriod: string;
 }) {
   const {
-    id,
-    factorName,
     tab,
     onTab,
     snapshots,
@@ -400,7 +356,6 @@ function FactorHistoryMain(props: {
 
   return (
     <>
-      <FactorHistoryHeader id={id} factorName={factorName} />
       <FactorHistoryTabBar tab={tab} onTab={onTab} />
       {tab === "snapshots" ? (
         <FactorSnapshotsPanel
@@ -563,10 +518,41 @@ export default function FactorHistoryPage() {
   const displayPeriod = selectedPeriod || primaryPeriod;
 
   return (
-    <FactorFormPageContainer>
+    <FactorFormPageContainer
+      title="历史版本"
+      description={
+        <>
+          <span className="font-mono text-xs">{factorName}</span>
+          {" · "}
+          代码快照与评价记录来自 workspace{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+            config/factor_code_snapshots.json
+          </code>{" "}
+          与{" "}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+            config/factor_evaluation_history.json
+          </code>
+          。
+        </>
+      }
+      action={
+        <>
+          <Link
+            href={`/factors/${encodeURIComponent(id)}/edit`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+          >
+            编辑源码
+          </Link>
+          <Link
+            href="/factors"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            因子库
+          </Link>
+        </>
+      }
+    >
       <FactorHistoryMain
-        id={id}
-        factorName={factorName}
         tab={tab}
         onTab={setTab}
         snapshots={snapshots}
