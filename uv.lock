@@ -2370,6 +2370,7 @@ name = "quant-agent-api"
 version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
+    { name = "agent" },
     { name = "csv-datasource" },
     { name = "custom-code" },
     { name = "evaluate" },
@@ -2387,6 +2388,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agent", editable = "lib/agent" },
     { name = "csv-datasource", editable = "lib/csv_datasource" },
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "evaluate", editable = "lib/evaluate" },

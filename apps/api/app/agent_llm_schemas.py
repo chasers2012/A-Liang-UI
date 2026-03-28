@@ -7,6 +7,26 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 AgentLlmProvider = Literal["ollama", "openai"]
+AgentChatRole = Literal["user", "assistant", "system"]
+
+
+class AgentChatMessageIn(BaseModel):
+    role: AgentChatRole
+    content: str = Field(..., min_length=1, max_length=32000)
+
+
+class AgentChatRequest(BaseModel):
+    messages: list[AgentChatMessageIn] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Conversation turns in order (system / user / assistant).",
+    )
+
+
+class AgentChatResponse(BaseModel):
+    role: Literal["assistant"] = "assistant"
+    content: str
 
 
 class AgentLlmSettings(BaseModel):

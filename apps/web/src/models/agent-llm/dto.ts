@@ -8,3 +8,19 @@ export type AgentLlmSettingsPublic = {
   openai_base_url: string | null;
   api_key: string | null;
 };
+
+export type AgentChatRolePublic = "user" | "assistant" | "system";
+
+export type AgentChatMessagePublic = {
+  role: AgentChatRolePublic;
+  content: string;
+};
+
+export type AgentChatRequestPublic = {
+  messages: AgentChatMessagePublic[];
+};
+
+export type AgentChatResponsePublic = {
+  role: "assistant";
+  content: string;
+};
