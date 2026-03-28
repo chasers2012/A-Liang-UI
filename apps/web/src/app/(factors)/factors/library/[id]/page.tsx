@@ -57,8 +57,7 @@ function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
   return Object.keys(m).length > 0;
 }
 
-function FactorDetailHeaderActions(props: {
-  id: string;
+function FactorEvaluationRunControls(props: {
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
@@ -67,10 +66,8 @@ function FactorDetailHeaderActions(props: {
   otherEvaluatingFactorName: string | undefined;
   onProfileSelectValue: (raw: string) => void;
   onRunEvaluation: () => void;
-  onRequestDelete: () => void;
 }) {
   const {
-    id,
     profiles,
     profileSelectItems,
     runProfileId,
@@ -79,89 +76,172 @@ function FactorDetailHeaderActions(props: {
     otherEvaluatingFactorName,
     onProfileSelectValue,
     onRunEvaluation,
-    onRequestDelete,
   } = props;
 
   const selectDisabled = evaluatingThis || evaluatingOther;
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
-        <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
-          <Label
-            htmlFor="factor-eval-profile"
-            className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-xs">
+        <Label
+          htmlFor="factor-eval-profile-card"
+          className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+        >
+          评价方案
+        </Label>
+        <Select
+          modal={false}
+          items={profileSelectItems}
+          value={runProfileId ?? "__none__"}
+          onValueChange={(v) => {
+            if (!v) return;
+            onProfileSelectValue(v);
+          }}
+          disabled={selectDisabled}
+        >
+          <SelectTrigger
+            id="factor-eval-profile-card"
+            size="sm"
+            className="w-full min-w-0"
           >
-            评价方案
-          </Label>
-          <Select
-            modal={false}
-            items={profileSelectItems}
-            value={runProfileId ?? "__none__"}
-            onValueChange={(v) => {
-              if (!v) return;
-              onProfileSelectValue(v);
-            }}
-            disabled={selectDisabled}
-          >
-            <SelectTrigger
-              id="factor-eval-profile"
-              size="sm"
-              className="w-full min-w-0"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">无（默认参数）</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.is_default ? `${p.name}（默认）` : p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">无（默认参数）</SelectItem>
+            {profiles.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.is_default ? `${p.name}（默认）` : p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button
+        type="button"
+        variant="secondary"
+        className="w-full gap-1.5 sm:w-auto"
+        disabled={selectDisabled}
+        title={
+          evaluatingOther
+            ? `「${otherEvaluatingFactorName ?? ""}」正在评价中`
+            : undefined
+        }
+        onClick={onRunEvaluation}
+      >
+        {evaluatingThis ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : null}
+        {evaluatingThis ? "评价中…" : "运行评价"}
+      </Button>
+    </div>
+  );
+}
+
+function FactorEvaluationSnapshotDetails(props: {
+  id: string;
+  evalRow: FactorEvaluationRowPublic;
+  evalProfileForSnapshot: EvaluationProfilePublic | null;
+  metricMetaById: Record<string, MetricMetaEntry>;
+}) {
+  const { id, evalRow, evalProfileForSnapshot, metricMetaById } = props;
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <span
+          className={
+            evalRow.error
+              ? "text-destructive"
+              : "text-emerald-600 dark:text-emerald-400"
+          }
+        >
+          {evalRow.error ? "评价失败" : "评价成功"}
+        </span>
+        {evalRow.evaluated_at ? (
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            {formatIso(evalRow.evaluated_at)}
+          </span>
+        ) : null}
+      </div>
+      {evalRow.error ? (
+        <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {evalRow.error}
+        </p>
+      ) : null}
+      {evalRow.evaluation_profile_id ? (
+        <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">评价方案</span>
+          <span className="ml-2 font-medium">
+            {evalProfileForSnapshot?.name ?? evalRow.evaluation_profile_id}
+          </span>
+          {!evalProfileForSnapshot ? (
+            <span className="ml-1 text-xs text-muted-foreground">
+              （方案可能已删除）
+            </span>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/factors/library/${encodeURIComponent(id)}/edit`}
-            className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
-          >
-            <Pencil className="size-4" />
-            编辑
-          </Link>
-          <Link
-            href={`/factors/library/${encodeURIComponent(id)}/history`}
-            className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
-          >
-            <History className="size-4" />
-            历史
-          </Link>
-          <Button
-            type="button"
-            variant="secondary"
-            className="gap-1.5"
-            disabled={selectDisabled}
-            title={
-              evaluatingOther
-                ? `「${otherEvaluatingFactorName ?? ""}」正在评价中`
-                : undefined
-            }
-            onClick={onRunEvaluation}
-          >
-            {evaluatingThis ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : null}
-            {evaluatingThis ? "评价中…" : "运行评价"}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            className="gap-1.5"
-            onClick={onRequestDelete}
-          >
-            <Trash2 className="size-4" />
-            删除
-          </Button>
-        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          该次评价未记录评价方案，无法对齐工作流节点说明。
+        </p>
+      )}
+      {!evalRow.error &&
+      evalRow.evaluation_profile_id &&
+      !hasWorkflowMetricResults(evalRow) ? (
+        <p className="text-sm text-muted-foreground">
+          当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
+        </p>
+      ) : null}
+      <EvaluationProfileMetricResultsPanel
+        metricResults={evalRow.metric_results ?? {}}
+        profile={evalProfileForSnapshot}
+        metricMetaById={metricMetaById}
+      />
+      <Link
+        href={`/factors/library/${encodeURIComponent(id)}/history`}
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "inline-flex gap-1",
+        )}
+      >
+        查看评价历史与代码快照
+        <ChevronRight className="size-4" />
+      </Link>
+    </>
+  );
+}
+
+function FactorDetailHeaderActions(props: {
+  id: string;
+  onRequestDelete: () => void;
+}) {
+  const { id, onRequestDelete } = props;
+
+  return (
+    <div className="flex w-full min-w-0 flex-wrap justify-end gap-2">
+      <Link
+        href={`/factors/library/${encodeURIComponent(id)}/edit`}
+        className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+      >
+        <Pencil className="size-4" />
+        编辑
+      </Link>
+      <Link
+        href={`/factors/library/${encodeURIComponent(id)}/history`}
+        className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+      >
+        <History className="size-4" />
+        历史
+      </Link>
+      <Button
+        type="button"
+        variant="destructive"
+        className="gap-1.5"
+        onClick={onRequestDelete}
+      >
+        <Trash2 className="size-4" />
+        删除
+      </Button>
     </div>
   );
 }
@@ -226,8 +306,29 @@ function FactorEvaluationSnapshotCard(props: {
   evalRow: FactorEvaluationRowPublic | null;
   evalProfileForSnapshot: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
+  profiles: EvaluationProfilePublic[];
+  profileSelectItems: Record<string, string>;
+  runProfileId: string | null;
+  evaluatingThis: boolean;
+  evaluatingOther: boolean;
+  otherEvaluatingFactorName: string | undefined;
+  onProfileSelectValue: (raw: string) => void;
+  onRunEvaluation: () => void;
 }) {
-  const { id, evalRow, evalProfileForSnapshot, metricMetaById } = props;
+  const {
+    id,
+    evalRow,
+    evalProfileForSnapshot,
+    metricMetaById,
+    profiles,
+    profileSelectItems,
+    runProfileId,
+    evaluatingThis,
+    evaluatingOther,
+    otherEvaluatingFactorName,
+    onProfileSelectValue,
+    onRunEvaluation,
+  } = props;
 
   return (
     <Card>
@@ -242,6 +343,16 @@ function FactorEvaluationSnapshotCard(props: {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <FactorEvaluationRunControls
+          profiles={profiles}
+          profileSelectItems={profileSelectItems}
+          runProfileId={runProfileId}
+          evaluatingThis={evaluatingThis}
+          evaluatingOther={evaluatingOther}
+          otherEvaluatingFactorName={otherEvaluatingFactorName}
+          onProfileSelectValue={onProfileSelectValue}
+          onRunEvaluation={onRunEvaluation}
+        />
         {!evalRow?.has_evaluation ? (
           <p className="text-sm text-muted-foreground">
             暂无评价快照。请选择评价方案后点击「运行评价」，或查看
@@ -254,69 +365,12 @@ function FactorEvaluationSnapshotCard(props: {
             。
           </p>
         ) : (
-          <>
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span
-                className={
-                  evalRow.error
-                    ? "text-destructive"
-                    : "text-emerald-600 dark:text-emerald-400"
-                }
-              >
-                {evalRow.error ? "评价失败" : "评价成功"}
-              </span>
-              {evalRow.evaluated_at ? (
-                <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                  {formatIso(evalRow.evaluated_at)}
-                </span>
-              ) : null}
-            </div>
-            {evalRow.error ? (
-              <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-                {evalRow.error}
-              </p>
-            ) : null}
-            {evalRow.evaluation_profile_id ? (
-              <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">评价方案</span>
-                <span className="ml-2 font-medium">
-                  {evalProfileForSnapshot?.name ??
-                    evalRow.evaluation_profile_id}
-                </span>
-                {!evalProfileForSnapshot ? (
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    （方案可能已删除）
-                  </span>
-                ) : null}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                该次评价未记录评价方案，无法对齐工作流节点说明。
-              </p>
-            )}
-            {!evalRow.error &&
-              evalRow.evaluation_profile_id &&
-              !hasWorkflowMetricResults(evalRow) ? (
-              <p className="text-sm text-muted-foreground">
-                当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
-              </p>
-            ) : null}
-            <EvaluationProfileMetricResultsPanel
-              metricResults={evalRow.metric_results ?? {}}
-              profile={evalProfileForSnapshot}
-              metricMetaById={metricMetaById}
-            />
-            <Link
-              href={`/factors/library/${encodeURIComponent(id)}/history`}
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "inline-flex gap-1",
-              )}
-            >
-              查看评价历史与代码快照
-              <ChevronRight className="size-4" />
-            </Link>
-          </>
+          <FactorEvaluationSnapshotDetails
+            id={id}
+            evalRow={evalRow}
+            evalProfileForSnapshot={evalProfileForSnapshot}
+            metricMetaById={metricMetaById}
+          />
         )}
       </CardContent>
     </Card>
@@ -330,6 +384,14 @@ function FactorDetailLoadedView(props: {
   evalRow: FactorEvaluationRowPublic | null;
   evalProfileForSnapshot: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
+  profiles: EvaluationProfilePublic[];
+  profileSelectItems: Record<string, string>;
+  runProfileId: string | null;
+  evaluatingThis: boolean;
+  evaluatingOther: boolean;
+  otherEvaluatingFactorName: string | undefined;
+  onProfileSelectValue: (raw: string) => void;
+  onRunEvaluation: () => void;
 }) {
   const {
     id,
@@ -338,6 +400,14 @@ function FactorDetailLoadedView(props: {
     evalRow,
     evalProfileForSnapshot,
     metricMetaById,
+    profiles,
+    profileSelectItems,
+    runProfileId,
+    evaluatingThis,
+    evaluatingOther,
+    otherEvaluatingFactorName,
+    onProfileSelectValue,
+    onRunEvaluation,
   } = props;
 
   return (
@@ -356,6 +426,14 @@ function FactorDetailLoadedView(props: {
           evalRow={evalRow}
           evalProfileForSnapshot={evalProfileForSnapshot}
           metricMetaById={metricMetaById}
+          profiles={profiles}
+          profileSelectItems={profileSelectItems}
+          runProfileId={runProfileId}
+          evaluatingThis={evaluatingThis}
+          evaluatingOther={evaluatingOther}
+          otherEvaluatingFactorName={otherEvaluatingFactorName}
+          onProfileSelectValue={onProfileSelectValue}
+          onRunEvaluation={onRunEvaluation}
         />
       </div>
     </>
@@ -521,21 +599,6 @@ export default function FactorDetailPage() {
       action={
         <FactorDetailHeaderActions
           id={id}
-          profiles={profiles}
-          profileSelectItems={profileSelectItems}
-          runProfileId={runProfileId}
-          evaluatingThis={evaluatingThis}
-          evaluatingOther={evaluatingOther}
-          otherEvaluatingFactorName={
-            evaluatingOther ? evaluationRunning?.factorName : undefined
-          }
-          onProfileSelectValue={(v) =>
-            setS((prev) => ({
-              ...prev,
-              runProfileId: v === "__none__" ? null : v,
-            }))
-          }
-          onRunEvaluation={() => void handleRunEvaluation()}
           onRequestDelete={() =>
             setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))
           }
@@ -549,6 +612,21 @@ export default function FactorDetailPage() {
         evalRow={evalRow}
         evalProfileForSnapshot={evalProfileForSnapshot}
         metricMetaById={metricMetaById}
+        profiles={profiles}
+        profileSelectItems={profileSelectItems}
+        runProfileId={runProfileId}
+        evaluatingThis={evaluatingThis}
+        evaluatingOther={evaluatingOther}
+        otherEvaluatingFactorName={
+          evaluatingOther ? evaluationRunning?.factorName : undefined
+        }
+        onProfileSelectValue={(v) =>
+          setS((prev) => ({
+            ...prev,
+            runProfileId: v === "__none__" ? null : v,
+          }))
+        }
+        onRunEvaluation={() => void handleRunEvaluation()}
       />
 
       <DeleteFactorDialog
