@@ -13,7 +13,7 @@ export function FactorEvaluationGlobalStatus() {
 
   return (
     <Link
-      href={`/factors/${encodeURIComponent(running.factorId)}`}
+      href={`/factors/library/${encodeURIComponent(running.factorId)}`}
       className={cn(
         "inline-flex max-w-[min(20rem,50vw)] items-center gap-2 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted/60",
       )}

@@ -1,17 +1,23 @@
 import type { PageBreadcrumbItem } from "@/components/page-breadcrumb";
 
-const FACTOR_SECTION_HREF = "/sections/factors";
-const DATA_SECTION_HREF = "/sections/data";
+const FACTOR_ROOT_HREF = "/factors";
+const DATA_ROOT_HREF = "/data";
+
+const FACTOR_LIBRARY_LIST = "/factors/library";
+const FACTOR_PROFILES_LIST = "/factors/profiles";
+const FACTOR_METRICS_LIST = "/factors/metrics";
+const DATA_DATASOURCES_LIST = "/data/datasources";
+const DATA_TEST_SETS_LIST = "/data/test-sets";
 
 const TOP_LEVEL = new Set([
   "/",
-  FACTOR_SECTION_HREF,
-  DATA_SECTION_HREF,
-  "/factors",
-  "/evaluation-metrics",
-  "/evaluation-profiles",
-  "/datasources",
-  "/test-sets",
+  FACTOR_ROOT_HREF,
+  FACTOR_LIBRARY_LIST,
+  FACTOR_PROFILES_LIST,
+  FACTOR_METRICS_LIST,
+  DATA_ROOT_HREF,
+  DATA_DATASOURCES_LIST,
+  DATA_TEST_SETS_LIST,
   "/strategies",
   "/backtest",
   "/agent",
@@ -20,13 +26,13 @@ const TOP_LEVEL = new Set([
 /** Exact pathname → single crumb (list/home pages). */
 const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   "/": [{ label: "首页" }],
-  [FACTOR_SECTION_HREF]: [{ label: "因子" }],
-  [DATA_SECTION_HREF]: [{ label: "数据" }],
-  "/factors": [{ label: "因子库" }],
-  "/evaluation-metrics": [{ label: "评价指标" }],
-  "/evaluation-profiles": [{ label: "评价方案" }],
-  "/datasources": [{ label: "数据源" }],
-  "/test-sets": [{ label: "测试集" }],
+  [FACTOR_ROOT_HREF]: [{ label: "因子" }],
+  [FACTOR_LIBRARY_LIST]: [{ label: "因子库" }],
+  [FACTOR_PROFILES_LIST]: [{ label: "评价方案" }],
+  [FACTOR_METRICS_LIST]: [{ label: "评价指标" }],
+  [DATA_ROOT_HREF]: [{ label: "数据" }],
+  [DATA_DATASOURCES_LIST]: [{ label: "数据源" }],
+  [DATA_TEST_SETS_LIST]: [{ label: "测试集" }],
   "/strategies": [{ label: "策略" }],
   "/backtest": [{ label: "回测" }],
   "/agent": [{ label: "Agent" }],
@@ -36,32 +42,27 @@ function withMenuSection(
   pathname: string,
   items: PageBreadcrumbItem[],
 ): PageBreadcrumbItem[] {
-  if (pathname === FACTOR_SECTION_HREF || pathname === DATA_SECTION_HREF) {
+  if (pathname === FACTOR_ROOT_HREF || pathname === DATA_ROOT_HREF) {
     return items;
   }
 
   if (
-    items[0]?.href === FACTOR_SECTION_HREF ||
-    items[0]?.href === DATA_SECTION_HREF
+    items[0]?.href === FACTOR_ROOT_HREF ||
+    items[0]?.href === DATA_ROOT_HREF
   ) {
     return items;
   }
 
-  const factorChild =
-    pathname === "/factors" ||
-    pathname.startsWith("/factors/") ||
-    pathname.startsWith("/evaluation-metrics") ||
-    pathname.startsWith("/evaluation-profiles");
+  const factorChild = pathname.startsWith("/factors/");
 
   if (factorChild) {
-    return [{ href: FACTOR_SECTION_HREF, label: "因子" }, ...items];
+    return [{ href: FACTOR_ROOT_HREF, label: "因子" }, ...items];
   }
 
-  const dataChild =
-    pathname.startsWith("/datasources") || pathname.startsWith("/test-sets");
+  const dataChild = pathname.startsWith("/data/");
 
   if (dataChild) {
-    return [{ href: DATA_SECTION_HREF, label: "数据" }, ...items];
+    return [{ href: DATA_ROOT_HREF, label: "数据" }, ...items];
   }
 
   return items;
@@ -71,36 +72,44 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function factorsHeaderBreadcrumbs(pathname: string): PageBreadcrumbItem[] | null {
-  if (pathname === "/factors/new") {
-    return [{ href: "/factors", label: "因子库" }, { label: "新增" }];
+function factorsLibraryHeaderBreadcrumbs(
+  pathname: string,
+): PageBreadcrumbItem[] | null {
+  if (pathname === `${FACTOR_LIBRARY_LIST}/new`) {
+    return [
+      { href: FACTOR_LIBRARY_LIST, label: "因子库" },
+      { label: "新增" },
+    ];
   }
 
-  const edit = /^\/factors\/([^/]+)\/edit$/.exec(pathname);
+  const edit = /^\/factors\/library\/([^/]+)\/edit$/.exec(pathname);
   if (edit) {
     const id = edit[1];
-    const base = `/factors/${encodeURIComponent(id)}`;
+    const base = `/factors/library/${encodeURIComponent(id)}`;
     return [
-      { href: "/factors", label: "因子库" },
+      { href: FACTOR_LIBRARY_LIST, label: "因子库" },
       { href: base, label: "因子详情" },
       { label: "编辑" },
     ];
   }
 
-  const hist = /^\/factors\/([^/]+)\/history$/.exec(pathname);
+  const hist = /^\/factors\/library\/([^/]+)\/history$/.exec(pathname);
   if (hist) {
     const id = hist[1];
-    const base = `/factors/${encodeURIComponent(id)}`;
+    const base = `/factors/library/${encodeURIComponent(id)}`;
     return [
-      { href: "/factors", label: "因子库" },
+      { href: FACTOR_LIBRARY_LIST, label: "因子库" },
       { href: base, label: "因子详情" },
       { label: "历史版本" },
     ];
   }
 
-  const detail = /^\/factors\/([^/]+)$/.exec(pathname);
+  const detail = /^\/factors\/library\/([^/]+)$/.exec(pathname);
   if (detail) {
-    return [{ href: "/factors", label: "因子库" }, { label: "因子详情" }];
+    return [
+      { href: FACTOR_LIBRARY_LIST, label: "因子库" },
+      { label: "因子详情" },
+    ];
   }
 
   return null;
@@ -147,17 +156,17 @@ function prefixSectionBreadcrumbs(
   return null;
 }
 
-function factorsBackHref(pathname: string): string | null {
-  if (pathname === "/factors/new") return "/factors";
+function factorsLibraryBackHref(pathname: string): string | null {
+  if (pathname === `${FACTOR_LIBRARY_LIST}/new`) return FACTOR_LIBRARY_LIST;
 
-  const edit = /^\/factors\/([^/]+)\/edit$/.exec(pathname);
-  if (edit) return `/factors/${encodeURIComponent(edit[1])}`;
+  const edit = /^\/factors\/library\/([^/]+)\/edit$/.exec(pathname);
+  if (edit) return `/factors/library/${encodeURIComponent(edit[1])}`;
 
-  const hist = /^\/factors\/([^/]+)\/history$/.exec(pathname);
-  if (hist) return `/factors/${encodeURIComponent(hist[1])}`;
+  const hist = /^\/factors\/library\/([^/]+)\/history$/.exec(pathname);
+  if (hist) return `/factors/library/${encodeURIComponent(hist[1])}`;
 
-  const detail = /^\/factors\/([^/]+)$/.exec(pathname);
-  if (detail) return "/factors";
+  const detail = /^\/factors\/library\/([^/]+)$/.exec(pathname);
+  if (detail) return FACTOR_LIBRARY_LIST;
 
   return null;
 }
@@ -192,12 +201,12 @@ export function buildAppHeaderBreadcrumbs(
   const exact = EXACT_HEADER_CRUMBS[pathname];
   if (exact) return withMenuSection(pathname, exact);
 
-  const factors = factorsHeaderBreadcrumbs(pathname);
-  if (factors) return withMenuSection(pathname, factors);
+  const factorsLib = factorsLibraryHeaderBreadcrumbs(pathname);
+  if (factorsLib) return withMenuSection(pathname, factorsLib);
 
   const metrics = standardResourceBreadcrumbs(
     pathname,
-    "/evaluation-metrics",
+    FACTOR_METRICS_LIST,
     "评价指标",
     "详情",
   );
@@ -205,7 +214,7 @@ export function buildAppHeaderBreadcrumbs(
 
   const profiles = standardResourceBreadcrumbs(
     pathname,
-    "/evaluation-profiles",
+    FACTOR_PROFILES_LIST,
     "评价方案",
     "详情",
   );
@@ -213,7 +222,7 @@ export function buildAppHeaderBreadcrumbs(
 
   const datasources = standardResourceBreadcrumbs(
     pathname,
-    "/datasources",
+    DATA_DATASOURCES_LIST,
     "数据源",
     "数据源详情",
   );
@@ -221,7 +230,7 @@ export function buildAppHeaderBreadcrumbs(
 
   const testSets = standardResourceBreadcrumbs(
     pathname,
-    "/test-sets",
+    DATA_TEST_SETS_LIST,
     "测试集",
     "测试集详情",
   );
@@ -243,19 +252,19 @@ export function buildAppHeaderBreadcrumbs(
 export function headerBackHref(pathname: string): string | null {
   if (isTopLevelPath(pathname)) return null;
 
-  const factors = factorsBackHref(pathname);
-  if (factors !== null) return factors;
+  const factorsLib = factorsLibraryBackHref(pathname);
+  if (factorsLib !== null) return factorsLib;
 
-  const metrics = standardResourceBackHref(pathname, "/evaluation-metrics");
+  const metrics = standardResourceBackHref(pathname, FACTOR_METRICS_LIST);
   if (metrics !== null) return metrics;
 
-  const profiles = standardResourceBackHref(pathname, "/evaluation-profiles");
+  const profiles = standardResourceBackHref(pathname, FACTOR_PROFILES_LIST);
   if (profiles !== null) return profiles;
 
-  const datasources = standardResourceBackHref(pathname, "/datasources");
+  const datasources = standardResourceBackHref(pathname, DATA_DATASOURCES_LIST);
   if (datasources !== null) return datasources;
 
-  const testSets = standardResourceBackHref(pathname, "/test-sets");
+  const testSets = standardResourceBackHref(pathname, DATA_TEST_SETS_LIST);
   if (testSets !== null) return testSets;
 
   const strategies = prefixSectionBackHref(pathname, "/strategies");
