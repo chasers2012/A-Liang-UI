@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { AiChatMarkdown } from "@/components/ai-chat-markdown";
 import { ApiError, postAgentChatStream } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import type { AgentChatMessagePublic } from "@/models";
@@ -120,12 +121,10 @@ function AiChatMessageList({
             return (
               <div
                 key={seg.message.id}
-                className="mr-auto max-w-[min(100%,36rem)] rounded-lg border border-border/70 bg-card px-4 py-3 text-sm leading-relaxed text-card-foreground"
+                className="mr-auto max-w-[min(100%,36rem)] rounded-lg border border-border/70 bg-card py-3 pl-6 pr-4 text-sm leading-relaxed text-card-foreground"
               >
                 <span className="sr-only">助手：</span>
-                <p className="whitespace-pre-wrap wrap-break-word">
-                  {seg.message.content}
-                </p>
+                <AiChatMarkdown content={seg.message.content} />
               </div>
             );
           }
@@ -173,7 +172,7 @@ function AiChatMessageList({
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
-                <div className="border-border/40 border-l py-2 pl-5 pr-2 text-sm leading-relaxed text-foreground">
+                <div className="border-border/40 border-l py-2 pl-7 pr-2 text-sm leading-relaxed text-foreground">
                   {seg.assistant ? (
                     <>
                       <span className="sr-only">助手：</span>
@@ -189,9 +188,7 @@ function AiChatMessageList({
                         </div>
                       ) : null}
                       {seg.assistant.content !== "" ? (
-                        <p className="whitespace-pre-wrap wrap-break-word">
-                          {seg.assistant.content}
-                        </p>
+                        <AiChatMarkdown content={seg.assistant.content} />
                       ) : null}
                     </>
                   ) : showPending ? (
