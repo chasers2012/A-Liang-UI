@@ -7,6 +7,7 @@ import {
   Layers,
   Library,
   LineChart,
+  Settings,
   Table2,
   TableProperties,
 } from "lucide-react";
@@ -49,6 +50,11 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
     },
     { title: "策略", url: "/strategies", icon: GitBranch },
     { title: "回测", url: "/backtest", icon: LineChart },
-    { title: "Agent", url: "/agent", icon: Bot },
+    {
+      title: "Agent",
+      url: "/agent",
+      icon: Bot,
+      items: [{ title: "配置", url: "/agent/config", icon: Settings }],
+    },
   ],
 };

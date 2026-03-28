@@ -242,6 +242,13 @@ export function buildAppHeaderBreadcrumbs(
   const backtest = prefixSectionBreadcrumbs(pathname, "/backtest", "回测");
   if (backtest) return withMenuSection(pathname, backtest);
 
+  if (pathname === "/agent/config") {
+    return withMenuSection(pathname, [
+      { href: "/agent", label: "Agent" },
+      { label: "配置" },
+    ]);
+  }
+
   const agent = prefixSectionBreadcrumbs(pathname, "/agent", "Agent");
   if (agent) return withMenuSection(pathname, agent);
 
