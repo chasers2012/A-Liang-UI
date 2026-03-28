@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 FactorCodeSnapshotKind = Literal["auto", "manual"]
 
 
 class FactorCodeSnapshotMeta(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str
     group: str
-    group_label: str
     description: str
     max_window: int
     dependencies: list[str] = Field(default_factory=list)

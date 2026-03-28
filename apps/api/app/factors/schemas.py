@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app import datetime_utils
 
@@ -23,8 +23,7 @@ from factor.factor import Factor
 class UserFactor(Factor):
     name = "{safe}"
     group = "custom"
-    group_label = "自定义"
-    description = "在此实现 calc"
+    description = ""
     dependencies = ["close"]
     max_window = 2
 
@@ -39,10 +38,11 @@ def source_relative_path(factor_id: str) -> str:
 
 
 class FactorRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     id: str
     name: str
     group: str = "factor"
-    group_label: str = "因子"
     description: str = ""
     max_window: int = 1
     dependencies: list[str] = Field(default_factory=lambda: ["close"])
@@ -57,9 +57,10 @@ class FactorRegistryFile(BaseModel):
 
 
 class FactorCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str
     group: str = "factor"
-    group_label: str = "因子"
     description: str = ""
     max_window: int = 1
     dependencies: list[str] = Field(default_factory=lambda: ["close"])
@@ -86,8 +87,7 @@ class FactorCreate(BaseModel):
         return FactorRecord(
             id=factor_id,
             name=self.name.strip(),
-            group=self.group.strip() or "factor",
-            group_label=self.group_label.strip() or "因子",
+            group=self.group.strip(),
             description=self.description.strip(),
             max_window=self.max_window,
             dependencies=list(self.dependencies),
@@ -98,9 +98,10 @@ class FactorCreate(BaseModel):
 
 
 class FactorPatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     name: str | None = None
     group: str | None = None
-    group_label: str | None = None
     description: str | None = None
     max_window: int | None = None
     dependencies: list[str] | None = None
@@ -111,7 +112,6 @@ class FactorSummaryPublic(BaseModel):
     id: str
     name: str
     group: str
-    group_label: str
     description: str
     max_window: int
     dependencies: list[str]
@@ -135,7 +135,6 @@ def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
         id=rec.id,
         name=rec.name,
         group=rec.group,
-        group_label=rec.group_label,
         description=rec.description,
         max_window=rec.max_window,
         dependencies=list(rec.dependencies),

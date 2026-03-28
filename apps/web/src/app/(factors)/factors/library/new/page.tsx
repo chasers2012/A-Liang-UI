@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,23 +8,31 @@ import { createFactor, getFactorDefaultSource } from "@/lib/quant-agent-api";
 
 import {
   bodyFromForm,
+  defaultNewFactorName,
   emptyForm,
   type FactorFormState,
   validateFormForSubmit,
 } from "@/features/factors/form-model";
-import { FactorFormFields } from "@/features/factors/ui/factor-form-fields";
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
+import {
+  applyFactorFormPatch,
+  FactorFormFields,
+} from "@/features/factors/ui/factor-form-fields";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
   FACTOR_MAIN_FORM_ID,
-  factorFormPageDescription,
-  FactorFormHintAlert,
   FactorFormPageContainer,
   FactorFormLoading,
 } from "@/features/factors/ui/factor-form-page";
 
 export default function NewFactorPage() {
   const router = useRouter();
-  const [form, setForm] = useState<FactorFormState>(emptyForm);
+  const initialFactorName = useMemo(() => defaultNewFactorName(), []);
+  const [form, setForm] = useState<FactorFormState>(() => ({
+    ...emptyForm(),
+    name: initialFactorName,
+  }));
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
@@ -34,7 +42,7 @@ export default function NewFactorPage() {
     let cancelled = false;
     (async () => {
       try {
-        const { source } = await getFactorDefaultSource("my_factor");
+        const { source } = await getFactorDefaultSource(initialFactorName);
         if (!cancelled) {
           setForm((prev) => ({ ...prev, source }));
         }
@@ -51,7 +59,7 @@ export default function NewFactorPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialFactorName]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,10 +82,7 @@ export default function NewFactorPage() {
 
   if (bootstrapping) {
     return (
-      <FactorFormPageContainer
-        title="新增因子"
-        description={factorFormPageDescription()}
-      >
+      <FactorFormPageContainer title="新增因子">
         <FactorFormLoading />
       </FactorFormPageContainer>
     );
@@ -85,8 +90,22 @@ export default function NewFactorPage() {
 
   return (
     <FactorFormPageContainer
-      title="新增因子"
-      description={factorFormPageDescription()}
+      title={
+        <FactorEditPageTitle
+          name={form.name}
+          onNameChange={(next) =>
+            setForm((f) => applyFactorFormPatch(f, { name: next }))
+          }
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={form.description}
+          onDescriptionChange={(next) =>
+            setForm((f) => applyFactorFormPatch(f, { description: next }))
+          }
+        />
+      }
       action={
         <PageFormHeaderActions
           formId={FACTOR_MAIN_FORM_ID}
@@ -102,13 +121,6 @@ export default function NewFactorPage() {
         </Alert>
       ) : null}
 
-      <FactorFormHintAlert>
-        保存成功后将进入该因子的详情页。因子文件名为{" "}
-        <span className="font-mono text-xs">factors/&lt;uuid&gt;.py</span>
-        ，标识 <span className="font-mono text-xs">name</span>{" "}
-        写入注册表并与类属性同步。
-      </FactorFormHintAlert>
-
       <form
         id={FACTOR_MAIN_FORM_ID}
         className="flex flex-col gap-6"
@@ -119,8 +131,14 @@ export default function NewFactorPage() {
           setForm={setForm}
           formError={formError}
           idPrefix="new-factor"
+          hideNameField
+          hideDescriptionField
         />
       </form>
+
+      <p className="text-sm text-muted-foreground">
+        保存成功后将进入该因子的详情页。
+      </p>
     </FactorFormPageContainer>
   );
 }

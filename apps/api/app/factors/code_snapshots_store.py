@@ -38,7 +38,6 @@ def _meta_from_record(rec: FactorRecord) -> FactorCodeSnapshotMeta:
     return FactorCodeSnapshotMeta(
         name=rec.name,
         group=rec.group,
-        group_label=rec.group_label,
         description=rec.description,
         max_window=rec.max_window,
         dependencies=list(rec.dependencies),

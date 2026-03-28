@@ -27,7 +27,7 @@ export type PageProps = {
   className?: string;
   /** 页顶主标题（与全站列表页 `h1` 样式一致）。 */
   title?: ReactNode;
-  /** 标题下的说明文案，可为纯文本或含行内元素的 ReactNode。 */
+  /** 标题下的说明区（`div`），可为纯文本、表单控件或块级结构。 */
   description?: ReactNode;
   /** 传给页面主内容区标题块 `<header>` 的 class（例如 `gap="none"` 时用 `mb-8` 与正文拉开间距）。 */
   headerClassName?: string;
@@ -123,9 +123,9 @@ function PageChrome({
                 </h1>
               ) : null}
               {description != null ? (
-                <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
                   {description}
-                </p>
+                </div>
               ) : null}
             </header>
           ) : null}

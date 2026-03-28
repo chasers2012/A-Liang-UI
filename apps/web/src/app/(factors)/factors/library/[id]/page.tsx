@@ -184,6 +184,10 @@ function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
         )}
         <dl className="grid gap-2 text-xs">
           <div className="flex flex-wrap gap-x-2 gap-y-1">
+            <dt className="text-muted-foreground">group</dt>
+            <dd className="font-mono text-[0.7rem]">{detail.group}</dd>
+          </div>
+          <div className="flex flex-wrap gap-x-2 gap-y-1">
             <dt className="text-muted-foreground">max_window</dt>
             <dd className="font-mono tabular-nums">{detail.max_window}</dd>
           </div>
@@ -496,7 +500,6 @@ export default function FactorDetailPage() {
     id: detail.id,
     name: detail.name,
     group: detail.group,
-    group_label: detail.group_label,
     description: detail.description,
     max_window: detail.max_window,
     dependencies: detail.dependencies,
@@ -509,12 +512,11 @@ export default function FactorDetailPage() {
     <FactorFormPageContainer
       title={<span className="font-mono">{detail.name}</span>}
       description={
-        <>
-          {detail.group}
-          {detail.group_label && detail.group_label !== detail.group
-            ? ` · ${detail.group_label}`
-            : null}
-        </>
+        detail.description.trim() !== "" ? (
+          detail.description
+        ) : (
+          <span className="text-muted-foreground">无描述</span>
+        )
       }
       action={
         <FactorDetailHeaderActions

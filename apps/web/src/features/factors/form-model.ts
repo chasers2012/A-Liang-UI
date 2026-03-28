@@ -3,21 +3,31 @@ import type { FactorDetailPublic } from "@/lib/quant-agent-api";
 export type FactorFormState = {
   name: string;
   group: string;
-  group_label: string;
   description: string;
   max_window: string;
   dependencies_csv: string;
   source: string;
 };
 
+/** 新建因子页默认标识：「新因子」+ 日期时间，须满足服务端 `name.isidentifier()`。 */
+export function defaultNewFactorName(d = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const y = d.getFullYear();
+  const mo = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const h = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  return `新因子_${y}${mo}${day}_${h}${mi}${s}`;
+}
+
 /** Initial shell; `source` is filled from GET /factors/default-source on the new-factor page. */
 export function emptyForm(): FactorFormState {
   return {
-    name: "my_factor",
-    group: "custom",
-    group_label: "自定义",
-    description: "在此实现 calc",
-    max_window: "2",
+    name: "新因子",
+    group: "未分组",
+    description: "",
+    max_window: "1",
     dependencies_csv: "close",
     source: "",
   };
@@ -27,7 +37,6 @@ export function hydrateFromDetail(d: FactorDetailPublic): FactorFormState {
   return {
     name: d.name,
     group: d.group,
-    group_label: d.group_label,
     description: d.description,
     max_window: String(d.max_window),
     dependencies_csv: d.dependencies.join(", "),
@@ -57,8 +66,7 @@ export function bodyFromForm(form: FactorFormState): Record<string, unknown> {
   const max_window = Number.parseInt(form.max_window, 10);
   return {
     name: form.name.trim(),
-    group: form.group.trim() || "factor",
-    group_label: form.group_label.trim() || "因子",
+    group: form.group.trim(),
     description: form.description.trim(),
     max_window,
     dependencies: deps,

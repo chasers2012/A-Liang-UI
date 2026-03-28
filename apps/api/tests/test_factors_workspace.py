@@ -51,7 +51,6 @@ def test_create_roundtrip_files(workspace_tmp, client):
         json={
             "name": "alpha_one",
             "group": "g",
-            "group_label": "G",
             "description": "d",
             "max_window": 3,
             "dependencies": ["close", "volume"],

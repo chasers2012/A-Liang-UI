@@ -51,12 +51,6 @@ export function FactorCardList({ items }: Props) {
                   </div>
                 <CardDescription className="text-xs leading-relaxed">
                   <span className="text-muted-foreground">{f.group}</span>
-                  {f.group_label && f.group_label !== f.group ? (
-                    <span className="text-muted-foreground/70">
-                      {" "}
-                      · {f.group_label}
-                    </span>
-                  ) : null}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-1.5 pt-0 pb-3">

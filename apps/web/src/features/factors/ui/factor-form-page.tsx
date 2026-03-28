@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 
 import { Page, type PageProps } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getQuantAgentApiBase } from "@/lib/quant-agent-api";
 
 export const FACTOR_MAIN_FORM_ID = "factor-main-form";
 
@@ -37,37 +36,6 @@ export function FactorFormPageContainer({
     >
       {children}
     </Page>
-  );
-}
-
-/** 供 `Page` 的 `description`：因子表单的 workspace 说明。 */
-export function factorFormPageDescription(options?: {
-  factorNameBadge?: string;
-}): ReactNode {
-  const factorNameBadge = options?.factorNameBadge;
-  const api = getQuantAgentApiBase();
-  return (
-    <>
-      {factorNameBadge != null && factorNameBadge !== "" ? (
-        <>
-          <span className="font-mono text-xs">{factorNameBadge}</span>
-          {" · "}
-        </>
-      ) : null}
-      元数据写入{" "}
-      <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-        config/factors.json
-      </code>
-      ，源码保存为{" "}
-      <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-        factors/&lt;id&gt;.py
-      </code>
-      （相对服务端{" "}
-      <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-        {api}
-      </code>{" "}
-      使用的 workspace）。
-    </>
   );
 }
 

@@ -16,11 +16,15 @@ import {
   type FactorFormState,
   validateFormForSubmit,
 } from "@/features/factors/form-model";
-import { FactorFormFields } from "@/features/factors/ui/factor-form-fields";
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
+import {
+  applyFactorFormPatch,
+  FactorFormFields,
+} from "@/features/factors/ui/factor-form-fields";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
   FACTOR_MAIN_FORM_ID,
-  factorFormPageDescription,
   FactorFormLoadError,
   FactorFormLoading,
   FactorFormPageContainer,
@@ -82,10 +86,7 @@ export default function EditFactorPage() {
 
   if (loading) {
     return (
-      <FactorFormPageContainer
-        title="编辑因子"
-        description={factorFormPageDescription()}
-      >
+      <FactorFormPageContainer title="编辑因子">
         <FactorFormLoading />
       </FactorFormPageContainer>
     );
@@ -97,10 +98,22 @@ export default function EditFactorPage() {
 
   return (
     <FactorFormPageContainer
-      title="编辑因子"
-      description={factorFormPageDescription({
-        factorNameBadge: form.name,
-      })}
+      title={
+        <FactorEditPageTitle
+          name={form.name}
+          onNameChange={(next) =>
+            setForm((f) => applyFactorFormPatch(f, { name: next }))
+          }
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={form.description}
+          onDescriptionChange={(next) =>
+            setForm((f) => applyFactorFormPatch(f, { description: next }))
+          }
+        />
+      }
       action={
         <PageFormHeaderActions
           formId={FACTOR_MAIN_FORM_ID}
@@ -119,6 +132,8 @@ export default function EditFactorPage() {
           setForm={setForm}
           formError={formError}
           idPrefix={`edit-${id.slice(0, 8)}`}
+          hideNameField
+          hideDescriptionField
         />
       </form>
 

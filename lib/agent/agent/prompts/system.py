@@ -5,7 +5,7 @@ def factor_subclass_contract() -> str:
     return """
 你必须输出**一个**继承自 Factor 的类，满足：
 
-1. 类属性：name（英文蛇形，唯一）、label（中文短名）、group、group_label、description、max_window（整数，calc 所需最长历史）、dependencies（列表，只能从「可用字段」中选）。
+1. 类属性：name（英文蛇形，唯一）、label（中文短名）、group、description、max_window（整数，calc 所需最长历史）、dependencies（列表，只能从「可用字段」中选）。
 2. 实现 def calc(self, data: pd.DataFrame) -> pd.Series | pd.DataFrame：
    - data 为 MultiIndex (date, asset)，列名与 dependencies 一致；**日期在索引 level `date`**，通常不必把 `trade_date` 放进 dependencies（除非计算里显式用到该列）。
    - 返回值必须是 MultiIndex (date, asset) 的 Series 或单列 DataFrame。

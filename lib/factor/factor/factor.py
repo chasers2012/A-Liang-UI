@@ -16,6 +16,7 @@ class Factor(ABC):
 
     Subclasses define:
     - ``name``: factor id
+    - ``group``: registry grouping (optional override; default ``"factor"``)
     - ``max_window``: maximum lookback length
     - ``dependencies``: required column names in the panel
     - ``calc(data)``: compute values from a MultiIndex (date, asset) DataFrame
@@ -24,7 +25,6 @@ class Factor(ABC):
     name: str = "factor"
     label: str = "因子"
     group: str = "factor"
-    group_label: str = "因子"
     description: str = "因子描述"
     max_window: int = 1
     dependencies: ClassVar[list[str]] = ["close"]

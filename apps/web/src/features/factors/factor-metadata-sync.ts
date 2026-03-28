@@ -33,6 +33,11 @@ function replaceDependenciesAttr(block: string, items: string[]): string {
     : block;
 }
 
+/** Remove legacy `group_label = ...` lines from the class body when saving. */
+function stripGroupLabelLines(block: string): string {
+  return block.replace(/^[ \t]*group_label\s*=.*(?:\r?\n|$)/gm, "");
+}
+
 function findUserFactorClassBodyRange(
   source: string,
 ): { start: number; end: number } | null {
@@ -50,18 +55,15 @@ function patchUserFactorBody(block: string, form: FactorFormState): string {
   const name = form.name.trim() || "my_factor";
   let b = block;
   b = replaceStringAttr(b, "name", name);
-  b = replaceStringAttr(b, "group", form.group.trim() || "factor");
-  b = replaceStringAttr(b, "group_label", form.group_label.trim() || "因子");
+  b = replaceStringAttr(b, "group", form.group.trim());
   b = replaceStringAttr(b, "description", form.description);
   const mw = Number.parseInt(form.max_window, 10);
   if (Number.isFinite(mw) && mw >= 1) {
     b = replaceNumberAttr(b, "max_window", mw);
   }
   const deps = parseDependencies(form.dependencies_csv);
-  if (deps.length > 0) {
-    b = replaceDependenciesAttr(b, deps);
-  }
-  return b;
+  b = replaceDependenciesAttr(b, deps);
+  return stripGroupLabelLines(b);
 }
 
 /**
@@ -155,8 +157,6 @@ export function parseUserFactorMetadataFromSource(
   if (n !== null) out.name = n;
   const group = parseStringAttr(block, "group");
   if (group !== null) out.group = group;
-  const groupLabel = parseStringAttr(block, "group_label");
-  if (groupLabel !== null) out.group_label = groupLabel;
   const description = parseStringAttr(block, "description");
   if (description !== null) out.description = description;
   const mw = parseMaxWindow(block);

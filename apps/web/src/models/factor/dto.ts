@@ -4,7 +4,6 @@ export interface FactorSummaryPublic {
   id: string;
   name: string;
   group: string;
-  group_label: string;
   description: string;
   max_window: number;
   dependencies: string[];
@@ -56,7 +55,6 @@ export type FactorCodeSnapshotKind = "auto" | "manual";
 export interface FactorCodeSnapshotMeta {
   name: string;
   group: string;
-  group_label: string;
   description: string;
   max_window: number;
   dependencies: string[];

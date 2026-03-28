@@ -74,9 +74,7 @@ def _merge_patch(rec, patch: FactorPatch) -> None:
             raise ValueError("name 不能为空")
         rec.name = str(v).strip()
     if "group" in data:
-        rec.group = (data["group"] or "").strip() or "factor"
-    if "group_label" in data:
-        rec.group_label = (data["group_label"] or "").strip() or "因子"
+        rec.group = (data["group"] or "").strip()
     if "description" in data:
         rec.description = (data["description"] or "").strip()
     if "max_window" in data:
