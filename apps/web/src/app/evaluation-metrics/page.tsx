@@ -40,12 +40,10 @@ export default function EvaluationMetricsPage() {
   }, [refresh]);
 
   return (
-    <Page>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          评价指标
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <Page
+      title="评价指标"
+      description={
+        <>
           继承 EvaluationMetric 的 Python 实现，落盘 workspace{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             evaluation_metrics/
@@ -54,9 +52,9 @@ export default function EvaluationMetricsPage() {
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
           </code>
-        </p>
-      </header>
-
+        </>
+      }
+    >
       {error && (
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>

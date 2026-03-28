@@ -81,7 +81,7 @@ export default function TestSetDetailPage() {
 
   if (error || !row) {
     return (
-      <Page gap="sm" grow={false}>
+      <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载测试集</AlertTitle>
           <AlertDescription>{error ?? "未知错误"}</AlertDescription>

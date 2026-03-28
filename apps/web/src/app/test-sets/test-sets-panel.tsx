@@ -56,20 +56,18 @@ export function TestSetsPanel() {
   const count = items?.length ?? 0;
 
   return (
-    <Page>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          测试集
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <Page
+      title="测试集"
+      description={
+        <>
           配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
           </code>
           读写；使用「详情」查看完整字段。
-        </p>
-      </header>
-
+        </>
+      }
+    >
       {loadError && (
         <Alert variant="destructive">
           <AlertTitle>无法加载列表</AlertTitle>

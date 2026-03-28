@@ -40,19 +40,17 @@ export default function EvaluationProfilesPage() {
   }, [refresh]);
 
   return (
-    <Page>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          评价方案
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <Page
+      title="评价方案"
+      description={
+        <>
           配置评价流程（节点图 JSON）与 Alphalens 参数；运行因子评价时可选用方案。API{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
           </code>
-        </p>
-      </header>
-
+        </>
+      }
+    >
       {error && (
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>

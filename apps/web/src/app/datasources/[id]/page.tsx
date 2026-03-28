@@ -59,7 +59,7 @@ export default function DatasourceDetailPage() {
 
   if (error || !ds) {
     return (
-      <Page gap="sm" grow={false}>
+      <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载数据源</AlertTitle>
           <AlertDescription>{error ?? "未知错误"}</AlertDescription>

@@ -121,19 +121,19 @@ export default function AgentPage() {
   }, []);
 
   return (
-    <Page>
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Agent</h1>
-        <p className="mt-2 text-muted-foreground">
+    <Page
+      title="Agent"
+      description={
+        <>
           配置因子挖掘智能体使用的 LLM。默认使用本机 Ollama，模型{" "}
           <span className="font-mono text-foreground">qwen3.5:9b</span>
           。设置会写入工作区{" "}
           <span className="font-mono text-foreground">config/agent_llm.json</span>
           ；命令行运行 <span className="font-mono">python -m agent.run</span>{" "}
           时会读取（环境变量仍可覆盖）。
-        </p>
-      </div>
-
+        </>
+      }
+    >
       <Card className="max-w-xl">
         <CardHeader>
           <CardTitle>模型与密钥</CardTitle>

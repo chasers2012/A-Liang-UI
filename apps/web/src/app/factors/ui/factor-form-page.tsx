@@ -13,7 +13,7 @@ export function FactorFormPageContainer({ children }: { children: ReactNode }) {
   return <Page>{children}</Page>;
 }
 
-/** 标题区：页面标题 + workspace 说明（面包屑仅在 AppShell 顶栏展示） */
+/** 标题区：页面标题 + workspace 说明（面包屑在 Page 顶栏） */
 export function FactorFormPageHeader({
   title,
   factorNameBadge,

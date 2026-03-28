@@ -296,7 +296,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
 
   if (loadError && mode === "edit") {
     return (
-      <Page gap="sm" grow={false}>
+      <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载测试集</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
@@ -309,16 +309,12 @@ export function TestSetForm({ mode, testSetId }: Props) {
   }
 
   return (
-    <Page gap="none">
-      <header className="mb-8 space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          {mode === "create" ? "新增测试集" : "编辑测试集"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。
-        </p>
-      </header>
-
+    <Page
+      gap="none"
+      title={mode === "create" ? "新增测试集" : "编辑测试集"}
+      description="可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。"
+      headerClassName="mb-8"
+    >
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-8">
         {enabledDs.length === 0 ? (
           <Alert variant="destructive">

@@ -109,12 +109,10 @@ export function DatasourcesPanel() {
   const count = items?.length ?? 0;
 
   return (
-    <Page>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          数据源
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <Page
+      title="数据源"
+      description={
+        <>
           配置经{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
@@ -128,9 +126,9 @@ export function DatasourcesPanel() {
             ~/.quant-agent
           </code>
           ）。使用「详情」查看完整配置。
-        </p>
-      </header>
-
+        </>
+      }
+    >
       {loadError && (
         <Alert variant="destructive">
           <AlertTitle>无法加载列表</AlertTitle>

@@ -34,12 +34,10 @@ export function FactorsPanel() {
   const count = items?.length ?? 0;
 
   return (
-    <Page>
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          因子库
-        </h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+    <Page
+      title="因子库"
+      description={
+        <>
           因子配置经{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
@@ -61,9 +59,9 @@ export function FactorsPanel() {
             factors/
           </code>
           。
-        </p>
-      </header>
-
+        </>
+      }
+    >
       {loadError && (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>

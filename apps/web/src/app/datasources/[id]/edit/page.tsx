@@ -110,7 +110,7 @@ export default function EditDatasourcePage() {
 
   if (loadError) {
     return (
-      <Page gap="sm" grow={false}>
+      <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载数据源</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>

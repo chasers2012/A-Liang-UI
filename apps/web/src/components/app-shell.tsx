@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  ArrowLeft,
   Bot,
   ChevronRight,
   Database,
@@ -20,12 +19,7 @@ import {
   TableProperties,
 } from "lucide-react";
 
-import {
-  buildAppHeaderBreadcrumbs,
-  headerBackHref,
-} from "@/components/app-header-nav";
-import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -260,10 +254,6 @@ function AppSidebar() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const headerCrumbs = buildAppHeaderBreadcrumbs(pathname);
-  const backHref = headerBackHref(pathname);
-
   return (
     <SidebarProvider
       className="flex min-h-0 min-w-0 flex-1 h-screen w-screen overflow-hidden"
@@ -276,28 +266,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     >
       <AppSidebar />
       <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-auto">
-        <header
-          className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border px-6 py-2 md:px-8 bg-sidebar"
-          role="banner"
-        >
-          <PageBreadcrumb items={headerCrumbs} variant="header" />
-          {backHref != null ? (
-            <Link
-              href={backHref}
-              className={cn(
-                buttonVariants({
-                  variant: "outline",
-                  size: "sm",
-                }),
-                "shrink-0 gap-1.5",
-              )}
-            >
-              <ArrowLeft className="size-4" aria-hidden />
-              返回
-            </Link>
-          ) : null}
-        </header>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto bg-background">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
           {children}
         </div>
       </SidebarInset>
