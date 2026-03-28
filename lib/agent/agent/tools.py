@@ -3,53 +3,32 @@
 from __future__ import annotations
 
 import json
-import os
 import traceback
 from typing import Any
 
 import pandas as pd
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
 
 from agent.codegen import load_factor_class
 from agent.context import get_dependency_resolver, list_registered_dependency_fields
-from agent.llm import build_chat_llm, message_text, stream_llm
-from agent.prompts import (
-    SYSTEM_CODEGEN,
-    SYSTEM_IDEATE,
-    SYSTEM_PSEUDOCODE,
-    codegen_human_message,
-    ideate_human_message,
-    pseudocode_human_message,
+from agent.state import (
+    DEFAULT_DRY_RUN_END_DATE,
+    DEFAULT_DRY_RUN_START_DATE,
+    DEFAULT_EVAL_END_DATE,
+    DEFAULT_EVAL_START_DATE,
+    DEFAULT_QUANTILES,
 )
 
 __all__ = [
     "FACTOR_EXECUTION_TOOLS",
-    "FACTOR_LLM_TOOLS",
     "describe_factor_dependency_fields",
-    "draft_factor_pseudocode",
     "dry_run_factor_source",
     "evaluate_factor_with_alphalens",
     "format_fields_csv",
-    "generate_factor_python_source",
-    "ideate_factor_research",
     "list_factor_dependency_fields",
     "run_alphalens_evaluation",
     "run_factor_dry_run",
 ]
-
-
-def _stock_codes_from_env() -> list[str] | None:
-    raw = os.environ.get("FACTOR_AGENT_STOCK_CODES", "")
-    if not raw.strip():
-        return None
-    codes = [c.strip() for c in raw.split(",") if c.strip()]
-    return codes or None
-
-
-def _env_skip_alphalens() -> bool:
-    v = os.environ.get("FACTOR_AGENT_SKIP_EVAL", "").strip().lower()
-    return v in {"1", "true", "yes"}
 
 
 def list_factor_dependency_fields() -> list[str]:
@@ -62,74 +41,18 @@ def format_fields_csv(fields: list[str], *, max_show: int = 80) -> str:
 
 
 @tool
-def ideate_factor_research(available_fields_csv: str, user_topic: str) -> str:
-    """Draft a factor research idea from dependency fields (CSV) and user topic."""
-    llm = build_chat_llm()
-    msg = stream_llm(
-        llm,
-        [
-            SystemMessage(content=SYSTEM_IDEATE),
-            HumanMessage(content=ideate_human_message(available_fields_csv, user_topic)),
-        ],
-        stage="ideate",
-    )
-    return message_text(msg).strip()
-
-
-@tool
-def draft_factor_pseudocode(available_fields_csv: str, research_idea: str) -> str:
-    """Pseudocode for a factor from fields summary and research idea."""
-    llm = build_chat_llm()
-    msg = stream_llm(
-        llm,
-        [
-            SystemMessage(content=SYSTEM_PSEUDOCODE),
-            HumanMessage(content=pseudocode_human_message(available_fields_csv, research_idea)),
-        ],
-        stage="pseudocode",
-    )
-    return message_text(msg).strip()
-
-
-@tool
-def generate_factor_python_source(
-    dependency_fields_csv: str,
-    research_idea: str,
-    pseudocode: str,
-    previous_dry_run_error: str | None,
-    repair_attempt_number: int,
-) -> str:
-    """Python source for a Factor subclass; optional dry-run error for repair."""
-    llm = build_chat_llm()
-    human = codegen_human_message(
-        dependency_fields_csv,
-        research_idea,
-        pseudocode,
-        previous_dry_run_error,
-        repair_attempt_number,
-    )
-    msg = stream_llm(
-        llm,
-        [SystemMessage(content=SYSTEM_CODEGEN), HumanMessage(content=human)],
-        stage="codegen",
-    )
-    return message_text(msg).strip()
-
-
-FACTOR_LLM_TOOLS = [
-    ideate_factor_research,
-    draft_factor_pseudocode,
-    generate_factor_python_source,
-]
-
-
-@tool
 def describe_factor_dependency_fields() -> str:
     """Comma-separated dependency field names for Factor implementations (truncated)."""
     return format_fields_csv(list_factor_dependency_fields())
 
 
-def run_factor_dry_run(factor_source: str) -> dict[str, Any]:
+def run_factor_dry_run(
+    factor_source: str,
+    *,
+    dry_run_start_date: str = DEFAULT_DRY_RUN_START_DATE,
+    dry_run_end_date: str = DEFAULT_DRY_RUN_END_DATE,
+    stock_codes: list[str] | None = None,
+) -> dict[str, Any]:
     """Load factor source and run ``calculate()``; dict for graph state updates."""
     if not factor_source:
         return {"dry_run_ok": False, "dry_run_error": "未生成因子代码"}
@@ -145,9 +68,8 @@ def run_factor_dry_run(factor_source: str) -> dict[str, Any]:
             ),
         }
 
-    start = os.environ.get("FACTOR_AGENT_START_DATE", "2024-06-01")
-    end = os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31")
-    stock_codes = _stock_codes_from_env()
+    start = dry_run_start_date
+    end = dry_run_end_date
 
     try:
         cls, class_name = load_factor_class(factor_source)
@@ -176,11 +98,19 @@ def dry_run_factor_source(factor_source: str) -> str:
     return json.dumps(run_factor_dry_run(factor_source), ensure_ascii=False)
 
 
-def run_alphalens_evaluation(factor_source: str) -> dict[str, Any]:
+def run_alphalens_evaluation(
+    factor_source: str,
+    *,
+    skip_alphalens_evaluation: bool = False,
+    eval_start_date: str = DEFAULT_EVAL_START_DATE,
+    eval_end_date: str = DEFAULT_EVAL_END_DATE,
+    stock_codes: list[str] | None = None,
+    quantiles: int = DEFAULT_QUANTILES,
+) -> dict[str, Any]:
     """Run Alphalens evaluation for the given factor source."""
-    if _env_skip_alphalens():
+    if skip_alphalens_evaluation:
         return {
-            "evaluation_summary": "已根据 FACTOR_AGENT_SKIP_EVAL 跳过 Alphalens 评价。",
+            "evaluation_summary": "已跳过 Alphalens 评价（skip_alphalens_evaluation=True）。",
             "evaluation_error": None,
         }
 
@@ -191,16 +121,8 @@ def run_alphalens_evaluation(factor_source: str) -> dict[str, Any]:
             "evaluation_error": "跳过评价：未配置 DependencyResolver",
         }
 
-    start = os.environ.get(
-        "FACTOR_AGENT_EVAL_START",
-        os.environ.get("FACTOR_AGENT_START_DATE", "2023-01-01"),
-    )
-    end = os.environ.get(
-        "FACTOR_AGENT_EVAL_END",
-        os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31"),
-    )
-    stock_codes = _stock_codes_from_env()
-    quantiles = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
+    start = eval_start_date
+    end = eval_end_date
 
     try:
         import matplotlib

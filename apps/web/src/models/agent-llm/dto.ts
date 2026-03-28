@@ -7,6 +7,10 @@ export type AgentLlmSettingsPublic = {
   ollama_base_url: string;
   openai_base_url: string | null;
   api_key: string | null;
+  temperature: number;
+  ollama_timeout: number;
+  ollama_num_predict: number;
+  ollama_reasoning: boolean | null;
 };
 
 export type AgentChatRolePublic = "user" | "assistant" | "system";
@@ -18,9 +22,4 @@ export type AgentChatMessagePublic = {
 
 export type AgentChatRequestPublic = {
   messages: AgentChatMessagePublic[];
-};
-
-export type AgentChatResponsePublic = {
-  role: "assistant";
-  content: string;
 };

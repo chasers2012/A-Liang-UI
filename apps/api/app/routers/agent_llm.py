@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from app.agent_llm_schemas import AgentChatRequest, AgentChatResponse, AgentLlmSettings
+from app.chat.chat_llm import build_chat_model_from_workspace_settings, stream_chunk_text
+from app.chat.llm_schemas import ChatRequest, LlmSettings
 from app.workspace_config import load_workspace_config, save_workspace_config
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -15,27 +17,26 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 _CONFIG_FILE = "agent_llm.json"
 
 
-def _defaults() -> AgentLlmSettings:
-    return AgentLlmSettings()
+def _defaults() -> LlmSettings:
+    return LlmSettings()
 
 
-@router.get("/llm-settings", response_model=AgentLlmSettings)
-def get_llm_settings() -> AgentLlmSettings:
+@router.get("/llm-settings", response_model=LlmSettings)
+def get_llm_settings() -> LlmSettings:
     return load_workspace_config(
         _CONFIG_FILE,
-        AgentLlmSettings,
+        LlmSettings,
         default_factory=_defaults,
     )
 
 
-@router.put("/llm-settings", response_model=AgentLlmSettings)
-def put_llm_settings(body: AgentLlmSettings) -> AgentLlmSettings:
+@router.put("/llm-settings", response_model=LlmSettings)
+def put_llm_settings(body: LlmSettings) -> LlmSettings:
     save_workspace_config(_CONFIG_FILE, body)
     return body
 
 
-def _lc_messages_from_chat_request(body: AgentChatRequest):
-    from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+def _lc_messages_from_chat_request(body: ChatRequest):
 
     lc_messages: list[BaseMessage] = []
     for m in body.messages:
@@ -48,51 +49,27 @@ def _lc_messages_from_chat_request(body: AgentChatRequest):
     return lc_messages
 
 
-@router.post("/chat", response_model=AgentChatResponse)
-def agent_chat(body: AgentChatRequest) -> AgentChatResponse:
-    """Free-form chat using the same LLM as the factor agent (Ollama / OpenAI)."""
-    from agent.llm import build_chat_llm, message_text, stream_llm
-
-    lc_messages = _lc_messages_from_chat_request(body)
-
-    try:
-        llm = build_chat_llm()
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    try:
-        out = stream_llm(llm, lc_messages, stage="chat")
-    except Exception as e:
-        raise HTTPException(
-            status_code=502,
-            detail=f"LLM 调用失败：{e}",
-        ) from e
-
-    return AgentChatResponse(content=message_text(out))
-
-
 @router.post("/chat/stream")
-def agent_chat_stream(body: AgentChatRequest) -> StreamingResponse:
+def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
-    from agent.llm import build_chat_llm, iter_llm_stream_text_deltas
-
     lc_messages = _lc_messages_from_chat_request(body)
 
     def event_iter():
         try:
-            llm = build_chat_llm()
+            settings = load_workspace_config(
+                _CONFIG_FILE,
+                LlmSettings,
+                default_factory=_defaults,
+            )
+            llm = build_chat_model_from_workspace_settings(settings)
         except ValueError as e:
             yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
             return
         try:
-            for delta in iter_llm_stream_text_deltas(
-                llm,
-                lc_messages,
-                stage="chat",
-                force_stream=True,
-            ):
-                if delta:
-                    yield f"data: {json.dumps({'delta': delta}, ensure_ascii=False)}\n\n"
+            for chunk in llm.stream(lc_messages):
+                piece = stream_chunk_text(chunk)
+                if piece:
+                    yield f"data: {json.dumps({'delta': piece}, ensure_ascii=False)}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': f'LLM 调用失败：{e}'}, ensure_ascii=False)}\n\n"
             return

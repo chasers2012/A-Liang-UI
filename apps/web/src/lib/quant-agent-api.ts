@@ -1,6 +1,5 @@
 import type {
   AgentChatRequestPublic,
-  AgentChatResponsePublic,
   AgentLlmSettingsPublic,
   AgentNodeTypePublic,
   AgentWorkflowDetailPublic,
@@ -92,15 +91,6 @@ export function putAgentLlmSettings(
 ): Promise<AgentLlmSettingsPublic> {
   return apiFetchJson<AgentLlmSettingsPublic>("/agent/llm-settings", {
     method: "PUT",
-    body: JSON.stringify(body),
-  });
-}
-
-export function postAgentChat(
-  body: AgentChatRequestPublic,
-): Promise<AgentChatResponsePublic> {
-  return apiFetchJson<AgentChatResponsePublic>("/agent/chat", {
-    method: "POST",
     body: JSON.stringify(body),
   });
 }
