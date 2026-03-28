@@ -12,14 +12,14 @@ from app.datasources.registry import get_by_id as ds_get_by_id
 from app.datasources.registry import load_registry as load_datasource_registry
 from app.datasources.schemas import DataSourceRecord
 from app.datasources.sql_url import build_sqlalchemy_url
-from app.evaluation.test_set_schemas import EvaluationTestSetRecord
-from app.evaluation.test_sets_store import (
+from app.evaluation.scheme.test_set_schemas import EvaluationTestSetRecord
+from app.evaluation.scheme.test_sets_store import (
     get_by_id as test_set_get_by_id,
 )
-from app.evaluation.test_sets_store import (
+from app.evaluation.scheme.test_sets_store import (
     get_default_test_set,
 )
-from app.evaluation.test_sets_store import (
+from app.evaluation.scheme.test_sets_store import (
     load_file as load_test_sets_file,
 )
 from app.factors.evaluation_schemas import (
@@ -29,14 +29,6 @@ from app.factors.evaluation_schemas import (
 from app.factors.loader import load_factor_class
 from app.factors.registry import get_by_id, load_registry, read_source
 from app.factors.schemas import utc_now_iso
-
-
-def _pick_default_datasource() -> DataSourceRecord | None:
-    reg = load_datasource_registry()
-    enabled = [r for r in reg.items if r.enabled]
-    if not enabled:
-        return None
-    return enabled[0]
 
 
 def _datasource_for_test_set(ds_id: str) -> DataSourceRecord:
@@ -57,22 +49,13 @@ def _stock_codes_from_test_set(codes: list[str]) -> list[str] | None:
 def _resolve_evaluation_context(
     explicit_test_set_id: str | None,
 ) -> tuple[
-    EvaluationTestSetRecord | None,
-    DataSourceRecord | None,
+    EvaluationTestSetRecord,
     str,
     str,
     list[str] | None,
     int,
 ]:
-    """Resolve test set (if any), legacy single datasource, window, universe, default quantiles.
-
-    Alphalens 分位数由环境变量 ``FACTOR_AGENT_QUANTILES``（默认 5）决定，不再从测试集读取。
-
-    Order: explicit test_set_id → workspace default test set → env + default datasource.
-
-    When the first tuple element is not None, use its ``datasource_bindings`` for evaluation;
-    otherwise use the second element as the single panel source for all factor dependencies.
-    """
+    """Resolve test set, window, universe, quantiles (from env, default 5)."""
     ts_id = (explicit_test_set_id or "").strip()
     ts_reg = load_test_sets_file()
     ts_rec: EvaluationTestSetRecord | None = None
@@ -83,37 +66,20 @@ def _resolve_evaluation_context(
     else:
         ts_rec = get_default_test_set(ts_reg)
 
-    if ts_rec is not None:
-        stock_codes = _stock_codes_from_test_set(list(ts_rec.stock_codes))
-        q_default = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
-        return (
-            ts_rec,
-            None,
-            ts_rec.start,
-            ts_rec.end,
-            stock_codes,
-            max(2, q_default),
+    if ts_rec is None:
+        raise ValueError(
+            "未配置评价测试集：请在「评价测试集」中创建并设置默认，或在请求中指定 test_set_id。"
         )
 
-    ds_rec = _pick_default_datasource()
-    if ds_rec is None:
-        raise ValueError(
-            "未找到已启用的数据源：请在「数据源」中配置并启用至少一个数据源（建议设默认）。"
-        )
-    start = os.environ.get(
-        "FACTOR_AGENT_EVAL_START",
-        os.environ.get("FACTOR_AGENT_START_DATE", "2023-01-01"),
+    stock_codes = _stock_codes_from_test_set(list(ts_rec.stock_codes))
+    q_default = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
+    return (
+        ts_rec,
+        ts_rec.start,
+        ts_rec.end,
+        stock_codes,
+        max(2, q_default),
     )
-    end = os.environ.get(
-        "FACTOR_AGENT_EVAL_END",
-        os.environ.get("FACTOR_AGENT_END_DATE", "2024-12-31"),
-    )
-    codes_env = os.environ.get("FACTOR_AGENT_STOCK_CODES", "")
-    stock_codes: list[str] | None = (
-        [c.strip() for c in codes_env.split(",") if c.strip()] if codes_env else None
-    )
-    quantiles = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
-    return None, ds_rec, start, end, stock_codes, quantiles
 
 
 def _series_to_period_dict(s: pd.Series) -> dict[str, float]:
@@ -235,8 +201,7 @@ def _register_test_set_bindings(
 
 
 def _build_dependency_resolver(
-    ts_rec: EvaluationTestSetRecord | None,
-    legacy_ds: DataSourceRecord | None,
+    ts_rec: EvaluationTestSetRecord,
     deps: list[str],
     *,
     window: FactorEvaluationWindow,
@@ -255,21 +220,16 @@ def _build_dependency_resolver(
 ]:
     resolver = DependencyResolver()
     try:
-        if ts_rec is not None:
-            err = _register_test_set_bindings(
-                resolver,
-                ts_rec,
-                deps,
-                window=window,
-                quantiles=quantiles,
-                stock_codes=stock_codes,
-            )
-            if err is not None:
-                return None, err
-        else:
-            assert legacy_ds is not None
-            panel_src = _build_datasource(legacy_ds)
-            resolver.register_datasource(panel_src, deps)
+        err = _register_test_set_bindings(
+            resolver,
+            ts_rec,
+            deps,
+            window=window,
+            quantiles=quantiles,
+            stock_codes=stock_codes,
+        )
+        if err is not None:
+            return None, err
     except ValueError as e:
         return None, _eval_failure_tuple(
             str(e), window=window, quantiles=quantiles, stock_codes=stock_codes
@@ -309,7 +269,7 @@ def build_alphalens_evaluator_for_factor(
     if rec is None:
         raise ValueError("因子不存在")
 
-    ts_rec, legacy_ds, start, end, stock_codes, quantiles = _resolve_evaluation_context(test_set_id)
+    ts_rec, start, end, stock_codes, quantiles = _resolve_evaluation_context(test_set_id)
     window = FactorEvaluationWindow(start=start, end=end)
 
     src = read_source(rec)
@@ -330,7 +290,7 @@ def build_alphalens_evaluator_for_factor(
         )
 
     resolver, fail = _build_dependency_resolver(
-        ts_rec, legacy_ds, deps, window=window, quantiles=quantiles, stock_codes=stock_codes
+        ts_rec, deps, window=window, quantiles=quantiles, stock_codes=stock_codes
     )
     if fail is not None:
         return fail
@@ -364,7 +324,7 @@ def run_evaluation_for_factor(
     test_set_id: str | None = None,
     evaluation_profile: object | None = None,
 ) -> FactorEvaluationSnapshot:
-    from app.evaluation.profile_schemas import EvaluationProfileRecord
+    from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
 
     merged_ts = (test_set_id or "").strip() or None
     if (
@@ -380,7 +340,7 @@ def run_evaluation_for_factor(
         and isinstance(evaluation_profile, EvaluationProfileRecord)
         and evaluation_profile.workflow.nodes
     ):
-        from app.evaluation.workflow_runner import run_evaluation_profile_workflow
+        from app.evaluation.scheme.workflow_runner import run_evaluation_profile_workflow
 
         return run_evaluation_profile_workflow(
             factor_id,

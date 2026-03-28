@@ -9,16 +9,12 @@ import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   prepare_alphalens: "计算因子",
-  result_visualization: "结果可视化",
   viz_auto: "可视化·自动",
   viz_bars: "可视化·条形图",
   viz_bars_diverging: "可视化·双向条形图",
   viz_table: "可视化·表格",
   viz_json: "可视化·JSON",
   viz_scalar: "可视化·单值",
-  mean_information_coefficient: "平均 IC",
-  mean_return_spread: "多空收益差",
-  user_metric: "自定义指标",
 };
 
 const METRIC_NODE_PREFIX = "metric:";
@@ -52,10 +48,6 @@ function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
     const id = node.type.slice(METRIC_NODE_PREFIX.length).trim();
     return id || null;
   }
-  if (node.type === "user_metric" && node.params) {
-    const mid = node.params.metric_id;
-    return typeof mid === "string" && mid.trim() ? mid.trim() : null;
-  }
   return null;
 }
 
@@ -69,24 +61,7 @@ function metricDisplayName(
 
 function isVizWorkflowNodeType(t: string | undefined): boolean {
   if (!t) return false;
-  return t === "result_visualization" || t.startsWith(VIZ_NODE_PREFIX);
-}
-
-/** 旧版单一可视化节点：mode 在 params 里（迁移后多为 viz_* 类型）。 */
-function vizSpecFromLegacyResultVizParams(
-  params: Record<string, unknown> | undefined,
-): MetricVisualizationSpec {
-  const rawMode = params?.mode;
-  const mode: MetricVisualizationMode =
-    typeof rawMode === "string" &&
-    (VIZ_MODES as readonly string[]).includes(rawMode)
-      ? (rawMode as MetricVisualizationMode)
-      : "auto";
-  const pdk = params?.period_day_keys;
-  return {
-    mode,
-    period_day_keys: typeof pdk === "boolean" ? pdk : false,
-  };
+  return t.startsWith(VIZ_NODE_PREFIX);
 }
 
 function vizSpecFromVizNode(
@@ -95,9 +70,6 @@ function vizSpecFromVizNode(
   const t = node?.type ?? "";
   const pdk = node?.params?.period_day_keys;
   const period_day_keys = typeof pdk === "boolean" ? pdk : false;
-  if (t === "result_visualization") {
-    return vizSpecFromLegacyResultVizParams(node?.params);
-  }
   if (t.startsWith(VIZ_NODE_PREFIX)) {
     const rest = t.slice(VIZ_NODE_PREFIX.length);
     const mode: MetricVisualizationMode = (VIZ_MODES as readonly string[]).includes(

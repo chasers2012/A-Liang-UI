@@ -11,9 +11,8 @@ DataSourceType = Literal["sql", "csv"]
 
 
 class SqlConfigStored(BaseModel):
-    """Stored SQL source. Prefer db_* fields; engine_url is legacy-only."""
+    """Stored SQL source (structured db_* fields)."""
 
-    engine_url: str | None = None
     db_driver: str = "postgresql"
     db_host: str = ""
     db_port: int | None = None
@@ -124,7 +123,6 @@ class DataSourceCreate(BaseModel):
         if self.type == "sql" and self.sql:
             s = self.sql
             sql = SqlConfigStored(
-                engine_url=None,
                 db_driver=s.db_driver,
                 db_host=s.db_host.strip(),
                 db_port=s.db_port,
@@ -166,7 +164,6 @@ class DataSourceCreate(BaseModel):
 
 
 class SqlPatch(BaseModel):
-    engine_url: str | None = None
     db_driver: str | None = None
     db_host: str | None = None
     db_port: int | None = None
@@ -202,7 +199,6 @@ class SqlPublic(BaseModel):
     db_username: str = ""
     db_name: str = ""
     has_password: bool = False
-    has_legacy_engine_url: bool = False
     table: str
     date_column: str
     asset_column: str
@@ -232,15 +228,13 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
     csv_pub: CsvPublic | None = None
     if rec.type == "sql" and rec.sql:
         s = rec.sql
-        legacy = bool((s.engine_url or "").strip())
         sql_pub = SqlPublic(
             db_driver=s.db_driver or "postgresql",
             db_host=s.db_host,
             db_port=s.db_port,
             db_username=s.db_username,
             db_name=s.db_name,
-            has_password=bool(s.db_password) or legacy,
-            has_legacy_engine_url=legacy,
+            has_password=bool(s.db_password),
             table=s.table,
             date_column=s.date_column,
             asset_column=s.asset_column,

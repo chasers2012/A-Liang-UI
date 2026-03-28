@@ -4,11 +4,6 @@ from pathlib import Path
 
 from workspace import ensure_dir
 
-from app.evaluation.metric_schemas import (
-    EVALUATION_METRICS_DIR,
-    EvaluationMetricRecord,
-    EvaluationMetricsRegistryFile,
-)
 from app.persistence.registry_helpers import get_item_by_id
 from app.persistence.source_files import (
     delete_source_text_file,
@@ -16,6 +11,12 @@ from app.persistence.source_files import (
     write_source_text,
 )
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
+
+from .metric_schemas import (
+    EVALUATION_METRICS_DIR,
+    EvaluationMetricRecord,
+    EvaluationMetricsRegistryFile,
+)
 
 REGISTRY_FILENAME = "evaluation_metrics.json"
 
@@ -34,7 +35,7 @@ def load_registry() -> EvaluationMetricsRegistryFile:
         EvaluationMetricsRegistryFile,
         default_factory=EvaluationMetricsRegistryFile,
     )
-    from app.evaluation.builtin_metrics_seed import ensure_builtin_metrics_seeded
+    from .builtin_metrics_seed import ensure_builtin_metrics_seeded
 
     if ensure_builtin_metrics_seeded(reg):
         save_registry(reg)

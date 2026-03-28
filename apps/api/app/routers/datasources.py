@@ -26,24 +26,12 @@ from app.datasources.verify import verify_datasource
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
 
-def _merge_sql_engine_url(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
-    if "engine_url" not in sp:
-        return
-    v = sp["engine_url"]
-    if v is None or (isinstance(v, str) and not v.strip()):
-        sql.engine_url = None
-    else:
-        sql.engine_url = str(v).strip()
-
-
 def _merge_sql_credentials(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
     if "db_driver" in sp and sp["db_driver"] is not None:
         sql.db_driver = str(sp["db_driver"])
     if "db_host" in sp:
         hv = sp["db_host"]
         sql.db_host = "" if hv is None else str(hv)
-        if sql.db_host.strip():
-            sql.engine_url = None
     if "db_port" in sp:
         sql.db_port = sp["db_port"]
     if "db_username" in sp:
@@ -55,8 +43,6 @@ def _merge_sql_credentials(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
     if "db_name" in sp:
         nv = sp["db_name"]
         sql.db_name = "" if nv is None else str(nv)
-        if sql.db_name.strip():
-            sql.engine_url = None
 
 
 def _merge_sql_table_mapping(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
@@ -71,7 +57,6 @@ def _merge_sql_table_mapping(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
 
 
 def _merge_sql_subpatch(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
-    _merge_sql_engine_url(sql, sp)
     _merge_sql_credentials(sql, sp)
     _merge_sql_table_mapping(sql, sp)
 

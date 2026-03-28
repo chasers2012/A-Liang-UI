@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from collections.abc import Set as AbstractSet
 
-from app.evaluation.profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
-from app.evaluation.workflow_graph_types import workflow_node_definition_or_fail
+from .profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
+from .workflow_graph_types import workflow_node_definition_or_fail
 
 
 def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNode]:

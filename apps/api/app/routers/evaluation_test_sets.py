@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.datasources.registry import get_by_id as ds_get_by_id
 from app.datasources.registry import load_registry as load_ds_registry
 from app.datasources.schemas import DataSourceRecord, utc_now_iso
-from app.evaluation.test_set_schemas import (
+from app.evaluation.scheme.test_set_schemas import (
     EvaluationTestSetCreate,
     EvaluationTestSetDatasourceBindingInput,
     EvaluationTestSetDatasourceBindingPublic,
@@ -14,7 +14,7 @@ from app.evaluation.test_set_schemas import (
     EvaluationTestSetPublic,
     EvaluationTestSetRecord,
 )
-from app.evaluation.test_sets_store import (
+from app.evaluation.scheme.test_sets_store import (
     apply_default_uniqueness,
     get_by_id,
     load_file,

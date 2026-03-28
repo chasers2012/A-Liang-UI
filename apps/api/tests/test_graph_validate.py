@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from app.evaluation.graph_validate import validate_workflow_graph
-from app.evaluation.profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
+from app.evaluation.scheme.graph_validate import validate_workflow_graph
+from app.evaluation.scheme.profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
 
 
 def test_duplicate_node_types_allowed():

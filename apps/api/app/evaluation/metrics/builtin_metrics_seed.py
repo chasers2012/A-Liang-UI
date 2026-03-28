@@ -4,18 +4,19 @@ from __future__ import annotations
 
 from importlib import resources
 
-from app.evaluation.builtin_metric_registry import BUILTIN_SEED_METAS
-from app.evaluation.metric_schemas import (
+from app.persistence.source_files import read_source_text, resolve_source_path
+
+from .builtin_metric_registry import BUILTIN_SEED_METAS
+from .metric_schemas import (
     EvaluationMetricRecord,
     MetricVisualizationSpec,
     source_relative_path,
     utc_now_iso,
 )
-from app.persistence.source_files import read_source_text, resolve_source_path
 
 
 def _template_text(filename: str) -> str:
-    root = resources.files("app.evaluation.builtin_metric_templates")
+    root = resources.files("app.evaluation.metrics.builtin_metric_templates")
     return root.joinpath(filename).read_text(encoding="utf-8")
 
 
@@ -28,7 +29,7 @@ def _source_missing_or_empty(source_path: str) -> bool:
 
 def ensure_builtin_metrics_seeded(reg) -> bool:
     """Mutate *reg* in place; return whether the registry JSON should be saved."""
-    from app.evaluation.metrics_store import get_by_id, write_source
+    from .metrics_store import get_by_id, write_source
 
     changed = False
     now = utc_now_iso()

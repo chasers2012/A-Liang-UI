@@ -180,10 +180,6 @@ export function DatasourceDetailLoaded({
                 <dd>{ds.sql.has_password ? "是" : "否"}</dd>
               </div>
               <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">has_legacy_engine_url</dt>
-                <dd>{ds.sql.has_legacy_engine_url ? "是" : "否"}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                 <dt className="text-muted-foreground">table</dt>
                 <dd className="break-all font-mono text-xs">{ds.sql.table}</dd>
               </div>

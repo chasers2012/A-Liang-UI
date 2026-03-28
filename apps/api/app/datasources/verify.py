@@ -19,7 +19,7 @@ def verify_datasource(rec: DataSourceRecord) -> tuple[bool, str]:
         except ValueError as e:
             return False, str(e)
         if not url:
-            return False, "未配置数据库连接：请填写主机（IP）、数据库名与端口，或保留旧版连接串。"
+            return False, "未配置数据库连接：请填写主机（IP）、数据库名与端口。"
         try:
             engine = create_engine(url)
             with engine.connect() as conn:

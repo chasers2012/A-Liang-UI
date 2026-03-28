@@ -143,13 +143,27 @@ def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
 
     csv_path = workspace_tmp / "eval_test_panel.csv"
     csv_path.write_text("date,asset,close\n2023-01-01,A,1\n", encoding="utf-8")
-    client.post("/datasources", json=_csv_datasource_body())
-    assert True
+    r_ds = client.post("/datasources", json=_csv_datasource_body())
+    assert r_ds.status_code == 200
+    ds_id = r_ds.json()["id"]
+
+    r_ts = client.post(
+        "/evaluation-test-sets",
+        json={
+            "name": "ts_default",
+            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
+            "start": "2023-01-01",
+            "end": "2024-12-31",
+            "stock_codes": [],
+            "is_default": True,
+        },
+    )
+    assert r_ts.status_code == 200
 
     r_f = client.post(
         "/factors",
         json={
-            "name": "f_legacy",
+            "name": "f_default_ts",
             "max_window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
@@ -163,39 +177,3 @@ def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
     body = r_run.json()
     assert body["factor_id"] == fid
     assert body["window"] == {"start": "2023-01-01", "end": "2024-12-31"}
-
-
-def test_migrate_v1_file_on_load(client, workspace_tmp):
-    cfg_dir = workspace_tmp / "config"
-    cfg_dir.mkdir(parents=True, exist_ok=True)
-    ds_id = "fake-ds"
-    (cfg_dir / "evaluation_test_sets.json").write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "items": [
-                    {
-                        "id": "ts-1",
-                        "name": "legacy",
-                        "description": "",
-                        "datasource_id": ds_id,
-                        "start": "2020-01-01",
-                        "end": "2020-12-31",
-                        "stock_codes": [],
-                        "quantiles": 5,
-                        "is_default": False,
-                        "created_at": "2020-01-01T00:00:00+00:00",
-                        "updated_at": "2020-01-01T00:00:00+00:00",
-                    }
-                ],
-            },
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
-    )
-    r = client.get("/evaluation-test-sets")
-    assert r.status_code == 200
-    rows = r.json()
-    assert len(rows) == 1
-    assert rows[0]["datasource_bindings"][0]["datasource_id"] == ds_id
-    assert rows[0]["datasource_bindings"][0]["dependencies"] == []

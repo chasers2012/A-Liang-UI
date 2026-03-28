@@ -6,7 +6,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, field_validator
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.metric_schemas import MetricWorkflowParamSpec
+from app.evaluation.metrics.metric_schemas import MetricWorkflowParamSpec
 
 
 class WorkflowViewport(BaseModel):
@@ -44,7 +44,7 @@ class EvaluationWorkflow(BaseModel):
 
 
 class EvaluationProfilePrepare(BaseModel):
-    """历史字段：用于将旧方案中的准备参数一次性合并进「计算因子」节点 params；新方案以节点为准。"""
+    """Profile-level Alphalens defaults merged into ``prepare_alphalens`` nodes when params omit them."""
 
     forward_return_periods: list[int] = Field(default_factory=lambda: [1, 5, 10, 20])
     quantiles: int | None = None

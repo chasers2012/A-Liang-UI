@@ -96,7 +96,7 @@ def is_prepare_node_type(node_type: str) -> bool:
 
 def is_viz_node_type(node_type: str) -> bool:
     t = (node_type or "").strip()
-    return t.startswith(VIZ_NODE_TYPE_PREFIX) or t == "result_visualization"
+    return t.startswith(VIZ_NODE_TYPE_PREFIX)
 
 
 def sorted_viz_node_type_ids() -> list[str]:

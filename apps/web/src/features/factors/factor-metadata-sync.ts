@@ -33,11 +33,6 @@ function replaceDependenciesAttr(block: string, items: string[]): string {
     : block;
 }
 
-/** Remove legacy `group_label = ...` lines from the class body when saving. */
-function stripGroupLabelLines(block: string): string {
-  return block.replace(/^[ \t]*group_label\s*=.*(?:\r?\n|$)/gm, "");
-}
-
 function findUserFactorClassBodyRange(
   source: string,
 ): { start: number; end: number } | null {
@@ -63,7 +58,7 @@ function patchUserFactorBody(block: string, form: FactorFormState): string {
   }
   const deps = parseDependencies(form.dependencies_csv);
   b = replaceDependenciesAttr(b, deps);
-  return stripGroupLabelLines(b);
+  return b;
 }
 
 /**

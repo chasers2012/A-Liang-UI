@@ -10,17 +10,14 @@ from typing import Any
 
 import pandas as pd
 
-from app.evaluation.builtin_metric_registry import parse_metric_node_type
-from app.evaluation.evaluation_metric_resolve import resolve_evaluation_metric
-from app.evaluation.metric_schemas import (
+from app.evaluation.metrics.builtin_metric_registry import parse_metric_node_type
+from app.evaluation.metrics.evaluation_metric_resolve import resolve_evaluation_metric
+from app.evaluation.metrics.metric_schemas import (
     RESERVED_METRIC_WORKFLOW_PARAM_KEYS,
     MetricWorkflowParamSpec,
 )
-from app.evaluation.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics_store import load_registry as load_metrics_registry
-from app.evaluation.node_type_registry import is_viz_node_type
-from app.evaluation.profile_schemas import EvaluationProfileRecord
-from app.evaluation.workflow_migrate import migrate_evaluation_workflow
+from app.evaluation.metrics.metrics_store import get_by_id as metric_get_by_id
+from app.evaluation.metrics.metrics_store import load_registry as load_metrics_registry
 from app.factors.evaluation_runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
@@ -28,6 +25,10 @@ from app.factors.evaluation_runner import (
 )
 from app.factors.evaluation_schemas import FactorEvaluationSnapshot
 from app.factors.schemas import utc_now_iso
+
+from .node_type_registry import is_viz_node_type
+from .profile_schemas import EvaluationProfileRecord
+from .workflow_prepare import merge_profile_prepare_into_workflow
 
 
 def _workflow_topological_order(workflow) -> list[str]:
@@ -259,7 +260,7 @@ def run_evaluation_profile_workflow(
 ) -> FactorEvaluationSnapshot:
     profile = profile.model_copy(
         update={
-            "workflow": migrate_evaluation_workflow(
+            "workflow": merge_profile_prepare_into_workflow(
                 profile.workflow,
                 profile_prepare=profile.prepare,
             ),

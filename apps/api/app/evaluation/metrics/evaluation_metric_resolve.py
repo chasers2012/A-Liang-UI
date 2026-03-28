@@ -6,10 +6,10 @@ from dataclasses import dataclass
 
 from evaluate import EvaluationMetric
 
-from app.evaluation.metric_loader import load_evaluation_metric_class
-from app.evaluation.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics_store import load_registry as load_metrics_registry
-from app.evaluation.metrics_store import read_source as read_metric_source
+from .metric_loader import load_evaluation_metric_class
+from .metrics_store import get_by_id as metric_get_by_id
+from .metrics_store import load_registry as load_metrics_registry
+from .metrics_store import read_source as read_metric_source
 
 
 @dataclass(frozen=True)

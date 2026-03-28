@@ -17,9 +17,6 @@ def _auth_fragment(username: str, password: str) -> str:
 
 def build_sqlalchemy_url(sql: SqlConfigStored) -> str | None:
     """Return a SQLAlchemy URL, or None if not configured."""
-    legacy = (sql.engine_url or "").strip()
-    if legacy:
-        return legacy
     host = (sql.db_host or "").strip()
     db_name = (sql.db_name or "").strip()
     if not host or not db_name:

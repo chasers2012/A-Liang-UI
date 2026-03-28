@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from app.evaluation.builtin_metric_registry import metric_node_type, parse_metric_node_type
-from app.evaluation.evaluation_metric_resolve import try_resolve_evaluation_metric
-from app.evaluation.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics_store import load_registry as load_metrics_registry
-from app.evaluation.node_type_registry import BUILTIN_NODE_SPECS, BuiltinNodeSpec, SocketSpec
+from app.evaluation.metrics.builtin_metric_registry import (
+    metric_node_type,
+    parse_metric_node_type,
+)
+from app.evaluation.metrics.evaluation_metric_resolve import try_resolve_evaluation_metric
+from app.evaluation.metrics.metrics_store import get_by_id as metric_get_by_id
+from app.evaluation.metrics.metrics_store import load_registry as load_metrics_registry
+
+from .node_type_registry import BUILTIN_NODE_SPECS, BuiltinNodeSpec, SocketSpec
 
 
 def all_workflow_node_type_ids() -> frozenset[str]:

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.builtin_metric_registry import is_builtin_metric_id
-from app.evaluation.metric_loader import load_evaluation_metric_class
-from app.evaluation.metric_schemas import (
+from app.evaluation.metrics.builtin_metric_registry import is_builtin_metric_id
+from app.evaluation.metrics.metric_loader import load_evaluation_metric_class
+from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -14,7 +14,7 @@ from app.evaluation.metric_schemas import (
     record_to_summary,
     utc_now_iso,
 )
-from app.evaluation.metrics_store import (
+from app.evaluation.metrics.metrics_store import (
     delete_source_file,
     get_by_id,
     load_registry,

@@ -60,7 +60,6 @@ def sql_config_for_column_listing(
     if not body.db_host.strip() or not body.db_name.strip():
         raise ValueError("请填写主机（IP）与数据库名")
     return SqlConfigStored(
-        engine_url=None,
         db_driver=body.db_driver.strip() or "postgresql",
         db_host=body.db_host.strip(),
         db_port=body.db_port,
@@ -79,7 +78,7 @@ def list_table_column_names(sql: SqlConfigStored) -> list[str]:
     assert_safe_table_qualifier(sql.table)
     url = build_sqlalchemy_url(sql)
     if not url:
-        raise ValueError("无法建立数据库连接：请填写主机、库名等信息，或保留有效连接串")
+        raise ValueError("无法建立数据库连接：请填写主机、库名与认证信息")
     schema, tbl = _parse_table_name(sql.table)
     engine = create_engine(url)
     insp = inspect(engine)

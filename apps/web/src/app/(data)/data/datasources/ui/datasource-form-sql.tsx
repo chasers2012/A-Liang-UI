@@ -3,7 +3,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback } from "react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -93,17 +92,6 @@ export function DatasourceFormSql({
 
   return (
     <>
-      {editorMode === "edit" && editingSql?.has_legacy_engine_url && (
-        <Alert className="border-amber-500/40 bg-amber-500/5">
-          <AlertTitle className="text-amber-950 dark:text-amber-100">
-            旧版连接串
-          </AlertTitle>
-          <AlertDescription className="text-amber-900/90 dark:text-amber-50/90">
-            填写下方主机、库名等信息并保存后，将改为分字段存储并清除旧 URL。
-          </AlertDescription>
-        </Alert>
-      )}
-
       <FormSection
         title="数据库连接"
         description="端口留空时使用默认值：PostgreSQL 5432，MySQL 3306。"

@@ -25,7 +25,6 @@ def load_workspace_config(
     model_type: type[T],
     *,
     default_factory: Callable[[], T],
-    migrate_raw: Callable[[dict], dict] | None = None,
     json_error_label: str | None = None,
     non_dict_returns_default: bool = False,
 ) -> T:
@@ -53,8 +52,6 @@ def load_workspace_config(
         return default_factory()
     if not isinstance(data, dict):
         raise ValueError(f"{filename}: expected JSON object")
-    if migrate_raw is not None:
-        data = migrate_raw(data)
     return model_type.model_validate(data)
 
 
