@@ -6,11 +6,9 @@ import {
   getFactorEvaluationsSummary,
   listEvaluationMetrics,
   listEvaluationProfiles,
-  listEvaluationTestSets,
 } from "@/lib/quant-agent-api";
 import type { EvaluationMetricSummaryPublic } from "../evaluation-metric/dto";
 import type { EvaluationProfilePublic } from "../evaluation-profile/dto";
-import type { EvaluationTestSetPublic } from "../evaluation-test-set/dto";
 import type {
   FactorDetailPublic,
   FactorEvaluationRowPublic,
@@ -22,10 +20,8 @@ export type FactorDetailPageState = {
   loadError: string | null;
   detail: FactorDetailPublic | null;
   evalRow: FactorEvaluationRowPublic | null;
-  testSets: EvaluationTestSetPublic[];
   profiles: EvaluationProfilePublic[];
   evaluationMetrics: EvaluationMetricSummaryPublic[];
-  runTestSetId: string | null;
   runProfileId: string | null;
   deleteTarget: FactorSummaryPublic | null;
   deleting: boolean;
@@ -37,10 +33,8 @@ function initialFactorDetailState(): FactorDetailPageState {
     loadError: null,
     detail: null,
     evalRow: null,
-    testSets: [],
     profiles: [],
     evaluationMetrics: [],
-    runTestSetId: null,
     runProfileId: null,
     deleteTarget: null,
     deleting: false,
@@ -68,20 +62,13 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
       loading: true,
     }));
     try {
-      const [d, summary, ts, pr, metrics] = await Promise.all([
+      const [d, summary, pr, metrics] = await Promise.all([
         getFactor(factorId),
         getFactorEvaluationsSummary(),
-        listEvaluationTestSets(),
         listEvaluationProfiles(),
         listEvaluationMetrics(),
       ]);
       set(factorDetailStateAtomFamily(factorId), (prev) => {
-        const runTestSetId = (() => {
-          const p = prev.runTestSetId;
-          if (p && ts.some((x) => x.id === p)) return p;
-          const def = ts.find((t) => t.is_default);
-          return def ? def.id : null;
-        })();
         const runProfileId = (() => {
           const p = prev.runProfileId;
           if (p && pr.some((x) => x.id === p)) return p;
@@ -94,10 +81,8 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
           loadError: null,
           detail: d,
           evalRow: summary.rows.find((r) => r.factor_id === factorId) ?? null,
-          testSets: ts,
           profiles: pr,
           evaluationMetrics: metrics,
-          runTestSetId,
           runProfileId,
         };
       });

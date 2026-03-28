@@ -32,7 +32,6 @@ import {
   type FactorSummaryPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationProfilePublic } from "@/models/evaluation-profile/dto";
-import type { EvaluationTestSetPublic } from "@/models/evaluation-test-set/dto";
 import type { FactorDetailPublic } from "@/models/factor/dto";
 import {
   factorDetailStateAtomFamily,
@@ -60,32 +59,24 @@ function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
 
 function FactorDetailHeaderActions(props: {
   id: string;
-  testSets: EvaluationTestSetPublic[];
   profiles: EvaluationProfilePublic[];
-  testSetSelectItems: Record<string, string>;
   profileSelectItems: Record<string, string>;
-  runTestSetId: string | null;
   runProfileId: string | null;
   evaluatingThis: boolean;
   evaluatingOther: boolean;
   otherEvaluatingFactorName: string | undefined;
-  onTestSetSelectValue: (raw: string) => void;
   onProfileSelectValue: (raw: string) => void;
   onRunEvaluation: () => void;
   onRequestDelete: () => void;
 }) {
   const {
     id,
-    testSets,
     profiles,
-    testSetSelectItems,
     profileSelectItems,
-    runTestSetId,
     runProfileId,
     evaluatingThis,
     evaluatingOther,
     otherEvaluatingFactorName,
-    onTestSetSelectValue,
     onProfileSelectValue,
     onRunEvaluation,
     onRequestDelete,
@@ -95,42 +86,6 @@ function FactorDetailHeaderActions(props: {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
-        <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
-          <Label
-            htmlFor="factor-eval-test-set"
-            className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-          >
-            评价测试集
-          </Label>
-          <Select
-            modal={false}
-            items={testSetSelectItems}
-            value={runTestSetId ?? "__auto__"}
-            onValueChange={(v) => {
-              if (!v) return;
-              onTestSetSelectValue(v);
-            }}
-            disabled={selectDisabled}
-          >
-            <SelectTrigger
-              id="factor-eval-test-set"
-              size="sm"
-              className="w-full min-w-0"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__auto__">
-                自动（默认测试集或环境变量）
-              </SelectItem>
-              {testSets.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
         <div className="flex min-w-0 flex-col gap-1.5 sm:max-w-56">
           <Label
             htmlFor="factor-eval-profile"
@@ -424,24 +379,12 @@ export default function FactorDetailPage() {
     evalRow,
     loadError,
     loading,
-    testSets,
     profiles,
     evaluationMetrics,
-    runTestSetId,
     runProfileId,
     deleteTarget,
     deleting,
   } = s;
-
-  const testSetSelectItems = useMemo(() => {
-    const o: Record<string, string> = {
-      __auto__: "自动（默认测试集或环境变量）",
-    };
-    for (const t of testSets) {
-      o[t.id] = t.name;
-    }
-    return o;
-  }, [testSets]);
 
   const profileSelectItems = useMemo(() => {
     const o: Record<string, string> = {
@@ -487,7 +430,7 @@ export default function FactorDetailPage() {
     setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
-        testSetId: runTestSetId,
+        testSetId: null,
         evaluationProfileId: runProfileId,
       });
       await refreshEvalRow();
@@ -576,22 +519,13 @@ export default function FactorDetailPage() {
       action={
         <FactorDetailHeaderActions
           id={id}
-          testSets={testSets}
           profiles={profiles}
-          testSetSelectItems={testSetSelectItems}
           profileSelectItems={profileSelectItems}
-          runTestSetId={runTestSetId}
           runProfileId={runProfileId}
           evaluatingThis={evaluatingThis}
           evaluatingOther={evaluatingOther}
           otherEvaluatingFactorName={
             evaluatingOther ? evaluationRunning?.factorName : undefined
-          }
-          onTestSetSelectValue={(v) =>
-            setS((prev) => ({
-              ...prev,
-              runTestSetId: v === "__auto__" ? null : v,
-            }))
           }
           onProfileSelectValue={(v) =>
             setS((prev) => ({
