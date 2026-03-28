@@ -10,11 +10,9 @@ import {
 } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,14 +35,13 @@ import {
 import type { EvaluationWorkflowCanvasHandle } from "../../ui/evaluation-workflow-canvas";
 import { ProfileWorkflowEditorBlock } from "../../ui/profile-editor-main-section";
 
-import {
-  FactorFormPageContainer,
-  FactorFormPageHeader,
-} from "@/app/factors/ui/factor-form-page";
+import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
 import {
   EMPTY_EVALUATION_WORKFLOW,
   parseEvaluationWorkflowJson,
 } from "../../ui/profile-form-shared";
+
+const EVALUATION_PROFILE_EDIT_FORM_ID = "evaluation-profile-edit-form";
 
 export default function EditEvaluationProfilePage() {
   const params = useParams<{ id: string }>();
@@ -180,9 +177,22 @@ export default function EditEvaluationProfilePage() {
   }
 
   return (
-    <FactorFormPageContainer>
-      <FactorFormPageHeader title="编辑评价方案" />
-      <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+    <FactorFormPageContainer
+      title="编辑评价方案"
+      action={
+        <PageFormHeaderActions
+          formId={EVALUATION_PROFILE_EDIT_FORM_ID}
+          submitting={submitting}
+          submitDisabled={!name.trim()}
+          cancelHref={`/evaluation-profiles/${encodeURIComponent(id)}`}
+        />
+      }
+    >
+      <form
+        id={EVALUATION_PROFILE_EDIT_FORM_ID}
+        className="flex flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         {formError && (
           <Alert variant="destructive">
             <AlertTitle>无法保存</AlertTitle>
@@ -256,17 +266,6 @@ export default function EditEvaluationProfilePage() {
           initialWorkflow={initialWorkflowForCanvas}
         />
 
-        <div className="flex gap-2">
-          <Button type="submit" disabled={submitting || !name.trim()}>
-            {submitting ? "保存中…" : "保存"}
-          </Button>
-          <Link
-            href={`/evaluation-profiles/${encodeURIComponent(id)}`}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            取消
-          </Link>
-        </div>
       </form>
     </FactorFormPageContainer>
   );

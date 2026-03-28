@@ -2,10 +2,7 @@
 
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
-import Link from "next/link";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,13 +14,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Page } from "@/components/page";
-import { cn } from "@/lib/utils";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import type { DataSourceType, SqlPublic } from "@/lib/quant-agent-api";
 
 import type { EditorMode, FormState } from "../form-model";
 import { DatasourceFormCsv } from "./datasource-form-csv";
 import { DatasourceFormSql } from "./datasource-form-sql";
 import { FormSection } from "./form-section";
+
+export const DATASOURCE_MAIN_FORM_ID = "datasource-main-form";
 
 const DATASOURCE_TYPE_ITEMS: Record<DataSourceType, string> = {
   sql: "SQL 表",
@@ -58,19 +57,25 @@ export function DatasourceForm({
     setForm((f) => ({ ...f, ...patch }));
 
   return (
-    <Page gap="none">
-      <header className="mb-8 space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          {editorMode === "create" ? "新增数据源" : "编辑数据源"}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {editorMode === "create"
-            ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
-            : "密码留空表示保留原值。填写主机或库名并保存后，将从旧版整段 URL 迁移为分字段。"}
-        </p>
-      </header>
-
+    <Page
+      gap="none"
+      title={editorMode === "create" ? "新增数据源" : "编辑数据源"}
+      description={
+        editorMode === "create"
+          ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
+          : "密码留空表示保留原值。填写主机或库名并保存后，将从旧版整段 URL 迁移为分字段。"
+      }
+      headerClassName="mb-8"
+      action={
+        <PageFormHeaderActions
+          formId={DATASOURCE_MAIN_FORM_ID}
+          submitting={submitting}
+          cancelHref={cancelHref}
+        />
+      }
+    >
       <form
+        id={DATASOURCE_MAIN_FORM_ID}
         className="flex flex-col gap-6"
         onSubmit={(e) => void onSubmit(e)}
       >
@@ -142,20 +147,6 @@ export function DatasourceForm({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2 border-t border-border/60 pt-6">
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "保存中…" : "保存"}
-          </Button>
-          <Link
-            href={cancelHref}
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "inline-flex h-8 items-center justify-center px-2.5",
-            )}
-          >
-            取消
-          </Link>
-        </div>
       </form>
     </Page>
   );

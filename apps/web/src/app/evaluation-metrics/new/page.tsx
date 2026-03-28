@@ -3,20 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createEvaluationMetric } from "@/lib/quant-agent-api";
 
 import { FactorCodeJar } from "@/app/factors/ui/factor-code-jar";
-import {
-  FactorFormPageContainer,
-  FactorFormPageHeader,
-} from "@/app/factors/ui/factor-form-page";
+import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
+
+const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
 
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
@@ -45,9 +42,24 @@ export default function NewEvaluationMetricPage() {
   };
 
   return (
-    <FactorFormPageContainer>
-      <FactorFormPageHeader title="新增评价指标" />
-      <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+    <FactorFormPageContainer
+      title="新增评价指标"
+      action={
+        <PageFormHeaderActions
+          formId={EVALUATION_METRIC_NEW_FORM_ID}
+          submitting={submitting}
+          submitDisabled={!name.trim()}
+          submitLabel="创建"
+          submittingLabel="创建中…"
+          cancelHref="/evaluation-metrics"
+        />
+      }
+    >
+      <form
+        id={EVALUATION_METRIC_NEW_FORM_ID}
+        className="flex flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         {error && (
           <Alert variant="destructive">
             <AlertTitle>无法保存</AlertTitle>
@@ -83,17 +95,6 @@ export default function NewEvaluationMetricPage() {
             value={source}
             onChange={setSource}
           />
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" disabled={submitting || !name.trim()}>
-            {submitting ? "保存中…" : "创建"}
-          </Button>
-          <Link
-            href="/evaluation-metrics"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            取消
-          </Link>
         </div>
       </form>
     </FactorFormPageContainer>

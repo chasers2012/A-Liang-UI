@@ -13,12 +13,13 @@ import {
   validateFormForSubmit,
 } from "../form-model";
 import { FactorFormFields } from "../ui/factor-form-fields";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
+  FACTOR_MAIN_FORM_ID,
+  factorFormPageDescription,
   FactorFormHintAlert,
   FactorFormPageContainer,
-  FactorFormPageHeader,
   FactorFormLoading,
-  FactorFormSubmitRow,
 } from "../ui/factor-form-page";
 
 export default function NewFactorPage() {
@@ -73,17 +74,27 @@ export default function NewFactorPage() {
 
   if (bootstrapping) {
     return (
-      <FactorFormPageContainer>
-        <FactorFormPageHeader title="新增因子" />
+      <FactorFormPageContainer
+        title="新增因子"
+        description={factorFormPageDescription()}
+      >
         <FactorFormLoading />
       </FactorFormPageContainer>
     );
   }
 
   return (
-    <FactorFormPageContainer>
-      <FactorFormPageHeader title="新增因子" />
-
+    <FactorFormPageContainer
+      title="新增因子"
+      description={factorFormPageDescription()}
+      action={
+        <PageFormHeaderActions
+          formId={FACTOR_MAIN_FORM_ID}
+          submitting={submitting}
+          cancelHref="/factors"
+        />
+      }
+    >
       {bootstrapError ? (
         <Alert variant="destructive" className="mb-2">
           <AlertTitle>默认模板加载失败</AlertTitle>
@@ -98,14 +109,17 @@ export default function NewFactorPage() {
         写入注册表并与类属性同步。
       </FactorFormHintAlert>
 
-      <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+      <form
+        id={FACTOR_MAIN_FORM_ID}
+        className="flex flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         <FactorFormFields
           form={form}
           setForm={setForm}
           formError={formError}
           idPrefix="new-factor"
         />
-        <FactorFormSubmitRow submitting={submitting} />
       </form>
     </FactorFormPageContainer>
   );

@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,10 +14,10 @@ import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
 import { MetricWorkflowParamsSchemaEditor } from "../../ui/metric-workflow-params-schema-editor";
 
 import { FactorCodeJar } from "@/app/factors/ui/factor-code-jar";
-import {
-  FactorFormPageContainer,
-  FactorFormPageHeader,
-} from "@/app/factors/ui/factor-form-page";
+import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
+
+const EVALUATION_METRIC_EDIT_FORM_ID = "evaluation-metric-edit-form";
+
 export default function EditEvaluationMetricPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
@@ -121,15 +119,28 @@ export default function EditEvaluationMetricPage() {
   }
 
   return (
-    <FactorFormPageContainer>
+    <FactorFormPageContainer
+      title="编辑评价指标"
+      action={
+        <PageFormHeaderActions
+          formId={EVALUATION_METRIC_EDIT_FORM_ID}
+          submitting={submitting}
+          submitDisabled={!name.trim() || builtinReadOnly}
+          cancelHref={`/evaluation-metrics/${encodeURIComponent(id)}`}
+        />
+      }
+    >
       {builtinReadOnly && (
         <Alert className="mb-4">
           <AlertTitle>只读</AlertTitle>
           <AlertDescription>内置指标不可在此编辑。</AlertDescription>
         </Alert>
       )}
-      <FactorFormPageHeader title="编辑评价指标" />
-      <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+      <form
+        id={EVALUATION_METRIC_EDIT_FORM_ID}
+        className="flex flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         {formError && (
           <Alert variant="destructive">
             <AlertTitle>无法保存</AlertTitle>
@@ -168,17 +179,6 @@ export default function EditEvaluationMetricPage() {
             value={source}
             onChange={setSource}
           />
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" disabled={submitting || !name.trim() || builtinReadOnly}>
-            {submitting ? "保存中…" : "保存"}
-          </Button>
-          <Link
-            href={`/evaluation-metrics/${encodeURIComponent(id)}`}
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            取消
-          </Link>
         </div>
       </form>
     </FactorFormPageContainer>

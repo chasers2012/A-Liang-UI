@@ -9,10 +9,8 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Link from "next/link";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,15 +32,14 @@ import {
 import type { EvaluationWorkflowCanvasHandle } from "../ui/evaluation-workflow-canvas";
 import { ProfileWorkflowEditorBlock } from "../ui/profile-editor-main-section";
 
-import {
-  FactorFormPageContainer,
-  FactorFormPageHeader,
-} from "@/app/factors/ui/factor-form-page";
+import { FactorFormPageContainer } from "@/app/factors/ui/factor-form-page";
 import {
   DEFAULT_WORKFLOW_JSON,
   EMPTY_EVALUATION_WORKFLOW,
   parseEvaluationWorkflowJson,
 } from "../ui/profile-form-shared";
+
+const EVALUATION_PROFILE_NEW_FORM_ID = "evaluation-profile-new-form";
 
 export default function NewEvaluationProfilePage() {
   const router = useRouter();
@@ -134,9 +131,24 @@ export default function NewEvaluationProfilePage() {
   };
 
   return (
-    <FactorFormPageContainer>
-      <FactorFormPageHeader title="新增评价方案" />
-      <form className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+    <FactorFormPageContainer
+      title="新增评价方案"
+      action={
+        <PageFormHeaderActions
+          formId={EVALUATION_PROFILE_NEW_FORM_ID}
+          submitting={submitting}
+          submitDisabled={!name.trim()}
+          submitLabel="创建"
+          submittingLabel="创建中…"
+          cancelHref="/evaluation-profiles"
+        />
+      }
+    >
+      <form
+        id={EVALUATION_PROFILE_NEW_FORM_ID}
+        className="flex flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         {error && (
           <Alert variant="destructive">
             <AlertTitle>无法保存</AlertTitle>
@@ -212,17 +224,6 @@ export default function NewEvaluationProfilePage() {
           initialWorkflow={initialWorkflowForCanvas}
         />
 
-        <div className="flex gap-2">
-          <Button type="submit" disabled={submitting || !name.trim()}>
-            {submitting ? "创建中…" : "创建"}
-          </Button>
-          <Link
-            href="/evaluation-profiles"
-            className={cn(buttonVariants({ variant: "outline" }))}
-          >
-            取消
-          </Link>
-        </div>
       </form>
     </FactorFormPageContainer>
   );

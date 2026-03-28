@@ -27,6 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Page } from "@/components/page";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { cn } from "@/lib/utils";
 import {
   ApiError,
@@ -137,6 +138,8 @@ function normalizeBindingDependencies(deps: string[]): string[] {
   }
   return out;
 }
+
+const TEST_SET_MAIN_FORM_ID = "test-set-main-form";
 
 type Props = {
   mode: "create" | "edit";
@@ -314,8 +317,24 @@ export function TestSetForm({ mode, testSetId }: Props) {
       title={mode === "create" ? "新增测试集" : "编辑测试集"}
       description="可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。"
       headerClassName="mb-8"
+      action={
+        <PageFormHeaderActions
+          formId={TEST_SET_MAIN_FORM_ID}
+          submitting={submitting}
+          submitDisabled={enabledDs.length === 0}
+          cancelHref={
+            mode === "edit" && testSetId
+              ? `/test-sets/${encodeURIComponent(testSetId)}`
+              : "/test-sets"
+          }
+        />
+      }
     >
-      <form onSubmit={(e) => void onSubmit(e)} className="space-y-8">
+      <form
+        id={TEST_SET_MAIN_FORM_ID}
+        onSubmit={(e) => void onSubmit(e)}
+        className="space-y-8"
+      >
         {enabledDs.length === 0 ? (
           <Alert variant="destructive">
             <AlertTitle>无可用数据源</AlertTitle>
@@ -516,27 +535,6 @@ export function TestSetForm({ mode, testSetId }: Props) {
           </CardContent>
         </Card>
 
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="submit"
-            disabled={submitting || enabledDs.length === 0}
-          >
-            {submitting ? "保存中…" : "保存"}
-          </Button>
-          <Link
-            href={
-              mode === "edit" && testSetId
-                ? `/test-sets/${encodeURIComponent(testSetId)}`
-                : "/test-sets"
-            }
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "inline-flex h-8 items-center justify-center px-2.5",
-            )}
-          >
-            取消
-          </Link>
-        </div>
       </form>
     </Page>
   );

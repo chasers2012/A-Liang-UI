@@ -7,14 +7,13 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Page } from "@/components/page";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
   Select,
   SelectContent,
@@ -28,6 +27,8 @@ import {
   putAgentLlmSettings,
 } from "@/lib/quant-agent-api";
 import type { AgentLlmProvider, AgentLlmSettingsPublic } from "@/models";
+
+const AGENT_LLM_FORM_ID = "agent-llm-settings-form";
 
 const DEFAULT_LLM: AgentLlmSettingsPublic = {
   provider: "ollama",
@@ -123,6 +124,13 @@ export default function AgentPage() {
   return (
     <Page
       title="Agent"
+      action={
+        <PageFormHeaderActions
+          formId={AGENT_LLM_FORM_ID}
+          submitting={saving}
+          submitDisabled={loading}
+        />
+      }
       description={
         <>
           配置因子挖掘智能体使用的 LLM。默认使用本机 Ollama，模型{" "}
@@ -142,7 +150,7 @@ export default function AgentPage() {
             <span className="font-mono">OPENAI_API_KEY</span>。
           </CardDescription>
         </CardHeader>
-        <form onSubmit={onSubmit}>
+        <form id={AGENT_LLM_FORM_ID} onSubmit={onSubmit}>
           <CardContent className="space-y-4">
             {loadError ? (
               <p className="text-sm text-destructive" role="alert">
@@ -250,11 +258,6 @@ export default function AgentPage() {
               </>
             )}
           </CardContent>
-          <CardFooter className="justify-end gap-2">
-            <Button type="submit" disabled={loading || saving}>
-              {saving ? "保存中…" : "保存"}
-            </Button>
-          </CardFooter>
         </form>
       </Card>
     </Page>

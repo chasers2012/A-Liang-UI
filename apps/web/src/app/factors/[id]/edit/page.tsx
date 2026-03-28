@@ -17,12 +17,13 @@ import {
   validateFormForSubmit,
 } from "../../form-model";
 import { FactorFormFields } from "../../ui/factor-form-fields";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
+  FACTOR_MAIN_FORM_ID,
+  factorFormPageDescription,
   FactorFormLoadError,
   FactorFormLoading,
   FactorFormPageContainer,
-  FactorFormPageHeader,
-  FactorFormSubmitRow,
 } from "../../ui/factor-form-page";
 
 export default function EditFactorPage() {
@@ -88,13 +89,21 @@ export default function EditFactorPage() {
   }
 
   return (
-    <FactorFormPageContainer>
-      <FactorFormPageHeader
-        title="编辑因子"
-        factorNameBadge={form.name}
-      />
-
+    <FactorFormPageContainer
+      title="编辑因子"
+      description={factorFormPageDescription({
+        factorNameBadge: form.name,
+      })}
+      action={
+        <PageFormHeaderActions
+          formId={FACTOR_MAIN_FORM_ID}
+          submitting={submitting}
+          cancelHref={`/factors/${encodeURIComponent(id)}`}
+        />
+      }
+    >
       <form
+        id={FACTOR_MAIN_FORM_ID}
         className="flex flex-col gap-6"
         onSubmit={(e) => void onSubmit(e)}
       >
@@ -103,10 +112,6 @@ export default function EditFactorPage() {
           setForm={setForm}
           formError={formError}
           idPrefix={`edit-${id.slice(0, 8)}`}
-        />
-        <FactorFormSubmitRow
-          submitting={submitting}
-          cancelHref={`/factors/${encodeURIComponent(id)}`}
         />
       </form>
 
