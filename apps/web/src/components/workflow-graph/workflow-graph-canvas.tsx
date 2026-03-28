@@ -31,6 +31,7 @@ import {
   applyCatalogToNode,
   applyHiDpiToLGraphCanvas,
   applyWorkflowLiteGraphPaintFromCss,
+  cleanupExtraInputSlots,
   configureLiteGraphGlobals,
   defaultWorkflowNodeColors,
   findNodeByWorkflowId,
@@ -281,6 +282,15 @@ const WorkflowGraphCanvasInner = forwardRef<
 
     graphCanvas.onSelectionChange = () => {
       syncSelectionFromCanvas();
+    };
+
+    graph.onNodeConnectionChange = (
+      _kind: number,
+      node: unknown,
+    ) => {
+      if (node && typeof node === "object" && "inputs" in node) {
+        cleanupExtraInputSlots(node as import("litegraph.js").LGraphNode);
+      }
     };
 
     runtimeRef.current = { graph, canvas: graphCanvas };

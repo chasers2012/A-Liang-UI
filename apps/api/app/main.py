@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import agent_llm as agent_llm_router
+from app.routers import agent_workflows as agent_workflows_router
 from app.routers import datasources as datasources_router
 from app.routers import evaluation_metrics as evaluation_metrics_router
 from app.routers import evaluation_profiles as evaluation_profiles_router
@@ -12,6 +13,7 @@ from app.routers import factors as factors_router
 
 app = FastAPI(title="quant-agent API", version="0.1.0")
 app.include_router(agent_llm_router.router)
+app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)
 app.include_router(evaluation_metrics_router.router)
 app.include_router(evaluation_profiles_router.router)

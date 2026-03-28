@@ -35,6 +35,7 @@ export {
   applyHiDpiToLGraphCanvas,
   applyWorkflowLiteGraphPaintFromCss,
   canvasCssPixelSize,
+  cleanupExtraInputSlots,
   clientToGraphCoords,
   configureLiteGraphGlobals,
   installLiteGraphContextMenuScrollFix,

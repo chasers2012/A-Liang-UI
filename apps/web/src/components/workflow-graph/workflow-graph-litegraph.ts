@@ -30,6 +30,8 @@ export type WorkflowStepProperties = {
   workflowNodeId: string;
   backendType: string;
   params: Record<string, unknown>;
+  /** Number of input slots defined by the catalog (extra slots beyond this are dynamic for multi-link). */
+  _catalogInputCount?: number;
 };
 
 function graphNodes(graph: LGraph): LGraphNode[] {
@@ -219,6 +221,26 @@ export function registerWorkflowStepNodeType(): void {
     return !cfg?.workflowReadOnly;
   };
 
+  /**
+   * When an input slot already has a link, dynamically add a new slot with the
+   * same name so the node can accept multiple incoming connections (cycles).
+   */
+  WorkflowGraphStep.prototype.onBeforeConnectInput = function (
+    this: LGraphNode,
+    targetSlot: number,
+  ): number {
+    const input = this.inputs?.[targetSlot];
+    if (!input || input.link == null) return targetSlot;
+    const name = input.name;
+    for (let i = 0; i < (this.inputs?.length ?? 0); i++) {
+      if (this.inputs![i].name === name && this.inputs![i].link == null) {
+        return i;
+      }
+    }
+    this.addInput(name, "*");
+    return this.inputs!.length - 1;
+  };
+
   LiteGraph.registerNodeType(
     LITEGRAPH_WORKFLOW_STEP_TYPE,
     WorkflowGraphStep as unknown as { new (): LGraphNode },
@@ -245,6 +267,7 @@ export function applyCatalogToNode(
     node.addOutput(out.name, "*");
   }
   const p = node.properties as WorkflowStepProperties;
+  p._catalogInputCount = inputs.length;
   node.title = def?.label ?? p.backendType ?? "node";
   const accent = nodeColors(p.backendType);
   node.color = accent.color;
@@ -305,8 +328,18 @@ export function loadWorkflowStateIntoGraph(
     const toN = uuidToNode.get(l.to_node);
     if (!fromN || !toN) return;
     const outIdx = fromN.outputs?.findIndex((o) => o.name === l.from_socket) ?? -1;
-    const inIdx = toN.inputs?.findIndex((inp) => inp.name === l.to_socket) ?? -1;
-    if (outIdx < 0 || inIdx < 0) return;
+    if (outIdx < 0) return;
+    let inIdx = -1;
+    for (let i = 0; i < (toN.inputs?.length ?? 0); i++) {
+      if (toN.inputs![i].name === l.to_socket && toN.inputs![i].link == null) {
+        inIdx = i;
+        break;
+      }
+    }
+    if (inIdx < 0) {
+      toN.addInput(l.to_socket, "*");
+      inIdx = toN.inputs!.length - 1;
+    }
     try {
       fromN.connect(outIdx, toN, inIdx);
     } catch {
@@ -476,6 +509,22 @@ export function liteGraphNodeToSelectedNode(
     position: { x: node.pos[0], y: node.pos[1] },
     data: buildNodeDisplayData(wf, catalog),
   };
+}
+
+/**
+ * Remove dynamically-added input slots that are empty and beyond the catalog-defined base count.
+ * Called after a link is disconnected to keep the node tidy.
+ */
+export function cleanupExtraInputSlots(node: LGraphNode): void {
+  const p = node.properties as WorkflowStepProperties;
+  const base = p._catalogInputCount ?? 0;
+  if (!node.inputs || node.inputs.length <= base) return;
+  for (let i = node.inputs.length - 1; i >= base; i--) {
+    if (node.inputs[i].link == null) {
+      node.removeInput(i);
+    }
+  }
+  node.computeSize();
 }
 
 export function configureLiteGraphGlobals(): void {
