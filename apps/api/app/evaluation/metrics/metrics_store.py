@@ -13,7 +13,7 @@ from .metric_schemas import (
     EvaluationMetricsRegistryFile,
 )
 
-REGISTRY_FILENAME = "evaluation_metrics.json"
+REGISTRY_FILENAME = "evaluation/metrics/registry.json"
 
 
 class EvaluationMetricsRegistry(

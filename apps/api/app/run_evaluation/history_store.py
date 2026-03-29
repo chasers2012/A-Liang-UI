@@ -10,7 +10,7 @@ from app.run_evaluation.history_schemas import (
 from app.run_evaluation.schemas import FactorEvaluationSnapshot
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-FACTOR_EVALUATION_HISTORY_FILENAME = "factor_evaluation_history.json"
+FACTOR_EVALUATION_HISTORY_FILENAME = "factors/data/evaluation_history.json"
 
 
 def history_file_path() -> Path:

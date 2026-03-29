@@ -14,7 +14,7 @@ from app.workspace_config import load_workspace_config, save_workspace_config
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
-_CONFIG_FILE = "agent_llm.json"
+_CONFIG_FILE = "agent/llm.json"
 
 
 def _defaults() -> LlmSettings:

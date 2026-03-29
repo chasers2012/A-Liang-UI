@@ -1,4 +1,4 @@
-"""Workspace ``config/*.json`` persistence: generic file store and item-list registries."""
+"""Workspace JSON persistence: generic file store and item-list registries."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ TItem = TypeVar("TItem", bound=HasId)
 
 
 class WorkspaceJsonStore(ABC, Generic[TFile]):
-    """Load/save one JSON document under ``config/`` via a Pydantic root model."""
+    """Load/save one JSON document under the workspace root via a Pydantic root model."""
 
     filename: ClassVar[str]
     file_model: ClassVar[type[TFile]]

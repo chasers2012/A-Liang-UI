@@ -1,28 +1,104 @@
+"""Per-file registry for evaluation profiles (evaluation/profiles/{id}.json)."""
+
 from __future__ import annotations
 
-from typing import Any
+import json
+from pathlib import Path
 
-from app.persistence import registry_helpers
-from app.persistence.registry_helpers import get_first_default_item
-from app.persistence.workspace_registry import WorkspaceItemsRegistry
+from workspace import ensure_dir, workspace_path
 
-from .profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
+from .profile_schemas import EvaluationProfileRecord
 
-apply_default_uniqueness = registry_helpers.apply_default_uniqueness
-
-REGISTRY_FILENAME = "evaluation_profiles.json"
+PROFILES_DIR = "evaluation/profiles"
+_LEGACY_DIR = "config/evaluation_profiles"
 
 
-class EvaluationProfilesRegistry(
-    WorkspaceItemsRegistry[EvaluationProfileRecord, EvaluationProfilesFile]
-):
-    filename = REGISTRY_FILENAME
-    file_model = EvaluationProfilesFile
+class EvaluationProfilesRegistry:
+    """Load/save/delete profile JSON files under ``evaluation/profiles/``."""
 
     @classmethod
-    def save_model_dump_kwargs(cls) -> dict[str, Any] | None:
-        return {"mode": "json"}
+    def _profiles_dir(cls) -> Path:
+        return ensure_dir(PROFILES_DIR)
 
     @classmethod
-    def get_default_profile(cls, reg: EvaluationProfilesFile) -> EvaluationProfileRecord | None:
-        return get_first_default_item(reg.items)
+    def _profile_path(cls, profile_id: str) -> Path:
+        return workspace_path(PROFILES_DIR, f"{profile_id}.json")
+
+    @classmethod
+    def _read_record(cls, path: Path) -> EvaluationProfileRecord | None:
+        if not path.is_file():
+            return None
+        raw = path.read_text(encoding="utf-8")
+        if not raw.strip():
+            return None
+        data = json.loads(raw)
+        return EvaluationProfileRecord.model_validate(data)
+
+    @classmethod
+    def _write_record(cls, rec: EvaluationProfileRecord) -> None:
+        cls._profiles_dir()
+        path = cls._profile_path(rec.id)
+        path.write_text(
+            json.dumps(rec.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+    @classmethod
+    def _migrate_legacy_dir(cls) -> None:
+        """Move per-file records from old ``config/evaluation_profiles/`` to new dir."""
+        old_dir = workspace_path(_LEGACY_DIR)
+        if not old_dir.is_dir():
+            return
+        new_dir = cls._profiles_dir()
+        for p in old_dir.glob("*.json"):
+            dest = new_dir / p.name
+            if not dest.is_file():
+                p.rename(dest)
+            else:
+                p.unlink()
+        if not any(old_dir.iterdir()):
+            old_dir.rmdir()
+
+    @classmethod
+    def _ensure_ready(cls) -> Path:
+        d = cls._profiles_dir()
+        cls._migrate_legacy_dir()
+        return d
+
+    @classmethod
+    def list_all(cls) -> list[EvaluationProfileRecord]:
+        d = cls._ensure_ready()
+        records: list[EvaluationProfileRecord] = []
+        for p in sorted(d.glob("*.json")):
+            rec = cls._read_record(p)
+            if rec is not None:
+                records.append(rec)
+        return records
+
+    @classmethod
+    def get_by_id(cls, profile_id: str) -> EvaluationProfileRecord | None:
+        cls._ensure_ready()
+        return cls._read_record(cls._profile_path(profile_id))
+
+    @classmethod
+    def save(cls, rec: EvaluationProfileRecord) -> None:
+        cls._write_record(rec)
+
+    @classmethod
+    def delete_by_id(cls, profile_id: str) -> bool:
+        path = cls._profile_path(profile_id)
+        if not path.is_file():
+            return False
+        path.unlink()
+        return True
+
+    @classmethod
+    def apply_default_uniqueness(cls, keep_id: str) -> None:
+        """Ensure only ``keep_id`` has ``is_default=True``; clear others."""
+        d = cls._profiles_dir()
+        for p in d.glob("*.json"):
+            rec = cls._read_record(p)
+            if rec is None or rec.id == keep_id or not rec.is_default:
+                continue
+            rec.is_default = False
+            cls._write_record(rec)

@@ -1,4 +1,4 @@
-"""Per-file registry for agent workflows (config/agent_workflows/{id}.json)."""
+"""Per-file registry for agent workflows (agent/workflows/{id}.json)."""
 
 from __future__ import annotations
 
@@ -11,9 +11,10 @@ from app.agent_workflows.schemas import AgentWorkflowRecord
 
 
 class AgentWorkflowRegistry:
-    """Load/save/delete workflow JSON files under ``config/agent_workflows/``."""
+    """Load/save/delete workflow JSON files under ``agent/workflows/``."""
 
-    WORKFLOWS_DIR = "config/agent_workflows"
+    WORKFLOWS_DIR = "agent/workflows"
+    _LEGACY_DIR = "config/agent_workflows"
 
     @classmethod
     def _workflows_dir(cls) -> Path:
@@ -107,8 +108,25 @@ class AgentWorkflowRegistry:
         )
 
     @classmethod
+    def _migrate_legacy_dir(cls) -> None:
+        """Move per-file records from old ``config/agent_workflows/`` to new dir."""
+        old_dir = workspace_path(cls._LEGACY_DIR)
+        if not old_dir.is_dir():
+            return
+        new_dir = cls._workflows_dir()
+        for p in old_dir.glob("*.json"):
+            dest = new_dir / p.name
+            if not dest.is_file():
+                p.rename(dest)
+            else:
+                p.unlink()
+        if not any(old_dir.iterdir()):
+            old_dir.rmdir()
+
+    @classmethod
     def _ensure_default(cls) -> None:
-        """Seed the default workflow if the directory is empty."""
+        """Migrate legacy dir if needed, then seed the default workflow if empty."""
+        cls._migrate_legacy_dir()
         d = cls._workflows_dir()
         if any(d.glob("*.json")):
             return

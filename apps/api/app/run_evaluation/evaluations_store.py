@@ -9,11 +9,11 @@ from app.run_evaluation.schemas import (
     FactorEvaluationSnapshot,
 )
 
-FACTOR_EVALUATIONS_FILENAME = "factor_evaluations.json"
+FACTOR_EVALUATIONS_FILENAME = "factors/data/evaluations.json"
 
 
 class FactorEvaluationsStore(WorkspaceJsonStore[FactorEvaluationsFile]):
-    """Workspace ``config/factor_evaluations.json`` (factor_id → latest snapshot)."""
+    """Workspace ``factors/data/evaluations.json`` (factor_id -> latest snapshot)."""
 
     filename = FACTOR_EVALUATIONS_FILENAME
     file_model = FactorEvaluationsFile
@@ -43,7 +43,7 @@ def evaluations_file_path() -> Path:
 
 def load_evaluations_file() -> FactorEvaluationsFile:
     """
-    Load workspace ``config/factor_evaluations.json``.
+    Load workspace ``factors/data/evaluations.json``.
     Missing or whitespace-only file -> empty items.
     Raises ValueError on invalid JSON or schema validation failure.
     """

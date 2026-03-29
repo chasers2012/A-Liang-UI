@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,8 +11,16 @@ from app.routers import datasources as datasources_router
 from app.routers import evaluation_metrics as evaluation_metrics_router
 from app.routers import evaluation_profiles as evaluation_profiles_router
 from app.routers import factors as factors_router
+from app.workspace_migrate import migrate_workspace_layout
 
-app = FastAPI(title="quant-agent API", version="0.1.0")
+
+@asynccontextmanager
+async def _lifespan(application: FastAPI):
+    migrate_workspace_layout()
+    yield
+
+
+app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=_lifespan)
 app.include_router(agent_llm_router.router)
 app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)

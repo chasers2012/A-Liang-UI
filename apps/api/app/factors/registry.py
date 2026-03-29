@@ -10,7 +10,7 @@ from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 resolve_source_path = WorkspaceSourceFiles.resolve_source_path
 
-FACTORS_REGISTRY_FILENAME = "factors.json"
+FACTORS_REGISTRY_FILENAME = "factors/registry.json"
 
 
 class FactorItemsRegistry(WorkspaceItemsRegistry[FactorRecord, FactorRegistryFile]):

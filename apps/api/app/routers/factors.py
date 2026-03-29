@@ -248,7 +248,7 @@ def post_factor_evaluation_run(
         from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
         from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
 
-        prof = EvaluationProfilesRegistry.get_item(pid)
+        prof = EvaluationProfilesRegistry.get_by_id(pid)
         if prof is None:
             raise HTTPException(status_code=400, detail="评价方案不存在")
         if prof.workflow.nodes:

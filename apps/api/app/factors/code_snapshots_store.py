@@ -11,7 +11,7 @@ from app.factors.code_snapshot_schemas import (
 from app.factors.schemas import FactorRecord, new_factor_id, utc_now_iso
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
-FACTOR_CODE_SNAPSHOTS_FILENAME = "factor_code_snapshots.json"
+FACTOR_CODE_SNAPSHOTS_FILENAME = "factors/data/code_snapshots.json"
 
 MAX_SNAPSHOTS_PER_FACTOR = 100
 MAX_SNAPSHOTS_HARD_CAP = 150

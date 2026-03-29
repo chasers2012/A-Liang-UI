@@ -84,7 +84,8 @@ def test_evaluation_history_linked_on_patch(client, workspace_tmp):
     )
     fid = r.json()["id"]
 
-    eval_path = workspace_tmp / "config" / "factor_evaluations.json"
+    eval_path = workspace_tmp / "factors" / "data" / "evaluations.json"
+    eval_path.parent.mkdir(parents=True, exist_ok=True)
     eval_path.write_text(
         json.dumps(
             {
@@ -157,7 +158,7 @@ def test_delete_factor_clears_snapshots_and_history(client, workspace_tmp):
     fid = r.json()["id"]
     client.patch(f"/factors/{fid}", json={"source": "a = 1\n"})
 
-    hist_path = workspace_tmp / "config" / "factor_evaluation_history.json"
+    hist_path = workspace_tmp / "factors" / "data" / "evaluation_history.json"
     hist_path.write_text(
         json.dumps(
             {
@@ -173,7 +174,7 @@ def test_delete_factor_clears_snapshots_and_history(client, workspace_tmp):
     r2 = client.delete(f"/factors/{fid}")
     assert r2.status_code == 204
 
-    snap_file = workspace_tmp / "config" / "factor_code_snapshots.json"
+    snap_file = workspace_tmp / "factors" / "data" / "code_snapshots.json"
     if snap_file.is_file():
         data = json.loads(snap_file.read_text(encoding="utf-8"))
         assert fid not in data.get("factors", {})

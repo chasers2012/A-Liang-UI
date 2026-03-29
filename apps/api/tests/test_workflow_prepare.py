@@ -41,7 +41,7 @@ def test_builtin_metric_detail_has_workspace_source(client):
     r = client.get("/evaluation-metrics/builtin.mean_ic")
     assert r.status_code == 200
     body = r.json()
-    assert body["source_path"] == "evaluation_metrics/builtin.mean_ic.py"
+    assert body["source_path"] == "evaluation/metrics/source/builtin.mean_ic.py"
     assert "BuiltinMeanICMetric" in body["source"]
     assert body.get("builtin") is True
 

@@ -38,7 +38,7 @@ def test_put_llm_settings_round_trip(client, workspace_tmp):
     assert r.status_code == 200
     assert r.json() == body
 
-    path = workspace_tmp / "config" / "agent_llm.json"
+    path = workspace_tmp / "agent" / "llm.json"
     assert path.is_file()
     disk = json.loads(path.read_text(encoding="utf-8"))
     assert disk["provider"] == "openai"

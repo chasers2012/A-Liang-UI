@@ -73,7 +73,7 @@ def test_data_sets_crud(client, workspace_tmp):
     assert r3.status_code == 200
     assert r3.json()["name"] == "t1x"
 
-    cfg = workspace_tmp / "config" / "data_sets.json"
+    cfg = workspace_tmp / "data_sets" / "registry.json"
     assert cfg.is_file()
     data = json.loads(cfg.read_text(encoding="utf-8"))
     assert data["version"] == 2

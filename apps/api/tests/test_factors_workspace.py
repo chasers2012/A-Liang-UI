@@ -64,13 +64,13 @@ def test_create_roundtrip_files(workspace_tmp, client):
     assert data["source"] == MIN_SOURCE
     fid = data["id"]
 
-    cfg = workspace_tmp / "config" / "factors.json"
+    cfg = workspace_tmp / "factors" / "registry.json"
     assert cfg.is_file()
     reg = json.loads(cfg.read_text(encoding="utf-8"))
     assert len(reg["items"]) == 1
     assert reg["items"][0]["id"] == fid
 
-    py_path = workspace_tmp / "factors" / f"{fid}.py"
+    py_path = workspace_tmp / "factors" / "source" / f"{fid}.py"
     assert py_path.is_file()
     assert py_path.read_text(encoding="utf-8") == MIN_SOURCE
 

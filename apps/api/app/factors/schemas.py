@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app import datetime_utils
 
-FACTORS_DIR = "factors"
+FACTORS_DIR = "factors/source"
 
 utc_now_iso = datetime_utils.utc_now_iso
 

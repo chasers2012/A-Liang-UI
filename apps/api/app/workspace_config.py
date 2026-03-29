@@ -1,4 +1,4 @@
-"""Load and save Pydantic models from workspace ``config/*.json`` files."""
+"""Load and save Pydantic models from workspace JSON files."""
 
 from __future__ import annotations
 
@@ -8,16 +8,16 @@ from pathlib import Path
 from typing import Any, TypeVar
 
 from pydantic import BaseModel
-from workspace import ensure_dir, workspace_path
-
-CONFIG_DIR = "config"
+from workspace import workspace_path
 
 T = TypeVar("T", bound=BaseModel)
 
 
 def workspace_config_path(filename: str) -> Path:
-    ensure_dir(CONFIG_DIR)
-    return workspace_path(CONFIG_DIR, filename)
+    """Resolve *filename* relative to the workspace root, ensuring its parent dir exists."""
+    path = workspace_path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def load_workspace_config(
@@ -29,7 +29,7 @@ def load_workspace_config(
     non_dict_returns_default: bool = False,
 ) -> T:
     """
-    Read *filename* under ``config/``.
+    Read *filename* relative to workspace root.
 
     Missing or whitespace-only file yields *default_factory*(). Invalid JSON
     raises ``ValueError`` when *json_error_label* is set (message prefix),

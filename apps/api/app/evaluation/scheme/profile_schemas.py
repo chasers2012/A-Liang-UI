@@ -32,11 +32,6 @@ class EvaluationProfileRecord(BaseModel):
     updated_at: str
 
 
-class EvaluationProfilesFile(BaseModel):
-    version: int = 1
-    items: list[EvaluationProfileRecord] = Field(default_factory=list)
-
-
 class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""

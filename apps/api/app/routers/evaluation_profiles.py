@@ -15,14 +15,10 @@ from app.evaluation.scheme.profile_schemas import (
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
-    EvaluationProfilesFile,
     NodeTypeDefinitionPublic,
     NodeTypeSocketPublic,
 )
-from app.evaluation.scheme.profiles_store import (
-    EvaluationProfilesRegistry,
-    apply_default_uniqueness,
-)
+from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 from app.evaluation.scheme.workflow_graph_types import (
     all_workflow_node_type_ids,
     workflow_node_definition,
@@ -81,12 +77,6 @@ def _merge_evaluation_profile_patch(
     if "is_default" in data and body.is_default is not None:
         rec.is_default = body.is_default
     rec.updated_at = utc_now_iso()
-
-
-def _apply_default_uniqueness_if_needed(reg: EvaluationProfilesFile, profile_id: str) -> None:
-    hit = EvaluationProfilesRegistry.get_by_id(reg, profile_id)
-    if hit is not None and hit.is_default:
-        apply_default_uniqueness(reg.items)
 
 
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
@@ -163,12 +153,12 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
 
 @router.get("", response_model=list[EvaluationProfilePublic])
 def list_evaluation_profiles() -> list[EvaluationProfilePublic]:
-    return [_to_public(i) for i in EvaluationProfilesRegistry.list_items()]
+    return [_to_public(i) for i in EvaluationProfilesRegistry.list_all()]
 
 
 @router.get("/{profile_id}", response_model=EvaluationProfilePublic)
 def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
-    rec = EvaluationProfilesRegistry.get_item(profile_id)
+    rec = EvaluationProfilesRegistry.get_by_id(profile_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价方案不存在")
     return _to_public(rec)
@@ -186,11 +176,9 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfil
         }
     )
     _validate_workflow_if_needed(rec.workflow)
-    reg = EvaluationProfilesRegistry.load()
-    reg.items.append(rec)
+    EvaluationProfilesRegistry.save(rec)
     if rec.is_default:
-        apply_default_uniqueness(reg.items)
-    EvaluationProfilesRegistry.save(reg)
+        EvaluationProfilesRegistry.apply_default_uniqueness(rec.id)
     return _to_public(rec)
 
 
@@ -198,22 +186,19 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfil
 def patch_evaluation_profile(
     profile_id: str, body: EvaluationProfilePatch
 ) -> EvaluationProfilePublic:
-    data = body.model_dump(exclude_unset=True)
-
-    def _apply(rec: EvaluationProfileRecord) -> None:
-        _merge_evaluation_profile_patch(rec, body, data)
-
-    rec = EvaluationProfilesRegistry.update_item(
-        profile_id,
-        _apply,
-        after_mutate=lambda reg: _apply_default_uniqueness_if_needed(reg, profile_id),
-    )
+    rec = EvaluationProfilesRegistry.get_by_id(profile_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价方案不存在")
+
+    data = body.model_dump(exclude_unset=True)
+    _merge_evaluation_profile_patch(rec, body, data)
+    EvaluationProfilesRegistry.save(rec)
+    if rec.is_default:
+        EvaluationProfilesRegistry.apply_default_uniqueness(rec.id)
     return _to_public(rec)
 
 
 @router.delete("/{profile_id}", status_code=204)
 def delete_evaluation_profile(profile_id: str) -> None:
-    if EvaluationProfilesRegistry.delete_item(profile_id) is None:
+    if not EvaluationProfilesRegistry.delete_by_id(profile_id):
         raise HTTPException(status_code=404, detail="评价方案不存在")
