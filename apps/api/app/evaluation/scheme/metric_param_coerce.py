@@ -81,15 +81,13 @@ def metric_evaluate_kwargs_from_registry(
     *,
     quantiles: int,
 ) -> dict[str, Any]:
+    """Build kwargs for evaluating one metric from registry schema + node params."""
     mrec = EvaluationMetricsRegistry.get_item(metric_id)
     specs = list(mrec.workflow_parameters) if mrec is not None else []
     raw = dict(raw_params or {})
     out: dict[str, Any] = {"quantiles": quantiles}
     if not specs:
-        for k, v in raw.items():
-            if k in RESERVED_METRIC_WORKFLOW_PARAM_KEYS:
-                continue
-            out[k] = v
+        out.update({k: v for k, v in raw.items() if k not in RESERVED_METRIC_WORKFLOW_PARAM_KEYS})
         return out
     for spec in specs:
         key = spec.key

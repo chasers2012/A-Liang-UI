@@ -26,6 +26,5 @@ class ValidateNode:
         self,
         node: WorkflowNode,
         inputs: Mapping[str, Any],
-        ctx: Any,
     ) -> dict[str, Any]:
         raise NotImplementedError

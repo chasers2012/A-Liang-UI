@@ -4,6 +4,7 @@ import json
 from typing import Any, Literal
 from uuid import uuid4
 
+from custom_code import validate_identifier_name as validate_metric_name
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from workflow import NodeParamModel
 
@@ -12,7 +13,6 @@ from app.evaluation.scheme.metric_workflow_parameters import (
     validate_metric_workflow_parameters,
 )
 
-EVALUATION_METRICS_DIR = "evaluation/metrics/source"
 USER_METRIC_WORKFLOW_ROOT = "workflow_nodes/evaluation"
 
 utc_now_iso = datetime_utils.utc_now_iso
@@ -53,11 +53,6 @@ def registry_metric_id_from_workflow_type(workflow_type_id: str) -> str | None:
     return f"{a}-{b}-{c}-{d}-{e}"
 
 
-def source_relative_path(metric_id: str) -> str:
-    """Deprecated layout; use :func:`user_metric_source_path`."""
-    return user_metric_source_path(metric_id)
-
-
 def default_metric_source(name: str, metric_id: str) -> str:
     label = (name or "metric").strip() or "metric"
     wf_tid = user_metric_workflow_type_id(metric_id)
@@ -68,42 +63,33 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
-from app.evaluation.metrics.user_metric_workflow import run_registry_evaluation_metric
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from app.evaluation.metrics.user_metric_workflow import RegistryUserEvaluationMetric
+from workflow import workflow_node, workflow_socket
 
 REGISTRY_METRIC_ID = "{metric_id}"
-
-
-class UserEvaluationMetric(EvaluationMetric[dict[str, float]]):
-    \"\"\"
-    自定义评价指标：实现 evaluate，输入一般为 factor_data_clean (DataFrame)。
-    端口元数据供工作流编辑器校验（类属性，可选）。
-    \"\"\"
-    INPUT_SOCKETS = [
-        {{"name": "clean_factor", "required": True, "value_type": "factor_data_clean"}},
-    ]
-    OUTPUT_SOCKETS = [
-        {{"name": "out", "value_type": "scalar_json"}},
-    ]
-
-    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
-        _ = clean_factor
-        return {{"demo": 0.0}}
 
 
 @workflow_node(
     type_id="{wf_tid}",
     label={label_js},
     description="",
+    entry="evaluate",
     input_sockets=[
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
     ],
-    output_sockets=[workflow_socket("out", value_type="scalar_json")],
+    output_sockets=[
+        workflow_socket("out", value_type="scalar_json"),
+        workflow_socket("merged_mean_ic", required=False, value_type="scalar_json"),
+        workflow_socket("merged_spread", required=False, value_type="scalar_json"),
+    ],
 )
-class UserMetricWorkflowNode:
-    def execute(self, node: WorkflowNode, inputs, ctx):
-        return run_registry_evaluation_metric(REGISTRY_METRIC_ID, node, inputs, ctx)
+class UserEvaluationMetric(RegistryUserEvaluationMetric):
+    REGISTRY_METRIC_ID = REGISTRY_METRIC_ID
+
+    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
+        _ = clean_factor
+        return {{"demo": 0.0}}
 """
 
 
@@ -175,6 +161,7 @@ class EvaluationMetricCreate(BaseModel):
         s = v.strip()
         if not s:
             raise ValueError("name 不能为空")
+        validate_metric_name(s)
         return s
 
     @model_validator(mode="after")
@@ -204,6 +191,17 @@ class EvaluationMetricPatch(BaseModel):
     source: str | None = None
     workflow_parameters: list[NodeParamModel] | None = None
 
+    @field_validator("name")
+    @classmethod
+    def _name_when_set(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        if not s:
+            raise ValueError("name 不能为空")
+        validate_metric_name(s)
+        return s
+
     @model_validator(mode="after")
     def _wp_unique(self) -> EvaluationMetricPatch:
         if self.workflow_parameters is not None:
@@ -228,19 +226,13 @@ class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):
     source: str
 
 
-def record_to_summary(rec: EvaluationMetricRecord) -> EvaluationMetricSummaryPublic:
-    return EvaluationMetricSummaryPublic(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        source_path=rec.source_path,
-        workflow_type_id=rec.workflow_type_id or user_metric_workflow_type_id(rec.id),
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
-        visualization=None,
-        builtin=rec.builtin,
-        workflow_parameters=list(rec.workflow_parameters or []),
-    )
+def record_to_summary(
+    rec: EvaluationMetricRecord,
+) -> EvaluationMetricSummaryPublic:
+    data = rec.model_dump()
+    data["workflow_type_id"] = data["workflow_type_id"] or user_metric_workflow_type_id(rec.id)
+    data["visualization"] = None
+    return EvaluationMetricSummaryPublic.model_validate(data)
 
 
 def new_metric_id() -> str:

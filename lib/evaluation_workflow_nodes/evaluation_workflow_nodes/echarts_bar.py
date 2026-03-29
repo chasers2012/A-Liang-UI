@@ -36,9 +36,7 @@ class EchartsBarNode:
         self,
         node: WorkflowNode,
         inputs: Mapping[str, Any],
-        ctx: Any,
     ) -> dict[str, Any]:
         del inputs
         option = _demo_bar_option()
-        ctx["metric_results"][node.id] = {"out": option}
         return {"out": option}

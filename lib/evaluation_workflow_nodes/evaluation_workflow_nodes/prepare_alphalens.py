@@ -33,8 +33,15 @@ def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
     type_id="prepare_alphalens",
     label="计算因子",
     description="根据因子与数据源计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
-    input_sockets=[],
-    output_sockets=[workflow_socket("clean_factor", value_type="factor_data_clean")],
+    input_sockets=[
+        workflow_socket("ev", required=True, value_type="any"),
+        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
+    ],
+    output_sockets=[
+        workflow_socket("clean_factor", value_type="factor_data_clean"),
+        workflow_socket("last_quantiles", value_type="scalar_json"),
+        workflow_socket("n_stocks", value_type="scalar_json"),
+    ],
     workflow_parameters=[
         StringNodeParam(
             "forward_return_periods",
@@ -66,12 +73,10 @@ class PrepareAlphalensNode:
         self,
         node: WorkflowNode,
         inputs: Mapping[str, Any],
-        ctx: Any,
     ) -> dict[str, Any]:
-        del inputs
         nid = node.id
-        ev = ctx["ev"]
-        last_quantiles: int = ctx["last_quantiles"]
+        ev = inputs["ev"]
+        last_quantiles: int = inputs["last_quantiles"]
         params = dict(node.params or {})
         periods = _forward_periods_tuple(params.get("forward_return_periods"))
 
@@ -95,7 +100,9 @@ class PrepareAlphalensNode:
             max_loss=ml,
         )
         n_stocks = stock_count_from_alignment(ev.alignment_index())
-        ctx["last_quantiles"] = last_quantiles
-        ctx["n_stocks"] = n_stocks
-        ctx["metric_results"][nid] = {"clean_factor": "[DataFrame]"}
-        return {"clean_factor": out.factor_data_clean}
+        _ = nid
+        return {
+            "clean_factor": out.factor_data_clean,
+            "last_quantiles": last_quantiles,
+            "n_stocks": n_stocks,
+        }

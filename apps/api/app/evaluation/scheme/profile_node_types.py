@@ -11,6 +11,7 @@ from typing import Any
 from workflow import Node, NodeParamModel
 
 from app.evaluation.metrics.metric_schemas import (
+    EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
     registry_metric_id_from_workflow_type,
 )
@@ -43,26 +44,34 @@ def workflow_node_api_extra(
     if spec_wp:
         return {"workflow_parameters": spec_wp}
 
-    registry_id = registry_metric_id_from_workflow_type(nt)
-    mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, registry_id) if registry_id else None
-    if mrec is None:
-        for rec in metrics_reg.items:
-            if rec.workflow_type_id == nt:
-                mrec = rec
-                break
-
+    mrec, metric_id_out = _metric_record_and_metric_id(metrics_reg, nt)
     wp = [p.model_dump() for p in mrec.workflow_parameters] if mrec is not None else []
-    metric_id_out = registry_id
-    if metric_id_out is None and mrec is not None:
-        metric_id_out = mrec.id
-    if metric_id_out is None and nt.startswith("builtin_"):
-        metric_id_out = nt
-
     return {
         "workflow_parameters": wp,
         "metric_id": metric_id_out,
         "user_defined": bool(mrec is not None and not mrec.builtin),
     }
+
+
+def _metric_record_and_metric_id(
+    metrics_reg: EvaluationMetricsRegistryFile,
+    workflow_type_id: str,
+) -> tuple[EvaluationMetricRecord | None, str | None]:
+    """Resolve (metric record, metric_id) for a workflow node type id."""
+    registry_id = registry_metric_id_from_workflow_type(workflow_type_id)
+    mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, registry_id) if registry_id else None
+    if mrec is None:
+        for rec in metrics_reg.items:
+            if rec.workflow_type_id == workflow_type_id:
+                mrec = rec
+                break
+
+    metric_id_out = registry_id
+    if metric_id_out is None and mrec is not None:
+        metric_id_out = mrec.id
+    if metric_id_out is None and workflow_type_id.startswith("builtin_"):
+        metric_id_out = workflow_type_id
+    return mrec, metric_id_out
 
 
 def list_evaluation_profile_node_types_public(

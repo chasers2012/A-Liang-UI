@@ -17,31 +17,19 @@ def workflow_socket(
     *,
     required: bool = False,
     value_type: str = "any",
-) -> dict[str, object]:
-    """Build one entry for ``INPUT_SOCKETS`` / ``OUTPUT_SOCKETS`` on a decorated class."""
-    return {"name": name, "required": required, "value_type": value_type}
+) -> Socket:
+    """Build a :class:`Socket` for ``@workflow_node`` ``input_sockets`` / ``output_sockets``."""
+    return Socket(name=name, required=required, value_type=value_type)
 
 
-def _dicts_to_sockets(raw: list[dict[str, object]]) -> tuple[Socket, ...]:
-    out: list[Socket] = []
-    for x in raw:
-        name = x.get("name")
-        if not name:
-            continue
-        out.append(
-            Socket(
-                str(name),
-                bool(x.get("required", False)),
-                str(x.get("value_type", "any")),
-            )
-        )
-    return tuple(out)
+def _socket_tuple(sockets: list[Socket]) -> tuple[Socket, ...]:
+    return tuple(s for s in sockets if (s.name or "").strip())
 
 
 def workflow_node(
     *,
-    input_sockets: list[dict[str, object]],
-    output_sockets: list[dict[str, object]],
+    input_sockets: list[Socket],
+    output_sockets: list[Socket],
     workflow_parameters: list[NodeParam] | None = None,
     entry: str = "execute",
     type_id: str = "",
@@ -52,16 +40,26 @@ def workflow_node(
 
     When ``type_id`` is provided the class fully self-describes a node type
     and can be discovered by :func:`collect_node_classes`.
+
+    If ``entry="evaluate"`` (typical for evaluation metric classes), use
+    :func:`handler_from_node_class`: it calls ``evaluate(clean_factor, **kwargs)``
+    instead of ``execute(node, inputs)``. Expect an input socket named
+    ``clean_factor``. Optional **classmethods** on the node class:
+
+    - ``workflow_validate_clean_factor(value)``
+    - ``workflow_metric_kwargs(node, inputs)`` -> ``dict`` used as ``**kwargs``
+    - ``workflow_publish_evaluate_result(node, inputs, raw, primary_socket)``
+      -> ``dict`` merged into handler outputs
     """
 
-    input_specs = _dicts_to_sockets(input_sockets)
-    output_specs = _dicts_to_sockets(output_sockets)
+    input_specs = _socket_tuple(input_sockets)
+    output_specs = _socket_tuple(output_sockets)
     _wp = workflow_parameters if workflow_parameters is not None else []
     param_specs: tuple[NodeParam, ...] = tuple(p for p in _wp if (p.key or "").strip())
 
     def decorate(cls: type[_T]) -> type[_T]:
-        cls.INPUT_SOCKETS = input_sockets  # type: ignore[attr-defined]
-        cls.OUTPUT_SOCKETS = output_sockets  # type: ignore[attr-defined]
+        cls.INPUT_SOCKETS = list(input_sockets)  # type: ignore[attr-defined]
+        cls.OUTPUT_SOCKETS = list(output_sockets)  # type: ignore[attr-defined]
         cls.WORKFLOW_PARAMETERS = list(_wp)  # type: ignore[attr-defined]
         cls.ENTRY = entry  # type: ignore[attr-defined]
         cls.WORKFLOW_TYPE_ID = type_id  # type: ignore[attr-defined]

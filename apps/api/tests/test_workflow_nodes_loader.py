@@ -59,7 +59,7 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 '    entry="execute",',
                 ")",
                 "class ExtNode:",
-                "    def execute(self, node: WorkflowNode, inputs: Mapping[str, Any], ctx: Any) -> dict[str, Any]:",
+                "    def execute(self, node: WorkflowNode, inputs: Mapping[str, Any]) -> dict[str, Any]:",
                 "        del inputs",
                 "        return {'out': 1}",
                 "",

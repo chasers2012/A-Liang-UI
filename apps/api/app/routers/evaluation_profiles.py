@@ -14,21 +14,18 @@ from app.evaluation.scheme.profile_schemas import (
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
-from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
 from app.shared.node_type_dto import NodeTypeDefinitionPublic
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
 
-def _to_public(rec) -> EvaluationProfilePublic:
-    wf = merge_profile_prepare_into_workflow(rec.workflow, profile_prepare=rec.prepare)
+def _to_public(rec: EvaluationProfileRecord) -> EvaluationProfilePublic:
     return EvaluationProfilePublic(
         id=rec.id,
         name=rec.name,
         description=rec.description,
         data_set_id=rec.data_set_id,
-        prepare=rec.prepare,
-        workflow=wf,
+        workflow=rec.workflow,
         is_default=rec.is_default,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
@@ -58,14 +55,9 @@ def _merge_evaluation_profile_patch(
     if "data_set_id" in data:
         tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
         rec.data_set_id = tid or None
-    if "prepare" in data and body.prepare is not None:
-        rec.prepare = body.prepare
     if "workflow" in data and body.workflow is not None:
         _validate_workflow_if_needed(body.workflow)
-        rec.workflow = merge_profile_prepare_into_workflow(
-            body.workflow,
-            profile_prepare=rec.prepare,
-        )
+        rec.workflow = body.workflow
     if "is_default" in data and body.is_default is not None:
         rec.is_default = body.is_default
     rec.updated_at = utc_now_iso()
@@ -93,14 +85,6 @@ def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
 @router.post("", response_model=EvaluationProfilePublic)
 def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfilePublic:
     rec = body.to_record()
-    rec = rec.model_copy(
-        update={
-            "workflow": merge_profile_prepare_into_workflow(
-                rec.workflow,
-                profile_prepare=rec.prepare,
-            ),
-        }
-    )
     _validate_workflow_if_needed(rec.workflow)
     EvaluationProfilesRegistry.save(rec)
     if rec.is_default:

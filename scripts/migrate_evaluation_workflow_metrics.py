@@ -108,8 +108,13 @@ def _workflow_shell(metric_id: str, workflow_type_id: str, label: str) -> str:
     return f"""
 
 # --- workflow binding (added by migrate_evaluation_workflow_metrics.py) ---
-from app.evaluation.metrics.user_metric_workflow import run_registry_evaluation_metric
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from __future__ import annotations
+
+from typing import Any
+
+import pandas as pd
+from app.evaluation.metrics.user_metric_workflow import RegistryUserEvaluationMetric
+from workflow import workflow_node, workflow_socket
 
 REGISTRY_METRIC_ID = "{metric_id}"
 
@@ -118,20 +123,29 @@ REGISTRY_METRIC_ID = "{metric_id}"
     type_id="{workflow_type_id}",
     label={label_esc},
     description="",
+    entry="evaluate",
     input_sockets=[
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[workflow_socket("out", value_type="scalar_json")],
 )
-class _MigratedUserMetricWorkflowNode:
-    def execute(self, node: WorkflowNode, inputs, ctx):
-        return run_registry_evaluation_metric(REGISTRY_METRIC_ID, node, inputs, ctx)
+class _MigratedUserEvaluationMetric(RegistryUserEvaluationMetric):
+    REGISTRY_METRIC_ID = REGISTRY_METRIC_ID
+
+    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
+        _ = clean_factor
+        return {{"demo": 0.0}}
 """
 
 
 def _write_user_package(root: Path, metric_id: str, source_body: str, label: str) -> None:
     wf_tid = _workflow_type_user(metric_id)
-    if "run_registry_evaluation_metric" not in source_body:
+    if (
+        "RegistryUserEvaluationMetric" not in source_body
+        and "run_registry_evaluation_metric" not in source_body
+        and "UserMetricWorkflowNode" not in source_body
+        and "_MigratedUserMetricWorkflowNode" not in source_body
+    ):
         source_body = source_body.rstrip() + _workflow_shell(metric_id, wf_tid, label)
     pkg = root / "workflow_nodes" / "evaluation" / _pkg_dir(metric_id)
     pkg.mkdir(parents=True, exist_ok=True)

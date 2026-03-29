@@ -23,7 +23,8 @@ def write_user_metric_package(
 ) -> None:
     """Create package dir, ``__init__.py``, and ``metric_node.py``."""
     pkg_dir, _, _ = user_metric_package_parts(metric_id)
-    workspace_path("workflow_nodes", "evaluation", pkg_dir).mkdir(parents=True, exist_ok=True)
+    pkg_root = workspace_path("workflow_nodes", "evaluation", pkg_dir)
+    pkg_root.mkdir(parents=True, exist_ok=True)
     SourceFiles.write_source_text(
         user_metric_init_path(metric_id),
         "# User evaluation metric package\nfrom . import metric_node  # noqa: F401\n",
@@ -37,6 +38,6 @@ def write_user_metric_package(
 
 def delete_user_metric_package(metric_id: str) -> None:
     pkg_dir, _, _ = user_metric_package_parts(metric_id)
-    p = workspace_path("workflow_nodes", "evaluation", pkg_dir)
-    if p.is_dir():
-        shutil.rmtree(p, ignore_errors=True)
+    pkg_root = workspace_path("workflow_nodes", "evaluation", pkg_dir)
+    if pkg_root.is_dir():
+        shutil.rmtree(pkg_root, ignore_errors=True)

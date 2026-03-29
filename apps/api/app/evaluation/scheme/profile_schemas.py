@@ -10,21 +10,11 @@ from app.datasources.schemas import utc_now_iso
 EvaluationWorkflow = WorkflowGraph
 
 
-class EvaluationProfilePrepare(BaseModel):
-    """Profile-level Alphalens defaults merged into ``prepare_alphalens`` nodes when params omit them."""
-
-    forward_return_periods: list[int] = Field(default_factory=lambda: [1, 5, 10, 20])
-    quantiles: int | None = None
-    long_short: bool = True
-    max_loss: float = 0.5
-
-
 class EvaluationProfileRecord(BaseModel):
     id: str
     name: str
     description: str = ""
     data_set_id: str | None = None
-    prepare: EvaluationProfilePrepare = Field(default_factory=EvaluationProfilePrepare)
     workflow: EvaluationWorkflow = Field(default_factory=EvaluationWorkflow)
     is_default: bool = False
     created_at: str
@@ -35,7 +25,6 @@ class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
     data_set_id: str | None = None
-    prepare: EvaluationProfilePrepare | None = None
     workflow: EvaluationWorkflow | None = None
     is_default: bool = False
 
@@ -50,14 +39,12 @@ class EvaluationProfileCreate(BaseModel):
     def to_record(self) -> EvaluationProfileRecord:
         now = utc_now_iso()
         rid = str(uuid4())
-        prep = self.prepare or EvaluationProfilePrepare()
         wf = self.workflow or EvaluationWorkflow()
         return EvaluationProfileRecord(
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),
             data_set_id=(self.data_set_id or "").strip() or None,
-            prepare=prep,
             workflow=wf,
             is_default=self.is_default,
             created_at=now,
@@ -69,7 +56,6 @@ class EvaluationProfilePatch(BaseModel):
     name: str | None = None
     description: str | None = None
     data_set_id: str | None = None
-    prepare: EvaluationProfilePrepare | None = None
     workflow: EvaluationWorkflow | None = None
     is_default: bool | None = None
 
@@ -79,7 +65,6 @@ class EvaluationProfilePublic(BaseModel):
     name: str
     description: str
     data_set_id: str | None = None
-    prepare: EvaluationProfilePrepare
     workflow: EvaluationWorkflow
     is_default: bool
     created_at: str

@@ -21,6 +21,5 @@ class GeneratePseudocodeNode:
         self,
         node: WorkflowNode,
         inputs: Mapping[str, Any],
-        ctx: Any,
     ) -> dict[str, Any]:
         raise NotImplementedError

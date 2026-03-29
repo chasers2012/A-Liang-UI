@@ -1,4 +1,4 @@
-/** 评价方案（工作流 + Alphalens prepare）与节点类型目录 DTO。 */
+/** 评价方案（工作流图）与节点类型目录 DTO。 */
 
 import type { NodeParamModel } from "../evaluation-metric/dto";
 
@@ -23,19 +23,11 @@ export interface EvaluationWorkflowDto {
   viewport?: { x: number; y: number; zoom: number } | null;
 }
 
-export interface EvaluationProfilePrepareDto {
-  forward_return_periods: number[];
-  quantiles: number | null;
-  long_short: boolean;
-  max_loss: number;
-}
-
 export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
   data_set_id: string | null;
-  prepare: EvaluationProfilePrepareDto;
   workflow: EvaluationWorkflowDto;
   is_default: boolean;
   created_at: string;

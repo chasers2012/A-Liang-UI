@@ -323,12 +323,6 @@ def run_evaluation_for_factor(
     prep_q: int | None = None
     long_short = True
     max_loss = 0.5
-    if evaluation_profile is not None and isinstance(evaluation_profile, EvaluationProfileRecord):
-        pr = evaluation_profile.prepare
-        prep_periods = tuple(int(x) for x in pr.forward_return_periods)
-        prep_q = pr.quantiles
-        long_short = pr.long_short
-        max_loss = pr.max_loss
 
     q_use = prep_q if prep_q is not None else quantiles
     try:
