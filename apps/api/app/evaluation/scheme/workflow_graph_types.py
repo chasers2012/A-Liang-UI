@@ -11,7 +11,7 @@ from app.evaluation.metrics.builtin_metric_registry import (
 from app.evaluation.metrics.evaluation_metric_resolve import try_resolve_evaluation_metric
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
-from .node_type_registry import BUILTIN_NODE_SPECS
+from .nodes import BUILTIN_NODE_SPECS
 
 _DEFAULT_METRIC_INPUTS = (SocketSpec("clean_factor", True, "factor_data_clean"),)
 _DEFAULT_METRIC_OUTPUTS = (SocketSpec("out", False, "scalar_json"),)

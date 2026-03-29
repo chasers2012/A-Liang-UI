@@ -7,6 +7,8 @@ from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
+from evaluate.alphalens_panel_utils import series_to_period_dict
+from evaluation_workflow_nodes._viz_base import _jsonable_metric_value
 from workflow import NodeHandler, WorkflowExecutor, WorkflowNode
 
 from app.evaluation.metrics.builtin_metric_registry import (
@@ -19,16 +21,12 @@ from app.evaluation.metrics.metric_schemas import (
     MetricWorkflowParamSpec,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.evaluation.scheme.node_type_registry import BUILTIN_HANDLERS
-from app.evaluation.scheme.nodes._viz_base import _jsonable_metric_value
+from app.evaluation.scheme.nodes import BUILTIN_HANDLERS
 from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
 from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
 from app.factors.schemas import utc_now_iso
 
-from .runner import (
-    _series_to_period_dict,
-    build_alphalens_evaluator_for_factor,
-)
+from .runner import build_alphalens_evaluator_for_factor
 from .schemas import FactorEvaluationRecord
 
 
@@ -148,10 +146,10 @@ def _handle_metric(
         if isinstance(series, pd.DataFrame):
             series = series.iloc[:, 0]
         if isinstance(series, pd.Series):
-            ctx["merged_mean_ic"] = _series_to_period_dict(series)
+            ctx["merged_mean_ic"] = series_to_period_dict(series)
     elif resolved.record_field == "mean_return_spread":
         if isinstance(raw, pd.Series):
-            ctx["merged_spread"] = _series_to_period_dict(raw)
+            ctx["merged_spread"] = series_to_period_dict(raw)
     return {sock: raw}
 
 

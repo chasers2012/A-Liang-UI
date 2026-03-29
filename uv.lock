@@ -17,9 +17,12 @@ resolution-markers = [
 [manifest]
 members = [
     "agent",
+    "agent-workflow-nodes",
     "csv-datasource",
     "custom-code",
     "evaluate",
+    "evaluation-metric-templates",
+    "evaluation-workflow-nodes",
     "factor",
     "quant-agent",
     "quant-agent-api",
@@ -61,6 +64,17 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "workspace", editable = "lib/workspace" },
 ]
+
+[[package]]
+name = "agent-workflow-nodes"
+version = "0.1.0"
+source = { editable = "lib/agent_workflow_nodes" }
+dependencies = [
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "workflow", editable = "lib/workflow" }]
 
 [[package]]
 name = "alphalens-reloaded"
@@ -573,6 +587,36 @@ requires-dist = [
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "factor", editable = "lib/factor" },
     { name = "pandas", specifier = ">=2.2.0" },
+]
+
+[[package]]
+name = "evaluation-metric-templates"
+version = "0.1.0"
+source = { editable = "lib/evaluation_metric_templates" }
+dependencies = [
+    { name = "evaluate" },
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "evaluate", editable = "lib/evaluate" },
+    { name = "workflow", editable = "lib/workflow" },
+]
+
+[[package]]
+name = "evaluation-workflow-nodes"
+version = "0.1.0"
+source = { editable = "lib/evaluation_workflow_nodes" }
+dependencies = [
+    { name = "evaluate" },
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "evaluate", editable = "lib/evaluate" },
+    { name = "workflow", editable = "lib/workflow" },
 ]
 
 [[package]]
@@ -2380,9 +2424,12 @@ version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "agent" },
+    { name = "agent-workflow-nodes" },
     { name = "csv-datasource" },
     { name = "custom-code" },
     { name = "evaluate" },
+    { name = "evaluation-metric-templates" },
+    { name = "evaluation-workflow-nodes" },
     { name = "factor" },
     { name = "fastapi" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2399,9 +2446,12 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agent", editable = "lib/agent" },
+    { name = "agent-workflow-nodes", editable = "lib/agent_workflow_nodes" },
     { name = "csv-datasource", editable = "lib/csv_datasource" },
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "evaluate", editable = "lib/evaluate" },
+    { name = "evaluation-metric-templates", editable = "lib/evaluation_metric_templates" },
+    { name = "evaluation-workflow-nodes", editable = "lib/evaluation_workflow_nodes" },
     { name = "factor", editable = "lib/factor" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "numpy", specifier = ">=1.26.0" },

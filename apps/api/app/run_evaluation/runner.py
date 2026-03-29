@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import traceback
 
-import pandas as pd
+from evaluate.alphalens_panel_utils import series_to_period_dict, stock_count_from_alignment
 from factor import DependencyResolver, load_factor_class
 
 from app.data_set.data_set_schemas import DataSetRecord
@@ -63,29 +63,6 @@ def _resolve_evaluation_context(
         stock_codes,
         max(2, q_default),
     )
-
-
-def _series_to_period_dict(s: pd.Series) -> dict[str, float]:
-    out: dict[str, float] = {}
-    for k, v in s.items():
-        if pd.isna(v):
-            continue
-        key = str(int(k)) if isinstance(k, (int, float)) and float(k) == int(k) else str(k)
-        out[key] = float(v)
-    return out
-
-
-def _stock_count_from_alignment(idx: pd.Index) -> int | None:
-    if not isinstance(idx, pd.MultiIndex):
-        return None
-    try:
-        lev = idx.get_level_values("asset")
-    except (KeyError, IndexError, ValueError):
-        try:
-            lev = idx.get_level_values(-1)
-        except Exception:
-            return None
-    return int(lev.nunique())
 
 
 def _build_datasource(rec: DataSourceRecord):
@@ -357,14 +334,14 @@ def run_evaluation_for_factor(
     try:
         ev_eval = ev
         ev_eval.long_short = long_short
-        n_stocks = _stock_count_from_alignment(ev_eval.alignment_index())
+        n_stocks = stock_count_from_alignment(ev_eval.alignment_index())
         out = ev_eval.evaluate_factor(
             quantiles=q_use,
             periods=prep_periods,
             max_loss=max_loss,
         )
-        mean_ic = _series_to_period_dict(out.metrics.mean_ic)
-        mean_spread = _series_to_period_dict(out.metrics.mean_return_spread)
+        mean_ic = series_to_period_dict(out.metrics.mean_ic)
+        mean_spread = series_to_period_dict(out.metrics.mean_return_spread)
         pid = (
             evaluation_profile.id
             if evaluation_profile is not None

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.agent_workflows.node_types import AGENT_NODE_TYPES
+from app.agent_workflows.nodes import AGENT_NODE_TYPES
 from app.agent_workflows.registry import AgentWorkflowRegistry
 from app.agent_workflows.schemas import (
     AgentWorkflowCreate,

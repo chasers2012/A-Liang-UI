@@ -7,9 +7,8 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from evaluate.alphalens_panel_utils import stock_count_from_alignment
 from workflow import WorkflowNode, workflow_node, workflow_socket
-
-from app.run_evaluation.runner import _stock_count_from_alignment
 
 
 def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
@@ -64,7 +63,7 @@ class PrepareAlphalensNode:
             periods=periods,
             max_loss=ml,
         )
-        n_stocks = _stock_count_from_alignment(ev.alignment_index())
+        n_stocks = stock_count_from_alignment(ev.alignment_index())
         ctx["last_quantiles"] = last_quantiles
         ctx["n_stocks"] = n_stocks
         ctx["metric_results"][nid] = {"clean_factor": "[DataFrame]"}

@@ -6,14 +6,13 @@ from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
+from evaluate.alphalens_panel_utils import series_to_period_dict
 from workflow import WorkflowNode
 
 
 def _jsonable_metric_value(val: Any) -> Any:
     if isinstance(val, pd.Series):
-        from app.run_evaluation.runner import _series_to_period_dict
-
-        return _series_to_period_dict(val)
+        return series_to_period_dict(val)
     if isinstance(val, dict):
         return {str(k): float(v) for k, v in val.items() if not pd.isna(v)}
     return val

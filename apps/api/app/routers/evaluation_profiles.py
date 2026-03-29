@@ -9,7 +9,7 @@ from app.evaluation.metrics.metric_schemas import (
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
-from app.evaluation.scheme.node_type_registry import sorted_viz_node_type_ids
+from app.evaluation.scheme.nodes import sorted_viz_node_type_ids
 from app.evaluation.scheme.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,

@@ -16,7 +16,7 @@ from .metric_schemas import (
 
 
 def _template_text(filename: str) -> str:
-    root = resources.files("app.evaluation.metrics.builtin_metric_templates")
+    root = resources.files("evaluation_metric_templates")
     return root.joinpath(filename).read_text(encoding="utf-8")
 
 
