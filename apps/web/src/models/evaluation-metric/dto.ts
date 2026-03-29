@@ -31,6 +31,8 @@ export interface EvaluationMetricSummaryPublic {
   name: string;
   description: string;
   source_path: string;
+  /** 工作流节点 ``type``，与 ``user_metric_<uuid>`` 或后端内置前缀一致。 */
+  workflow_type_id: string;
   created_at: string;
   updated_at: string;
   visualization?: MetricVisualizationSpec | null;

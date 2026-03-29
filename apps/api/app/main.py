@@ -1,15 +1,20 @@
 import os
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from app.workflow_nodes.seed_builtin import ensure_all_builtin_workflow_domains
 
-from app.routers import agent_llm as agent_llm_router
-from app.routers import agent_workflows as agent_workflows_router
-from app.routers import data_sets as data_sets_router
-from app.routers import datasources as datasources_router
-from app.routers import evaluation_metrics as evaluation_metrics_router
-from app.routers import evaluation_profiles as evaluation_profiles_router
-from app.routers import factors as factors_router
+ensure_all_builtin_workflow_domains()
+
+# Imports must follow bootstrap so workspace node packages exist before routers load catalogs.
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+from app.routers import agent_llm as agent_llm_router  # noqa: E402
+from app.routers import agent_workflows as agent_workflows_router  # noqa: E402
+from app.routers import data_sets as data_sets_router  # noqa: E402
+from app.routers import datasources as datasources_router  # noqa: E402
+from app.routers import evaluation_metrics as evaluation_metrics_router  # noqa: E402
+from app.routers import evaluation_profiles as evaluation_profiles_router  # noqa: E402
+from app.routers import factors as factors_router  # noqa: E402
 
 app = FastAPI(title="quant-agent API", version="0.1.0")
 app.include_router(agent_llm_router.router)

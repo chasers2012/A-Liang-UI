@@ -3,13 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.metrics.metric_schemas import (
-    PREPARE_ALPHALENS_WORKFLOW_PARAMETERS,
-    RESULT_VIZ_NODE_WORKFLOW_PARAMETERS,
-)
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
-from app.evaluation.scheme.nodes import sorted_viz_node_type_ids
+from app.evaluation.scheme.profile_node_types import list_evaluation_profile_node_types_public
 from app.evaluation.scheme.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -17,12 +13,9 @@ from app.evaluation.scheme.profile_schemas import (
     EvaluationProfileRecord,
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
-from app.evaluation.scheme.workflow_graph_types import (
-    all_workflow_node_type_ids,
-    workflow_node_definition,
-)
+from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
 from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
-from app.shared.node_type_dto import NodeTypeDefinitionPublic, node_spec_to_public
+from app.shared.node_type_dto import NodeTypeDefinitionPublic
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -81,52 +74,7 @@ def _merge_evaluation_profile_patch(
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
     metrics_reg = EvaluationMetricsRegistry.load()
-    out: list[NodeTypeDefinitionPublic] = []
-
-    prep = workflow_node_definition("prepare_alphalens")
-    out.append(
-        node_spec_to_public(
-            prep,
-            extra={
-                "workflow_parameters": [
-                    p.model_dump() for p in PREPARE_ALPHALENS_WORKFLOW_PARAMETERS
-                ],
-            },
-        )
-    )
-
-    for vid in sorted_viz_node_type_ids():
-        vs = workflow_node_definition(vid)
-        out.append(
-            node_spec_to_public(
-                vs,
-                extra={
-                    "workflow_parameters": [
-                        p.model_dump() for p in RESULT_VIZ_NODE_WORKFLOW_PARAMETERS
-                    ],
-                },
-            )
-        )
-
-    allowed = all_workflow_node_type_ids()
-    for nt in sorted(allowed):
-        if nt == "prepare_alphalens" or nt.startswith("viz_"):
-            continue
-        spec = workflow_node_definition(nt)
-        mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
-        mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, mid) if mid else None
-        wp = [p.model_dump() for p in mrec.workflow_parameters] if mrec is not None else []
-        out.append(
-            node_spec_to_public(
-                spec,
-                extra={
-                    "workflow_parameters": wp,
-                    "user_defined": bool(mid and mrec is not None and not mrec.builtin),
-                    "metric_id": mid,
-                },
-            )
-        )
-    return out
+    return list_evaluation_profile_node_types_public(metrics_reg)
 
 
 @router.get("", response_model=list[EvaluationProfilePublic])

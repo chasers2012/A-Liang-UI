@@ -8,7 +8,7 @@ from workspace import ensure_dir
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 from .metric_schemas import (
-    EVALUATION_METRICS_DIR,
+    USER_METRIC_WORKFLOW_ROOT,
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
 )
@@ -24,23 +24,23 @@ class EvaluationMetricsRegistry(
 
     @classmethod
     def load(cls) -> EvaluationMetricsRegistryFile:
-        reg = super().load()
-        from .builtin_metrics_seed import ensure_builtin_metrics_seeded
-
-        if ensure_builtin_metrics_seeded(reg):
-            cls.save(reg)
-        return reg
+        return super().load()
 
     @staticmethod
     def metrics_dir_path() -> Path:
-        return ensure_dir(EVALUATION_METRICS_DIR)
+        return ensure_dir(USER_METRIC_WORKFLOW_ROOT)
 
     @staticmethod
     def read_source(rec: EvaluationMetricRecord) -> str:
         return SourceFiles.read_source_text(rec.source_path)
 
     @classmethod
-    def write_source(cls, rec: EvaluationMetricRecord, source: str, validators=None) -> None:
+    def write_source(
+        cls,
+        rec: EvaluationMetricRecord,
+        source: str,
+        validators=None,
+    ) -> None:
         cls.metrics_dir_path()
         SourceFiles.write_source_text(rec.source_path, source, validators=validators)
 

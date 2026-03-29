@@ -6,9 +6,15 @@ import type {
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
 import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
+import {
+  isRegistryOrBuiltinMetricNodeType,
+  registryMetricIdFromWorkflowType,
+} from "@/features/factors/ui/workflow-metric-node-utils";
 
 const NODE_TYPE_LABELS: Record<string, string> = {
   prepare_alphalens: "计算因子",
+  builtin_mean_ic: "平均 IC",
+  builtin_mean_return_spread: "多空收益差",
   viz_auto: "可视化·自动",
   viz_bars: "可视化·条形图",
   viz_bars_diverging: "可视化·双向条形图",
@@ -17,9 +23,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   viz_scalar: "可视化·单值",
 };
 
-const METRIC_NODE_PREFIX = "metric:";
 const VIZ_NODE_PREFIX = "viz_";
-
 
 const SOCKET_LABELS: Record<string, string> = {
   mean_ic: "平均 IC",
@@ -43,12 +47,7 @@ export type MetricMetaEntry = {
 };
 
 function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
-  if (!node?.type) return null;
-  if (node.type.startsWith(METRIC_NODE_PREFIX)) {
-    const id = node.type.slice(METRIC_NODE_PREFIX.length).trim();
-    return id || null;
-  }
-  return null;
+  return registryMetricIdFromWorkflowType(node?.type);
 }
 
 function metricDisplayName(
@@ -394,7 +393,7 @@ function periodDayStyleForSocket(
     return true;
   }
   if (
-    node?.type?.startsWith(METRIC_NODE_PREFIX) &&
+    isRegistryOrBuiltinMetricNodeType(node?.type) &&
     socketKey === "out" &&
     viz?.period_day_keys
   ) {
@@ -450,7 +449,7 @@ function renderScalarNumber(val: number, viz: MetricVisualizationSpec | null) {
 export function EvaluationProfileMetricResultsPanel(props: {
   metricResults: Record<string, unknown>;
   profile?: EvaluationProfilePublic | null;
-  /** Per metric id: display name（用于 `metric:*` 节点标题） */
+  /** Per registry metric id: display name（``user_metric_*`` 节点标题） */
   metricMetaById?: Record<string, MetricMetaEntry>;
 }) {
   const { metricResults, profile, metricMetaById } = props;

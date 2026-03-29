@@ -5,7 +5,6 @@ from custom_code import validate_source_syntax
 from evaluate import load_evaluation_metric_class
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.metrics.builtin_metric_registry import is_builtin_metric_id
 from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
@@ -18,6 +17,10 @@ from app.evaluation.metrics.metric_schemas import (
     utc_now_iso,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+from app.evaluation.metrics.user_metric_package import (
+    delete_user_metric_package,
+    write_user_metric_package,
+)
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 
@@ -87,10 +90,10 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     mid = new_metric_id()
     now = utc_now_iso()
     rec = body.to_record(mid, now)
-    src = body.source if body.source is not None else default_metric_source(rec.name)
+    src = body.source if body.source is not None else default_metric_source(rec.name, mid)
     try:
-        EvaluationMetricsRegistry.write_source(
-            rec,
+        write_user_metric_package(
+            mid,
             src,
             validators=[validate_source_syntax, load_evaluation_metric_class],
         )
@@ -100,8 +103,8 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     return _detail(rec)
 
 
-def _is_protected_builtin(rec, metric_id: str) -> bool:
-    return rec.builtin or is_builtin_metric_id(metric_id)
+def _is_protected_builtin(rec: EvaluationMetricRecord, metric_id: str) -> bool:
+    return rec.builtin
 
 
 @router.patch("/{metric_id}", response_model=EvaluationMetricDetailPublic)
@@ -138,5 +141,5 @@ def delete_evaluation_metric(metric_id: str) -> None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
     if _is_protected_builtin(rec, metric_id):
         raise HTTPException(status_code=400, detail="内置指标不可删除")
-    EvaluationMetricsRegistry.delete_source_file(rec)
+    delete_user_metric_package(metric_id)
     EvaluationMetricsRegistry.delete_item(metric_id)

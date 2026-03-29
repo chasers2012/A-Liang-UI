@@ -28,30 +28,17 @@ def test_merge_profile_prepare_into_prepare_alphalens_node():
     assert out.nodes[0].params["max_loss"] == 0.25
 
 
-def test_list_evaluation_metrics_has_builtin(client):
+def test_list_evaluation_metrics_is_user_registry_only(client):
     r = client.get("/evaluation-metrics")
     assert r.status_code == 200
-    ids = {x["id"] for x in r.json()}
-    assert "builtin.mean_ic" in ids
-    builtins = [x for x in r.json() if x.get("builtin")]
-    assert len(builtins) >= 2
+    for row in r.json():
+        assert row.get("builtin") is not True
+        assert "workflow_type_id" in row
 
 
-def test_builtin_metric_detail_has_workspace_source(client):
-    r = client.get("/evaluation-metrics/builtin.mean_ic")
+def test_node_types_include_builtin_eval_metric_nodes(client):
+    r = client.get("/evaluation-profiles/node-types")
     assert r.status_code == 200
-    body = r.json()
-    assert body["source_path"] == "evaluation/metrics/source/builtin.mean_ic.py"
-    assert "BuiltinMeanICMetric" in body["source"]
-    assert body.get("builtin") is True
-
-
-def test_patch_builtin_metric_forbidden(client):
-    r = client.patch("/evaluation-metrics/builtin.mean_ic", json={"description": "x"})
-    assert r.status_code == 400
-    assert "内置" in r.json()["detail"]
-
-
-def test_delete_builtin_metric_forbidden(client):
-    r = client.delete("/evaluation-metrics/builtin.mean_ic")
-    assert r.status_code == 400
+    types = {x["type"] for x in r.json()}
+    assert "builtin_mean_ic" in types
+    assert "builtin_mean_return_spread" in types

@@ -21,6 +21,8 @@ def test_load_evaluation_domain_includes_prepare(tmp_path: Path) -> None:
     cat = load_domain_node_catalog("evaluation")
     assert "prepare_alphalens" in cat.specs
     assert "viz_auto" in cat.handlers
+    assert "builtin_mean_ic" in cat.specs
+    assert "builtin_mean_return_spread" in cat.handlers
 
 
 def test_load_agent_domain_ordered_types(tmp_path: Path) -> None:

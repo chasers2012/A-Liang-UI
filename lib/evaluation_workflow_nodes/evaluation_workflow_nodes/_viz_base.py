@@ -5,17 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-import pandas as pd
-from evaluate.alphalens_panel_utils import series_to_period_dict
+from evaluate.alphalens_panel_utils import jsonable_metric_value
 from workflow import WorkflowNode
-
-
-def _jsonable_metric_value(val: Any) -> Any:
-    if isinstance(val, pd.Series):
-        return series_to_period_dict(val)
-    if isinstance(val, dict):
-        return {str(k): float(v) for k, v in val.items() if not pd.isna(v)}
-    return val
 
 
 class VizNodeBase:
@@ -28,5 +19,5 @@ class VizNodeBase:
         ctx: Any,
     ) -> dict[str, Any]:
         val = inputs["in"]
-        ctx["metric_results"][node.id] = {"out": _jsonable_metric_value(val)}
+        ctx["metric_results"][node.id] = {"out": jsonable_metric_value(val)}
         return {"out": val}

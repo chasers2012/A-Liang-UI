@@ -9,7 +9,7 @@ from workflow import WorkflowLink, WorkflowNode
 
 def test_duplicate_node_types_allowed(workspace_tmp):
     EvaluationMetricsRegistry.load()
-    mid = "metric:builtin.mean_ic"
+    mid = "builtin_mean_ic"
     wf = EvaluationWorkflow(
         nodes=[
             WorkflowNode(id="a", type="prepare_alphalens", pos=[0, 0], params={}),
@@ -31,7 +31,7 @@ def test_duplicate_node_types_allowed(workspace_tmp):
 
 def test_duplicate_target_socket_rejected(workspace_tmp):
     EvaluationMetricsRegistry.load()
-    mid = "metric:builtin.mean_ic"
+    mid = "builtin_mean_ic"
     wf = EvaluationWorkflow(
         nodes=[
             WorkflowNode(id="a", type="prepare_alphalens", pos=[0, 0], params={}),

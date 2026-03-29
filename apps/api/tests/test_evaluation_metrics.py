@@ -7,6 +7,8 @@ def test_evaluation_metrics_crud(client):
     data = r.json()
     mid = data["id"]
     assert data["name"] == "em_test"
+    assert data["workflow_type_id"] == f"user_metric_{mid.replace('-', '_')}"
+    assert data["source_path"].startswith("workflow_nodes/evaluation/em_")
     assert "UserEvaluationMetric" in data["source"]
     assert data.get("visualization") is None
 
@@ -76,7 +78,8 @@ def test_evaluation_profiles_node_types(client):
     assert "prepare_alphalens" in types
     assert "viz_auto" in types
     assert "viz_table" in types
-    assert "metric:builtin.mean_ic" in types
+    assert "builtin_mean_ic" in types
+    assert "builtin_mean_return_spread" in types
     viz_types = [x for x in types if x.startswith("viz_")]
     assert len(viz_types) == 6
     prep_row = next(x for x in rows if x["type"] == "prepare_alphalens")
