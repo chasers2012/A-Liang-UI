@@ -3,9 +3,9 @@ from __future__ import annotations
 from app.evaluation.scheme.profile_schemas import (
     EvaluationProfilePrepare,
     EvaluationWorkflow,
-    WorkflowNode,
 )
 from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
+from workflow import WorkflowNode
 
 
 def test_merge_profile_prepare_into_prepare_alphalens_node():

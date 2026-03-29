@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections import defaultdict, deque
 from collections.abc import Set as AbstractSet
 
-from .profile_schemas import EvaluationWorkflow, WorkflowLink, WorkflowNode
+from workflow import WorkflowLink, WorkflowNode, assert_acyclic
+
+from .profile_schemas import EvaluationWorkflow
 from .workflow_graph_types import workflow_node_definition_or_fail
 
 
@@ -75,31 +76,6 @@ def _validate_links(links: list[WorkflowLink], by_id: dict[str, WorkflowNode]) -
         _validate_link_sockets(li, link, by_id)
 
 
-def _assert_workflow_acyclic(
-    nodes: list[WorkflowNode],
-    links: list[WorkflowLink],
-    by_id: dict[str, WorkflowNode],
-) -> None:
-    adj: dict[str, list[str]] = defaultdict(list)
-    indeg: dict[str, int] = dict.fromkeys(by_id, 0)
-    for link in links:
-        adj[link.from_node].append(link.to_node)
-        indeg[link.to_node] += 1
-
-    q = deque([nid for nid, d in indeg.items() if d == 0])
-    seen = 0
-    while q:
-        u = q.popleft()
-        seen += 1
-        for v in adj[u]:
-            indeg[v] -= 1
-            if indeg[v] == 0:
-                q.append(v)
-
-    if nodes and seen != len(by_id):
-        raise ValueError("工作流存在环路")
-
-
 def validate_workflow_graph(
     workflow: EvaluationWorkflow,
     *,
@@ -117,4 +93,4 @@ def validate_workflow_graph(
     for n in nodes:
         workflow_node_definition_or_fail(n.type)
     _validate_links(links, by_id)
-    _assert_workflow_acyclic(nodes, links, by_id)
+    assert_acyclic(nodes, links)

@@ -2,39 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
+from workflow import WorkflowGraph, WorkflowLink, WorkflowNode, WorkflowViewport
 
 from app.datetime_utils import utc_now_iso
 
-
-class AgentGraphNode(BaseModel):
-    id: str
-    type: str
-    pos: tuple[float, float]
-    params: dict[str, Any] | None = None
-
-
-class AgentGraphLink(BaseModel):
-    id: str | None = None
-    from_node: str
-    from_socket: str
-    to_node: str
-    to_socket: str
-
-
-class AgentGraphViewport(BaseModel):
-    x: float
-    y: float
-    zoom: float
-
-
-class AgentGraphState(BaseModel):
-    nodes: list[AgentGraphNode] = Field(default_factory=list)
-    links: list[AgentGraphLink] = Field(default_factory=list)
-    viewport: AgentGraphViewport | None = None
+AgentGraphNode = WorkflowNode
+AgentGraphLink = WorkflowLink
+AgentGraphViewport = WorkflowViewport
+AgentGraphState = WorkflowGraph
 
 
 class AgentWorkflowRecord(BaseModel):

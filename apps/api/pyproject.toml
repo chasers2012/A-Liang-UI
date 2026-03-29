@@ -21,6 +21,7 @@ dependencies = [
   "sql-datasource",
   "csv-datasource",
   "numpy>=1.26.0",
+  "workflow",
 ]
 
 [tool.uv.sources]
@@ -31,6 +32,7 @@ evaluate = { workspace = true }
 factor = { workspace = true }
 sql-datasource = { workspace = true }
 csv-datasource = { workspace = true }
+workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

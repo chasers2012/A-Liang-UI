@@ -5,10 +5,10 @@ from __future__ import annotations
 import contextlib
 import re
 import traceback
-from collections import defaultdict, deque
 from typing import Any
 
 import pandas as pd
+from workflow import topological_order
 
 from app.evaluation.metrics.builtin_metric_registry import parse_metric_node_type
 from app.evaluation.metrics.evaluation_metric_resolve import resolve_evaluation_metric
@@ -17,38 +17,17 @@ from app.evaluation.metrics.metric_schemas import (
     MetricWorkflowParamSpec,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.factors.evaluation_runner import (
+from app.evaluation.scheme.node_type_registry import is_viz_node_type
+from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
+from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
+from app.factors.schemas import utc_now_iso
+
+from .runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
     build_alphalens_evaluator_for_factor,
 )
-from app.factors.evaluation_schemas import FactorEvaluationSnapshot
-from app.factors.schemas import utc_now_iso
-
-from .node_type_registry import is_viz_node_type
-from .profile_schemas import EvaluationProfileRecord
-from .workflow_prepare import merge_profile_prepare_into_workflow
-
-
-def _workflow_topological_order(workflow) -> list[str]:
-    by_id = {n.id: n for n in workflow.nodes}
-    adj: dict[str, list[str]] = defaultdict(list)
-    indeg: dict[str, int] = dict.fromkeys(by_id, 0)
-    for link in workflow.links:
-        adj[link.from_node].append(link.to_node)
-        indeg[link.to_node] += 1
-    q = deque([nid for nid, d in indeg.items() if d == 0])
-    out: list[str] = []
-    while q:
-        u = q.popleft()
-        out.append(u)
-        for v in adj[u]:
-            indeg[v] -= 1
-            if indeg[v] == 0:
-                q.append(v)
-    if len(out) != len(by_id):
-        raise ValueError("工作流存在环路")
-    return out
+from .schemas import FactorEvaluationSnapshot
 
 
 def _resolve_socket(
@@ -274,7 +253,7 @@ def run_evaluation_profile_workflow(
     assert ev is not None
     by_id = {n.id: n for n in wf.nodes}
     try:
-        order = _workflow_topological_order(wf)
+        order = topological_order(wf.nodes, wf.links)
     except ValueError as e:
         return FactorEvaluationSnapshot(
             evaluated_at=utc_now_iso(),

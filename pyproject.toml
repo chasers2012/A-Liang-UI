@@ -14,6 +14,7 @@ factor = { workspace = true }
 agent = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
+workflow = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*"]

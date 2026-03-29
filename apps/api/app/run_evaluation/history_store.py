@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.factors.evaluation_history_schemas import (
+from app.factors.schemas import new_factor_id
+from app.run_evaluation.history_schemas import (
     FactorEvaluationHistoryEntry,
     FactorEvaluationHistoryFile,
 )
-from app.factors.evaluation_schemas import FactorEvaluationSnapshot
-from app.factors.schemas import new_factor_id
+from app.run_evaluation.schemas import FactorEvaluationSnapshot
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
 FACTOR_EVALUATION_HISTORY_FILENAME = "factor_evaluation_history.json"

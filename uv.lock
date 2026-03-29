@@ -24,6 +24,7 @@ members = [
     "quant-agent",
     "quant-agent-api",
     "sql-datasource",
+    "workflow",
     "workspace",
 ]
 
@@ -2381,6 +2382,7 @@ dependencies = [
     { name = "sql-datasource" },
     { name = "sqlalchemy" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "workflow" },
     { name = "workspace" },
 ]
 
@@ -2398,6 +2400,7 @@ requires-dist = [
     { name = "sql-datasource", editable = "lib/sql_datasource" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+    { name = "workflow", editable = "lib/workflow" },
     { name = "workspace", editable = "lib/workspace" },
 ]
 
@@ -3360,6 +3363,17 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/9a/3f/f70e03f40ffc9a30d817eef7da1be72ee4956ba8d7255c399a01b135902a/websockets-16.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:a653aea902e0324b52f1613332ddf50b00c06fdaf7e92624fbf8c77c78fa5767", size = 178735, upload-time = "2026-01-10T09:23:42.259Z" },
     { url = "https://files.pythonhosted.org/packages/6f/28/258ebab549c2bf3e64d2b0217b973467394a9cea8c42f70418ca2c5d0d2e/websockets-16.0-py3-none-any.whl", hash = "sha256:1637db62fad1dc833276dded54215f2c7fa46912301a24bd94d45d46a011ceec", size = 171598, upload-time = "2026-01-10T09:23:45.395Z" },
 ]
+
+[[package]]
+name = "workflow"
+version = "0.1.0"
+source = { editable = "lib/workflow" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.0.0" }]
 
 [[package]]
 name = "workspace"

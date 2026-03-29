@@ -14,25 +14,6 @@ from app.factors.code_snapshots_store import (
     get_snapshot,
     list_snapshots_for_factor,
 )
-from app.factors.evaluation_history_schemas import FactorEvaluationHistoryEntry
-from app.factors.evaluation_history_store import (
-    append_history_entry,
-    delete_history_for_factor,
-    entry_from_latest_evaluation,
-    list_history_for_factor,
-)
-from app.factors.evaluation_runner import run_evaluation_for_factor
-from app.factors.evaluation_schemas import (
-    FactorEvaluationRowPublic,
-    FactorEvaluationRunBody,
-    FactorEvaluationsAggregatePublic,
-    FactorEvaluationsSummaryPublic,
-)
-from app.factors.evaluations_store import (
-    delete_evaluation_for_factor,
-    load_evaluations_file,
-    upsert_evaluation_for_factor,
-)
 from app.factors.registry import (
     FactorItemsRegistry,
     delete_source_file,
@@ -53,6 +34,25 @@ from app.factors.schemas import (
 )
 from app.factors.validate import validate_factor_name, validate_source_syntax
 from app.http_errors import http_bad_request, http_internal_server_error
+from app.run_evaluation.evaluations_store import (
+    delete_evaluation_for_factor,
+    load_evaluations_file,
+    upsert_evaluation_for_factor,
+)
+from app.run_evaluation.history_schemas import FactorEvaluationHistoryEntry
+from app.run_evaluation.history_store import (
+    append_history_entry,
+    delete_history_for_factor,
+    entry_from_latest_evaluation,
+    list_history_for_factor,
+)
+from app.run_evaluation.runner import run_evaluation_for_factor
+from app.run_evaluation.schemas import (
+    FactorEvaluationRowPublic,
+    FactorEvaluationRunBody,
+    FactorEvaluationsAggregatePublic,
+    FactorEvaluationsSummaryPublic,
+)
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 

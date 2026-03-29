@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "workflow"
+version = "0.1.0"
+description = "Reusable workflow graph primitives, algorithms, and node metadata"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["workflow"]

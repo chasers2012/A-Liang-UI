@@ -1,23 +1,23 @@
 # builtin metric: mean return spread (seeded template)
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 import pandas as pd
 from evaluate import MeanReturnSpreadMetric
+from workflow import workflow_node, workflow_socket
 
 
+@workflow_node(
+    input_sockets=[
+        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+    ],
+    output_sockets=[workflow_socket("mean_return_spread", value_type="scalar_json")],
+    snapshot_field="mean_return_spread",
+    visualization={"mode": "auto", "period_day_keys": False},
+)
 class BuiltinMeanReturnSpreadMetric(MeanReturnSpreadMetric):
     """分位多空平均收益差（按持有期）。"""
-
-    SNAPSHOT_FIELD: ClassVar[str] = "mean_return_spread"
-    INPUT_SOCKETS: ClassVar[list[dict[str, object]]] = [
-        {"name": "clean_factor", "required": True, "value_type": "factor_data_clean"},
-    ]
-    OUTPUT_SOCKETS: ClassVar[list[dict[str, object]]] = [
-        {"name": "mean_return_spread", "value_type": "scalar_json"},
-    ]
-    VISUALIZATION: ClassVar[dict[str, object]] = {"mode": "auto", "period_day_keys": False}
 
     def evaluate(
         self,

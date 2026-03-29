@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from workflow import WorkflowNode
+
 from .profile_schemas import (
     EvaluationProfilePrepare,
     EvaluationWorkflow,
-    WorkflowNode,
 )
 
 
