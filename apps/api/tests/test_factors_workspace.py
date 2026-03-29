@@ -4,7 +4,8 @@ import json
 
 import pytest
 from app.factors.registry import FactorItemsRegistry, read_source, resolve_source_path
-from app.factors.validate import validate_factor_name, validate_source_syntax
+from custom_code import validate_identifier_name as validate_factor_name
+from custom_code import validate_source_syntax
 
 MIN_SOURCE = "x = 1\n"
 

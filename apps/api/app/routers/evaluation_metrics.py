@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from custom_code import validate_identifier_name as validate_factor_name
+from custom_code import validate_source_syntax
+from evaluate import load_evaluation_metric_class
 from fastapi import APIRouter, HTTPException
 
 from app.evaluation.metrics.builtin_metric_registry import is_builtin_metric_id
-from app.evaluation.metrics.metric_loader import load_evaluation_metric_class
 from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
@@ -16,7 +18,6 @@ from app.evaluation.metrics.metric_schemas import (
     utc_now_iso,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.factors.validate import validate_factor_name, validate_source_syntax
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 
@@ -50,14 +51,13 @@ def _validate_http_name_for_patch(body: EvaluationMetricPatch) -> None:
 
 def _validate_and_write_source(rec, source: str) -> None:
     try:
-        validate_source_syntax(source)
+        EvaluationMetricsRegistry.write_source(
+            rec,
+            source,
+            validators=[validate_source_syntax, load_evaluation_metric_class],
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    try:
-        load_evaluation_metric_class(source)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    EvaluationMetricsRegistry.write_source(rec, source)
 
 
 def _metric_sort_key(rec) -> tuple[bool, str]:
@@ -89,15 +89,13 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     rec = body.to_record(mid, now)
     src = body.source if body.source is not None else default_metric_source(rec.name)
     try:
-        validate_source_syntax(src)
+        EvaluationMetricsRegistry.write_source(
+            rec,
+            src,
+            validators=[validate_source_syntax, load_evaluation_metric_class],
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    try:
-        load_evaluation_metric_class(src)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-    EvaluationMetricsRegistry.write_source(rec, src)
     EvaluationMetricsRegistry.add_item(rec)
     return _detail(rec)
 

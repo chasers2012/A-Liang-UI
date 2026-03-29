@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib import resources
 
-from app.persistence.source_files import WorkspaceSourceFiles
+from custom_code import SourceFiles
 
 from .builtin_metric_registry import BUILTIN_SEED_METAS
 from .metric_schemas import (
@@ -21,10 +21,10 @@ def _template_text(filename: str) -> str:
 
 
 def _source_missing_or_empty(source_path: str) -> bool:
-    p = WorkspaceSourceFiles.resolve_source_path(source_path)
+    p = SourceFiles.resolve_source_path(source_path)
     if not p.is_file():
         return True
-    return WorkspaceSourceFiles.read_source_text(source_path).strip() == ""
+    return SourceFiles.read_source_text(source_path).strip() == ""
 
 
 def ensure_builtin_metrics_seeded(reg) -> bool:

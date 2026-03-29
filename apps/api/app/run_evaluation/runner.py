@@ -6,14 +6,13 @@ import os
 import traceback
 
 import pandas as pd
-from factor import DependencyResolver
+from factor import DependencyResolver, load_factor_class
 
 from app.data_set.data_set_schemas import DataSetRecord
 from app.data_set.data_sets_store import DataSetsStore
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import DataSourceRecord
 from app.datasources.sql_url import build_sqlalchemy_url
-from app.factors.loader import load_factor_class
 from app.factors.registry import FactorItemsRegistry, read_source
 from app.factors.schemas import utc_now_iso
 from app.run_evaluation.schemas import (

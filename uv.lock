@@ -504,6 +504,12 @@ requires-dist = [
 name = "custom-code"
 version = "0.1.0"
 source = { editable = "lib/custom_code" }
+dependencies = [
+    { name = "workspace" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "workspace", editable = "lib/workspace" }]
 
 [[package]]
 name = "cycler"
@@ -556,6 +562,7 @@ version = "0.1.0"
 source = { editable = "lib/evaluate" }
 dependencies = [
     { name = "alphalens-reloaded" },
+    { name = "custom-code" },
     { name = "factor" },
     { name = "pandas" },
 ]
@@ -563,6 +570,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alphalens-reloaded", specifier = ">=0.4.6" },
+    { name = "custom-code", editable = "lib/custom_code" },
     { name = "factor", editable = "lib/factor" },
     { name = "pandas", specifier = ">=2.2.0" },
 ]
@@ -593,6 +601,7 @@ name = "factor"
 version = "0.1.0"
 source = { editable = "lib/factor" }
 dependencies = [
+    { name = "custom-code" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas" },
@@ -600,6 +609,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "custom-code", editable = "lib/custom_code" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]

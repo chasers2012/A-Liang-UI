@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import contextlib
 
+from custom_code import validate_identifier_name as validate_factor_name
+from custom_code import validate_source_syntax
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.factors.code_snapshot_schemas import (
@@ -32,7 +34,6 @@ from app.factors.schemas import (
     record_to_summary,
     utc_now_iso,
 )
-from app.factors.validate import validate_factor_name, validate_source_syntax
 from app.http_errors import http_bad_request, http_internal_server_error
 from app.run_evaluation.evaluations_store import (
     delete_evaluation_for_factor,
@@ -113,14 +114,13 @@ def _apply_source_change_with_snapshot(
     rec: FactorRecord,
     new_source: str,
 ) -> None:
-    try:
-        validate_source_syntax(new_source)
-    except ValueError as e:
-        http_bad_request(e)
     old_src = read_source(rec)
     if new_source == old_src:
         return
-    write_source(rec, new_source)
+    try:
+        write_source(rec, new_source, validators=[validate_source_syntax])
+    except ValueError as e:
+        http_bad_request(e)
     try:
         snap = append_code_snapshot(
             factor_id,
@@ -366,11 +366,9 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
     rec = body.to_record(fid, now)
     src = body.source if body.source is not None else default_factor_source(rec.name)
     try:
-        validate_source_syntax(src)
+        write_source(rec, src, validators=[validate_source_syntax])
     except ValueError as e:
         http_bad_request(e)
-
-    write_source(rec, src)
     FactorItemsRegistry.add_item(rec)
     return _detail(rec)
 

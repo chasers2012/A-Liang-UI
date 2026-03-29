@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from evaluate import EvaluationMetric
+from evaluate import EvaluationMetric, load_evaluation_metric_class
 
-from .metric_loader import load_evaluation_metric_class
 from .metrics_store import EvaluationMetricsRegistry
 
 

@@ -5,8 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "custom-code"
 version = "0.1.0"
-description = "Parse and exec custom Python subclasses (factors, metrics, etc.)"
+description = "Parse, exec, validate, and manage custom Python source files"
 requires-python = ">=3.10"
+dependencies = ["workspace"]
+
+[tool.uv.sources]
+workspace = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["custom_code"]

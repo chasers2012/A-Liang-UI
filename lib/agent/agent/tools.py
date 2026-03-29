@@ -7,9 +7,9 @@ import traceback
 from typing import Any
 
 import pandas as pd
+from factor import load_factor_class
 from langchain_core.tools import tool
 
-from agent.codegen import load_factor_class
 from agent.context import get_dependency_resolver, list_registered_dependency_fields
 from agent.state import (
     DEFAULT_DRY_RUN_END_DATE,

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from custom_code import SourceFiles
 from workspace import ensure_dir
 
 from app.factors.schemas import FACTORS_DIR, FactorRecord, FactorRegistryFile
-from app.persistence.source_files import WorkspaceSourceFiles
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
-resolve_source_path = WorkspaceSourceFiles.resolve_source_path
+resolve_source_path = SourceFiles.resolve_source_path
 
 FACTORS_REGISTRY_FILENAME = "factors/registry.json"
 
@@ -23,13 +23,13 @@ def factors_dir_path() -> Path:
 
 
 def read_source(rec: FactorRecord) -> str:
-    return WorkspaceSourceFiles.read_source_text(rec.source_path)
+    return SourceFiles.read_source_text(rec.source_path)
 
 
-def write_source(rec: FactorRecord, source: str) -> None:
+def write_source(rec: FactorRecord, source: str, validators=None) -> None:
     factors_dir_path()
-    WorkspaceSourceFiles.write_source_text(rec.source_path, source)
+    SourceFiles.write_source_text(rec.source_path, source, validators=validators)
 
 
 def delete_source_file(rec: FactorRecord) -> None:
-    WorkspaceSourceFiles.delete_source_text_file(rec.source_path)
+    SourceFiles.delete_source_text_file(rec.source_path)
