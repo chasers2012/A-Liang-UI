@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { History } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -24,14 +23,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
-  type FactorCodeSnapshotDetailPublic,
-  type FactorCodeSnapshotSummaryPublic,
   type FactorEvaluationHistoryEntry,
   getFactor,
   getFactorEvaluationsSummary,
-  getFactorSnapshot,
   getFactorEvaluationHistory,
-  listFactorSnapshots,
 } from "@/lib/quant-agent-api";
 import {
   formatEvaluationWindow,
@@ -65,121 +60,6 @@ function sortedPeriodKeys(rows: FactorEvaluationHistoryEntry[]): string[] {
   return [...s].sort((a, b) => Number(a) - Number(b));
 }
 
-function FactorHistoryTabBar(props: {
-  tab: "snapshots" | "evaluations";
-  onTab: (t: "snapshots" | "evaluations") => void;
-}) {
-  const { tab, onTab } = props;
-  return (
-    <div className="flex gap-2 border-b border-border/60 pb-2">
-      <Button
-        type="button"
-        variant={tab === "snapshots" ? "secondary" : "ghost"}
-        size="sm"
-        className="gap-1.5"
-        onClick={() => onTab("snapshots")}
-      >
-        <History className="size-4" />
-        代码快照
-      </Button>
-      <Button
-        type="button"
-        variant={tab === "evaluations" ? "secondary" : "ghost"}
-        size="sm"
-        onClick={() => onTab("evaluations")}
-      >
-        评价历史
-      </Button>
-    </div>
-  );
-}
-
-function FactorSnapshotsPanel(props: {
-  snapshots: FactorCodeSnapshotSummaryPublic[];
-  selectedId: string | null;
-  onSelectSnapshot: (snapshotId: string) => void;
-  detail: FactorCodeSnapshotDetailPublic | null;
-  detailError: string | null;
-}) {
-  const { snapshots, selectedId, onSelectSnapshot, detail, detailError } =
-    props;
-  return (
-    <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,14rem)_1fr]">
-      <Card className="min-h-48" size="sm">
-        <CardHeader>
-          <CardTitle>快照列表</CardTitle>
-          <CardDescription className="text-xs">
-            新→旧；点击查看源码
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="max-h-[min(60vh,28rem)] space-y-1 overflow-auto p-2">
-          {snapshots.length === 0 ? (
-            <p className="px-2 py-4 text-xs text-muted-foreground">
-              暂无快照。保存代码且源码变更时会自动生成。
-            </p>
-          ) : (
-            snapshots.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => onSelectSnapshot(s.id)}
-                className={cn(
-                  "w-full rounded-md border px-2 py-2 text-left text-xs transition-colors",
-                  selectedId === s.id
-                    ? "border-primary/40 bg-muted/40"
-                    : "border-transparent hover:bg-muted/30",
-                )}
-              >
-                <div className="font-mono text-[0.65rem] text-muted-foreground">
-                  {formatTs(s.saved_at)}
-                </div>
-                <div className="mt-0.5 font-medium">
-                  {s.kind === "manual" ? (
-                    <span className="text-foreground">
-                      {s.label ?? "手动"}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">自动</span>
-                  )}
-                </div>
-              </button>
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="min-h-48" size="sm">
-        <CardHeader>
-          <CardTitle>源码（只读）</CardTitle>
-          {detail ? (
-            <CardDescription className="text-xs">
-              {detail.meta.name} · max_window {detail.meta.max_window}
-            </CardDescription>
-          ) : null}
-        </CardHeader>
-        <CardContent className="p-0">
-          {detailError ? (
-            <Alert variant="destructive" className="m-4">
-              <AlertDescription>{detailError}</AlertDescription>
-            </Alert>
-          ) : null}
-          {detail && !detailError ? (
-            <pre className="max-h-[min(60vh,32rem)] overflow-auto p-4 font-mono text-xs leading-relaxed">
-              {detail.source}
-            </pre>
-          ) : null}
-          {!detail && !detailError && selectedId ? (
-            <p className="p-4 text-sm text-muted-foreground">加载源码…</p>
-          ) : null}
-          {!selectedId && snapshots.length > 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">请选择快照</p>
-          ) : null}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function FactorEvaluationsPanel(props: {
   periodKeys: string[];
   periodItemMap: Record<string, string>;
@@ -206,7 +86,11 @@ function FactorEvaluationsPanel(props: {
           <div>
             <CardTitle>评价历史</CardTitle>
             <CardDescription className="text-xs">
-              保存代码且当时存在最新评价时会自动关联快照 id；Agent 也可追加记录。
+              记录来自 workspace{" "}
+              <code className="rounded bg-muted px-1 font-mono text-[0.65rem]">
+                factors/data/evaluation_history.json
+              </code>
+              。
             </CardDescription>
           </div>
           {periodKeys.length > 0 ? (
@@ -243,11 +127,7 @@ function FactorEvaluationsPanel(props: {
       <CardContent className="p-0">
         {evalHistory.length === 0 ? (
           <p className="p-6 text-sm text-muted-foreground">
-            暂无评价历史。配置{" "}
-            <code className="rounded bg-muted px-1 font-mono text-xs">
-              factor_evaluations.json
-            </code>{" "}
-            并在保存代码变更后查看绑定记录。
+            暂无评价历史。运行评价后在此查看记录。
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -263,7 +143,6 @@ function FactorEvaluationsPanel(props: {
                   <TableHead className="text-right">
                     Return spread ({displayPeriod}D)
                   </TableHead>
-                  <TableHead>关联快照</TableHead>
                   <TableHead>状态</TableHead>
                 </TableRow>
               </TableHeader>
@@ -288,9 +167,6 @@ function FactorEvaluationsPanel(props: {
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs tabular-nums">
                         {err ? "—" : formatMetric(spread)}
-                      </TableCell>
-                      <TableCell className="max-w-32 truncate font-mono text-[0.65rem] text-muted-foreground">
-                        {row.linked_snapshot_id ?? "—"}
                       </TableCell>
                       <TableCell className="max-w-[min(24rem,40vw)] text-xs">
                         {err ? (
@@ -321,87 +197,18 @@ function FactorEvaluationsPanel(props: {
   );
 }
 
-function FactorHistoryMain(props: {
-  tab: "snapshots" | "evaluations";
-  onTab: (t: "snapshots" | "evaluations") => void;
-  snapshots: FactorCodeSnapshotSummaryPublic[];
-  selectedId: string | null;
-  onSelectSnapshot: (snapshotId: string) => void;
-  detail: FactorCodeSnapshotDetailPublic | null;
-  detailError: string | null;
-  periodKeys: string[];
-  periodItemMap: Record<string, string>;
-  primaryPeriod: string;
-  selectedPeriod: string;
-  onPeriodChange: (v: string) => void;
-  evalHistory: FactorEvaluationHistoryEntry[];
-  displayPeriod: string;
-}) {
-  const {
-    tab,
-    onTab,
-    snapshots,
-    selectedId,
-    onSelectSnapshot,
-    detail,
-    detailError,
-    periodKeys,
-    periodItemMap,
-    primaryPeriod,
-    selectedPeriod,
-    onPeriodChange,
-    evalHistory,
-    displayPeriod,
-  } = props;
-
-  return (
-    <>
-      <FactorHistoryTabBar tab={tab} onTab={onTab} />
-      {tab === "snapshots" ? (
-        <FactorSnapshotsPanel
-          snapshots={snapshots}
-          selectedId={selectedId}
-          onSelectSnapshot={onSelectSnapshot}
-          detail={detail}
-          detailError={detailError}
-        />
-      ) : null}
-      {tab === "evaluations" ? (
-        <FactorEvaluationsPanel
-          periodKeys={periodKeys}
-          periodItemMap={periodItemMap}
-          primaryPeriod={primaryPeriod}
-          selectedPeriod={selectedPeriod}
-          onPeriodChange={onPeriodChange}
-          evalHistory={evalHistory}
-          displayPeriod={displayPeriod}
-        />
-      ) : null}
-    </>
-  );
-}
-
 export default function FactorHistoryPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
 
   const [factorName, setFactorName] = useState<string>("");
-  const [snapshots, setSnapshots] = useState<FactorCodeSnapshotSummaryPublic[]>(
-    [],
-  );
   const [evalHistory, setEvalHistory] = useState<FactorEvaluationHistoryEntry[]>(
     [],
   );
   const [primaryPeriod, setPrimaryPeriod] = useState("5");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("");
-  const [tab, setTab] = useState<"snapshots" | "evaluations">("snapshots");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<FactorCodeSnapshotDetailPublic | null>(
-    null,
-  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const periodKeys = useMemo(
@@ -420,14 +227,12 @@ export default function FactorHistoryPage() {
     setLoadError(null);
     setLoading(true);
     try {
-      const [detailFactor, snaps, ev, summary] = await Promise.all([
+      const [detailFactor, ev, summary] = await Promise.all([
         getFactor(id),
-        listFactorSnapshots(id),
         getFactorEvaluationHistory(id),
         getFactorEvaluationsSummary(),
       ]);
       setFactorName(detailFactor.name);
-      setSnapshots(snaps);
       setEvalHistory(ev);
       setPrimaryPeriod(summary.aggregate.primary_period);
     } catch (e) {
@@ -452,39 +257,6 @@ export default function FactorHistoryPage() {
       return periodKeys[0] ?? "";
     });
   }, [periodKeys, primaryPeriod]);
-
-  useEffect(() => {
-    if (snapshots.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-    if (!selectedId || !snapshots.some((s) => s.id === selectedId)) {
-      setSelectedId(snapshots[0].id);
-    }
-  }, [snapshots, selectedId]);
-
-  useEffect(() => {
-    if (!id || !selectedId || tab !== "snapshots") {
-      setDetail(null);
-      return;
-    }
-    setDetailError(null);
-    let cancelled = false;
-    void (async () => {
-      try {
-        const d = await getFactorSnapshot(id, selectedId);
-        if (!cancelled) setDetail(d);
-      } catch (e) {
-        if (!cancelled) {
-          setDetail(null);
-          setDetailError(e instanceof Error ? e.message : String(e));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, selectedId, tab]);
 
   if (!id) {
     return (
@@ -519,18 +291,14 @@ export default function FactorHistoryPage() {
 
   return (
     <FactorFormPageContainer
-      title="历史版本"
+      title="评价历史"
       description={
         <>
           <span className="font-mono text-xs">{factorName}</span>
           {" · "}
-          代码快照与评价记录来自 workspace{" "}
+          数据来自 workspace{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            config/factor_code_snapshots.json
-          </code>{" "}
-          与{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            config/factor_evaluation_history.json
+            factors/data/evaluation_history.json
           </code>
           。
         </>
@@ -552,14 +320,7 @@ export default function FactorHistoryPage() {
         </>
       }
     >
-      <FactorHistoryMain
-        tab={tab}
-        onTab={setTab}
-        snapshots={snapshots}
-        selectedId={selectedId}
-        onSelectSnapshot={setSelectedId}
-        detail={detail}
-        detailError={detailError}
+      <FactorEvaluationsPanel
         periodKeys={periodKeys}
         periodItemMap={periodItemMap}
         primaryPeriod={primaryPeriod}

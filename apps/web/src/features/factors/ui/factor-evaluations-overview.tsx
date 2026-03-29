@@ -78,9 +78,9 @@ export function FactorEvaluationsOverview() {
           strokeWidth={1.25}
         />
         <p className="text-sm text-muted-foreground">
-          暂无因子。创建因子后，可将评价快照写入 workspace 的{" "}
+          暂无因子。创建因子后，可将评价结果写入 workspace 的{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            config/factor_evaluations.json
+            factors/data/evaluations.json
           </code>{" "}
           以在此查看整体评分。
         </p>
@@ -88,7 +88,7 @@ export function FactorEvaluationsOverview() {
     );
   }
 
-  const anySnapshot = rows.some((r) => r.has_evaluation);
+  const anyEvaluated = rows.some((r) => r.has_evaluation);
   const noSuccessfulEval =
     aggregate.evaluated_count === 0 && aggregate.total_factors > 0;
 
@@ -135,23 +135,19 @@ export function FactorEvaluationsOverview() {
         </div>
       </div>
 
-      {!anySnapshot && (
+      {!anyEvaluated && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          当前没有任何评价快照。请通过 CLI/Agent 将结果写入{" "}
+          当前没有任何评价记录。请通过 API/Agent 运行评价或写入{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">
-            config/factor_evaluations.json
+            factors/data/evaluations.json
           </code>
-          （与{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">
-            factors.json
-          </code>{" "}
-          同目录），刷新本页即可看到汇总。
+          ，刷新本页即可看到汇总。
         </p>
       )}
 
-      {anySnapshot && noSuccessfulEval && (
+      {anyEvaluated && noSuccessfulEval && (
         <p className="text-xs text-amber-600 dark:text-amber-500">
-          已有快照但均无成功结果（可能存在 error 字段）。请检查各因子条目或重新生成评价。
+          已有评价记录但均无成功结果（可能存在 error 字段）。请检查各因子条目或重新运行评价。
         </p>
       )}
 

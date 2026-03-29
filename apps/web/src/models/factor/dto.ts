@@ -1,4 +1,4 @@
-/** 因子注册、评价汇总、快照与历史记录 DTO。 */
+/** 因子注册、评价汇总与历史记录 DTO。 */
 
 export interface FactorSummaryPublic {
   id: string;
@@ -50,31 +50,8 @@ export interface FactorEvaluationsSummaryPublic {
   rows: FactorEvaluationRowPublic[];
 }
 
-export type FactorCodeSnapshotKind = "auto" | "manual";
-
-export interface FactorCodeSnapshotMeta {
-  name: string;
-  group: string;
-  description: string;
-  max_window: number;
-  dependencies: string[];
-}
-
-export interface FactorCodeSnapshotSummaryPublic {
-  id: string;
-  saved_at: string;
-  kind: FactorCodeSnapshotKind;
-  label?: string | null;
-  meta: FactorCodeSnapshotMeta;
-}
-
-export interface FactorCodeSnapshotDetailPublic extends FactorCodeSnapshotSummaryPublic {
-  source: string;
-}
-
 export interface FactorEvaluationHistoryEntry {
   id: string;
-  linked_snapshot_id?: string | null;
   evaluated_at: string;
   window?: { start?: string | null; end?: string | null } | null;
   stock_count?: number | null;

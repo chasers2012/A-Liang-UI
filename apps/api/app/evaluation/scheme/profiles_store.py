@@ -10,7 +10,6 @@ from workspace import ensure_dir, workspace_path
 from .profile_schemas import EvaluationProfileRecord
 
 PROFILES_DIR = "evaluation/profiles"
-_LEGACY_DIR = "config/evaluation_profiles"
 
 
 class EvaluationProfilesRegistry:
@@ -36,7 +35,6 @@ class EvaluationProfilesRegistry:
 
     @classmethod
     def _write_record(cls, rec: EvaluationProfileRecord) -> None:
-        cls._profiles_dir()
         path = cls._profile_path(rec.id)
         path.write_text(
             json.dumps(rec.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
@@ -44,30 +42,8 @@ class EvaluationProfilesRegistry:
         )
 
     @classmethod
-    def _migrate_legacy_dir(cls) -> None:
-        """Move per-file records from old ``config/evaluation_profiles/`` to new dir."""
-        old_dir = workspace_path(_LEGACY_DIR)
-        if not old_dir.is_dir():
-            return
-        new_dir = cls._profiles_dir()
-        for p in old_dir.glob("*.json"):
-            dest = new_dir / p.name
-            if not dest.is_file():
-                p.rename(dest)
-            else:
-                p.unlink()
-        if not any(old_dir.iterdir()):
-            old_dir.rmdir()
-
-    @classmethod
-    def _ensure_ready(cls) -> Path:
-        d = cls._profiles_dir()
-        cls._migrate_legacy_dir()
-        return d
-
-    @classmethod
     def list_all(cls) -> list[EvaluationProfileRecord]:
-        d = cls._ensure_ready()
+        d = cls._profiles_dir()
         records: list[EvaluationProfileRecord] = []
         for p in sorted(d.glob("*.json")):
             rec = cls._read_record(p)
@@ -77,7 +53,6 @@ class EvaluationProfilesRegistry:
 
     @classmethod
     def get_by_id(cls, profile_id: str) -> EvaluationProfileRecord | None:
-        cls._ensure_ready()
         return cls._read_record(cls._profile_path(profile_id))
 
     @classmethod

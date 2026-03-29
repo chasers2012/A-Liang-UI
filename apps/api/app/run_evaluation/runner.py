@@ -16,7 +16,7 @@ from app.datasources.sql_url import build_sqlalchemy_url
 from app.factors.registry import FactorItemsRegistry, read_source
 from app.factors.schemas import utc_now_iso
 from app.run_evaluation.schemas import (
-    FactorEvaluationSnapshot,
+    FactorEvaluationRecord,
     FactorEvaluationWindow,
 )
 
@@ -124,20 +124,20 @@ def _eval_failure_tuple(
     quantiles: int,
     stock_codes: list[str] | None,
 ) -> tuple[
-    FactorEvaluationSnapshot,
+    FactorEvaluationRecord,
     None,
     FactorEvaluationWindow,
     int,
     list[str] | None,
 ]:
-    snap = FactorEvaluationSnapshot(
+    rec = FactorEvaluationRecord(
         evaluated_at=utc_now_iso(),
         window=window,
         mean_ic={},
         mean_return_spread={},
         error=error,
     )
-    return snap, None, window, quantiles, stock_codes
+    return rec, None, window, quantiles, stock_codes
 
 
 def _register_data_set_bindings(
@@ -148,7 +148,7 @@ def _register_data_set_bindings(
     window: FactorEvaluationWindow,
     quantiles: int,
     stock_codes: list[str] | None,
-) -> tuple[FactorEvaluationSnapshot, None, FactorEvaluationWindow, int, list[str] | None] | None:
+) -> tuple[FactorEvaluationRecord, None, FactorEvaluationWindow, int, list[str] | None] | None:
     binds = list(ds_rec.datasource_bindings)
     if not binds:
         return _eval_failure_tuple(
@@ -193,7 +193,7 @@ def _build_dependency_resolver(
 ) -> tuple[
     DependencyResolver | None,
     tuple[
-        FactorEvaluationSnapshot,
+        FactorEvaluationRecord,
         None,
         FactorEvaluationWindow,
         int,
@@ -240,13 +240,13 @@ def _import_alphalens_evaluator():
 def build_alphalens_evaluator_for_factor(
     factor_id: str, *, data_set_id: str | None = None
 ) -> tuple[
-    FactorEvaluationSnapshot | None,
+    FactorEvaluationRecord | None,
     object | None,
     FactorEvaluationWindow,
     int,
     list[str] | None,
 ]:
-    """Return (error_snapshot, evaluator, window, quantiles, stock_codes) on success error is None."""
+    """Return (error_record, evaluator, window, quantiles, stock_codes); on success error_record is None."""
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise ValueError("因子不存在")
@@ -305,7 +305,7 @@ def run_evaluation_for_factor(
     *,
     data_set_id: str | None = None,
     evaluation_profile: object | None = None,
-) -> FactorEvaluationSnapshot:
+) -> FactorEvaluationRecord:
     from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
 
     merged_data_set_id = (data_set_id or "").strip() or None
@@ -334,12 +334,12 @@ def run_evaluation_for_factor(
         factor_id, data_set_id=merged_data_set_id
     )
     if err is not None:
-        snap = err
+        rec = err
         if evaluation_profile is not None and isinstance(
             evaluation_profile, EvaluationProfileRecord
         ):
-            snap = snap.model_copy(update={"evaluation_profile_id": evaluation_profile.id})
-        return snap
+            rec = rec.model_copy(update={"evaluation_profile_id": evaluation_profile.id})
+        return rec
     assert ev is not None
 
     prep_periods = (1, 5, 10, 20)
@@ -371,7 +371,7 @@ def run_evaluation_for_factor(
             and isinstance(evaluation_profile, EvaluationProfileRecord)
             else None
         )
-        return FactorEvaluationSnapshot(
+        return FactorEvaluationRecord(
             evaluated_at=utc_now_iso(),
             window=window,
             stock_count=n_stocks,
@@ -382,7 +382,7 @@ def run_evaluation_for_factor(
         )
     except Exception as e:
         tb = traceback.format_exc()
-        return FactorEvaluationSnapshot(
+        return FactorEvaluationRecord(
             evaluated_at=utc_now_iso(),
             window=window,
             mean_ic={},

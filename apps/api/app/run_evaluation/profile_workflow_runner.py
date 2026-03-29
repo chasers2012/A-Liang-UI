@@ -27,7 +27,7 @@ from .runner import (
     _stock_count_from_alignment,
     build_alphalens_evaluator_for_factor,
 )
-from .schemas import FactorEvaluationSnapshot
+from .schemas import FactorEvaluationRecord
 
 
 def _resolve_socket(
@@ -217,13 +217,13 @@ def _run_metric_node(
     metric_results[nid] = {sock: out_val}
     mic_merge: dict[str, float] | None = None
     spread_merge: dict[str, float] | None = None
-    if resolved.snapshot_field == "mean_ic":
+    if resolved.record_field == "mean_ic":
         series = raw
         if isinstance(series, pd.DataFrame):
             series = series.iloc[:, 0]
         if isinstance(series, pd.Series):
             mic_merge = _series_to_period_dict(series)
-    elif resolved.snapshot_field == "mean_return_spread":
+    elif resolved.record_field == "mean_return_spread":
         if isinstance(raw, pd.Series):
             spread_merge = _series_to_period_dict(raw)
     return mic_merge, spread_merge
@@ -234,7 +234,7 @@ def run_evaluation_profile_workflow(
     profile: EvaluationProfileRecord,
     *,
     data_set_id: str | None,
-) -> FactorEvaluationSnapshot:
+) -> FactorEvaluationRecord:
     profile = profile.model_copy(
         update={
             "workflow": merge_profile_prepare_into_workflow(
@@ -255,7 +255,7 @@ def run_evaluation_profile_workflow(
     try:
         order = topological_order(wf.nodes, wf.links)
     except ValueError as e:
-        return FactorEvaluationSnapshot(
+        return FactorEvaluationRecord(
             evaluated_at=utc_now_iso(),
             window=window,
             mean_ic={},
@@ -307,7 +307,7 @@ def run_evaluation_profile_workflow(
 
     except Exception as e:
         tb = traceback.format_exc()
-        return FactorEvaluationSnapshot(
+        return FactorEvaluationRecord(
             evaluated_at=utc_now_iso(),
             window=window,
             mean_ic={},
@@ -317,7 +317,7 @@ def run_evaluation_profile_workflow(
             metric_results=metric_results,
         )
 
-    return FactorEvaluationSnapshot(
+    return FactorEvaluationRecord(
         evaluated_at=utc_now_iso(),
         window=window,
         stock_count=n_stocks,

@@ -7,7 +7,6 @@ from app.run_evaluation.schemas import FactorEvaluationWindow
 
 class FactorEvaluationHistoryEntry(BaseModel):
     id: str
-    linked_snapshot_id: str | None = None
     evaluated_at: str
     window: FactorEvaluationWindow | None = None
     stock_count: int | None = None

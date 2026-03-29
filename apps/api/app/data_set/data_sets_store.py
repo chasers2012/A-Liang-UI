@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
-from app.workspace_config import workspace_config_path
 
 from .data_set_schemas import DataSetRecord, DataSetsFile
 
 REGISTRY_FILENAME = "data_sets/registry.json"
-_LEGACY_DATA_SETS = "config/data_sets.json"
-_LEGACY_EVALUATION_DATA_SETS = "config/evaluation_data_sets.json"
-_LEGACY_EVALUATION_TEST_SETS = "config/evaluation_test_sets.json"
 
 
 class DataSetsStore(WorkspaceItemsRegistry[DataSetRecord, DataSetsFile]):
@@ -16,18 +12,6 @@ class DataSetsStore(WorkspaceItemsRegistry[DataSetRecord, DataSetsFile]):
 
     filename = REGISTRY_FILENAME
     file_model = DataSetsFile
-
-    @classmethod
-    def load_filename(cls) -> str:
-        if workspace_config_path(REGISTRY_FILENAME).is_file():
-            return REGISTRY_FILENAME
-        if workspace_config_path(_LEGACY_DATA_SETS).is_file():
-            return _LEGACY_DATA_SETS
-        if workspace_config_path(_LEGACY_EVALUATION_DATA_SETS).is_file():
-            return _LEGACY_EVALUATION_DATA_SETS
-        if workspace_config_path(_LEGACY_EVALUATION_TEST_SETS).is_file():
-            return _LEGACY_EVALUATION_TEST_SETS
-        return REGISTRY_FILENAME
 
     @classmethod
     def load_workspace_kwargs(cls) -> dict:

@@ -13,7 +13,7 @@ from .metrics_store import EvaluationMetricsRegistry
 class ResolvedEvaluationMetric:
     metric_class: type[EvaluationMetric]
     primary_output_socket: str
-    snapshot_field: str | None
+    record_field: str | None
 
 
 def _primary_output_from_class(cls: type[EvaluationMetric]) -> str:
@@ -34,12 +34,12 @@ def resolve_evaluation_metric(metric_id: str) -> ResolvedEvaluationMetric:
         raise ValueError(f"评价指标不存在: {mid}")
     src = EvaluationMetricsRegistry.read_source(rec)
     cls, _ = load_evaluation_metric_class(src)
-    _sf = getattr(cls, "SNAPSHOT_FIELD", None)
-    snapshot_field = _sf if _sf in ("mean_ic", "mean_return_spread") else None
+    _rf = getattr(cls, "RECORD_FIELD", None)
+    record_field = _rf if _rf in ("mean_ic", "mean_return_spread") else None
     return ResolvedEvaluationMetric(
         metric_class=cls,
         primary_output_socket=_primary_output_from_class(cls),
-        snapshot_field=snapshot_field,
+        record_field=record_field,
     )
 
 

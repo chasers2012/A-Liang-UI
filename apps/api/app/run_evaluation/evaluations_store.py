@@ -5,15 +5,15 @@ from typing import Any
 
 from app.persistence.workspace_registry import WorkspaceJsonStore
 from app.run_evaluation.schemas import (
+    FactorEvaluationRecord,
     FactorEvaluationsFile,
-    FactorEvaluationSnapshot,
 )
 
 FACTOR_EVALUATIONS_FILENAME = "factors/data/evaluations.json"
 
 
 class FactorEvaluationsStore(WorkspaceJsonStore[FactorEvaluationsFile]):
-    """Workspace ``factors/data/evaluations.json`` (factor_id -> latest snapshot)."""
+    """Workspace ``factors/data/evaluations.json`` (factor_id -> latest evaluation)."""
 
     filename = FACTOR_EVALUATIONS_FILENAME
     file_model = FactorEvaluationsFile
@@ -31,9 +31,9 @@ class FactorEvaluationsStore(WorkspaceJsonStore[FactorEvaluationsFile]):
         cls.save(data)
 
     @classmethod
-    def upsert_for_factor(cls, factor_id: str, snap: FactorEvaluationSnapshot) -> None:
+    def upsert_for_factor(cls, factor_id: str, rec: FactorEvaluationRecord) -> None:
         data = cls.load()
-        data.items[factor_id] = snap
+        data.items[factor_id] = rec
         cls.save(data)
 
 
@@ -58,5 +58,5 @@ def delete_evaluation_for_factor(factor_id: str) -> None:
     FactorEvaluationsStore.delete_for_factor(factor_id)
 
 
-def upsert_evaluation_for_factor(factor_id: str, snap: FactorEvaluationSnapshot) -> None:
-    FactorEvaluationsStore.upsert_for_factor(factor_id, snap)
+def upsert_evaluation_for_factor(factor_id: str, rec: FactorEvaluationRecord) -> None:
+    FactorEvaluationsStore.upsert_for_factor(factor_id, rec)

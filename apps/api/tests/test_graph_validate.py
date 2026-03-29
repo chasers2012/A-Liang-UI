@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.profile_schemas import EvaluationWorkflow
 from workflow import WorkflowLink, WorkflowNode
 
 
-def test_duplicate_node_types_allowed():
+def test_duplicate_node_types_allowed(workspace_tmp):
+    EvaluationMetricsRegistry.load()
     mid = "metric:builtin.mean_ic"
     wf = EvaluationWorkflow(
         nodes=[
@@ -27,7 +29,8 @@ def test_duplicate_node_types_allowed():
     validate_workflow_graph(wf, allowed_types=allowed)
 
 
-def test_duplicate_target_socket_rejected():
+def test_duplicate_target_socket_rejected(workspace_tmp):
+    EvaluationMetricsRegistry.load()
     mid = "metric:builtin.mean_ic"
     wf = EvaluationWorkflow(
         nodes=[

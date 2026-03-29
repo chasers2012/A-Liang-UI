@@ -7,7 +7,7 @@ from app.run_evaluation.history_schemas import (
     FactorEvaluationHistoryEntry,
     FactorEvaluationHistoryFile,
 )
-from app.run_evaluation.schemas import FactorEvaluationSnapshot
+from app.run_evaluation.schemas import FactorEvaluationRecord
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
 FACTOR_EVALUATION_HISTORY_FILENAME = "factors/data/evaluation_history.json"
@@ -41,20 +41,15 @@ def append_history_entry(
     save_evaluation_history_file(file)
 
 
-def entry_from_latest_evaluation(
-    snap: FactorEvaluationSnapshot,
-    *,
-    linked_snapshot_id: str | None,
-) -> FactorEvaluationHistoryEntry:
+def entry_from_latest_evaluation(rec: FactorEvaluationRecord) -> FactorEvaluationHistoryEntry:
     return FactorEvaluationHistoryEntry(
         id=new_factor_id(),
-        linked_snapshot_id=linked_snapshot_id,
-        evaluated_at=snap.evaluated_at,
-        window=snap.window,
-        stock_count=snap.stock_count,
-        mean_ic=dict(snap.mean_ic),
-        mean_return_spread=dict(snap.mean_return_spread),
-        error=snap.error,
+        evaluated_at=rec.evaluated_at,
+        window=rec.window,
+        stock_count=rec.stock_count,
+        mean_ic=dict(rec.mean_ic),
+        mean_return_spread=dict(rec.mean_return_spread),
+        error=rec.error,
     )
 
 

@@ -1,1 +1,1 @@
-"""Factor registry, validation, dynamic loading, snapshots, and Alphalens / profile evaluation."""
+"""Factor registry, validation, dynamic loading, and Alphalens / profile evaluation."""

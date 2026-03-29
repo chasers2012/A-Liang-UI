@@ -9,8 +9,6 @@ import type {
   EvaluationMetricSummaryPublic,
   EvaluationProfilePublic,
   DataSetPublic,
-  FactorCodeSnapshotDetailPublic,
-  FactorCodeSnapshotSummaryPublic,
   FactorDefaultSourcePublic,
   FactorDetailPublic,
   FactorEvaluationHistoryEntry,
@@ -318,23 +316,6 @@ export function deleteFactor(id: string): Promise<void> {
 export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
   return apiFetchJson<FactorEvaluationsSummaryPublic>(
     "/factors/evaluations/summary",
-  );
-}
-
-export function listFactorSnapshots(
-  factorId: string,
-): Promise<FactorCodeSnapshotSummaryPublic[]> {
-  return apiFetchJson<FactorCodeSnapshotSummaryPublic[]>(
-    `/factors/${encodeURIComponent(factorId)}/snapshots`,
-  );
-}
-
-export function getFactorSnapshot(
-  factorId: string,
-  snapshotId: string,
-): Promise<FactorCodeSnapshotDetailPublic> {
-  return apiFetchJson<FactorCodeSnapshotDetailPublic>(
-    `/factors/${encodeURIComponent(factorId)}/snapshots/${encodeURIComponent(snapshotId)}`,
   );
 }
 

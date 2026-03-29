@@ -23,11 +23,6 @@ class WorkspaceJsonStore(ABC, Generic[TFile]):
     file_model: ClassVar[type[TFile]]
 
     @classmethod
-    def load_filename(cls) -> str:
-        """Basename used when reading (may differ from ``filename`` for legacy migration)."""
-        return cls.filename
-
-    @classmethod
     def load_workspace_kwargs(cls) -> dict[str, Any]:
         """Extra keyword arguments passed to :func:`load_workspace_config`."""
         return {}
@@ -46,7 +41,7 @@ class WorkspaceJsonStore(ABC, Generic[TFile]):
         m = cls.file_model
         kwargs = cls.load_workspace_kwargs()
         return load_workspace_config(
-            cls.load_filename(),
+            cls.filename,
             m,
             default_factory=m,
             **kwargs,
@@ -65,7 +60,7 @@ class WorkspaceItemsRegistry(WorkspaceJsonStore[TFile], Generic[TItem, TFile]):
     """JSON registry whose root model exposes an ``items`` sequence of id'd records.
 
     CRUD helpers load/save the registry file; use :meth:`get_by_id` when you already
-    hold the root model (e.g. batch work on one loaded snapshot).
+    hold the root model (e.g. batch work on one loaded file).
     """
 
     @classmethod

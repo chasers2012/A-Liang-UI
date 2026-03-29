@@ -6,16 +6,6 @@ from custom_code import validate_identifier_name as validate_factor_name
 from custom_code import validate_source_syntax
 from fastapi import APIRouter, Body, HTTPException, Query
 
-from app.factors.code_snapshot_schemas import (
-    FactorCodeSnapshotDetailPublic,
-    FactorCodeSnapshotSummaryPublic,
-)
-from app.factors.code_snapshots_store import (
-    append_code_snapshot,
-    delete_snapshots_for_factor,
-    get_snapshot,
-    list_snapshots_for_factor,
-)
 from app.factors.registry import (
     FactorItemsRegistry,
     delete_source_file,
@@ -37,7 +27,6 @@ from app.factors.schemas import (
 from app.http_errors import http_bad_request, http_internal_server_error
 from app.run_evaluation.evaluations_store import (
     delete_evaluation_for_factor,
-    load_evaluations_file,
     upsert_evaluation_for_factor,
 )
 from app.run_evaluation.history_schemas import FactorEvaluationHistoryEntry
@@ -109,11 +98,7 @@ def _patch_factor_validate_and_merge(
         http_bad_request(e)
 
 
-def _apply_source_change_with_snapshot(
-    factor_id: str,
-    rec: FactorRecord,
-    new_source: str,
-) -> None:
+def _apply_source_change(rec: FactorRecord, new_source: str) -> None:
     old_src = read_source(rec)
     if new_source == old_src:
         return
@@ -121,28 +106,6 @@ def _apply_source_change_with_snapshot(
         write_source(rec, new_source, validators=[validate_source_syntax])
     except ValueError as e:
         http_bad_request(e)
-    try:
-        snap = append_code_snapshot(
-            factor_id,
-            rec,
-            new_source,
-            kind="auto",
-        )
-    except ValueError as e:
-        http_internal_server_error(e)
-    try:
-        ev_file = load_evaluations_file()
-    except ValueError:
-        pass
-    else:
-        latest = ev_file.items.get(factor_id)
-        if latest is not None:
-            entry = entry_from_latest_evaluation(
-                latest,
-                linked_snapshot_id=snap.id,
-            )
-            with contextlib.suppress(ValueError):
-                append_history_entry(factor_id, entry)
 
 
 @router.get("", response_model=list[FactorSummaryPublic])
@@ -152,6 +115,8 @@ def list_factors() -> list[FactorSummaryPublic]:
 
 @router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
 def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
+    from app.run_evaluation.evaluations_store import load_evaluations_file
+
     try:
         ev_file = load_evaluations_file()
     except ValueError as e:
@@ -163,8 +128,8 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     evaluated_ok = 0
 
     for rec in items:
-        snap = ev_file.items.get(rec.id)
-        if snap is None:
+        ev_rec = ev_file.items.get(rec.id)
+        if ev_rec is None:
             rows.append(
                 FactorEvaluationRowPublic(
                     factor_id=rec.id,
@@ -174,12 +139,12 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
             )
             continue
 
-        err_raw = (snap.error or "").strip()
+        err_raw = (ev_rec.error or "").strip()
         err: str | None = err_raw or None
         success = err is None
         if success:
             evaluated_ok += 1
-            v = snap.mean_ic.get(PRIMARY_IC_PERIOD)
+            v = ev_rec.mean_ic.get(PRIMARY_IC_PERIOD)
             if v is not None:
                 ic_for_avg.append(float(v))
 
@@ -188,14 +153,14 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
                 factor_id=rec.id,
                 name=rec.name,
                 has_evaluation=True,
-                evaluated_at=snap.evaluated_at,
-                window=snap.window,
-                stock_count=snap.stock_count,
-                mean_ic=dict(snap.mean_ic),
-                mean_return_spread=dict(snap.mean_return_spread),
+                evaluated_at=ev_rec.evaluated_at,
+                window=ev_rec.window,
+                stock_count=ev_rec.stock_count,
+                mean_ic=dict(ev_rec.mean_ic),
+                mean_return_spread=dict(ev_rec.mean_return_spread),
                 error=err,
-                evaluation_profile_id=snap.evaluation_profile_id,
-                metric_results=dict(snap.metric_results),
+                evaluation_profile_id=ev_rec.evaluation_profile_id,
+                metric_results=dict(ev_rec.metric_results),
             )
         )
 
@@ -257,7 +222,7 @@ def post_factor_evaluation_run(
             except ValueError as e:
                 http_bad_request(e)
     try:
-        snap = run_evaluation_for_factor(
+        eval_rec = run_evaluation_for_factor(
             factor_id,
             data_set_id=run_data_set_id,
             evaluation_profile=prof,
@@ -265,75 +230,26 @@ def post_factor_evaluation_run(
     except ValueError as e:
         http_bad_request(e)
     try:
-        upsert_evaluation_for_factor(factor_id, snap)
+        upsert_evaluation_for_factor(factor_id, eval_rec)
     except ValueError as e:
         http_internal_server_error(e)
-    entry = entry_from_latest_evaluation(snap, linked_snapshot_id=None)
+    entry = entry_from_latest_evaluation(eval_rec)
     with contextlib.suppress(ValueError):
         append_history_entry(factor_id, entry)
-    err_raw = (snap.error or "").strip()
+    err_raw = (eval_rec.error or "").strip()
     err: str | None = err_raw or None
     return FactorEvaluationRowPublic(
         factor_id=factor_id,
         name=rec.name,
         has_evaluation=True,
-        evaluated_at=snap.evaluated_at,
-        window=snap.window,
-        stock_count=snap.stock_count,
-        mean_ic=dict(snap.mean_ic),
-        mean_return_spread=dict(snap.mean_return_spread),
+        evaluated_at=eval_rec.evaluated_at,
+        window=eval_rec.window,
+        stock_count=eval_rec.stock_count,
+        mean_ic=dict(eval_rec.mean_ic),
+        mean_return_spread=dict(eval_rec.mean_return_spread),
         error=err,
-        evaluation_profile_id=snap.evaluation_profile_id,
-        metric_results=dict(snap.metric_results),
-    )
-
-
-@router.get(
-    "/{factor_id}/snapshots",
-    response_model=list[FactorCodeSnapshotSummaryPublic],
-)
-def list_factor_snapshots(factor_id: str) -> list[FactorCodeSnapshotSummaryPublic]:
-    if FactorItemsRegistry.get_item(factor_id) is None:
-        raise HTTPException(status_code=404, detail="因子不存在")
-    try:
-        snaps = list_snapshots_for_factor(factor_id)
-    except ValueError as e:
-        http_internal_server_error(e)
-    return [
-        FactorCodeSnapshotSummaryPublic(
-            id=s.id,
-            saved_at=s.saved_at,
-            kind=s.kind,
-            label=s.label,
-            meta=s.meta,
-        )
-        for s in reversed(snaps)
-    ]
-
-
-@router.get(
-    "/{factor_id}/snapshots/{snapshot_id}",
-    response_model=FactorCodeSnapshotDetailPublic,
-)
-def get_factor_snapshot(
-    factor_id: str,
-    snapshot_id: str,
-) -> FactorCodeSnapshotDetailPublic:
-    if FactorItemsRegistry.get_item(factor_id) is None:
-        raise HTTPException(status_code=404, detail="因子不存在")
-    try:
-        snap = get_snapshot(factor_id, snapshot_id)
-    except ValueError as e:
-        http_internal_server_error(e)
-    if snap is None:
-        raise HTTPException(status_code=404, detail="快照不存在")
-    return FactorCodeSnapshotDetailPublic(
-        id=snap.id,
-        saved_at=snap.saved_at,
-        kind=snap.kind,
-        label=snap.label,
-        meta=snap.meta,
-        source=snap.source,
+        evaluation_profile_id=eval_rec.evaluation_profile_id,
+        metric_results=dict(eval_rec.metric_results),
     )
 
 
@@ -380,7 +296,7 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
     def _apply(rec: FactorRecord) -> None:
         _patch_factor_validate_and_merge(rec, body, unset)
         if "source" in unset and body.source is not None:
-            _apply_source_change_with_snapshot(factor_id, rec, body.source)
+            _apply_source_change(rec, body.source)
         rec.updated_at = utc_now_iso()
 
     rec = FactorItemsRegistry.update_item(factor_id, _apply)
@@ -396,8 +312,6 @@ def delete_factor(factor_id: str) -> None:
         raise HTTPException(status_code=404, detail="因子不存在")
     delete_source_file(rec)
     FactorItemsRegistry.delete_item(factor_id)
-    with contextlib.suppress(ValueError):
-        delete_snapshots_for_factor(factor_id)
     with contextlib.suppress(ValueError):
         delete_history_for_factor(factor_id)
     with contextlib.suppress(ValueError):

@@ -13,7 +13,7 @@ from workflow import workflow_node, workflow_socket
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[workflow_socket("mean_return_spread", value_type="scalar_json")],
-    snapshot_field="mean_return_spread",
+    record_field="mean_return_spread",
     visualization={"mode": "auto", "period_day_keys": False},
 )
 class BuiltinMeanReturnSpreadMetric(MeanReturnSpreadMetric):

@@ -10,7 +10,7 @@ class FactorEvaluationWindow(BaseModel):
     end: str | None = None
 
 
-class FactorEvaluationSnapshot(BaseModel):
+class FactorEvaluationRecord(BaseModel):
     evaluated_at: str
     window: FactorEvaluationWindow | None = None
     stock_count: int | None = None
@@ -23,7 +23,7 @@ class FactorEvaluationSnapshot(BaseModel):
 
 class FactorEvaluationsFile(BaseModel):
     version: int = 1
-    items: dict[str, FactorEvaluationSnapshot] = Field(default_factory=dict)
+    items: dict[str, FactorEvaluationRecord] = Field(default_factory=dict)
 
 
 class FactorEvaluationRowPublic(BaseModel):
@@ -38,7 +38,7 @@ class FactorEvaluationRowPublic(BaseModel):
     error: str | None = None
     evaluation_profile_id: str | None = Field(
         default=None,
-        description="Evaluation profile id when this snapshot used a named profile.",
+        description="Evaluation profile id when this run used a named profile.",
     )
     metric_results: dict[str, Any] = Field(
         default_factory=dict,

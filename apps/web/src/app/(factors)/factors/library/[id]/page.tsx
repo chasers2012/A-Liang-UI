@@ -137,13 +137,13 @@ function FactorEvaluationRunControls(props: {
   );
 }
 
-function FactorEvaluationSnapshotDetails(props: {
+function FactorEvaluationDetails(props: {
   id: string;
   evalRow: FactorEvaluationRowPublic;
-  evalProfileForSnapshot: EvaluationProfilePublic | null;
+  evalProfile: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
 }) {
-  const { id, evalRow, evalProfileForSnapshot, metricMetaById } = props;
+  const { id, evalRow, evalProfile, metricMetaById } = props;
 
   return (
     <>
@@ -172,9 +172,9 @@ function FactorEvaluationSnapshotDetails(props: {
         <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
           <span className="text-muted-foreground">评价方案</span>
           <span className="ml-2 font-medium">
-            {evalProfileForSnapshot?.name ?? evalRow.evaluation_profile_id}
+            {evalProfile?.name ?? evalRow.evaluation_profile_id}
           </span>
-          {!evalProfileForSnapshot ? (
+          {!evalProfile ? (
             <span className="ml-1 text-xs text-muted-foreground">
               （方案可能已删除）
             </span>
@@ -189,12 +189,12 @@ function FactorEvaluationSnapshotDetails(props: {
       evalRow.evaluation_profile_id &&
       !hasWorkflowMetricResults(evalRow) ? (
         <p className="text-sm text-muted-foreground">
-          当前快照没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
+          当前评价没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
         </p>
       ) : null}
       <EvaluationProfileMetricResultsPanel
         metricResults={evalRow.metric_results ?? {}}
-        profile={evalProfileForSnapshot}
+        profile={evalProfile}
         metricMetaById={metricMetaById}
       />
       <Link
@@ -204,7 +204,7 @@ function FactorEvaluationSnapshotDetails(props: {
           "inline-flex gap-1",
         )}
       >
-        查看评价历史与代码快照
+        查看评价历史
         <ChevronRight className="size-4" />
       </Link>
     </>
@@ -301,10 +301,10 @@ function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
   );
 }
 
-function FactorEvaluationSnapshotCard(props: {
+function FactorEvaluationCard(props: {
   id: string;
   evalRow: FactorEvaluationRowPublic | null;
-  evalProfileForSnapshot: EvaluationProfilePublic | null;
+  evalProfile: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
@@ -318,7 +318,7 @@ function FactorEvaluationSnapshotCard(props: {
   const {
     id,
     evalRow,
-    evalProfileForSnapshot,
+    evalProfile,
     metricMetaById,
     profiles,
     profileSelectItems,
@@ -335,9 +335,9 @@ function FactorEvaluationSnapshotCard(props: {
       <CardHeader>
         <CardTitle>方案评价结果</CardTitle>
         <CardDescription>
-          工作流节点输出（快照来自{" "}
+          工作流节点输出（数据来自{" "}
           <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.65rem]">
-            config/factor_evaluations.json
+            factors/data/evaluations.json
           </code>
           ）
         </CardDescription>
@@ -355,7 +355,7 @@ function FactorEvaluationSnapshotCard(props: {
         />
         {!evalRow?.has_evaluation ? (
           <p className="text-sm text-muted-foreground">
-            暂无评价快照。请选择评价方案后点击「运行评价」，或查看
+            暂无评价结果。请选择评价方案后点击「运行评价」，或查看
             <Link
               href={`/factors/library/${encodeURIComponent(id)}/history`}
               className="mx-1 font-medium text-foreground underline-offset-4 hover:underline"
@@ -365,10 +365,10 @@ function FactorEvaluationSnapshotCard(props: {
             。
           </p>
         ) : (
-          <FactorEvaluationSnapshotDetails
+          <FactorEvaluationDetails
             id={id}
             evalRow={evalRow}
-            evalProfileForSnapshot={evalProfileForSnapshot}
+            evalProfile={evalProfile}
             metricMetaById={metricMetaById}
           />
         )}
@@ -382,7 +382,7 @@ function FactorDetailLoadedView(props: {
   detail: FactorDetailPublic;
   loadError: string | null;
   evalRow: FactorEvaluationRowPublic | null;
-  evalProfileForSnapshot: EvaluationProfilePublic | null;
+  evalProfile: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
@@ -398,7 +398,7 @@ function FactorDetailLoadedView(props: {
     detail,
     loadError,
     evalRow,
-    evalProfileForSnapshot,
+    evalProfile,
     metricMetaById,
     profiles,
     profileSelectItems,
@@ -421,10 +421,10 @@ function FactorDetailLoadedView(props: {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <FactorMetadataCard detail={detail} />
-        <FactorEvaluationSnapshotCard
+        <FactorEvaluationCard
           id={id}
           evalRow={evalRow}
-          evalProfileForSnapshot={evalProfileForSnapshot}
+          evalProfile={evalProfile}
           metricMetaById={metricMetaById}
           profiles={profiles}
           profileSelectItems={profileSelectItems}
@@ -478,7 +478,7 @@ export default function FactorDetailPage() {
     return o;
   }, [profiles]);
 
-  const evalProfileForSnapshot = useMemo(() => {
+  const evalProfile = useMemo(() => {
     const pid = evalRow?.evaluation_profile_id;
     if (!pid) return null;
     return profiles.find((p) => p.id === pid) ?? null;
@@ -610,7 +610,7 @@ export default function FactorDetailPage() {
         detail={detail}
         loadError={loadError}
         evalRow={evalRow}
-        evalProfileForSnapshot={evalProfileForSnapshot}
+        evalProfile={evalProfile}
         metricMetaById={metricMetaById}
         profiles={profiles}
         profileSelectItems={profileSelectItems}
