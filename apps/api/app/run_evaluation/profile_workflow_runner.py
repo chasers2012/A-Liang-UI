@@ -2,57 +2,34 @@
 
 from __future__ import annotations
 
-import contextlib
-import re
 import traceback
+from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
-from workflow import topological_order
+from workflow import NodeHandler, WorkflowExecutor, WorkflowNode
 
-from app.evaluation.metrics.builtin_metric_registry import parse_metric_node_type
+from app.evaluation.metrics.builtin_metric_registry import (
+    metric_node_type,
+    parse_metric_node_type,
+)
 from app.evaluation.metrics.evaluation_metric_resolve import resolve_evaluation_metric
 from app.evaluation.metrics.metric_schemas import (
     RESERVED_METRIC_WORKFLOW_PARAM_KEYS,
     MetricWorkflowParamSpec,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.evaluation.scheme.node_type_registry import is_viz_node_type
+from app.evaluation.scheme.node_type_registry import BUILTIN_HANDLERS
+from app.evaluation.scheme.nodes._viz_base import _jsonable_metric_value
 from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
 from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
 from app.factors.schemas import utc_now_iso
 
 from .runner import (
     _series_to_period_dict,
-    _stock_count_from_alignment,
     build_alphalens_evaluator_for_factor,
 )
 from .schemas import FactorEvaluationRecord
-
-
-def _resolve_socket(
-    workflow,
-    outputs: dict[str, dict[str, Any]],
-    to_node: str,
-    to_socket: str,
-) -> Any:
-    for link in workflow.links:
-        if link.to_node == to_node and link.to_socket == to_socket:
-            bucket = outputs.get(link.from_node)
-            if bucket is None:
-                raise KeyError(link.from_node)
-            if link.from_socket not in bucket:
-                raise KeyError(link.from_socket)
-            return bucket[link.from_socket]
-    raise KeyError(f"未连接输入 {to_node!r}.{to_socket!r}")
-
-
-def _jsonable_metric_value(val: Any) -> Any:
-    if isinstance(val, pd.Series):
-        return _series_to_period_dict(val)
-    if isinstance(val, dict):
-        return {str(k): float(v) for k, v in val.items() if not pd.isna(v)}
-    return val
 
 
 def _coerce_metric_param_number(spec: MetricWorkflowParamSpec, val: Any) -> Any:
@@ -147,86 +124,42 @@ def _metric_evaluate_kwargs(
     return out
 
 
-def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
-    if isinstance(raw, list):
-        out = tuple(int(float(x)) for x in raw)
-        return out if out else (1, 5, 10, 20)
-    s = str(raw).strip() if raw is not None and raw != "" else "1,5,10,20"
-    parts = [p.strip() for p in re.split(r"[,，\s]+", s) if p.strip()]
-    if not parts:
-        return (1, 5, 10, 20)
-    return tuple(int(float(x)) for x in parts)
-
-
-def _node_prepare_alphalens(
-    nid: str,
-    node,
-    ev,
-    *,
-    last_quantiles: int,
-    outputs: dict[str, dict[str, Any]],
-    metric_results: dict[str, Any],
-) -> tuple[int, int | None]:
-    params = dict(node.params or {})
-    periods = _forward_periods_tuple(params.get("forward_return_periods"))
-    q_raw = params.get("alphalens_quantiles", params.get("quantiles"))
-    if isinstance(q_raw, (int, float)) and not isinstance(q_raw, bool):
-        last_quantiles = max(2, int(q_raw))
-    elif q_raw is not None and str(q_raw).strip() != "":
-        with contextlib.suppress(TypeError, ValueError):
-            last_quantiles = max(2, int(float(str(q_raw).strip())))
-    ls = bool(params.get("long_short", True))
-    try:
-        ml = float(params.get("max_loss", 0.5))
-    except (TypeError, ValueError):
-        ml = 0.5
-    ev.long_short = ls
-    out = ev.evaluate_factor(
-        quantiles=last_quantiles,
-        periods=periods,
-        max_loss=ml,
-    )
-    n_stocks = _stock_count_from_alignment(ev.alignment_index())
-    outputs[nid] = {"clean_factor": out.factor_data_clean}
-    metric_results[nid] = {"clean_factor": "[DataFrame]"}
-    return last_quantiles, n_stocks
-
-
-def _run_metric_node(
-    wf,
-    nid: str,
-    node,
-    *,
-    last_quantiles: int,
-    outputs: dict[str, dict[str, Any]],
-    metric_results: dict[str, Any],
-) -> tuple[dict[str, float] | None, dict[str, float] | None]:
+def _handle_metric(
+    node: WorkflowNode,
+    inputs: Mapping[str, Any],
+    ctx: Any,
+) -> dict[str, Any]:
     mid = parse_metric_node_type(node.type)
     if not mid:
         raise ValueError(f"非指标节点: {node.type!r}")
     resolved = resolve_evaluation_metric(mid)
-    fdc = _resolve_socket(wf, outputs, nid, "clean_factor")
+    fdc = inputs["clean_factor"]
     if not isinstance(fdc, pd.DataFrame):
         raise TypeError("clean_factor 须为 DataFrame")
     inst = resolved.metric_class()
+    last_quantiles: int = ctx["last_quantiles"]
     kwargs = _metric_evaluate_kwargs(mid, dict(node.params or {}), quantiles=last_quantiles)
     raw = inst.evaluate(fdc, **kwargs)  # type: ignore[call-arg]
     sock = resolved.primary_output_socket
     out_val = _jsonable_metric_value(raw)
-    outputs[nid] = {sock: raw}
-    metric_results[nid] = {sock: out_val}
-    mic_merge: dict[str, float] | None = None
-    spread_merge: dict[str, float] | None = None
+    ctx["metric_results"][node.id] = {sock: out_val}
     if resolved.record_field == "mean_ic":
         series = raw
         if isinstance(series, pd.DataFrame):
             series = series.iloc[:, 0]
         if isinstance(series, pd.Series):
-            mic_merge = _series_to_period_dict(series)
+            ctx["merged_mean_ic"] = _series_to_period_dict(series)
     elif resolved.record_field == "mean_return_spread":
         if isinstance(raw, pd.Series):
-            spread_merge = _series_to_period_dict(raw)
-    return mic_merge, spread_merge
+            ctx["merged_spread"] = _series_to_period_dict(raw)
+    return {sock: raw}
+
+
+def _evaluation_profile_handlers() -> dict[str, NodeHandler]:
+    h: dict[str, NodeHandler] = dict(BUILTIN_HANDLERS)
+    for item in EvaluationMetricsRegistry.list_items():
+        h[metric_node_type(item.id)] = _handle_metric
+    return h
 
 
 def run_evaluation_profile_workflow(
@@ -251,9 +184,21 @@ def run_evaluation_profile_workflow(
         return err.model_copy(update={"evaluation_profile_id": profile.id})
 
     assert ev is not None
-    by_id = {n.id: n for n in wf.nodes}
+    metric_results: dict[str, Any] = {}
+    ctx: dict[str, Any] = {
+        "ev": ev,
+        "last_quantiles": base_quantiles,
+        "n_stocks": None,
+        "metric_results": metric_results,
+        "merged_mean_ic": {},
+        "merged_spread": {},
+    }
+
     try:
-        order = topological_order(wf.nodes, wf.links)
+        _ = WorkflowExecutor(_evaluation_profile_handlers()).execute(
+            wf,
+            context=ctx,
+        )
     except ValueError as e:
         return FactorEvaluationRecord(
             evaluated_at=utc_now_iso(),
@@ -263,48 +208,6 @@ def run_evaluation_profile_workflow(
             error=str(e),
             evaluation_profile_id=profile.id,
         )
-
-    outputs: dict[str, dict[str, Any]] = {}
-    metric_results: dict[str, Any] = {}
-    last_quantiles = base_quantiles
-    n_stocks: int | None = None
-    merged_mean_ic: dict[str, float] = {}
-    merged_spread: dict[str, float] = {}
-
-    try:
-        for nid in order:
-            node = by_id[nid]
-            nt = node.type
-
-            if nt == "prepare_alphalens":
-                last_quantiles, n_stocks = _node_prepare_alphalens(
-                    nid,
-                    node,
-                    ev,
-                    last_quantiles=last_quantiles,
-                    outputs=outputs,
-                    metric_results=metric_results,
-                )
-            elif is_viz_node_type(nt):
-                val = _resolve_socket(wf, outputs, nid, "in")
-                outputs[nid] = {"out": val}
-                metric_results[nid] = {"out": _jsonable_metric_value(val)}
-            elif parse_metric_node_type(nt):
-                mic, sp = _run_metric_node(
-                    wf,
-                    nid,
-                    node,
-                    last_quantiles=last_quantiles,
-                    outputs=outputs,
-                    metric_results=metric_results,
-                )
-                if mic is not None:
-                    merged_mean_ic = mic
-                if sp is not None:
-                    merged_spread = sp
-            else:
-                raise ValueError(f"未知节点类型: {nt}")
-
     except Exception as e:
         tb = traceback.format_exc()
         return FactorEvaluationRecord(
@@ -320,9 +223,9 @@ def run_evaluation_profile_workflow(
     return FactorEvaluationRecord(
         evaluated_at=utc_now_iso(),
         window=window,
-        stock_count=n_stocks,
-        mean_ic=merged_mean_ic,
-        mean_return_spread=merged_spread,
+        stock_count=ctx["n_stocks"],
+        mean_ic=ctx["merged_mean_ic"],
+        mean_return_spread=ctx["merged_spread"],
         error=None,
         evaluation_profile_id=profile.id,
         metric_results=metric_results,

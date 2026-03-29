@@ -13,8 +13,7 @@ from workflow import workflow_node, workflow_socket
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[workflow_socket("mean_ic", value_type="scalar_json")],
-    record_field="mean_ic",
-    visualization={"mode": "auto", "period_day_keys": True},
+    entry="evaluate",
 )
 class BuiltinMeanICMetric(MeanInformationCoefficientMetric):
     """各持有期平均信息系数（Alphalens）。"""

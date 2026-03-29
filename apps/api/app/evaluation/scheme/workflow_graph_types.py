@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from workflow import NodeSpec, SocketSpec
+
 from app.evaluation.metrics.builtin_metric_registry import (
     metric_node_type,
     parse_metric_node_type,
@@ -9,7 +11,10 @@ from app.evaluation.metrics.builtin_metric_registry import (
 from app.evaluation.metrics.evaluation_metric_resolve import try_resolve_evaluation_metric
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
-from .node_type_registry import BUILTIN_NODE_SPECS, BuiltinNodeSpec, SocketSpec
+from .node_type_registry import BUILTIN_NODE_SPECS
+
+_DEFAULT_METRIC_INPUTS = (SocketSpec("clean_factor", True, "factor_data_clean"),)
+_DEFAULT_METRIC_OUTPUTS = (SocketSpec("out", False, "scalar_json"),)
 
 
 def all_workflow_node_type_ids() -> frozenset[str]:
@@ -19,42 +24,7 @@ def all_workflow_node_type_ids() -> frozenset[str]:
     return frozenset(out)
 
 
-def _default_metric_sockets() -> tuple[tuple[SocketSpec, ...], tuple[SocketSpec, ...]]:
-    return (
-        (SocketSpec("clean_factor", True, "factor_data_clean"),),
-        (SocketSpec("out", False, "scalar_json"),),
-    )
-
-
-def _sockets_from_metric_class(cls: type) -> tuple[tuple[SocketSpec, ...], tuple[SocketSpec, ...]]:
-    def conv(raw: list | tuple | None) -> tuple[SocketSpec, ...] | None:
-        if not raw:
-            return None
-        out: list[SocketSpec] = []
-        for x in raw:
-            if not isinstance(x, dict):
-                continue
-            name = x.get("name")
-            if not name:
-                continue
-            out.append(
-                SocketSpec(
-                    str(name),
-                    bool(x.get("required", False)),
-                    str(x.get("value_type", "any")),
-                )
-            )
-        return tuple(out) if out else None
-
-    raw_in = getattr(cls, "INPUT_SOCKETS", None)
-    raw_out = getattr(cls, "OUTPUT_SOCKETS", None)
-    ins = conv(raw_in)
-    outs = conv(raw_out)
-    din, dout = _default_metric_sockets()
-    return (ins or din), (outs or dout)
-
-
-def workflow_node_definition(node_type: str) -> BuiltinNodeSpec:
+def workflow_node_definition(node_type: str) -> NodeSpec:
     nt = (node_type or "").strip()
     if nt in BUILTIN_NODE_SPECS:
         return BUILTIN_NODE_SPECS[nt]
@@ -67,17 +37,26 @@ def workflow_node_definition(node_type: str) -> BuiltinNodeSpec:
     rec = EvaluationMetricsRegistry.get_item(mid)
     if rec is None:
         raise KeyError(nt)
-    ins, outs = _sockets_from_metric_class(resolved.metric_class)
-    return BuiltinNodeSpec(
+    cls = resolved.metric_class
+    node_spec_fn = getattr(cls, "__node_spec__", None)
+    if callable(node_spec_fn):
+        return node_spec_fn(
+            type_id=nt,
+            label=rec.name,
+            description=rec.description,
+            default_inputs=_DEFAULT_METRIC_INPUTS,
+            default_outputs=_DEFAULT_METRIC_OUTPUTS,
+        )
+    return NodeSpec(
         type=nt,
         label=rec.name,
         description=rec.description,
-        inputs=ins,
-        outputs=outs,
+        inputs=_DEFAULT_METRIC_INPUTS,
+        outputs=_DEFAULT_METRIC_OUTPUTS,
     )
 
 
-def workflow_node_definition_or_fail(node_type: str) -> BuiltinNodeSpec:
+def workflow_node_definition_or_fail(node_type: str) -> NodeSpec:
     try:
         return workflow_node_definition(node_type)
     except KeyError as e:

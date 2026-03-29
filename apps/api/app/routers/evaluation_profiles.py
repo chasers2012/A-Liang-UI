@@ -15,8 +15,6 @@ from app.evaluation.scheme.profile_schemas import (
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
-    NodeTypeDefinitionPublic,
-    NodeTypeSocketPublic,
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 from app.evaluation.scheme.workflow_graph_types import (
@@ -24,6 +22,7 @@ from app.evaluation.scheme.workflow_graph_types import (
     workflow_node_definition,
 )
 from app.evaluation.scheme.workflow_prepare import merge_profile_prepare_into_workflow
+from app.shared.node_type_dto import NodeTypeDefinitionPublic, node_spec_to_public
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -83,45 +82,32 @@ def _merge_evaluation_profile_patch(
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
     metrics_reg = EvaluationMetricsRegistry.load()
     out: list[NodeTypeDefinitionPublic] = []
+
     prep = workflow_node_definition("prepare_alphalens")
     out.append(
-        NodeTypeDefinitionPublic(
-            type=prep.type,
-            label=prep.label,
-            description=prep.description,
-            inputs=[
-                NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
-                for s in prep.inputs
-            ],
-            outputs=[
-                NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
-                for s in prep.outputs
-            ],
-            workflow_parameters=list(PREPARE_ALPHALENS_WORKFLOW_PARAMETERS),
-            user_defined=False,
-            metric_id=None,
+        node_spec_to_public(
+            prep,
+            extra={
+                "workflow_parameters": [
+                    p.model_dump() for p in PREPARE_ALPHALENS_WORKFLOW_PARAMETERS
+                ],
+            },
         )
     )
+
     for vid in sorted_viz_node_type_ids():
         vs = workflow_node_definition(vid)
         out.append(
-            NodeTypeDefinitionPublic(
-                type=vs.type,
-                label=vs.label,
-                description=vs.description,
-                inputs=[
-                    NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
-                    for s in vs.inputs
-                ],
-                outputs=[
-                    NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
-                    for s in vs.outputs
-                ],
-                workflow_parameters=list(RESULT_VIZ_NODE_WORKFLOW_PARAMETERS),
-                user_defined=False,
-                metric_id=None,
+            node_spec_to_public(
+                vs,
+                extra={
+                    "workflow_parameters": [
+                        p.model_dump() for p in RESULT_VIZ_NODE_WORKFLOW_PARAMETERS
+                    ],
+                },
             )
         )
+
     allowed = all_workflow_node_type_ids()
     for nt in sorted(allowed):
         if nt == "prepare_alphalens" or nt.startswith("viz_"):
@@ -129,23 +115,15 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
         spec = workflow_node_definition(nt)
         mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
         mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, mid) if mid else None
-        wp = list(mrec.workflow_parameters) if mrec is not None else []
+        wp = [p.model_dump() for p in mrec.workflow_parameters] if mrec is not None else []
         out.append(
-            NodeTypeDefinitionPublic(
-                type=spec.type,
-                label=spec.label,
-                description=spec.description,
-                inputs=[
-                    NodeTypeSocketPublic(name=s.name, required=s.required, value_type=s.value_type)
-                    for s in spec.inputs
-                ],
-                outputs=[
-                    NodeTypeSocketPublic(name=s.name, required=False, value_type=s.value_type)
-                    for s in spec.outputs
-                ],
-                workflow_parameters=wp,
-                user_defined=bool(mid and mrec is not None and not mrec.builtin),
-                metric_id=mid,
+            node_spec_to_public(
+                spec,
+                extra={
+                    "workflow_parameters": wp,
+                    "user_defined": bool(mid and mrec is not None and not mrec.builtin),
+                    "metric_id": mid,
+                },
             )
         )
     return out

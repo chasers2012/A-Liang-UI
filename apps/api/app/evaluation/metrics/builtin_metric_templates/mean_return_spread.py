@@ -13,8 +13,7 @@ from workflow import workflow_node, workflow_socket
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[workflow_socket("mean_return_spread", value_type="scalar_json")],
-    record_field="mean_return_spread",
-    visualization={"mode": "auto", "period_day_keys": False},
+    entry="evaluate",
 )
 class BuiltinMeanReturnSpreadMetric(MeanReturnSpreadMetric):
     """分位多空平均收益差（按持有期）。"""

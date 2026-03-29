@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, field_validator
 from workflow import WorkflowGraph
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.metrics.metric_schemas import MetricWorkflowParamSpec
 
 EvaluationWorkflow = WorkflowGraph
 
@@ -85,20 +84,3 @@ class EvaluationProfilePublic(BaseModel):
     is_default: bool
     created_at: str
     updated_at: str
-
-
-class NodeTypeSocketPublic(BaseModel):
-    name: str
-    required: bool = False
-    value_type: str
-
-
-class NodeTypeDefinitionPublic(BaseModel):
-    type: str
-    label: str
-    description: str = ""
-    inputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
-    outputs: list[NodeTypeSocketPublic] = Field(default_factory=list)
-    workflow_parameters: list[MetricWorkflowParamSpec] = Field(default_factory=list)
-    user_defined: bool = False
-    metric_id: str | None = None

@@ -34,11 +34,11 @@ def resolve_evaluation_metric(metric_id: str) -> ResolvedEvaluationMetric:
         raise ValueError(f"评价指标不存在: {mid}")
     src = EvaluationMetricsRegistry.read_source(rec)
     cls, _ = load_evaluation_metric_class(src)
-    _rf = getattr(cls, "RECORD_FIELD", None)
-    record_field = _rf if _rf in ("mean_ic", "mean_return_spread") else None
+    primary = _primary_output_from_class(cls)
+    record_field = primary if primary in ("mean_ic", "mean_return_spread") else None
     return ResolvedEvaluationMetric(
         metric_class=cls,
-        primary_output_socket=_primary_output_from_class(cls),
+        primary_output_socket=primary,
         record_field=record_field,
     )
 
