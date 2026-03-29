@@ -7,22 +7,21 @@ from app.evaluation.metrics.metric_schemas import (
     PREPARE_ALPHALENS_WORKFLOW_PARAMETERS,
     RESULT_VIZ_NODE_WORKFLOW_PARAMETERS,
 )
-from app.evaluation.metrics.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.node_type_registry import sorted_viz_node_type_ids
 from app.evaluation.scheme.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
+    EvaluationProfileRecord,
+    EvaluationProfilesFile,
     NodeTypeDefinitionPublic,
     NodeTypeSocketPublic,
 )
 from app.evaluation.scheme.profiles_store import (
+    EvaluationProfilesRegistry,
     apply_default_uniqueness,
-    get_by_id,
-    load_file,
-    save_file,
 )
 from app.evaluation.scheme.workflow_graph_types import (
     all_workflow_node_type_ids,
@@ -57,9 +56,42 @@ def _validate_workflow_if_needed(wf) -> None:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+def _merge_evaluation_profile_patch(
+    rec: EvaluationProfileRecord,
+    body: EvaluationProfilePatch,
+    data: dict[str, object],
+) -> None:
+    if "name" in data:
+        if body.name is None or not str(body.name).strip():
+            raise HTTPException(status_code=400, detail="name 不能为空")
+        rec.name = str(body.name).strip()
+    if "description" in data:
+        rec.description = (body.description or "").strip()
+    if "data_set_id" in data:
+        tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
+        rec.data_set_id = tid or None
+    if "prepare" in data and body.prepare is not None:
+        rec.prepare = body.prepare
+    if "workflow" in data and body.workflow is not None:
+        _validate_workflow_if_needed(body.workflow)
+        rec.workflow = merge_profile_prepare_into_workflow(
+            body.workflow,
+            profile_prepare=rec.prepare,
+        )
+    if "is_default" in data and body.is_default is not None:
+        rec.is_default = body.is_default
+    rec.updated_at = utc_now_iso()
+
+
+def _apply_default_uniqueness_if_needed(reg: EvaluationProfilesFile, profile_id: str) -> None:
+    hit = EvaluationProfilesRegistry.get_by_id(reg, profile_id)
+    if hit is not None and hit.is_default:
+        apply_default_uniqueness(reg.items)
+
+
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
-    metrics_reg = load_metrics_registry()
+    metrics_reg = EvaluationMetricsRegistry.load()
     out: list[NodeTypeDefinitionPublic] = []
     prep = workflow_node_definition("prepare_alphalens")
     out.append(
@@ -106,7 +138,7 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
             continue
         spec = workflow_node_definition(nt)
         mid = nt.removeprefix("metric:") if nt.startswith("metric:") else None
-        mrec = metric_get_by_id(metrics_reg, mid) if mid else None
+        mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, mid) if mid else None
         wp = list(mrec.workflow_parameters) if mrec is not None else []
         out.append(
             NodeTypeDefinitionPublic(
@@ -131,14 +163,12 @@ def list_node_types() -> list[NodeTypeDefinitionPublic]:
 
 @router.get("", response_model=list[EvaluationProfilePublic])
 def list_evaluation_profiles() -> list[EvaluationProfilePublic]:
-    reg = load_file()
-    return [_to_public(i) for i in reg.items]
+    return [_to_public(i) for i in EvaluationProfilesRegistry.list_items()]
 
 
 @router.get("/{profile_id}", response_model=EvaluationProfilePublic)
 def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
-    reg = load_file()
-    rec = get_by_id(reg, profile_id)
+    rec = EvaluationProfilesRegistry.get_item(profile_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价方案不存在")
     return _to_public(rec)
@@ -156,11 +186,11 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfil
         }
     )
     _validate_workflow_if_needed(rec.workflow)
-    reg = load_file()
+    reg = EvaluationProfilesRegistry.load()
     reg.items.append(rec)
     if rec.is_default:
         apply_default_uniqueness(reg.items)
-    save_file(reg)
+    EvaluationProfilesRegistry.save(reg)
     return _to_public(rec)
 
 
@@ -168,44 +198,22 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfil
 def patch_evaluation_profile(
     profile_id: str, body: EvaluationProfilePatch
 ) -> EvaluationProfilePublic:
-    reg = load_file()
-    rec = get_by_id(reg, profile_id)
+    data = body.model_dump(exclude_unset=True)
+
+    def _apply(rec: EvaluationProfileRecord) -> None:
+        _merge_evaluation_profile_patch(rec, body, data)
+
+    rec = EvaluationProfilesRegistry.update_item(
+        profile_id,
+        _apply,
+        after_mutate=lambda reg: _apply_default_uniqueness_if_needed(reg, profile_id),
+    )
     if rec is None:
         raise HTTPException(status_code=404, detail="评价方案不存在")
-
-    data = body.model_dump(exclude_unset=True)
-    if "name" in data:
-        if body.name is None or not str(body.name).strip():
-            raise HTTPException(status_code=400, detail="name 不能为空")
-        rec.name = str(body.name).strip()
-    if "description" in data:
-        rec.description = (body.description or "").strip()
-    if "data_set_id" in data:
-        tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
-        rec.data_set_id = tid or None
-    if "prepare" in data and body.prepare is not None:
-        rec.prepare = body.prepare
-    if "workflow" in data and body.workflow is not None:
-        _validate_workflow_if_needed(body.workflow)
-        rec.workflow = merge_profile_prepare_into_workflow(
-            body.workflow,
-            profile_prepare=rec.prepare,
-        )
-    if "is_default" in data and body.is_default is not None:
-        rec.is_default = body.is_default
-
-    rec.updated_at = utc_now_iso()
-    if rec.is_default:
-        apply_default_uniqueness(reg.items)
-    save_file(reg)
     return _to_public(rec)
 
 
 @router.delete("/{profile_id}", status_code=204)
 def delete_evaluation_profile(profile_id: str) -> None:
-    reg = load_file()
-    rec = get_by_id(reg, profile_id)
-    if rec is None:
+    if EvaluationProfilesRegistry.delete_item(profile_id) is None:
         raise HTTPException(status_code=404, detail="评价方案不存在")
-    reg.items = [i for i in reg.items if i.id != profile_id]
-    save_file(reg)

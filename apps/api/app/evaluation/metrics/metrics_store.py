@@ -4,13 +4,8 @@ from pathlib import Path
 
 from workspace import ensure_dir
 
-from app.persistence.registry_helpers import get_item_by_id
-from app.persistence.source_files import (
-    delete_source_text_file,
-    read_source_text,
-    write_source_text,
-)
-from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
+from app.persistence.source_files import WorkspaceSourceFiles
+from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 from .metric_schemas import (
     EVALUATION_METRICS_DIR,
@@ -21,43 +16,34 @@ from .metric_schemas import (
 REGISTRY_FILENAME = "evaluation_metrics.json"
 
 
-def registry_file_path() -> Path:
-    return workspace_config_path(REGISTRY_FILENAME)
+class EvaluationMetricsRegistry(
+    WorkspaceItemsRegistry[EvaluationMetricRecord, EvaluationMetricsRegistryFile]
+):
+    filename = REGISTRY_FILENAME
+    file_model = EvaluationMetricsRegistryFile
 
+    @classmethod
+    def load(cls) -> EvaluationMetricsRegistryFile:
+        reg = super().load()
+        from .builtin_metrics_seed import ensure_builtin_metrics_seeded
 
-def metrics_dir_path() -> Path:
-    return ensure_dir(EVALUATION_METRICS_DIR)
+        if ensure_builtin_metrics_seeded(reg):
+            cls.save(reg)
+        return reg
 
+    @staticmethod
+    def metrics_dir_path() -> Path:
+        return ensure_dir(EVALUATION_METRICS_DIR)
 
-def load_registry() -> EvaluationMetricsRegistryFile:
-    reg = load_workspace_config(
-        REGISTRY_FILENAME,
-        EvaluationMetricsRegistryFile,
-        default_factory=EvaluationMetricsRegistryFile,
-    )
-    from .builtin_metrics_seed import ensure_builtin_metrics_seeded
+    @staticmethod
+    def read_source(rec: EvaluationMetricRecord) -> str:
+        return WorkspaceSourceFiles.read_source_text(rec.source_path)
 
-    if ensure_builtin_metrics_seeded(reg):
-        save_registry(reg)
-    return reg
+    @classmethod
+    def write_source(cls, rec: EvaluationMetricRecord, source: str) -> None:
+        cls.metrics_dir_path()
+        WorkspaceSourceFiles.write_source_text(rec.source_path, source)
 
-
-def save_registry(reg: EvaluationMetricsRegistryFile) -> None:
-    save_workspace_config(REGISTRY_FILENAME, reg)
-
-
-def get_by_id(reg: EvaluationMetricsRegistryFile, metric_id: str) -> EvaluationMetricRecord | None:
-    return get_item_by_id(reg.items, metric_id)
-
-
-def read_source(rec: EvaluationMetricRecord) -> str:
-    return read_source_text(rec.source_path)
-
-
-def write_source(rec: EvaluationMetricRecord, source: str) -> None:
-    metrics_dir_path()
-    write_source_text(rec.source_path, source)
-
-
-def delete_source_file(rec: EvaluationMetricRecord) -> None:
-    delete_source_text_file(rec.source_path)
+    @staticmethod
+    def delete_source_file(rec: EvaluationMetricRecord) -> None:
+        WorkspaceSourceFiles.delete_source_text_file(rec.source_path)

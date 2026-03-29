@@ -175,7 +175,7 @@ export default function NewEvaluationProfilePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>默认数据集（可选）</Label>
+            <Label>数据集（可选）</Label>
             <Select
               modal={false}
               value={dataSetId}

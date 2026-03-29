@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import Any
 
 from app.persistence import registry_helpers
-from app.persistence.registry_helpers import get_first_default_item, get_item_by_id
-from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
+from app.persistence.registry_helpers import get_first_default_item
+from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 from .profile_schemas import EvaluationProfileRecord, EvaluationProfilesFile
 
@@ -13,29 +13,16 @@ apply_default_uniqueness = registry_helpers.apply_default_uniqueness
 REGISTRY_FILENAME = "evaluation_profiles.json"
 
 
-def registry_file_path() -> Path:
-    return workspace_config_path(REGISTRY_FILENAME)
+class EvaluationProfilesRegistry(
+    WorkspaceItemsRegistry[EvaluationProfileRecord, EvaluationProfilesFile]
+):
+    filename = REGISTRY_FILENAME
+    file_model = EvaluationProfilesFile
 
+    @classmethod
+    def save_model_dump_kwargs(cls) -> dict[str, Any] | None:
+        return {"mode": "json"}
 
-def load_file() -> EvaluationProfilesFile:
-    return load_workspace_config(
-        REGISTRY_FILENAME,
-        EvaluationProfilesFile,
-        default_factory=EvaluationProfilesFile,
-    )
-
-
-def save_file(reg: EvaluationProfilesFile) -> None:
-    save_workspace_config(
-        REGISTRY_FILENAME,
-        reg,
-        model_dump_kwargs={"mode": "json"},
-    )
-
-
-def get_by_id(reg: EvaluationProfilesFile, pid: str) -> EvaluationProfileRecord | None:
-    return get_item_by_id(reg.items, pid)
-
-
-def get_default_profile(reg: EvaluationProfilesFile) -> EvaluationProfileRecord | None:
-    return get_first_default_item(reg.items)
+    @classmethod
+    def get_default_profile(cls, reg: EvaluationProfilesFile) -> EvaluationProfileRecord | None:
+        return get_first_default_item(reg.items)

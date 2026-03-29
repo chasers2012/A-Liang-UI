@@ -7,9 +7,7 @@ from dataclasses import dataclass
 from evaluate import EvaluationMetric
 
 from .metric_loader import load_evaluation_metric_class
-from .metrics_store import get_by_id as metric_get_by_id
-from .metrics_store import load_registry as load_metrics_registry
-from .metrics_store import read_source as read_metric_source
+from .metrics_store import EvaluationMetricsRegistry
 
 
 @dataclass(frozen=True)
@@ -32,11 +30,10 @@ def resolve_evaluation_metric(metric_id: str) -> ResolvedEvaluationMetric:
     mid = (metric_id or "").strip()
     if not mid:
         raise ValueError("metric_id 不能为空")
-    reg = load_metrics_registry()
-    rec = metric_get_by_id(reg, mid)
+    rec = EvaluationMetricsRegistry.get_item(mid)
     if rec is None:
         raise ValueError(f"评价指标不存在: {mid}")
-    src = read_metric_source(rec)
+    src = EvaluationMetricsRegistry.read_source(rec)
     cls, _ = load_evaluation_metric_class(src)
     _sf = getattr(cls, "SNAPSHOT_FIELD", None)
     snapshot_field = _sf if _sf in ("mean_ic", "mean_return_spread") else None

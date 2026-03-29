@@ -15,7 +15,6 @@ export interface DataSetPublic {
   start: string;
   end: string;
   stock_codes: string[];
-  is_default: boolean;
   created_at: string;
   updated_at: string;
 }

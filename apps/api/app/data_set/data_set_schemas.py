@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-
 from app.datasources.schemas import utc_now_iso
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class DataSetDatasourceBindingStored(BaseModel):
@@ -20,12 +19,10 @@ class DataSetRecord(BaseModel):
     id: str
     name: str
     description: str = ""
-    datasource_bindings: list[DataSetDatasourceBindingStored] = Field(
-        default_factory=list)
+    datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
     start: str
     end: str
     stock_codes: list[str] = Field(default_factory=list)
-    is_default: bool = False
     created_at: str
     updated_at: str
 
@@ -58,7 +55,6 @@ class DataSetCreate(BaseModel):
     start: str
     end: str
     stock_codes: list[str] = Field(default_factory=list)
-    is_default: bool = False
 
     @field_validator("stock_codes", mode="before")
     @classmethod
@@ -76,7 +72,8 @@ class DataSetCreate(BaseModel):
             DataSetDatasourceBindingStored(
                 datasource_id=b.datasource_id.strip(),
                 dependencies=list(b.dependencies),
-            ) for b in self.datasource_bindings
+            )
+            for b in self.datasource_bindings
         ]
         return DataSetRecord(
             id=rid,
@@ -85,10 +82,7 @@ class DataSetCreate(BaseModel):
             datasource_bindings=bindings,
             start=self.start.strip(),
             end=self.end.strip(),
-            stock_codes=[
-                c.strip() for c in self.stock_codes if str(c).strip()
-            ],
-            is_default=self.is_default,
+            stock_codes=[c.strip() for c in self.stock_codes if str(c).strip()],
             created_at=now,
             updated_at=now,
         )
@@ -103,7 +97,6 @@ class DataSetPatch(BaseModel):
     start: str | None = None
     end: str | None = None
     stock_codes: list[str] | None = None
-    is_default: bool | None = None
 
 
 class DataSetDatasourceBindingPublic(BaseModel):
@@ -121,6 +114,5 @@ class DataSetPublic(BaseModel):
     start: str
     end: str
     stock_codes: list[str]
-    is_default: bool
     created_at: str
     updated_at: str

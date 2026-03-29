@@ -34,21 +34,13 @@ def test_data_sets_crud(client, workspace_tmp):
     r_bad = client.post(
         "/data-sets",
         json={
-            "name":
-            "t1",
+            "name": "t1",
             "datasource_bindings": [
-                {
-                    "datasource_id": "nonexistent",
-                    "dependencies": ["close"]
-                },
+                {"datasource_id": "nonexistent", "dependencies": ["close"]},
             ],
-            "start":
-            "2023-01-01",
-            "end":
-            "2023-12-31",
+            "start": "2023-01-01",
+            "end": "2023-12-31",
             "stock_codes": [],
-            "is_default":
-            False,
         },
     )
     assert r_bad.status_code == 400
@@ -58,14 +50,10 @@ def test_data_sets_crud(client, workspace_tmp):
         json={
             "name": "t1",
             "description": "d",
-            "datasource_bindings": [{
-                "datasource_id": ds_id,
-                "dependencies": []
-            }],
+            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": ["A", "B"],
-            "is_default": True,
         },
     )
     assert r1.status_code == 200
@@ -74,7 +62,6 @@ def test_data_sets_crud(client, workspace_tmp):
     assert b1["name"] == "t1"
     assert len(b1["datasource_bindings"]) == 1
     assert b1["datasource_bindings"][0]["datasource_name"]
-    assert b1["is_default"] is True
 
     r2 = client.get("/data-sets")
     assert len(r2.json()) == 1
@@ -113,14 +100,10 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
         "/data-sets",
         json={
             "name": "ts_run",
-            "datasource_bindings": [{
-                "datasource_id": ds_id,
-                "dependencies": []
-            }],
+            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
             "start": "2099-01-01",
             "end": "2099-12-31",
             "stock_codes": [],
-            "is_default": False,
         },
     )
     assert r_ts.status_code == 200
@@ -148,7 +131,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     assert body["window"] == {"start": "2099-01-01", "end": "2099-12-31"}
 
 
-def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
+def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monkeypatch):
     monkeypatch.delenv("FACTOR_AGENT_EVAL_START", raising=False)
     monkeypatch.delenv("FACTOR_AGENT_EVAL_END", raising=False)
     monkeypatch.delenv("FACTOR_AGENT_START_DATE", raising=False)
@@ -163,15 +146,11 @@ def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
     r_ts = client.post(
         "/data-sets",
         json={
-            "name": "ts_default",
-            "datasource_bindings": [{
-                "datasource_id": ds_id,
-                "dependencies": []
-            }],
+            "name": "ts_only",
+            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
             "start": "2023-01-01",
             "end": "2024-12-31",
             "stock_codes": [],
-            "is_default": True,
         },
     )
     assert r_ts.status_code == 200
@@ -179,7 +158,7 @@ def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
     r_f = client.post(
         "/factors",
         json={
-            "name": "f_default_ts",
+            "name": "f_no_ds_in_body",
             "max_window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
@@ -189,7 +168,5 @@ def test_evaluation_run_no_body_still_ok(client, workspace_tmp, monkeypatch):
     fid = r_f.json()["id"]
 
     r_run = client.post(f"/factors/{fid}/evaluations/run")
-    assert r_run.status_code == 200
-    body = r_run.json()
-    assert body["factor_id"] == fid
-    assert body["window"] == {"start": "2023-01-01", "end": "2024-12-31"}
+    assert r_run.status_code == 400
+    assert "数据集" in r_run.json()["detail"]

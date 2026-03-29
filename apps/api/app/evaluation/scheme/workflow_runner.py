@@ -16,8 +16,7 @@ from app.evaluation.metrics.metric_schemas import (
     RESERVED_METRIC_WORKFLOW_PARAM_KEYS,
     MetricWorkflowParamSpec,
 )
-from app.evaluation.metrics.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.factors.evaluation_runner import (
     _series_to_period_dict,
     _stock_count_from_alignment,
@@ -147,8 +146,7 @@ def _metric_evaluate_kwargs(
     *,
     quantiles: int,
 ) -> dict[str, Any]:
-    reg = load_metrics_registry()
-    mrec = metric_get_by_id(reg, metric_id)
+    mrec = EvaluationMetricsRegistry.get_item(metric_id)
     specs = list(mrec.workflow_parameters) if mrec is not None else []
     raw = dict(raw_params or {})
     out: dict[str, Any] = {"quantiles": quantiles}

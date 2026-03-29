@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.datasources.registry import get_by_id, load_registry, save_registry
+from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import (
     DataSourceCreate,
     DataSourcePatch,
@@ -88,16 +88,14 @@ def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:
 
 @router.get("", response_model=list[DataSourcePublic])
 def list_datasources() -> list[DataSourcePublic]:
-    reg = load_registry()
-    return [record_to_public(i) for i in reg.items]
+    return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
 
 
 @router.post("/sql-table-columns", response_model=SqlTableColumnsResponse)
 def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
     stored = None
     if body.datasource_id:
-        reg = load_registry()
-        rec = get_by_id(reg, body.datasource_id)
+        rec = DataSourceItemsRegistry.get_item(body.datasource_id)
         if rec is None or rec.type != "sql" or not rec.sql:
             raise HTTPException(status_code=404, detail="数据源不存在或非 SQL 类型")
         stored = rec.sql
@@ -111,8 +109,7 @@ def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
 
 @router.get("/{ds_id}", response_model=DataSourcePublic)
 def get_datasource(ds_id: str) -> DataSourcePublic:
-    reg = load_registry()
-    rec = get_by_id(reg, ds_id)
+    rec = DataSourceItemsRegistry.get_item(ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
     return record_to_public(rec)
@@ -120,46 +117,38 @@ def get_datasource(ds_id: str) -> DataSourcePublic:
 
 @router.post("", response_model=DataSourcePublic)
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
-    reg = load_registry()
     new_rec = body.to_record()
-    reg.items.append(new_rec)
-    save_registry(reg)
+    DataSourceItemsRegistry.add_item(new_rec)
     return record_to_public(new_rec)
 
 
 @router.patch("/{ds_id}", response_model=DataSourcePublic)
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
-    reg = load_registry()
-    rec = get_by_id(reg, ds_id)
+    unset = body.model_dump(exclude_unset=True)
+
+    def _apply(rec: DataSourceRecord) -> None:
+        if rec.type == "csv" and "sql" in unset:
+            raise HTTPException(status_code=400, detail="CSV 数据源不能更新 sql 字段")
+        if rec.type == "sql" and "csv" in unset:
+            raise HTTPException(status_code=400, detail="SQL 数据源不能更新 csv 字段")
+        _merge_patch(rec, body)
+        rec.updated_at = utc_now_iso()
+
+    rec = DataSourceItemsRegistry.update_item(ds_id, _apply)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-
-    unset = body.model_dump(exclude_unset=True)
-    if rec.type == "csv" and "sql" in unset:
-        raise HTTPException(status_code=400, detail="CSV 数据源不能更新 sql 字段")
-    if rec.type == "sql" and "csv" in unset:
-        raise HTTPException(status_code=400, detail="SQL 数据源不能更新 csv 字段")
-
-    _merge_patch(rec, body)
-    rec.updated_at = utc_now_iso()
-    save_registry(reg)
     return record_to_public(rec)
 
 
 @router.delete("/{ds_id}", status_code=204)
 def delete_datasource(ds_id: str) -> None:
-    reg = load_registry()
-    n = len(reg.items)
-    reg.items = [i for i in reg.items if i.id != ds_id]
-    if len(reg.items) == n:
+    if DataSourceItemsRegistry.delete_item(ds_id) is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    save_registry(reg)
 
 
 @router.post("/{ds_id}/test", response_model=TestResult)
 def test_datasource_endpoint(ds_id: str) -> TestResult:
-    reg = load_registry()
-    rec = get_by_id(reg, ds_id)
+    rec = DataSourceItemsRegistry.get_item(ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
     ok, msg = verify_datasource(rec)

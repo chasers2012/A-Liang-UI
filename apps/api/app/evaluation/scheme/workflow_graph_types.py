@@ -7,16 +7,14 @@ from app.evaluation.metrics.builtin_metric_registry import (
     parse_metric_node_type,
 )
 from app.evaluation.metrics.evaluation_metric_resolve import try_resolve_evaluation_metric
-from app.evaluation.metrics.metrics_store import get_by_id as metric_get_by_id
-from app.evaluation.metrics.metrics_store import load_registry as load_metrics_registry
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
 from .node_type_registry import BUILTIN_NODE_SPECS, BuiltinNodeSpec, SocketSpec
 
 
 def all_workflow_node_type_ids() -> frozenset[str]:
     out: set[str] = set(BUILTIN_NODE_SPECS.keys())
-    reg = load_metrics_registry()
-    for item in reg.items:
+    for item in EvaluationMetricsRegistry.list_items():
         out.add(metric_node_type(item.id))
     return frozenset(out)
 
@@ -66,8 +64,7 @@ def workflow_node_definition(node_type: str) -> BuiltinNodeSpec:
     resolved = try_resolve_evaluation_metric(mid)
     if resolved is None:
         raise KeyError(nt)
-    reg = load_metrics_registry()
-    rec = metric_get_by_id(reg, mid)
+    rec = EvaluationMetricsRegistry.get_item(mid)
     if rec is None:
         raise KeyError(nt)
     ins, outs = _sockets_from_metric_class(resolved.metric_class)

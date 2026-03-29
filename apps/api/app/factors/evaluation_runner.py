@@ -9,11 +9,8 @@ import pandas as pd
 from factor import DependencyResolver
 
 from app.data_set.data_set_schemas import DataSetRecord
-from app.data_set.data_sets_store import get_by_id as data_set_get_by_id
-from app.data_set.data_sets_store import get_default_data_set
-from app.data_set.data_sets_store import load_file as load_data_sets_file
-from app.datasources.registry import get_by_id as ds_get_by_id
-from app.datasources.registry import load_registry as load_datasource_registry
+from app.data_set.data_sets_store import DataSetsStore
+from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import DataSourceRecord
 from app.datasources.sql_url import build_sqlalchemy_url
 from app.factors.evaluation_schemas import (
@@ -21,13 +18,12 @@ from app.factors.evaluation_schemas import (
     FactorEvaluationWindow,
 )
 from app.factors.loader import load_factor_class
-from app.factors.registry import get_by_id, load_registry, read_source
+from app.factors.registry import FactorItemsRegistry, read_source
 from app.factors.schemas import utc_now_iso
 
 
 def _datasource_for_data_set(ds_id: str) -> DataSourceRecord:
-    reg = load_datasource_registry()
-    ds_rec = ds_get_by_id(reg, ds_id)
+    ds_rec = DataSourceItemsRegistry.get_item(ds_id)
     if ds_rec is None:
         raise ValueError("数据源不存在或已删除，无法用于该数据集评价")
     if not ds_rec.enabled:
@@ -51,19 +47,13 @@ def _resolve_evaluation_context(
 ]:
     """Resolve data set, window, universe, quantiles (from env, default 5)."""
     rid = (explicit_data_set_id or "").strip()
-    ds_reg = load_data_sets_file()
-    ds_rec: DataSetRecord | None = None
-    if rid:
-        ds_rec = data_set_get_by_id(ds_reg, rid)
-        if ds_rec is None:
-            raise ValueError("数据集不存在")
-    else:
-        ds_rec = get_default_data_set(ds_reg)
-
-    if ds_rec is None:
+    if not rid:
         raise ValueError(
-            "未配置评价数据集：请在「数据集」中创建并设置默认，或在请求中指定 data_set_id。"
+            "未指定评价数据集：请在请求中传入 data_set_id，或使用已绑定 data_set_id 的评价方案。"
         )
+    ds_rec = DataSetsStore.get_item(rid)
+    if ds_rec is None:
+        raise ValueError("数据集不存在")
 
     stock_codes = _stock_codes_from_data_set(list(ds_rec.stock_codes))
     q_default = int(os.environ.get("FACTOR_AGENT_QUANTILES", "5"))
@@ -258,8 +248,7 @@ def build_alphalens_evaluator_for_factor(
     list[str] | None,
 ]:
     """Return (error_snapshot, evaluator, window, quantiles, stock_codes) on success error is None."""
-    reg = load_registry()
-    rec = get_by_id(reg, factor_id)
+    rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise ValueError("因子不存在")
 

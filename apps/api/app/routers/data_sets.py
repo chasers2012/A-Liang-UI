@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.datasources.registry import get_by_id as ds_get_by_id
-from app.datasources.registry import load_registry as load_ds_registry
-from app.datasources.schemas import DataSourceRecord, utc_now_iso
 from app.data_set.data_set_schemas import (
     DataSetCreate,
     DataSetDatasourceBindingInput,
@@ -14,55 +11,53 @@ from app.data_set.data_set_schemas import (
     DataSetPublic,
     DataSetRecord,
 )
-from app.data_set.data_sets_store import (
-    apply_default_uniqueness,
-    get_by_id,
-    load_file,
-    save_file,
-)
+from app.data_set.data_sets_store import DataSetsStore
+from app.datasources.registry import DataSourceItemsRegistry
+from app.datasources.schemas import DataSourceRecord, utc_now_iso
 
 router = APIRouter(prefix="/data-sets", tags=["data-sets"])
 
 
-def _ds_meta(reg_ds, ds_id: str) -> tuple[str, str]:
-    r = ds_get_by_id(reg_ds, ds_id)
+def _ds_meta(ds_id: str) -> tuple[str, str]:
+    r = DataSourceItemsRegistry.get_item(ds_id)
     if r is None:
         return "", ""
     return r.name, r.type
 
 
-def _bindings_to_public(bindings: list[DataSetDatasourceBindingStored],
-                        reg_ds) -> list[DataSetDatasourceBindingPublic]:
+def _bindings_to_public(
+    bindings: list[DataSetDatasourceBindingStored],
+) -> list[DataSetDatasourceBindingPublic]:
     out: list[DataSetDatasourceBindingPublic] = []
     for b in bindings:
-        name, typ = _ds_meta(reg_ds, b.datasource_id)
+        name, typ = _ds_meta(b.datasource_id)
         out.append(
-            DataSetDatasourceBindingPublic(datasource_id=b.datasource_id,
-                                           datasource_name=name,
-                                           datasource_type=typ,
-                                           dependencies=list(b.dependencies)))
+            DataSetDatasourceBindingPublic(
+                datasource_id=b.datasource_id,
+                datasource_name=name,
+                datasource_type=typ,
+                dependencies=list(b.dependencies),
+            )
+        )
     return out
 
 
-def _to_public(rec: DataSetRecord, reg_ds) -> DataSetPublic:
+def _to_public(rec: DataSetRecord) -> DataSetPublic:
     return DataSetPublic(
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        datasource_bindings=_bindings_to_public(rec.datasource_bindings,
-                                                reg_ds),
+        datasource_bindings=_bindings_to_public(rec.datasource_bindings),
         start=rec.start,
         end=rec.end,
         stock_codes=list(rec.stock_codes),
-        is_default=rec.is_default,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
 
 
 def _validate_datasource_enabled(ds_id: str) -> DataSourceRecord:
-    reg_ds = load_ds_registry()
-    rec = ds_get_by_id(reg_ds, ds_id)
+    rec = DataSourceItemsRegistry.get_item(ds_id)
     if rec is None:
         raise HTTPException(status_code=400, detail="数据源不存在")
     if not rec.enabled:
@@ -71,7 +66,8 @@ def _validate_datasource_enabled(ds_id: str) -> DataSourceRecord:
 
 
 def _validate_bindings_inputs(
-    bindings: list[DataSetDatasourceBindingInput], ) -> None:
+    bindings: list[DataSetDatasourceBindingInput],
+) -> None:
     if not bindings:
         raise HTTPException(status_code=400, detail="至少配置一条数据源绑定")
     n = len(bindings)
@@ -102,12 +98,14 @@ def _inputs_to_stored(
         DataSetDatasourceBindingStored(
             datasource_id=b.datasource_id.strip(),
             dependencies=[x.strip() for x in b.dependencies if str(x).strip()],
-        ) for b in bindings
+        )
+        for b in bindings
     ]
 
 
 def _validate_and_touch_datasources(
-    bindings: list[DataSetDatasourceBindingInput], ) -> None:
+    bindings: list[DataSetDatasourceBindingInput],
+) -> None:
     _validate_bindings_inputs(bindings)
     for b in bindings:
         _validate_datasource_enabled(b.datasource_id.strip())
@@ -118,10 +116,8 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
     if "name" in data and data["name"] is not None:
         rec.name = str(data["name"]).strip()
     if "description" in data:
-        rec.description = "" if data["description"] is None else str(
-            data["description"]).strip()
-    if "datasource_bindings" in data and data[
-            "datasource_bindings"] is not None:
+        rec.description = "" if data["description"] is None else str(data["description"]).strip()
+    if "datasource_bindings" in data and data["datasource_bindings"] is not None:
         raw = data["datasource_bindings"]
         inputs = [DataSetDatasourceBindingInput.model_validate(x) for x in raw]
         rec.datasource_bindings = _inputs_to_stored(inputs)
@@ -130,28 +126,20 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
     if "end" in data and data["end"] is not None:
         rec.end = str(data["end"]).strip()
     if "stock_codes" in data and data["stock_codes"] is not None:
-        rec.stock_codes = [
-            c.strip() for c in data["stock_codes"] if str(c).strip()
-        ]
-    if "is_default" in data:
-        rec.is_default = bool(data["is_default"])
+        rec.stock_codes = [c.strip() for c in data["stock_codes"] if str(c).strip()]
 
 
 @router.get("", response_model=list[DataSetPublic])
 def list_data_sets() -> list[DataSetPublic]:
-    reg = load_file()
-    reg_ds = load_ds_registry()
-    return [_to_public(i, reg_ds) for i in reg.items]
+    return [_to_public(i) for i in DataSetsStore.list_items()]
 
 
 @router.get("/{data_set_id}", response_model=DataSetPublic)
 def get_data_set(data_set_id: str) -> DataSetPublic:
-    reg = load_file()
-    rec = get_by_id(reg, data_set_id)
+    rec = DataSetsStore.get_item(data_set_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据集不存在")
-    reg_ds = load_ds_registry()
-    return _to_public(rec, reg_ds)
+    return _to_public(rec)
 
 
 @router.post("", response_model=DataSetPublic)
@@ -160,60 +148,41 @@ def create_data_set(body: DataSetCreate) -> DataSetPublic:
         raise HTTPException(status_code=400, detail="名称不能为空")
     _validate_and_touch_datasources(list(body.datasource_bindings))
 
-    reg = load_file()
     new_rec = body.to_record()
-    if new_rec.is_default:
-        for i in reg.items:
-            i.is_default = False
-    reg.items.append(new_rec)
-    apply_default_uniqueness(reg.items)
-    save_file(reg)
-    reg_ds = load_ds_registry()
-    return _to_public(new_rec, reg_ds)
+    DataSetsStore.add_item(new_rec)
+    return _to_public(new_rec)
 
 
 @router.patch("/{data_set_id}", response_model=DataSetPublic)
 def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
-    reg = load_file()
-    rec = get_by_id(reg, data_set_id)
+    def _apply(rec: DataSetRecord) -> None:
+        if body.datasource_bindings is not None:
+            _validate_and_touch_datasources(list(body.datasource_bindings))
+        _merge_patch(rec, body)
+        if not rec.name:
+            raise HTTPException(status_code=400, detail="名称不能为空")
+        if not rec.datasource_bindings:
+            raise HTTPException(status_code=400, detail="至少保留一条数据源绑定")
+        _validate_bindings_inputs(
+            [
+                DataSetDatasourceBindingInput(
+                    datasource_id=b.datasource_id,
+                    dependencies=list(b.dependencies),
+                )
+                for b in rec.datasource_bindings
+            ]
+        )
+        for b in rec.datasource_bindings:
+            _validate_datasource_enabled(b.datasource_id)
+        rec.updated_at = utc_now_iso()
+
+    rec = DataSetsStore.update_item(data_set_id, _apply)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据集不存在")
-
-    if body.datasource_bindings is not None:
-        _validate_and_touch_datasources(list(body.datasource_bindings))
-
-    _merge_patch(rec, body)
-    if not rec.name:
-        raise HTTPException(status_code=400, detail="名称不能为空")
-    if not rec.datasource_bindings:
-        raise HTTPException(status_code=400, detail="至少保留一条数据源绑定")
-    _validate_bindings_inputs([
-        DataSetDatasourceBindingInput(
-            datasource_id=b.datasource_id,
-            dependencies=list(b.dependencies),
-        ) for b in rec.datasource_bindings
-    ])
-    for b in rec.datasource_bindings:
-        _validate_datasource_enabled(b.datasource_id)
-
-    rec.updated_at = utc_now_iso()
-
-    if rec.is_default:
-        for i in reg.items:
-            if i.id != rec.id:
-                i.is_default = False
-
-    apply_default_uniqueness(reg.items)
-    save_file(reg)
-    reg_ds = load_ds_registry()
-    return _to_public(rec, reg_ds)
+    return _to_public(rec)
 
 
 @router.delete("/{data_set_id}", status_code=204)
 def delete_data_set(data_set_id: str) -> None:
-    reg = load_file()
-    n = len(reg.items)
-    reg.items = [i for i in reg.items if i.id != data_set_id]
-    if len(reg.items) == n:
+    if DataSetsStore.delete_item(data_set_id) is None:
         raise HTTPException(status_code=404, detail="数据集不存在")
-    save_file(reg)

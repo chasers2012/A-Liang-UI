@@ -43,7 +43,6 @@ export function DataSetTable({ items, onDelete }: Props) {
           <TableHead>数据源</TableHead>
           <TableHead>日期范围</TableHead>
           <TableHead>股票池</TableHead>
-          <TableHead className="w-24 text-center">默认</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
@@ -66,15 +65,6 @@ export function DataSetTable({ items, onDelete }: Props) {
             </TableCell>
             <TableCell className="whitespace-normal text-sm text-muted-foreground">
               {stockSummary(row.stock_codes)}
-            </TableCell>
-            <TableCell className="text-center">
-              {row.is_default ? (
-                <span className="rounded-md border border-border/80 bg-muted/40 px-2 py-0.5 text-xs font-medium">
-                  默认
-                </span>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex flex-wrap items-center justify-end gap-2">

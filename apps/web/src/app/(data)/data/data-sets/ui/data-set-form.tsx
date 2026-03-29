@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
@@ -52,7 +51,6 @@ export type DataSetFormState = {
   start: string;
   end: string;
   stock_codes_text: string;
-  is_default: boolean;
 };
 
 export function emptyDataSetForm(): DataSetFormState {
@@ -63,7 +61,6 @@ export function emptyDataSetForm(): DataSetFormState {
     start: "2023-01-01",
     end: "2024-12-31",
     stock_codes_text: "",
-    is_default: false,
   };
 }
 
@@ -90,7 +87,6 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     stock_codes_text: row.stock_codes.length
       ? row.stock_codes.join("\n")
       : "",
-    is_default: row.is_default,
   };
 }
 
@@ -265,7 +261,6 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       start: form.start.trim(),
       end: form.end.trim(),
       stock_codes,
-      is_default: form.is_default,
     };
     setSubmitting(true);
     try {
@@ -354,7 +349,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         <Card>
           <CardHeader>
             <CardTitle>基本信息</CardTitle>
-            <CardDescription>名称、说明与默认标记</CardDescription>
+            <CardDescription>名称与说明</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -375,18 +370,6 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 onChange={(e) => set({ description: e.target.value })}
                 rows={2}
                 className="min-h-0 resize-y"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
-              <div>
-                <p className="text-sm font-medium">设为默认评价数据集</p>
-                <p className="text-xs text-muted-foreground">
-                  未指定数据集时优先使用；否则回退环境变量与数据源默认。
-                </p>
-              </div>
-              <Switch
-                checked={form.is_default}
-                onCheckedChange={(v) => set({ is_default: Boolean(v) })}
               />
             </div>
           </CardContent>

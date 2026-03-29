@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib import resources
 
-from app.persistence.source_files import read_source_text, resolve_source_path
+from app.persistence.source_files import WorkspaceSourceFiles
 
 from .builtin_metric_registry import BUILTIN_SEED_METAS
 from .metric_schemas import (
@@ -21,20 +21,20 @@ def _template_text(filename: str) -> str:
 
 
 def _source_missing_or_empty(source_path: str) -> bool:
-    p = resolve_source_path(source_path)
+    p = WorkspaceSourceFiles.resolve_source_path(source_path)
     if not p.is_file():
         return True
-    return read_source_text(source_path).strip() == ""
+    return WorkspaceSourceFiles.read_source_text(source_path).strip() == ""
 
 
 def ensure_builtin_metrics_seeded(reg) -> bool:
     """Mutate *reg* in place; return whether the registry JSON should be saved."""
-    from .metrics_store import get_by_id, write_source
+    from .metrics_store import EvaluationMetricsRegistry
 
     changed = False
     now = utc_now_iso()
     for meta in BUILTIN_SEED_METAS:
-        rec = get_by_id(reg, meta.metric_id)
+        rec = EvaluationMetricsRegistry.get_by_id(reg, meta.metric_id)
         template = _template_text(meta.template_file)
         vis = (
             MetricVisualizationSpec.model_validate(meta.visualization)
@@ -53,7 +53,7 @@ def ensure_builtin_metrics_seeded(reg) -> bool:
                 builtin=True,
             )
             reg.items.append(rec)
-            write_source(rec, template)
+            EvaluationMetricsRegistry.write_source(rec, template)
             changed = True
             continue
         if not rec.builtin:
@@ -63,6 +63,6 @@ def ensure_builtin_metrics_seeded(reg) -> bool:
             rec.visualization = vis
             changed = True
         if _source_missing_or_empty(rec.source_path):
-            write_source(rec, template)
+            EvaluationMetricsRegistry.write_source(rec, template)
             changed = True
     return changed

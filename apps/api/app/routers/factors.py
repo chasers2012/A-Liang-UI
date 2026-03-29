@@ -34,11 +34,9 @@ from app.factors.evaluations_store import (
     upsert_evaluation_for_factor,
 )
 from app.factors.registry import (
+    FactorItemsRegistry,
     delete_source_file,
-    get_by_id,
-    load_registry,
     read_source,
-    save_registry,
     write_source,
 )
 from app.factors.schemas import (
@@ -149,8 +147,7 @@ def _apply_source_change_with_snapshot(
 
 @router.get("", response_model=list[FactorSummaryPublic])
 def list_factors() -> list[FactorSummaryPublic]:
-    reg = load_registry()
-    return [record_to_summary(i) for i in reg.items]
+    return [record_to_summary(i) for i in FactorItemsRegistry.list_items()]
 
 
 @router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
@@ -160,12 +157,12 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     except ValueError as e:
         http_internal_server_error(e)
 
-    reg = load_registry()
+    items = FactorItemsRegistry.list_items()
     rows: list[FactorEvaluationRowPublic] = []
     ic_for_avg: list[float] = []
     evaluated_ok = 0
 
-    for rec in reg.items:
+    for rec in items:
         snap = ev_file.items.get(rec.id)
         if snap is None:
             rows.append(
@@ -202,7 +199,7 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
             )
         )
 
-    total = len(reg.items)
+    total = len(items)
     mean_ic_primary: float | None = None
     if ic_for_avg:
         mean_ic_primary = sum(ic_for_avg) / len(ic_for_avg)
@@ -222,8 +219,7 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     response_model=list[FactorEvaluationHistoryEntry],
 )
 def factor_evaluation_history(factor_id: str) -> list[FactorEvaluationHistoryEntry]:
-    reg = load_registry()
-    if get_by_id(reg, factor_id) is None:
+    if FactorItemsRegistry.get_item(factor_id) is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     try:
         rows = list_history_for_factor(factor_id)
@@ -240,8 +236,7 @@ def post_factor_evaluation_run(
     factor_id: str,
     body: FactorEvaluationRunBody | None = Body(default=None),
 ) -> FactorEvaluationRowPublic:
-    reg = load_registry()
-    rec = get_by_id(reg, factor_id)
+    rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     b = body or FactorEvaluationRunBody()
@@ -250,12 +245,10 @@ def post_factor_evaluation_run(
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
         from app.evaluation.scheme.graph_validate import validate_workflow_graph
-        from app.evaluation.scheme.profiles_store import get_by_id as get_profile_by_id
-        from app.evaluation.scheme.profiles_store import load_file as load_profiles_file
+        from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
         from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
 
-        preg = load_profiles_file()
-        prof = get_profile_by_id(preg, pid)
+        prof = EvaluationProfilesRegistry.get_item(pid)
         if prof is None:
             raise HTTPException(status_code=400, detail="评价方案不存在")
         if prof.workflow.nodes:
@@ -300,8 +293,7 @@ def post_factor_evaluation_run(
     response_model=list[FactorCodeSnapshotSummaryPublic],
 )
 def list_factor_snapshots(factor_id: str) -> list[FactorCodeSnapshotSummaryPublic]:
-    reg = load_registry()
-    if get_by_id(reg, factor_id) is None:
+    if FactorItemsRegistry.get_item(factor_id) is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     try:
         snaps = list_snapshots_for_factor(factor_id)
@@ -327,8 +319,7 @@ def get_factor_snapshot(
     factor_id: str,
     snapshot_id: str,
 ) -> FactorCodeSnapshotDetailPublic:
-    reg = load_registry()
-    if get_by_id(reg, factor_id) is None:
+    if FactorItemsRegistry.get_item(factor_id) is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     try:
         snap = get_snapshot(factor_id, snapshot_id)
@@ -358,8 +349,7 @@ def get_default_factor_source(
 
 @router.get("/{factor_id}", response_model=FactorDetailPublic)
 def get_factor(factor_id: str) -> FactorDetailPublic:
-    reg = load_registry()
-    rec = get_by_id(reg, factor_id)
+    rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     return _detail(rec)
@@ -380,40 +370,34 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
     except ValueError as e:
         http_bad_request(e)
 
-    reg = load_registry()
-    reg.items.append(rec)
     write_source(rec, src)
-    save_registry(reg)
+    FactorItemsRegistry.add_item(rec)
     return _detail(rec)
 
 
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
 def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
-    reg = load_registry()
-    rec = get_by_id(reg, factor_id)
+    unset = body.model_dump(exclude_unset=True)
+
+    def _apply(rec: FactorRecord) -> None:
+        _patch_factor_validate_and_merge(rec, body, unset)
+        if "source" in unset and body.source is not None:
+            _apply_source_change_with_snapshot(factor_id, rec, body.source)
+        rec.updated_at = utc_now_iso()
+
+    rec = FactorItemsRegistry.update_item(factor_id, _apply)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-
-    unset = body.model_dump(exclude_unset=True)
-    _patch_factor_validate_and_merge(rec, body, unset)
-
-    if "source" in unset and body.source is not None:
-        _apply_source_change_with_snapshot(factor_id, rec, body.source)
-
-    rec.updated_at = utc_now_iso()
-    save_registry(reg)
     return _detail(rec)
 
 
 @router.delete("/{factor_id}", status_code=204)
 def delete_factor(factor_id: str) -> None:
-    reg = load_registry()
-    rec = get_by_id(reg, factor_id)
+    rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-    reg.items = [i for i in reg.items if i.id != factor_id]
     delete_source_file(rec)
-    save_registry(reg)
+    FactorItemsRegistry.delete_item(factor_id)
     with contextlib.suppress(ValueError):
         delete_snapshots_for_factor(factor_id)
     with contextlib.suppress(ValueError):

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.factors.registry import load_registry, read_source, resolve_source_path
+from app.factors.registry import FactorItemsRegistry, read_source, resolve_source_path
 from app.factors.validate import validate_factor_name, validate_source_syntax
 
 MIN_SOURCE = "x = 1\n"
@@ -127,7 +127,7 @@ def test_patch_and_delete(workspace_tmp, client):
     assert r2.json()["description"] == "Patched"
     assert r2.json()["source"] == new_src
 
-    rec = load_registry().items[0]
+    rec = FactorItemsRegistry.list_items()[0]
     assert read_source(rec) == new_src
     assert resolve_source_path(rec.source_path).read_text(encoding="utf-8") == new_src
 

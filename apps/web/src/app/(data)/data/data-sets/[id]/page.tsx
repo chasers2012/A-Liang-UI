@@ -130,10 +130,6 @@ export default function DataSetDetailPage() {
               <dd className="break-all font-mono text-xs">{row.id}</dd>
             </div>
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-              <dt className="text-muted-foreground">is_default</dt>
-              <dd>{row.is_default ? "是" : "否"}</dd>
-            </div>
-            <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">created_at</dt>
               <dd className="font-mono text-xs tabular-nums">{formatIso(row.created_at)}</dd>
             </div>
