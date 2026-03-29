@@ -9,11 +9,13 @@
     },
     "scripts": {
         "dev": "pnpm run dev:all",
-        "dev:web": "pnpm --filter web dev",
-        "dev:api": "uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+        "dev:web": "node scripts/run-with-tree-kill.mjs pnpm --filter web dev",
+        "dev:api": "node scripts/run-with-tree-kill.mjs uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+        "_dev:web:inner": "pnpm --filter web dev",
+        "_dev:api:inner": "uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
         "sync:py": "uv sync",
         "install:all": "pnpm install && uv sync",
-        "dev:all": "concurrently -n api,web -c cyan,magenta \"pnpm run dev:api\" \"pnpm run dev:web\"",
+        "dev:all": "node scripts/dev-all.mjs",
         "build": "pnpm --filter web build",
         "build:all": "pnpm --filter web build && pnpm run build:api",
         "build:api": "python apps/api/build.py",
@@ -24,7 +26,7 @@
     "devDependencies": {
         "@commitlint/cli": "^20.5.0",
         "@commitlint/config-conventional": "^20.5.0",
-        "concurrently": "^9.1.2",
+        "tree-kill": "^1.2.2",
         "husky": "^9.1.7"
     },
     "packageManager": "pnpm@9.15.0"
