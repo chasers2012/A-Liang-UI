@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workflow import NodeCatalog, NodeSpec
+from workflow import Node, NodeCatalog
 
 from app.workflow_nodes import load_domain_node_catalog
 
@@ -21,7 +21,7 @@ def all_workflow_node_type_ids() -> frozenset[str]:
     return frozenset(get_evaluation_node_catalog().specs.keys())
 
 
-def workflow_node_definition(node_type: str) -> NodeSpec:
+def workflow_node_definition(node_type: str) -> Node:
     nt = (node_type or "").strip()
     spec = get_evaluation_node_catalog().specs.get(nt)
     if spec is None:
@@ -29,7 +29,7 @@ def workflow_node_definition(node_type: str) -> NodeSpec:
     return spec
 
 
-def workflow_node_definition_or_fail(node_type: str) -> NodeSpec:
+def workflow_node_definition_or_fail(node_type: str) -> Node:
     try:
         return workflow_node_definition(node_type)
     except KeyError as e:

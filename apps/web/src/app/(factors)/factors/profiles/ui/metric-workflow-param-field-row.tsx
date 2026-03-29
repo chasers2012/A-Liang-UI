@@ -9,11 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
+import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 export function metricWorkflowParamEffectiveValue(
   params: Record<string, unknown>,
-  spec: MetricWorkflowParamSpec,
+  spec: NodeParamModel,
 ): unknown {
   if (Object.prototype.hasOwnProperty.call(params, spec.key)) {
     return params[spec.key];
@@ -116,7 +116,7 @@ function StringParamRow(props: {
 
 function NumberParamRow(props: {
   label: string;
-  spec: MetricWorkflowParamSpec;
+  spec: NodeParamModel;
   readOnly: boolean;
   value: unknown;
   onChange: (v: unknown) => void;
@@ -148,7 +148,7 @@ function NumberParamRow(props: {
 }
 
 export function MetricWorkflowParamFieldRow(props: {
-  spec: MetricWorkflowParamSpec;
+  spec: NodeParamModel;
   value: unknown;
   readOnly: boolean;
   onChange: (v: unknown) => void;

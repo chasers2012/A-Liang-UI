@@ -8,7 +8,14 @@ from collections.abc import Mapping
 from typing import Any
 
 from evaluate.alphalens_panel_utils import stock_count_from_alignment
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from workflow import (
+    BooleanNodeParam,
+    NumberNodeParam,
+    StringNodeParam,
+    WorkflowNode,
+    workflow_node,
+    workflow_socket,
+)
 
 
 def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
@@ -28,6 +35,30 @@ def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
     description="根据因子与数据源计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     input_sockets=[],
     output_sockets=[workflow_socket("clean_factor", value_type="factor_data_clean")],
+    workflow_parameters=[
+        StringNodeParam(
+            "forward_return_periods",
+            label="持有期 periods（逗号分隔）",
+            default="1,5,10,20",
+        ),
+        StringNodeParam(
+            "alphalens_quantiles",
+            label="分位数（留空则用环境变量 FACTOR_AGENT_QUANTILES，默认 5）",
+            default="",
+        ),
+        BooleanNodeParam(
+            "long_short",
+            label="多空 long_short",
+            default=True,
+        ),
+        NumberNodeParam(
+            "max_loss",
+            label="max_loss",
+            default=0.5,
+            minimum=0.0,
+            maximum=10.0,
+        ),
+    ],
     entry="execute",
 )
 class PrepareAlphalensNode:

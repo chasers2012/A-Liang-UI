@@ -1,54 +1,23 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import type {
   EvaluationProfilePublic,
-  MetricVisualizationSpec,
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
-import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
-import {
-  isRegistryOrBuiltinMetricNodeType,
-  registryMetricIdFromWorkflowType,
-} from "@/features/factors/ui/workflow-metric-node-utils";
-
-const NODE_TYPE_LABELS: Record<string, string> = {
-  prepare_alphalens: "计算因子",
-  builtin_mean_ic: "平均 IC",
-  builtin_mean_return_spread: "多空收益差",
-  viz_auto: "可视化·自动",
-  viz_bars: "可视化·条形图",
-  viz_bars_diverging: "可视化·双向条形图",
-  viz_table: "可视化·表格",
-  viz_json: "可视化·JSON",
-  viz_scalar: "可视化·单值",
-};
-
-const VIZ_NODE_PREFIX = "viz_";
-
-const SOCKET_LABELS: Record<string, string> = {
-  mean_ic: "平均 IC",
-  mean_return_spread: "多空收益差",
-  out: "指标输出",
-  clean_factor: "因子数据",
-  in: "可视化输入",
-};
-
-const VIZ_MODES: readonly MetricVisualizationMode[] = [
-  "auto",
-  "bars",
-  "bars_diverging",
-  "table",
-  "json",
-  "scalar",
-] as const;
+import { listEvaluationNodeTypes } from "@/lib/quant-agent-api";
+import type { NodeTypeDefinitionPublic } from "@/models";
+import type { MetricVisualizationSpec } from "@/models/evaluation-metric/dto";
 
 export type MetricMetaEntry = {
   name: string;
 };
 
-function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
-  return registryMetricIdFromWorkflowType(node?.type);
-}
+const DEFAULT_VIZ: MetricVisualizationSpec = {
+  mode: "auto",
+  period_day_keys: false,
+};
 
 function metricDisplayName(
   metricId: string | null,
@@ -58,49 +27,12 @@ function metricDisplayName(
   return metricMetaById?.[metricId]?.name ?? null;
 }
 
-function isVizWorkflowNodeType(t: string | undefined): boolean {
-  if (!t) return false;
-  return t.startsWith(VIZ_NODE_PREFIX);
-}
-
-function vizSpecFromVizNode(
-  node: WorkflowNodeDto | undefined,
-): MetricVisualizationSpec {
-  const t = node?.type ?? "";
-  const pdk = node?.params?.period_day_keys;
-  const period_day_keys = typeof pdk === "boolean" ? pdk : false;
-  if (t.startsWith(VIZ_NODE_PREFIX)) {
-    const rest = t.slice(VIZ_NODE_PREFIX.length);
-    const mode: MetricVisualizationMode = (VIZ_MODES as readonly string[]).includes(
-      rest,
-    )
-      ? (rest as MetricVisualizationMode)
-      : "auto";
-    return { mode, period_day_keys };
-  }
-  return { mode: "auto", period_day_keys: false };
-}
-
-/** 指标某输出端口若接到可视化（viz_*）节点，则展示配置取自该节点类型与 params。 */
-function vizFromDownstreamResultViz(
-  profile: EvaluationProfilePublic | undefined,
-  metricNodeId: string,
-  fromSocket: string,
-): MetricVisualizationSpec | null {
-  if (!profile?.workflow?.links?.length) return null;
-  const nodesById = new Map(
-    (profile.workflow.nodes ?? []).map((n) => [n.id, n]),
-  );
-  for (const link of profile.workflow.links) {
-    if (link.from_node !== metricNodeId || link.from_socket !== fromSocket) {
-      continue;
-    }
-    if (link.to_socket !== "in") continue;
-    const to = nodesById.get(link.to_node);
-    if (!to || !isVizWorkflowNodeType(to.type)) continue;
-    return vizSpecFromVizNode(to);
-  }
-  return null;
+function nodeTypeDef(
+  catalogByType: Map<string, NodeTypeDefinitionPublic>,
+  typeKey: string | undefined,
+): NodeTypeDefinitionPublic | undefined {
+  if (!typeKey) return undefined;
+  return catalogByType.get(typeKey);
 }
 
 function isNumericRecord(v: unknown): v is Record<string, number> {
@@ -301,13 +233,6 @@ function renderNumericRecord(
 ) {
   const mode = viz?.mode ?? "auto";
   const entries = Object.entries(data);
-  if (mode === "json") {
-    return (
-      <pre className="max-h-36 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem] leading-relaxed">
-        {JSON.stringify(data, null, 2)}
-      </pre>
-    );
-  }
   if (mode === "scalar" && entries.length === 1) {
     const [k, v] = entries[0]!;
     return (
@@ -350,11 +275,13 @@ function workflowNodeTitle(
   profile: EvaluationProfilePublic | undefined,
   nodeId: string,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
+  catalogByType: Map<string, NodeTypeDefinitionPublic>,
 ): string {
   const n = profile?.workflow?.nodes?.find((x) => x.id === nodeId);
   if (!n) return "工作流节点";
-  const label = NODE_TYPE_LABELS[n.type] ?? n.type;
-  const mid = metricIdFromNode(n);
+  const def = nodeTypeDef(catalogByType, n.type);
+  const label = def?.label ?? n.type;
+  const mid = def?.metric_id ?? null;
   if (mid) {
     const nm = metricDisplayName(mid, metricMetaById);
     if (nm) return `${label} · ${nm}`;
@@ -367,16 +294,16 @@ function outputSectionLabel(
   socketKey: string,
   node: WorkflowNodeDto | undefined,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
+  catalogByType: Map<string, NodeTypeDefinitionPublic>,
 ): string {
-  if (socketKey === "out" && isVizWorkflowNodeType(node?.type)) {
-    return "展示输出";
-  }
-  if (socketKey === "out") {
-    const mid = metricIdFromNode(node);
-    const nm = metricDisplayName(mid, metricMetaById);
+  const def = nodeTypeDef(catalogByType, node?.type);
+  if (socketKey === "out" && def?.metric_id) {
+    const nm = metricDisplayName(def.metric_id, metricMetaById);
     if (nm) return nm;
   }
-  return SOCKET_LABELS[socketKey] ?? socketKey;
+  const fromCatalog = def?.socket_labels?.[socketKey];
+  if (fromCatalog) return fromCatalog;
+  return socketKey;
 }
 
 function asObjectRecord(v: unknown): Record<string, unknown> | null {
@@ -387,62 +314,17 @@ function asObjectRecord(v: unknown): Record<string, unknown> | null {
 function periodDayStyleForSocket(
   socketKey: string,
   node: WorkflowNodeDto | undefined,
-  viz: MetricVisualizationSpec | null,
+  catalogByType: Map<string, NodeTypeDefinitionPublic>,
 ): boolean {
-  if (socketKey === "mean_ic" || socketKey === "mean_return_spread") {
-    return true;
-  }
-  if (
-    isRegistryOrBuiltinMetricNodeType(node?.type) &&
-    socketKey === "out" &&
-    viz?.period_day_keys
-  ) {
-    return true;
-  }
-  if (
-    isVizWorkflowNodeType(node?.type) &&
-    socketKey === "out" &&
-    viz?.period_day_keys
-  ) {
-    return true;
-  }
-  return false;
+  const def = nodeTypeDef(catalogByType, node?.type);
+  return Boolean(def?.period_day_style_sockets?.includes(socketKey));
 }
 
-function renderScalarNumber(val: number, viz: MetricVisualizationSpec | null) {
-  const mode = viz?.mode ?? "auto";
-  if (mode === "json") {
-    return (
-      <pre className="max-h-28 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem]">
-        {JSON.stringify(val, null, 2)}
-      </pre>
-    );
-  }
-  if (mode === "scalar" || mode === "auto") {
-    return (
-      <p className="font-mono text-xl font-semibold tabular-nums">
-        {val.toFixed(6)}
-      </p>
-    );
-  }
-  if (mode === "table") {
-    return (
-      <div className="overflow-x-auto rounded-md border border-border/60">
-        <table className="w-full text-xs">
-          <tbody>
-            <tr>
-              <td className="px-2 py-1.5 text-muted-foreground">值</td>
-              <td className="px-2 py-1.5 text-right font-mono tabular-nums">
-                {val.toFixed(6)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+function renderScalarNumber(val: number) {
   return (
-    <p className="font-mono text-sm tabular-nums">{val.toFixed(6)}</p>
+    <p className="font-mono text-xl font-semibold tabular-nums">
+      {val.toFixed(6)}
+    </p>
   );
 }
 
@@ -453,6 +335,27 @@ export function EvaluationProfileMetricResultsPanel(props: {
   metricMetaById?: Record<string, MetricMetaEntry>;
 }) {
   const { metricResults, profile, metricMetaById } = props;
+  const [nodeCatalog, setNodeCatalog] = useState<NodeTypeDefinitionPublic[]>(
+    [],
+  );
+  useEffect(() => {
+    let cancelled = false;
+    listEvaluationNodeTypes()
+      .then((rows) => {
+        if (!cancelled) setNodeCatalog(rows);
+      })
+      .catch(() => {
+        /* 目录失败时退回 type 原样展示 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const catalogByType = useMemo(
+    () => new Map(nodeCatalog.map((d) => [d.type, d])),
+    [nodeCatalog],
+  );
+
   const nodeIds = Object.keys(metricResults);
   if (nodeIds.length === 0) return null;
 
@@ -471,7 +374,12 @@ export function EvaluationProfileMetricResultsPanel(props: {
         className="rounded-lg border border-border/70 bg-muted/15 p-3"
       >
         <p className="mb-2 text-sm font-medium">
-          {workflowNodeTitle(profile ?? undefined, nid, metricMetaById)}
+          {workflowNodeTitle(
+            profile ?? undefined,
+            nid,
+            metricMetaById,
+            catalogByType,
+          )}
         </p>
         <div className="space-y-3">
           {entries.map(([socketKey, val]) => {
@@ -479,18 +387,12 @@ export function EvaluationProfileMetricResultsPanel(props: {
               socketKey,
               node,
               metricMetaById,
+              catalogByType,
             );
-            const socketViz = isVizWorkflowNodeType(node?.type)
-              ? vizSpecFromVizNode(node)
-              : vizFromDownstreamResultViz(
-                  profile ?? undefined,
-                  nid,
-                  socketKey,
-                );
             const periodDay = periodDayStyleForSocket(
               socketKey,
               node,
-              socketViz,
+              catalogByType,
             );
             if (isNumericRecord(val)) {
               return (
@@ -498,7 +400,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
                   <p className="mb-1.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
                     {skLabel}
                   </p>
-                  {renderNumericRecord(val, socketViz, periodDay)}
+                  {renderNumericRecord(val, DEFAULT_VIZ, periodDay)}
                 </div>
               );
             }
@@ -509,7 +411,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
                   className="flex flex-col gap-1 text-xs"
                 >
                   <span className="text-muted-foreground">{skLabel}</span>
-                  {renderScalarNumber(val, socketViz)}
+                  {renderScalarNumber(val)}
                 </div>
               );
             }
@@ -524,16 +426,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
                 </div>
               );
             }
-            return (
-              <div key={socketKey} className="text-xs">
-                <span className="font-medium text-muted-foreground">
-                  {skLabel}
-                </span>
-                <pre className="mt-1 max-h-28 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem] leading-relaxed">
-                  {JSON.stringify(val, null, 2)}
-                </pre>
-              </div>
-            );
+            return null;
           })}
         </div>
       </div>

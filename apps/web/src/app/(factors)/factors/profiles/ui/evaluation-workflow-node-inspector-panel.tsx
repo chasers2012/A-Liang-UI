@@ -3,7 +3,7 @@
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
+import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import {
   IoBlockHeader,
@@ -13,13 +13,14 @@ import {
   MetricWorkflowParamFieldRow,
   metricWorkflowParamEffectiveValue,
 } from "./metric-workflow-param-field-row";
-import { isRegistryOrBuiltinMetricNodeType } from "@/features/factors/ui/workflow-metric-node-utils";
 import type { EvalWorkflowCanvasNode } from "./workflow-rf-utils";
 
 export function EvaluationWorkflowNodeInspectorPanel(props: {
   readOnly: boolean;
   node: EvalWorkflowCanvasNode | null;
-  workflowParamSpecs: MetricWorkflowParamSpec[];
+  workflowParamSpecs: NodeParamModel[];
+  /** 节点目录中 ``metric_id`` 非空（指标类工作流节点） */
+  isMetricNode: boolean;
   onParamChange: (key: string, value: unknown) => void;
   onDeleteNode: () => void;
 }) {
@@ -27,6 +28,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
     readOnly,
     node,
     workflowParamSpecs,
+    isMetricNode,
     onParamChange,
     onDeleteNode,
   } = props;
@@ -135,7 +137,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         <p className="leading-relaxed text-muted-foreground">
           其余 params 请在「JSON」模式中编辑。
         </p>
-      ) : isRegistryOrBuiltinMetricNodeType(node.data.backendType) ? (
+      ) : isMetricNode ? (
         <p className="leading-relaxed text-muted-foreground">
           指标已绑定到该节点类型。可在指标编辑中配置工作流参数，或使用「JSON」模式编辑
           params。

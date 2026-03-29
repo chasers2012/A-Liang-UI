@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel, Field, model_serializer
-from workflow import NodeSpec, SocketSpec
+from workflow import Node, Socket
 
 
 class SocketSpecPublic(BaseModel):
@@ -31,11 +31,11 @@ class NodeTypeDefinitionPublic(BaseModel):
 
 
 def node_spec_to_public(
-    spec: NodeSpec,
+    spec: Node,
     *,
     extra: dict[str, Any] | None = None,
 ) -> NodeTypeDefinitionPublic:
-    """Convert a :class:`workflow.NodeSpec` to the API response model."""
+    """Convert a :class:`workflow.Node` to the API response model."""
     return NodeTypeDefinitionPublic(
         type=spec.type,
         label=spec.label,
@@ -52,5 +52,5 @@ def node_spec_to_public(
     )
 
 
-def socket_spec_to_public(spec: SocketSpec) -> SocketSpecPublic:
+def socket_spec_to_public(spec: Socket) -> SocketSpecPublic:
     return SocketSpecPublic(name=spec.name, required=spec.required, value_type=spec.value_type)

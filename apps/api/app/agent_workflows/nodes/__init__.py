@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workflow import NodeSpec, ordered_specs
+from workflow import Node, ordered_specs
 
 from app.workflow_nodes import load_domain_node_catalog
 
@@ -18,4 +18,4 @@ AGENT_NODE_ORDER: list[str] = [
     "finalize",
 ]
 
-AGENT_NODE_TYPES: list[NodeSpec] = ordered_specs(_AGENT_CATALOG.specs, AGENT_NODE_ORDER)
+AGENT_NODE_TYPES: list[Node] = ordered_specs(_AGENT_CATALOG.specs, AGENT_NODE_ORDER)

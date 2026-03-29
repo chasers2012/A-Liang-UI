@@ -8,9 +8,6 @@ import type {
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
 
-/** Virtual type id kept for inspector / API parity（LiteGraph 注册类型见 `workflow_graph/step`）。 */
-export const EVAL_WORKFLOW_NODE_TYPE = "evalWorkflowNode" as const;
-
 export type EvalWorkflowNodeData = WorkflowNodeDisplayData;
 
 export type EvalWorkflowCanvasNode = WorkflowGraphSelectedNode;

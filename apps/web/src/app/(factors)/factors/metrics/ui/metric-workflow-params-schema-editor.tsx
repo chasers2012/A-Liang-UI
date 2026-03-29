@@ -5,10 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type {
-  MetricWorkflowParamSpec,
-  MetricWorkflowParamType,
-} from "@/models/evaluation-metric/dto";
+import type { NodeParamModel, NodeParamType } from "@/models/evaluation-metric/dto";
 import {
   Select,
   SelectContent,
@@ -18,14 +15,14 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const TYPE_ITEMS: { value: MetricWorkflowParamType; label: string }[] = [
+const TYPE_ITEMS: { value: NodeParamType; label: string }[] = [
   { value: "number", label: "数值" },
   { value: "boolean", label: "布尔" },
   { value: "enum", label: "枚举（字符串）" },
   { value: "string", label: "字符串" },
 ];
 
-function emptyRow(): MetricWorkflowParamSpec {
+function emptyRow(): NodeParamModel {
   return {
     key: "",
     label: "",
@@ -38,13 +35,13 @@ function emptyRow(): MetricWorkflowParamSpec {
 }
 
 export function MetricWorkflowParamsSchemaEditor(props: {
-  value: MetricWorkflowParamSpec[];
-  onChange: (next: MetricWorkflowParamSpec[]) => void;
+  value: NodeParamModel[];
+  onChange: (next: NodeParamModel[]) => void;
   disabled?: boolean;
 }) {
   const { value, onChange, disabled } = props;
 
-  const updateRow = (index: number, patch: Partial<MetricWorkflowParamSpec>) => {
+  const updateRow = (index: number, patch: Partial<NodeParamModel>) => {
     const next = value.map((row, i) => (i === index ? { ...row, ...patch } : row));
     onChange(next);
   };

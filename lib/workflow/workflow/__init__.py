@@ -1,4 +1,8 @@
-"""Reusable workflow graph primitives, algorithms, and socket decorators."""
+"""Reusable workflow graph primitives, algorithms, and socket decorators.
+
+Public API is grouped roughly as: graph models, execution, node type metadata
+(:mod:`workflow.node_types`), discovery (:mod:`workflow.node_catalog`), validation.
+"""
 
 from .executor import (
     NodeHandler,
@@ -15,17 +19,37 @@ from .node_catalog import (
     merge_node_catalogs,
     ordered_specs,
 )
-from .node_decorator import collect_node_classes, workflow_node, workflow_socket
-from .node_spec import NodeSpec, SocketSpec
+from .node_decorator import (
+    collect_node_classes,
+    workflow_node,
+    workflow_socket,
+)
+from .node_types import (
+    BooleanNodeParam,
+    EnumNodeParam,
+    Node,
+    NodeParam,
+    NodeParamModel,
+    NumberNodeParam,
+    Socket,
+    StringNodeParam,
+    validate_node_param_list,
+)
 from .registry import NodeTypeRegistry
 from .validate import validate_workflow_graph
 
 __all__ = [
+    "BooleanNodeParam",
+    "EnumNodeParam",
+    "Node",
     "NodeCatalog",
     "NodeHandler",
-    "NodeSpec",
+    "NodeParam",
+    "NodeParamModel",
     "NodeTypeRegistry",
-    "SocketSpec",
+    "NumberNodeParam",
+    "Socket",
+    "StringNodeParam",
     "WorkflowExecutor",
     "WorkflowGraph",
     "WorkflowLink",
@@ -40,6 +64,7 @@ __all__ = [
     "merge_node_catalogs",
     "ordered_specs",
     "topological_order",
+    "validate_node_param_list",
     "validate_workflow_graph",
     "workflow_node",
     "workflow_socket",

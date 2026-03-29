@@ -10,7 +10,8 @@ from evaluate import EvaluationMetric, load_evaluation_metric_class
 from evaluate.alphalens_panel_utils import jsonable_metric_value, series_to_period_dict
 from workflow import WorkflowNode
 
-from .metric_param_coerce import metric_evaluate_kwargs_from_registry
+from app.evaluation.scheme.metric_param_coerce import metric_evaluate_kwargs_from_registry
+
 from .metrics_store import EvaluationMetricsRegistry
 
 

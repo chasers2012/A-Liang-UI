@@ -20,7 +20,7 @@ def test_load_evaluation_domain_includes_prepare(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
     cat = load_domain_node_catalog("evaluation")
     assert "prepare_alphalens" in cat.specs
-    assert "viz_auto" in cat.handlers
+    assert "echarts_line" in cat.handlers
     assert "builtin_mean_ic" in cat.specs
     assert "builtin_mean_return_spread" in cat.handlers
 

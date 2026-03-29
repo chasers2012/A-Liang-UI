@@ -8,15 +8,15 @@ from types import ModuleType
 
 from .executor import NodeHandler, handler_from_node_class
 from .node_decorator import collect_node_classes
-from .node_spec import NodeSpec
+from .node_types import Node
 
 
 @dataclass(frozen=True)
 class NodeCatalog:
-    """Maps ``WORKFLOW_TYPE_ID`` to class, :class:`NodeSpec`, and runtime :class:`NodeHandler`."""
+    """Maps ``WORKFLOW_TYPE_ID`` to class, :class:`Node`, and runtime :class:`NodeHandler`."""
 
     classes: dict[str, type]
-    specs: dict[str, NodeSpec]
+    specs: dict[str, Node]
     handlers: dict[str, NodeHandler]
 
 
@@ -40,6 +40,6 @@ def merge_node_catalogs(*catalogs: NodeCatalog) -> NodeCatalog:
     return NodeCatalog(classes=dict(classes), specs=specs, handlers=handlers)
 
 
-def ordered_specs(specs: Mapping[str, NodeSpec], type_ids: list[str]) -> list[NodeSpec]:
-    """Return ``NodeSpec`` instances in ``type_ids`` order (must all exist)."""
+def ordered_specs(specs: Mapping[str, Node], type_ids: list[str]) -> list[Node]:
+    """Return :class:`Node` instances in ``type_ids`` order (must all exist)."""
     return [specs[tid] for tid in type_ids]

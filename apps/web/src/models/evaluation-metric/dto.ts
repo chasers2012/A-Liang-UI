@@ -13,13 +13,13 @@ export interface MetricVisualizationSpec {
   period_day_keys: boolean;
 }
 
-export type MetricWorkflowParamType = "number" | "boolean" | "enum" | "string";
+export type NodeParamType = "number" | "boolean" | "enum" | "string";
 
-/** 与后端 ``MetricWorkflowParamSpec`` 一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
-export interface MetricWorkflowParamSpec {
+/** 与后端 ``workflow.NodeParamModel``（JSON）一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
+export interface NodeParamModel {
   key: string;
   label: string;
-  type: MetricWorkflowParamType;
+  type: NodeParamType;
   default?: string | number | boolean | null;
   minimum?: number | null;
   maximum?: number | null;
@@ -37,7 +37,7 @@ export interface EvaluationMetricSummaryPublic {
   updated_at: string;
   visualization?: MetricVisualizationSpec | null;
   builtin?: boolean;
-  workflow_parameters?: MetricWorkflowParamSpec[];
+  workflow_parameters?: NodeParamModel[];
 }
 
 export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {

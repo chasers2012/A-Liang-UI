@@ -7,7 +7,7 @@ import types
 from collections.abc import Callable
 from typing import TypeVar
 
-from .node_spec import NodeSpec, SocketSpec
+from .node_types import Node, NodeParam, Socket
 
 _T = TypeVar("_T")
 
@@ -22,14 +22,14 @@ def workflow_socket(
     return {"name": name, "required": required, "value_type": value_type}
 
 
-def _dicts_to_socket_specs(raw: list[dict[str, object]]) -> tuple[SocketSpec, ...]:
-    out: list[SocketSpec] = []
+def _dicts_to_sockets(raw: list[dict[str, object]]) -> tuple[Socket, ...]:
+    out: list[Socket] = []
     for x in raw:
         name = x.get("name")
         if not name:
             continue
         out.append(
-            SocketSpec(
+            Socket(
                 str(name),
                 bool(x.get("required", False)),
                 str(x.get("value_type", "any")),
@@ -42,6 +42,7 @@ def workflow_node(
     *,
     input_sockets: list[dict[str, object]],
     output_sockets: list[dict[str, object]],
+    workflow_parameters: list[NodeParam] | None = None,
     entry: str = "execute",
     type_id: str = "",
     label: str = "",
@@ -53,12 +54,15 @@ def workflow_node(
     and can be discovered by :func:`collect_node_classes`.
     """
 
-    input_specs = _dicts_to_socket_specs(input_sockets)
-    output_specs = _dicts_to_socket_specs(output_sockets)
+    input_specs = _dicts_to_sockets(input_sockets)
+    output_specs = _dicts_to_sockets(output_sockets)
+    _wp = workflow_parameters if workflow_parameters is not None else []
+    param_specs: tuple[NodeParam, ...] = tuple(p for p in _wp if (p.key or "").strip())
 
     def decorate(cls: type[_T]) -> type[_T]:
         cls.INPUT_SOCKETS = input_sockets  # type: ignore[attr-defined]
         cls.OUTPUT_SOCKETS = output_sockets  # type: ignore[attr-defined]
+        cls.WORKFLOW_PARAMETERS = list(_wp)  # type: ignore[attr-defined]
         cls.ENTRY = entry  # type: ignore[attr-defined]
         cls.WORKFLOW_TYPE_ID = type_id  # type: ignore[attr-defined]
         cls.WORKFLOW_LABEL = label  # type: ignore[attr-defined]
@@ -71,15 +75,16 @@ def workflow_node(
             type_id: str = "",
             label: str = "",
             description: str = "",
-            default_inputs: tuple[SocketSpec, ...] | None = None,
-            default_outputs: tuple[SocketSpec, ...] | None = None,
-        ) -> NodeSpec:
-            return NodeSpec(
+            default_inputs: tuple[Socket, ...] | None = None,
+            default_outputs: tuple[Socket, ...] | None = None,
+        ) -> Node:
+            return Node(
                 type=type_id or klass.WORKFLOW_TYPE_ID,
                 label=label or klass.WORKFLOW_LABEL,
                 description=description or klass.WORKFLOW_DESCRIPTION,
                 inputs=input_specs if input_specs else (default_inputs or ()),
                 outputs=output_specs if output_specs else (default_outputs or ()),
+                parameters=param_specs,
             )
 
         cls.__node_spec__ = __node_spec__  # type: ignore[attr-defined]

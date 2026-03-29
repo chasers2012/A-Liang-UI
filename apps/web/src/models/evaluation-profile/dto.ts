@@ -1,6 +1,6 @@
 /** 评价方案（工作流 + Alphalens prepare）与节点类型目录 DTO。 */
 
-import type { MetricWorkflowParamSpec } from "../evaluation-metric/dto";
+import type { NodeParamModel } from "../evaluation-metric/dto";
 
 export interface WorkflowNodeDto {
   id: string;
@@ -54,7 +54,9 @@ export interface NodeTypeDefinitionPublic {
   description: string;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
-  workflow_parameters: MetricWorkflowParamSpec[];
+  workflow_parameters: NodeParamModel[];
   user_defined: boolean;
   metric_id: string | null;
+  socket_labels?: Record<string, string>;
+  period_day_style_sockets?: string[];
 }

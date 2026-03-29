@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol, runtime_checkable
 
-from .node_spec import NodeSpec
+from .node_types import Node
 
 
 @runtime_checkable
 class NodeTypeRegistry(Protocol):
     """Minimal interface every domain node-type catalog should satisfy."""
 
-    def get(self, node_type: str) -> NodeSpec | None:
+    def get(self, node_type: str) -> Node | None:
         """Return the spec for ``node_type``, or ``None`` if unknown."""
         ...
 
@@ -20,6 +20,6 @@ class NodeTypeRegistry(Protocol):
         """Return all known type id strings."""
         ...
 
-    def all_specs(self) -> Mapping[str, NodeSpec]:
-        """Return the full ``{type_id: NodeSpec}`` mapping."""
+    def all_specs(self) -> Mapping[str, Node]:
+        """Return the full ``{type_id: Node}`` mapping."""
         ...

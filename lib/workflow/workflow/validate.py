@@ -6,7 +6,7 @@ from collections.abc import Mapping
 
 from .graph import WorkflowGraph, WorkflowLink, WorkflowNode
 from .graph_algo import assert_acyclic
-from .node_spec import NodeSpec
+from .node_types import Node
 
 
 def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNode]:
@@ -18,7 +18,7 @@ def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNo
 
 def _validate_node_types(
     nodes: list[WorkflowNode],
-    specs: Mapping[str, NodeSpec],
+    specs: Mapping[str, Node],
 ) -> None:
     for n in nodes:
         t = n.type.strip()
@@ -45,7 +45,7 @@ def _validate_link_sockets(
     li: int,
     link: WorkflowLink,
     by_id: dict[str, WorkflowNode],
-    specs: Mapping[str, NodeSpec],
+    specs: Mapping[str, Node],
 ) -> None:
     ft = by_id[link.from_node].type
     tt = by_id[link.to_node].type
@@ -78,7 +78,7 @@ def _validate_unique_link_targets(links: list[WorkflowLink]) -> None:
 def _validate_links(
     links: list[WorkflowLink],
     by_id: dict[str, WorkflowNode],
-    specs: Mapping[str, NodeSpec],
+    specs: Mapping[str, Node],
 ) -> None:
     _validate_unique_link_targets(links)
     for li, link in enumerate(links):
@@ -89,12 +89,12 @@ def _validate_links(
 def validate_workflow_graph(
     graph: WorkflowGraph,
     *,
-    node_type_specs: Mapping[str, NodeSpec],
+    node_type_specs: Mapping[str, Node],
 ) -> None:
     """Validate DAG structure, socket wiring, and acyclicity.
 
     ``node_type_specs`` maps each allowed ``node.type`` string to its
-    :class:`NodeSpec` so that socket names can be checked against the spec.
+    :class:`Node` so that socket names can be checked against the definition.
     """
     nodes = graph.nodes
     links = graph.links

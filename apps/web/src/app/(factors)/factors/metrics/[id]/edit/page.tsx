@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
-import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
+import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import { MetricWorkflowParamsSchemaEditor } from "../../ui/metric-workflow-params-schema-editor";
 
@@ -27,7 +27,7 @@ export default function EditEvaluationMetricPage() {
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
   const [workflowParams, setWorkflowParams] = useState<
-    MetricWorkflowParamSpec[]
+    NodeParamModel[]
   >([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);

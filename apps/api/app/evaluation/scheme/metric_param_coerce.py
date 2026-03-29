@@ -1,14 +1,17 @@
-"""Coerce workflow node params using :class:`MetricWorkflowParamSpec` lists."""
+"""Coerce evaluation metric node params using :class:`workflow.NodeParamModel` lists."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from .metric_schemas import RESERVED_METRIC_WORKFLOW_PARAM_KEYS, MetricWorkflowParamSpec
-from .metrics_store import EvaluationMetricsRegistry
+from workflow import NodeParamModel
+
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+
+from .metric_workflow_parameters import RESERVED_METRIC_WORKFLOW_PARAM_KEYS
 
 
-def coerce_metric_param_number(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+def coerce_metric_param_number(spec: NodeParamModel, val: Any) -> Any:
     if val is None or val == "":
         return None
     try:
@@ -27,7 +30,7 @@ def coerce_metric_param_number(spec: MetricWorkflowParamSpec, val: Any) -> Any:
     return int(x) if float(x).is_integer() else x
 
 
-def coerce_metric_param_boolean(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+def coerce_metric_param_boolean(spec: NodeParamModel, val: Any) -> Any:
     if val is None or val == "":
         return None if spec.default is None else bool(spec.default)
     if isinstance(val, bool):
@@ -37,7 +40,7 @@ def coerce_metric_param_boolean(spec: MetricWorkflowParamSpec, val: Any) -> Any:
     return bool(val)
 
 
-def coerce_metric_param_enum(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+def coerce_metric_param_enum(spec: NodeParamModel, val: Any) -> Any:
     choices = list(spec.enum_values)
     if not choices:
         return None
@@ -49,7 +52,7 @@ def coerce_metric_param_enum(spec: MetricWorkflowParamSpec, val: Any) -> Any:
     return choices[0]
 
 
-def coerce_metric_param_string(spec: MetricWorkflowParamSpec, val: Any) -> str | None:
+def coerce_metric_param_string(spec: NodeParamModel, val: Any) -> str | None:
     if val is None or val == "":
         if spec.default is None:
             return None
@@ -60,7 +63,7 @@ def coerce_metric_param_string(spec: MetricWorkflowParamSpec, val: Any) -> str |
     return s
 
 
-def coerce_metric_param_value(spec: MetricWorkflowParamSpec, val: Any) -> Any:
+def coerce_metric_param_value(spec: NodeParamModel, val: Any) -> Any:
     if spec.type == "number":
         return coerce_metric_param_number(spec, val)
     if spec.type == "boolean":
