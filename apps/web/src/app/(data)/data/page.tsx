@@ -12,7 +12,7 @@ export default function DataSectionPage() {
   return (
     <Page
       title="数据"
-      description="与侧栏「数据」分组一致：数据源与数据集（测试集）。"
+      description="与侧栏「数据」分组一致：数据源与数据集。"
       gap="sm"
     >
       <ul className="grid max-w-md gap-2">

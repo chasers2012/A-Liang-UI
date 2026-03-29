@@ -16,19 +16,19 @@ import {
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { deleteEvaluationTestSet, getQuantAgentApiBase } from "@/lib/quant-agent-api";
+import { deleteDataSet, getQuantAgentApiBase } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import {
-  refreshTestSetsPanelAtom,
-  testSetsPanelAtom,
-} from "@/models/evaluation-test-set/panel-detail.atom";
+  dataSetsPanelAtom,
+  refreshDataSetsPanelAtom,
+} from "@/models/data-set/panel-detail.atom";
 
-import { DeleteTestSetDialog } from "./ui/delete-test-set-dialog";
-import { TestSetTable } from "./ui/test-set-table";
+import { DeleteDataSetDialog } from "./ui/delete-data-set-dialog";
+import { DataSetTable } from "./ui/data-set-table";
 
-export function TestSetsPanel() {
-  const [panel, setPanel] = useAtom(testSetsPanelAtom);
-  const refresh = useSetAtom(refreshTestSetsPanelAtom);
+export function DataSetsPanel() {
+  const [panel, setPanel] = useAtom(dataSetsPanelAtom);
+  const refresh = useSetAtom(refreshDataSetsPanelAtom);
 
   useEffectMicrotask(() => {
     void refresh();
@@ -40,7 +40,7 @@ export function TestSetsPanel() {
     if (!deleteTarget) return;
     setPanel((p) => ({ ...p, deleting: true }));
     try {
-      await deleteEvaluationTestSet(deleteTarget.id);
+      await deleteDataSet(deleteTarget.id);
       setPanel((p) => ({ ...p, deleteTarget: null }));
       await refresh();
     } catch (e) {
@@ -57,7 +57,7 @@ export function TestSetsPanel() {
 
   return (
     <Page
-      title="测试集"
+      title="数据集"
       description={
         <>
           配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
@@ -77,17 +77,17 @@ export function TestSetsPanel() {
 
       <Card>
         <CardHeader>
-          <CardTitle>已配置的测试集</CardTitle>
+          <CardTitle>已配置的数据集</CardTitle>
           <CardDescription>
             共 {count} 条；支持多数据源绑定，详情页展示全部存储字段。
           </CardDescription>
           <CardAction>
             <Link
-              href="/data/test-sets/new"
+              href="/data/data-sets/new"
               className={cn(buttonVariants(), "gap-1.5")}
             >
               <Plus className="size-4" />
-              新增测试集
+              新增数据集
             </Link>
           </CardAction>
         </CardHeader>
@@ -97,11 +97,11 @@ export function TestSetsPanel() {
           )}
           {items && items.length === 0 && !loadError && (
             <p className="p-6 text-sm text-muted-foreground">
-              暂无测试集。请使用上方「新增测试集」开始配置。
+              暂无数据集。请使用上方「新增数据集」开始配置。
             </p>
           )}
           {items && items.length > 0 && (
-            <TestSetTable
+            <DataSetTable
               items={items}
               onDelete={(t) => setPanel((p) => ({ ...p, deleteTarget: t }))}
             />
@@ -109,7 +109,7 @@ export function TestSetsPanel() {
         </CardContent>
       </Card>
 
-      <DeleteTestSetDialog
+      <DeleteDataSetDialog
         target={deleteTarget}
         deleting={deleting}
         onDismiss={() => setPanel((p) => ({ ...p, deleteTarget: null }))}

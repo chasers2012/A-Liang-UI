@@ -25,8 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   createEvaluationProfile,
   listEvaluationNodeTypes,
-  listEvaluationTestSets,
-  type EvaluationTestSetPublic,
+  listDataSets,
+  type DataSetPublic,
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationWorkflowCanvasHandle } from "../ui/evaluation-workflow-canvas";
@@ -45,7 +45,7 @@ export default function NewEvaluationProfilePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [testSetId, setTestSetId] = useState<string>("__none__");
+  const [dataSetId, setDataSetId] = useState<string>("__none__");
   const [isDefault, setIsDefault] = useState(false);
   const [workflowJson, setWorkflowJson] = useState(DEFAULT_WORKFLOW_JSON);
   const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">(
@@ -55,12 +55,12 @@ export default function NewEvaluationProfilePage() {
   const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
   const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
-  const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
+  const [dataSets, setDataSets] = useState<DataSetPublic[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void listEvaluationTestSets().then(setTestSets).catch(() => { });
+    void listDataSets().then(setDataSets).catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function NewEvaluationProfilePage() {
       const created = await createEvaluationProfile({
         name: name.trim(),
         description: description.trim(),
-        test_set_id: testSetId === "__none__" ? null : testSetId,
+        data_set_id: dataSetId === "__none__" ? null : dataSetId,
         is_default: isDefault,
         workflow,
       });
@@ -175,12 +175,12 @@ export default function NewEvaluationProfilePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>默认测试集（可选）</Label>
+            <Label>默认数据集（可选）</Label>
             <Select
               modal={false}
-              value={testSetId}
+              value={dataSetId}
               onValueChange={(v) => {
-                if (v != null) setTestSetId(v);
+                if (v != null) setDataSetId(v);
               }}
             >
               <SelectTrigger>
@@ -188,7 +188,7 @@ export default function NewEvaluationProfilePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">无</SelectItem>
-                {testSets.map((t) => (
+                {dataSets.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
                   </SelectItem>

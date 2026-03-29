@@ -1,1 +1,1 @@
-"""Evaluation schemes: profiles, workflow graphs, test sets, and execution."""
+"""Evaluation schemes: profiles, workflow graphs, data sets, and execution."""

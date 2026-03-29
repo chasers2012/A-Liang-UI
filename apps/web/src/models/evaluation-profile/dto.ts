@@ -34,7 +34,7 @@ export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
-  test_set_id: string | null;
+  data_set_id: string | null;
   prepare: EvaluationProfilePrepareDto;
   workflow: EvaluationWorkflowDto;
   is_default: boolean;

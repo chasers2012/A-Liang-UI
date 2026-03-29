@@ -5,23 +5,23 @@ from fastapi import APIRouter, HTTPException
 from app.datasources.registry import get_by_id as ds_get_by_id
 from app.datasources.registry import load_registry as load_ds_registry
 from app.datasources.schemas import DataSourceRecord, utc_now_iso
-from app.evaluation.scheme.test_set_schemas import (
-    EvaluationTestSetCreate,
-    EvaluationTestSetDatasourceBindingInput,
-    EvaluationTestSetDatasourceBindingPublic,
-    EvaluationTestSetDatasourceBindingStored,
-    EvaluationTestSetPatch,
-    EvaluationTestSetPublic,
-    EvaluationTestSetRecord,
+from app.data_set.data_set_schemas import (
+    DataSetCreate,
+    DataSetDatasourceBindingInput,
+    DataSetDatasourceBindingPublic,
+    DataSetDatasourceBindingStored,
+    DataSetPatch,
+    DataSetPublic,
+    DataSetRecord,
 )
-from app.evaluation.scheme.test_sets_store import (
+from app.data_set.data_sets_store import (
     apply_default_uniqueness,
     get_by_id,
     load_file,
     save_file,
 )
 
-router = APIRouter(prefix="/evaluation-test-sets", tags=["evaluation-test-sets"])
+router = APIRouter(prefix="/data-sets", tags=["data-sets"])
 
 
 def _ds_meta(reg_ds, ds_id: str) -> tuple[str, str]:
@@ -31,29 +31,26 @@ def _ds_meta(reg_ds, ds_id: str) -> tuple[str, str]:
     return r.name, r.type
 
 
-def _bindings_to_public(
-    bindings: list[EvaluationTestSetDatasourceBindingStored], reg_ds
-) -> list[EvaluationTestSetDatasourceBindingPublic]:
-    out: list[EvaluationTestSetDatasourceBindingPublic] = []
+def _bindings_to_public(bindings: list[DataSetDatasourceBindingStored],
+                        reg_ds) -> list[DataSetDatasourceBindingPublic]:
+    out: list[DataSetDatasourceBindingPublic] = []
     for b in bindings:
         name, typ = _ds_meta(reg_ds, b.datasource_id)
         out.append(
-            EvaluationTestSetDatasourceBindingPublic(
-                datasource_id=b.datasource_id,
-                datasource_name=name,
-                datasource_type=typ,
-                dependencies=list(b.dependencies),
-            )
-        )
+            DataSetDatasourceBindingPublic(datasource_id=b.datasource_id,
+                                           datasource_name=name,
+                                           datasource_type=typ,
+                                           dependencies=list(b.dependencies)))
     return out
 
 
-def _to_public(rec: EvaluationTestSetRecord, reg_ds) -> EvaluationTestSetPublic:
-    return EvaluationTestSetPublic(
+def _to_public(rec: DataSetRecord, reg_ds) -> DataSetPublic:
+    return DataSetPublic(
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        datasource_bindings=_bindings_to_public(rec.datasource_bindings, reg_ds),
+        datasource_bindings=_bindings_to_public(rec.datasource_bindings,
+                                                reg_ds),
         start=rec.start,
         end=rec.end,
         stock_codes=list(rec.stock_codes),
@@ -69,13 +66,12 @@ def _validate_datasource_enabled(ds_id: str) -> DataSourceRecord:
     if rec is None:
         raise HTTPException(status_code=400, detail="数据源不存在")
     if not rec.enabled:
-        raise HTTPException(status_code=400, detail="数据源未启用，无法绑定到测试集")
+        raise HTTPException(status_code=400, detail="数据源未启用，无法绑定到数据集")
     return rec
 
 
 def _validate_bindings_inputs(
-    bindings: list[EvaluationTestSetDatasourceBindingInput],
-) -> None:
+    bindings: list[DataSetDatasourceBindingInput], ) -> None:
     if not bindings:
         raise HTTPException(status_code=400, detail="至少配置一条数据源绑定")
     n = len(bindings)
@@ -100,64 +96,66 @@ def _validate_bindings_inputs(
 
 
 def _inputs_to_stored(
-    bindings: list[EvaluationTestSetDatasourceBindingInput],
-) -> list[EvaluationTestSetDatasourceBindingStored]:
+    bindings: list[DataSetDatasourceBindingInput],
+) -> list[DataSetDatasourceBindingStored]:
     return [
-        EvaluationTestSetDatasourceBindingStored(
+        DataSetDatasourceBindingStored(
             datasource_id=b.datasource_id.strip(),
             dependencies=[x.strip() for x in b.dependencies if str(x).strip()],
-        )
-        for b in bindings
+        ) for b in bindings
     ]
 
 
 def _validate_and_touch_datasources(
-    bindings: list[EvaluationTestSetDatasourceBindingInput],
-) -> None:
+    bindings: list[DataSetDatasourceBindingInput], ) -> None:
     _validate_bindings_inputs(bindings)
     for b in bindings:
         _validate_datasource_enabled(b.datasource_id.strip())
 
 
-def _merge_patch(rec: EvaluationTestSetRecord, patch: EvaluationTestSetPatch) -> None:
+def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
         rec.name = str(data["name"]).strip()
     if "description" in data:
-        rec.description = "" if data["description"] is None else str(data["description"]).strip()
-    if "datasource_bindings" in data and data["datasource_bindings"] is not None:
+        rec.description = "" if data["description"] is None else str(
+            data["description"]).strip()
+    if "datasource_bindings" in data and data[
+            "datasource_bindings"] is not None:
         raw = data["datasource_bindings"]
-        inputs = [EvaluationTestSetDatasourceBindingInput.model_validate(x) for x in raw]
+        inputs = [DataSetDatasourceBindingInput.model_validate(x) for x in raw]
         rec.datasource_bindings = _inputs_to_stored(inputs)
     if "start" in data and data["start"] is not None:
         rec.start = str(data["start"]).strip()
     if "end" in data and data["end"] is not None:
         rec.end = str(data["end"]).strip()
     if "stock_codes" in data and data["stock_codes"] is not None:
-        rec.stock_codes = [c.strip() for c in data["stock_codes"] if str(c).strip()]
+        rec.stock_codes = [
+            c.strip() for c in data["stock_codes"] if str(c).strip()
+        ]
     if "is_default" in data:
         rec.is_default = bool(data["is_default"])
 
 
-@router.get("", response_model=list[EvaluationTestSetPublic])
-def list_evaluation_test_sets() -> list[EvaluationTestSetPublic]:
+@router.get("", response_model=list[DataSetPublic])
+def list_data_sets() -> list[DataSetPublic]:
     reg = load_file()
     reg_ds = load_ds_registry()
     return [_to_public(i, reg_ds) for i in reg.items]
 
 
-@router.get("/{ts_id}", response_model=EvaluationTestSetPublic)
-def get_evaluation_test_set(ts_id: str) -> EvaluationTestSetPublic:
+@router.get("/{data_set_id}", response_model=DataSetPublic)
+def get_data_set(data_set_id: str) -> DataSetPublic:
     reg = load_file()
-    rec = get_by_id(reg, ts_id)
+    rec = get_by_id(reg, data_set_id)
     if rec is None:
-        raise HTTPException(status_code=404, detail="测试集不存在")
+        raise HTTPException(status_code=404, detail="数据集不存在")
     reg_ds = load_ds_registry()
     return _to_public(rec, reg_ds)
 
 
-@router.post("", response_model=EvaluationTestSetPublic)
-def create_evaluation_test_set(body: EvaluationTestSetCreate) -> EvaluationTestSetPublic:
+@router.post("", response_model=DataSetPublic)
+def create_data_set(body: DataSetCreate) -> DataSetPublic:
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="名称不能为空")
     _validate_and_touch_datasources(list(body.datasource_bindings))
@@ -174,12 +172,12 @@ def create_evaluation_test_set(body: EvaluationTestSetCreate) -> EvaluationTestS
     return _to_public(new_rec, reg_ds)
 
 
-@router.patch("/{ts_id}", response_model=EvaluationTestSetPublic)
-def patch_evaluation_test_set(ts_id: str, body: EvaluationTestSetPatch) -> EvaluationTestSetPublic:
+@router.patch("/{data_set_id}", response_model=DataSetPublic)
+def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
     reg = load_file()
-    rec = get_by_id(reg, ts_id)
+    rec = get_by_id(reg, data_set_id)
     if rec is None:
-        raise HTTPException(status_code=404, detail="测试集不存在")
+        raise HTTPException(status_code=404, detail="数据集不存在")
 
     if body.datasource_bindings is not None:
         _validate_and_touch_datasources(list(body.datasource_bindings))
@@ -189,15 +187,12 @@ def patch_evaluation_test_set(ts_id: str, body: EvaluationTestSetPatch) -> Evalu
         raise HTTPException(status_code=400, detail="名称不能为空")
     if not rec.datasource_bindings:
         raise HTTPException(status_code=400, detail="至少保留一条数据源绑定")
-    _validate_bindings_inputs(
-        [
-            EvaluationTestSetDatasourceBindingInput(
-                datasource_id=b.datasource_id,
-                dependencies=list(b.dependencies),
-            )
-            for b in rec.datasource_bindings
-        ]
-    )
+    _validate_bindings_inputs([
+        DataSetDatasourceBindingInput(
+            datasource_id=b.datasource_id,
+            dependencies=list(b.dependencies),
+        ) for b in rec.datasource_bindings
+    ])
     for b in rec.datasource_bindings:
         _validate_datasource_enabled(b.datasource_id)
 
@@ -214,11 +209,11 @@ def patch_evaluation_test_set(ts_id: str, body: EvaluationTestSetPatch) -> Evalu
     return _to_public(rec, reg_ds)
 
 
-@router.delete("/{ts_id}", status_code=204)
-def delete_evaluation_test_set(ts_id: str) -> None:
+@router.delete("/{data_set_id}", status_code=204)
+def delete_data_set(data_set_id: str) -> None:
     reg = load_file()
     n = len(reg.items)
-    reg.items = [i for i in reg.items if i.id != ts_id]
+    reg.items = [i for i in reg.items if i.id != data_set_id]
     if len(reg.items) == n:
-        raise HTTPException(status_code=404, detail="测试集不存在")
+        raise HTTPException(status_code=404, detail="数据集不存在")
     save_file(reg)

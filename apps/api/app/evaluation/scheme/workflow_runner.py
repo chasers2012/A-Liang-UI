@@ -256,7 +256,7 @@ def run_evaluation_profile_workflow(
     factor_id: str,
     profile: EvaluationProfileRecord,
     *,
-    test_set_id: str | None,
+    data_set_id: str | None,
 ) -> FactorEvaluationSnapshot:
     profile = profile.model_copy(
         update={
@@ -268,7 +268,7 @@ def run_evaluation_profile_workflow(
     )
     wf = profile.workflow
     err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
-        factor_id, test_set_id=test_set_id
+        factor_id, data_set_id=data_set_id
     )
     if err is not None:
         return err.model_copy(update={"evaluation_profile_id": profile.id})

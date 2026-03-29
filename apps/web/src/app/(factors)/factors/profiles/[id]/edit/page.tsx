@@ -27,9 +27,9 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   getEvaluationProfile,
   listEvaluationNodeTypes,
-  listEvaluationTestSets,
+  listDataSets,
   patchEvaluationProfile,
-  type EvaluationTestSetPublic,
+  type DataSetPublic,
   type NodeTypeDefinitionPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationWorkflowCanvasHandle } from "../../ui/evaluation-workflow-canvas";
@@ -50,7 +50,7 @@ export default function EditEvaluationProfilePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [testSetId, setTestSetId] = useState<string>("__none__");
+  const [dataSetId, setDataSetId] = useState<string>("__none__");
   const [isDefault, setIsDefault] = useState(false);
   const [workflowJson, setWorkflowJson] = useState("{}");
   const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">(
@@ -59,14 +59,14 @@ export default function EditEvaluationProfilePage() {
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
   const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
-  const [testSets, setTestSets] = useState<EvaluationTestSetPublic[]>([]);
+  const [dataSets, setDataSets] = useState<DataSetPublic[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void listEvaluationTestSets().then(setTestSets).catch(() => { });
+    void listDataSets().then(setDataSets).catch(() => { });
   }, []);
 
   const load = useCallback(async () => {
@@ -81,7 +81,7 @@ export default function EditEvaluationProfilePage() {
       setCatalog(nodeTypes);
       setName(d.name);
       setDescription(d.description);
-      setTestSetId(d.test_set_id ?? "__none__");
+      setDataSetId(d.data_set_id ?? "__none__");
       setIsDefault(d.is_default);
       setWorkflowJson(JSON.stringify(d.workflow, null, 2));
       setCanvasKey((k) => k + 1);
@@ -135,7 +135,7 @@ export default function EditEvaluationProfilePage() {
       await patchEvaluationProfile(id, {
         name: name.trim(),
         description: description.trim(),
-        test_set_id: testSetId === "__none__" ? null : testSetId,
+        data_set_id: dataSetId === "__none__" ? null : dataSetId,
         is_default: isDefault,
         workflow,
       });
@@ -218,12 +218,12 @@ export default function EditEvaluationProfilePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label>默认测试集（可选）</Label>
+            <Label>默认数据集（可选）</Label>
             <Select
               modal={false}
-              value={testSetId}
+              value={dataSetId}
               onValueChange={(v) => {
-                if (v != null) setTestSetId(v);
+                if (v != null) setDataSetId(v);
               }}
             >
               <SelectTrigger>
@@ -231,7 +231,7 @@ export default function EditEvaluationProfilePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">无</SelectItem>
-                {testSets.map((t) => (
+                {dataSets.map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
                   </SelectItem>

@@ -12,11 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { EvaluationTestSetPublic } from "@/lib/quant-agent-api";
+import type { DataSetPublic } from "@/lib/quant-agent-api";
 
 type Props = {
-  items: EvaluationTestSetPublic[];
-  onDelete: (row: EvaluationTestSetPublic) => void;
+  items: DataSetPublic[];
+  onDelete: (row: DataSetPublic) => void;
 };
 
 function stockSummary(codes: string[]): string {
@@ -25,7 +25,7 @@ function stockSummary(codes: string[]): string {
   return `${codes.length} 只`;
 }
 
-function datasourceSummary(row: EvaluationTestSetPublic): string {
+function datasourceSummary(row: DataSetPublic): string {
   const b = row.datasource_bindings;
   if (!b.length) return "—";
   if (b.length === 1) {
@@ -34,7 +34,7 @@ function datasourceSummary(row: EvaluationTestSetPublic): string {
   return `${b.length} 个数据源`;
 }
 
-export function TestSetTable({ items, onDelete }: Props) {
+export function DataSetTable({ items, onDelete }: Props) {
   return (
     <Table>
       <TableHeader>
@@ -79,7 +79,7 @@ export function TestSetTable({ items, onDelete }: Props) {
             <TableCell className="text-right">
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Link
-                  href={`/data/test-sets/${encodeURIComponent(row.id)}`}
+                  href={`/data/data-sets/${encodeURIComponent(row.id)}`}
                   className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                 >
                   详情

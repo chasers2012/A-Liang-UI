@@ -18,4 +18,4 @@ def test_evaluation_run_no_datasource(client):
 
     r2 = client.post(f"/factors/{fid}/evaluations/run")
     assert r2.status_code == 400
-    assert "测试集" in r2.json()["detail"]
+    assert "数据集" in r2.json()["detail"]

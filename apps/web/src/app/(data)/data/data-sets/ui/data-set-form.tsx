@@ -31,31 +31,31 @@ import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { cn } from "@/lib/utils";
 import {
   ApiError,
-  createEvaluationTestSet,
-  getEvaluationTestSet,
+  createDataSet,
+  getDataSet,
   listDatasources,
-  patchEvaluationTestSet,
+  patchDataSet,
+  type DataSetPublic,
   type DataSourcePublic,
-  type EvaluationTestSetPublic,
 } from "@/lib/quant-agent-api";
 
-export type TestSetBindingFormRow = {
+export type DataSetBindingFormRow = {
   datasource_id: string;
   /** 因子依赖列名；顺序为预设字段在前，其余按填写顺序 */
   dependencies: string[];
 };
 
-export type TestSetFormState = {
+export type DataSetFormState = {
   name: string;
   description: string;
-  bindings: TestSetBindingFormRow[];
+  bindings: DataSetBindingFormRow[];
   start: string;
   end: string;
   stock_codes_text: string;
   is_default: boolean;
 };
 
-export function emptyTestSetForm(): TestSetFormState {
+export function emptyDataSetForm(): DataSetFormState {
   return {
     name: "",
     description: "",
@@ -73,7 +73,7 @@ function toDateInputValue(s: string): string {
   return t;
 }
 
-export function hydrateTestSetForm(row: EvaluationTestSetPublic): TestSetFormState {
+export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
   const bindings =
     row.datasource_bindings.length > 0
       ? row.datasource_bindings.map((b) => ({
@@ -139,28 +139,28 @@ function normalizeBindingDependencies(deps: string[]): string[] {
   return out;
 }
 
-const TEST_SET_MAIN_FORM_ID = "test-set-main-form";
+const DATA_SET_MAIN_FORM_ID = "data-set-main-form";
 
 type Props = {
   mode: "create" | "edit";
-  testSetId?: string;
+  dataSetId?: string;
 };
 
-export function TestSetForm({ mode, testSetId }: Props) {
+export function DataSetForm({ mode, dataSetId }: Props) {
   const router = useRouter();
   const [datasources, setDatasources] = useState<DataSourcePublic[]>([]);
-  const [form, setForm] = useState<TestSetFormState>(emptyTestSetForm);
+  const [form, setForm] = useState<DataSetFormState>(emptyDataSetForm);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(mode === "edit");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const set = useCallback((patch: Partial<TestSetFormState>) => {
+  const set = useCallback((patch: Partial<DataSetFormState>) => {
     setForm((f) => ({ ...f, ...patch }));
   }, []);
 
   const updateBinding = useCallback(
-    (index: number, patch: Partial<TestSetBindingFormRow>) => {
+    (index: number, patch: Partial<DataSetBindingFormRow>) => {
       setForm((f) => ({
         ...f,
         bindings: f.bindings.map((row, i) =>
@@ -194,10 +194,10 @@ export function TestSetForm({ mode, testSetId }: Props) {
         const ds = await listDatasources();
         if (cancelled) return;
         setDatasources(ds);
-        if (mode === "edit" && testSetId) {
-          const row = await getEvaluationTestSet(testSetId);
+        if (mode === "edit" && dataSetId) {
+          const row = await getDataSet(dataSetId);
           if (cancelled) return;
-          setForm(hydrateTestSetForm(row));
+          setForm(hydrateDataSetForm(row));
         } else if (mode === "create") {
           const enabled = ds.filter((d) => d.enabled);
           if (enabled.length === 1) {
@@ -219,7 +219,7 @@ export function TestSetForm({ mode, testSetId }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [mode, testSetId]);
+  }, [mode, dataSetId]);
 
   const enabledDs = datasources.filter((d) => d.enabled);
   const dsItems: Record<string, string> = {};
@@ -270,11 +270,11 @@ export function TestSetForm({ mode, testSetId }: Props) {
     setSubmitting(true);
     try {
       if (mode === "create") {
-        const created = await createEvaluationTestSet(payload);
-        router.push(`/data/test-sets/${encodeURIComponent(created.id)}`);
-      } else if (testSetId) {
-        await patchEvaluationTestSet(testSetId, payload);
-        router.push(`/data/test-sets/${encodeURIComponent(testSetId)}`);
+        const created = await createDataSet(payload);
+        router.push(`/data/data-sets/${encodeURIComponent(created.id)}`);
+      } else if (dataSetId) {
+        await patchDataSet(dataSetId, payload);
+        router.push(`/data/data-sets/${encodeURIComponent(dataSetId)}`);
       }
     } catch (err) {
       const msg =
@@ -301,10 +301,10 @@ export function TestSetForm({ mode, testSetId }: Props) {
     return (
       <Page gap="sm">
         <Alert variant="destructive">
-          <AlertTitle>无法加载测试集</AlertTitle>
+          <AlertTitle>无法加载数据集</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-        <Link href="/data/test-sets" className={cn(buttonVariants({ variant: "outline" }))}>
+        <Link href="/data/data-sets" className={cn(buttonVariants({ variant: "outline" }))}>
           返回列表
         </Link>
       </Page>
@@ -314,24 +314,24 @@ export function TestSetForm({ mode, testSetId }: Props) {
   return (
     <Page
       gap="none"
-      title={mode === "create" ? "新增测试集" : "编辑测试集"}
+      title={mode === "create" ? "新增数据集" : "编辑数据集"}
       description="可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。"
       headerClassName="mb-8"
       action={
         <PageFormHeaderActions
-          formId={TEST_SET_MAIN_FORM_ID}
+          formId={DATA_SET_MAIN_FORM_ID}
           submitting={submitting}
           submitDisabled={enabledDs.length === 0}
           cancelHref={
-            mode === "edit" && testSetId
-              ? `/data/test-sets/${encodeURIComponent(testSetId)}`
-              : "/data/test-sets"
+            mode === "edit" && dataSetId
+              ? `/data/data-sets/${encodeURIComponent(dataSetId)}`
+              : "/data/data-sets"
           }
         />
       }
     >
       <form
-        id={TEST_SET_MAIN_FORM_ID}
+        id={DATA_SET_MAIN_FORM_ID}
         onSubmit={(e) => void onSubmit(e)}
         className="space-y-8"
       >
@@ -379,9 +379,9 @@ export function TestSetForm({ mode, testSetId }: Props) {
             </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
               <div>
-                <p className="text-sm font-medium">设为默认评价测试集</p>
+                <p className="text-sm font-medium">设为默认评价数据集</p>
                 <p className="text-xs text-muted-foreground">
-                  未指定测试集时优先使用；否则回退环境变量与数据源默认。
+                  未指定数据集时优先使用；否则回退环境变量与数据源默认。
                 </p>
               </div>
               <Switch

@@ -8,7 +8,7 @@ import type {
   EvaluationMetricDetailPublic,
   EvaluationMetricSummaryPublic,
   EvaluationProfilePublic,
-  EvaluationTestSetPublic,
+  DataSetPublic,
   FactorCodeSnapshotDetailPublic,
   FactorCodeSnapshotSummaryPublic,
   FactorDefaultSourcePublic,
@@ -261,9 +261,7 @@ export function fetchSqlTableColumns(
     {
       method: "POST",
       body: JSON.stringify({
-        ...(body.datasource_id
-          ? { datasource_id: body.datasource_id }
-          : {}),
+        ...(body.datasource_id ? { datasource_id: body.datasource_id } : {}),
         db_driver: body.db_driver,
         db_host: body.db_host,
         db_port: body.db_port ?? null,
@@ -348,39 +346,35 @@ export function getFactorEvaluationHistory(
   );
 }
 
-export function listEvaluationTestSets(): Promise<EvaluationTestSetPublic[]> {
-  return apiFetchJson<EvaluationTestSetPublic[]>("/evaluation-test-sets");
+export function listDataSets(): Promise<DataSetPublic[]> {
+  return apiFetchJson<DataSetPublic[]>("/data-sets");
 }
 
-export function getEvaluationTestSet(
-  id: string,
-): Promise<EvaluationTestSetPublic> {
-  return apiFetchJson<EvaluationTestSetPublic>(
-    `/evaluation-test-sets/${encodeURIComponent(id)}`,
+export function getDataSet(id: string): Promise<DataSetPublic> {
+  return apiFetchJson<DataSetPublic>(
+    `/data-sets/${encodeURIComponent(id)}`,
   );
 }
 
-export function createEvaluationTestSet(
-  body: unknown,
-): Promise<EvaluationTestSetPublic> {
-  return apiFetchJson<EvaluationTestSetPublic>("/evaluation-test-sets", {
+export function createDataSet(body: unknown): Promise<DataSetPublic> {
+  return apiFetchJson<DataSetPublic>("/data-sets", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export function patchEvaluationTestSet(
+export function patchDataSet(
   id: string,
   body: unknown,
-): Promise<EvaluationTestSetPublic> {
-  return apiFetchJson<EvaluationTestSetPublic>(
-    `/evaluation-test-sets/${encodeURIComponent(id)}`,
+): Promise<DataSetPublic> {
+  return apiFetchJson<DataSetPublic>(
+    `/data-sets/${encodeURIComponent(id)}`,
     { method: "PATCH", body: JSON.stringify(body) },
   );
 }
 
-export function deleteEvaluationTestSet(id: string): Promise<void> {
-  return apiFetchJson<void>(`/evaluation-test-sets/${encodeURIComponent(id)}`, {
+export function deleteDataSet(id: string): Promise<void> {
+  return apiFetchJson<void>(`/data-sets/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
@@ -388,14 +382,14 @@ export function deleteEvaluationTestSet(id: string): Promise<void> {
 export function runFactorEvaluation(
   factorId: string,
   options?: {
-    testSetId?: string | null;
+    dataSetId?: string | null;
     evaluationProfileId?: string | null;
   },
 ): Promise<FactorEvaluationRowPublic> {
   const init: RequestInit = { method: "POST" };
   if (options !== undefined) {
     init.body = JSON.stringify({
-      test_set_id: options.testSetId ?? null,
+      data_set_id: options.dataSetId ?? null,
       evaluation_profile_id: options.evaluationProfileId ?? null,
     });
   }
@@ -405,7 +399,9 @@ export function runFactorEvaluation(
   );
 }
 
-export function listEvaluationMetrics(): Promise<EvaluationMetricSummaryPublic[]> {
+export function listEvaluationMetrics(): Promise<
+  EvaluationMetricSummaryPublic[]
+> {
   return apiFetchJson<EvaluationMetricSummaryPublic[]>("/evaluation-metrics");
 }
 

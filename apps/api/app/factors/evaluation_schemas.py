@@ -60,5 +60,5 @@ class FactorEvaluationsSummaryPublic(BaseModel):
 
 
 class FactorEvaluationRunBody(BaseModel):
-    test_set_id: str | None = None
+    data_set_id: str | None = None
     evaluation_profile_id: str | None = None

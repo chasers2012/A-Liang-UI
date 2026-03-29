@@ -245,7 +245,7 @@ def post_factor_evaluation_run(
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     b = body or FactorEvaluationRunBody()
-    ts_id = b.test_set_id
+    run_data_set_id = b.data_set_id
     prof = None
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
@@ -266,7 +266,7 @@ def post_factor_evaluation_run(
     try:
         snap = run_evaluation_for_factor(
             factor_id,
-            test_set_id=ts_id,
+            data_set_id=run_data_set_id,
             evaluation_profile=prof,
         )
     except ValueError as e:

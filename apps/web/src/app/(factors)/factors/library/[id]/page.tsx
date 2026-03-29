@@ -512,7 +512,7 @@ export default function FactorDetailPage() {
     setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
-        testSetId: null,
+        dataSetId: null,
         evaluationProfileId: runProfileId,
       });
       await refreshEvalRow();

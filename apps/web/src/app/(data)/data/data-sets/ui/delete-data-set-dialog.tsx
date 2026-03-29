@@ -1,16 +1,16 @@
 "use client";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { EvaluationTestSetPublic } from "@/lib/quant-agent-api";
+import type { DataSetPublic } from "@/lib/quant-agent-api";
 
 type Props = {
-  target: EvaluationTestSetPublic | null;
+  target: DataSetPublic | null;
   deleting: boolean;
   onDismiss: () => void;
   onConfirm: () => void;
 };
 
-export function DeleteTestSetDialog({
+export function DeleteDataSetDialog({
   target,
   deleting,
   onDismiss,
@@ -22,7 +22,7 @@ export function DeleteTestSetDialog({
       onOpenChange={(o) => {
         if (!o) onDismiss();
       }}
-      title="删除测试集"
+      title="删除数据集"
       description={<>确定删除「{target?.name}」？此操作不可撤销。</>}
       confirmLabel="删除"
       confirmVariant="destructive"

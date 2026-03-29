@@ -45,7 +45,7 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       icon: TableProperties,
       items: [
         { title: "数据源", url: "/data/datasources", icon: Database },
-        { title: "数据集", url: "/data/test-sets", icon: Table2 },
+        { title: "数据集", url: "/data/data-sets", icon: Table2 },
       ],
     },
     { title: "策略", url: "/strategies", icon: GitBranch },

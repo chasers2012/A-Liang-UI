@@ -56,7 +56,7 @@ class EvaluationProfileRecord(BaseModel):
     id: str
     name: str
     description: str = ""
-    test_set_id: str | None = None
+    data_set_id: str | None = None
     prepare: EvaluationProfilePrepare = Field(default_factory=EvaluationProfilePrepare)
     workflow: EvaluationWorkflow = Field(default_factory=EvaluationWorkflow)
     is_default: bool = False
@@ -72,7 +72,7 @@ class EvaluationProfilesFile(BaseModel):
 class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
-    test_set_id: str | None = None
+    data_set_id: str | None = None
     prepare: EvaluationProfilePrepare | None = None
     workflow: EvaluationWorkflow | None = None
     is_default: bool = False
@@ -94,7 +94,7 @@ class EvaluationProfileCreate(BaseModel):
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),
-            test_set_id=(self.test_set_id or "").strip() or None,
+            data_set_id=(self.data_set_id or "").strip() or None,
             prepare=prep,
             workflow=wf,
             is_default=self.is_default,
@@ -106,7 +106,7 @@ class EvaluationProfileCreate(BaseModel):
 class EvaluationProfilePatch(BaseModel):
     name: str | None = None
     description: str | None = None
-    test_set_id: str | None = None
+    data_set_id: str | None = None
     prepare: EvaluationProfilePrepare | None = None
     workflow: EvaluationWorkflow | None = None
     is_default: bool | None = None
@@ -116,7 +116,7 @@ class EvaluationProfilePublic(BaseModel):
     id: str
     name: str
     description: str
-    test_set_id: str | None = None
+    data_set_id: str | None = None
     prepare: EvaluationProfilePrepare
     workflow: EvaluationWorkflow
     is_default: bool

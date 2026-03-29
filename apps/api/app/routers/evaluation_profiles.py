@@ -39,7 +39,7 @@ def _to_public(rec) -> EvaluationProfilePublic:
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        test_set_id=rec.test_set_id,
+        data_set_id=rec.data_set_id,
         prepare=rec.prepare,
         workflow=wf,
         is_default=rec.is_default,
@@ -180,9 +180,9 @@ def patch_evaluation_profile(
         rec.name = str(body.name).strip()
     if "description" in data:
         rec.description = (body.description or "").strip()
-    if "test_set_id" in data:
-        tid = (body.test_set_id or "").strip() if body.test_set_id is not None else ""
-        rec.test_set_id = tid or None
+    if "data_set_id" in data:
+        tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
+        rec.data_set_id = tid or None
     if "prepare" in data and body.prepare is not None:
         rec.prepare = body.prepare
     if "workflow" in data and body.workflow is not None:

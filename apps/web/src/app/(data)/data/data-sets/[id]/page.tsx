@@ -16,27 +16,27 @@ import {
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { deleteEvaluationTestSet } from "@/lib/quant-agent-api";
+import { deleteDataSet } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
 import {
-  loadTestSetDetailAtomFamily,
-  testSetDetailAtomFamily,
-} from "@/models/evaluation-test-set/panel-detail.atom";
+  dataSetDetailAtomFamily,
+  loadDataSetDetailAtomFamily,
+} from "@/models/data-set/panel-detail.atom";
 
-import { DeleteTestSetDialog } from "../ui/delete-test-set-dialog";
+import { DeleteDataSetDialog } from "../ui/delete-data-set-dialog";
 
 function formatIso(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
 }
 
-export default function TestSetDetailPage() {
+export default function DataSetDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const raw = params.id;
   const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
 
-  const [state, setState] = useAtom(testSetDetailAtomFamily(id));
-  const load = useSetAtom(loadTestSetDetailAtomFamily(id));
+  const [state, setState] = useAtom(dataSetDetailAtomFamily(id));
+  const load = useSetAtom(loadDataSetDetailAtomFamily(id));
 
   useEffectMicrotask(() => {
     void load();
@@ -48,9 +48,9 @@ export default function TestSetDetailPage() {
     if (!row) return;
     setState((s) => ({ ...s, deleting: true }));
     try {
-      await deleteEvaluationTestSet(row.id);
+      await deleteDataSet(row.id);
       setState((s) => ({ ...s, deleteOpen: false }));
-      router.push("/data/test-sets");
+      router.push("/data/data-sets");
     } catch (e) {
       setState((s) => ({
         ...s,
@@ -83,10 +83,10 @@ export default function TestSetDetailPage() {
     return (
       <Page gap="sm">
         <Alert variant="destructive">
-          <AlertTitle>无法加载测试集</AlertTitle>
+          <AlertTitle>无法加载数据集</AlertTitle>
           <AlertDescription>{error ?? "未知错误"}</AlertDescription>
         </Alert>
-        <Link href="/data/test-sets" className={cn(buttonVariants({ variant: "outline" }))}>
+        <Link href="/data/data-sets" className={cn(buttonVariants({ variant: "outline" }))}>
           返回列表
         </Link>
       </Page>
@@ -100,7 +100,7 @@ export default function TestSetDetailPage() {
       action={
         <>
           <Link
-            href={`/data/test-sets/${encodeURIComponent(id)}/edit`}
+            href={`/data/data-sets/${encodeURIComponent(id)}/edit`}
             className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
           >
             <Pencil className="size-4" />
@@ -222,7 +222,7 @@ export default function TestSetDetailPage() {
         </CardContent>
       </Card>
 
-      <DeleteTestSetDialog
+      <DeleteDataSetDialog
         target={deleteOpen ? row : null}
         deleting={deleting}
         onDismiss={() => setState((s) => ({ ...s, deleteOpen: false }))}
