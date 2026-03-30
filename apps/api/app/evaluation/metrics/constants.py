@@ -1,4 +1,5 @@
 USER_METRIC_WORKFLOW_ROOT = "workflow_nodes/evaluation"
+REGISTRY_FILENAME = "evaluation/metrics/registry.json"
 
 DEFAULT_METRIC_SOURCE = """
 from __future__ import annotations

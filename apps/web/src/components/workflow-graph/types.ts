@@ -1,5 +1,7 @@
 /** 与具体业务（评价方案等）解耦的 LiteGraph 工作流图数据模型。 */
 
+import { NodeParamModel } from "@/models";
+
 export type WorkflowSocketDefinition = {
   name: string;
   required: boolean;
@@ -47,7 +49,7 @@ export type WorkflowNodeDisplayData = {
   label: string;
   inputs: WorkflowSocketDefinition[];
   outputs: WorkflowSocketDefinition[];
-  params: Record<string, unknown>;
+  params: Record<string, NodeParamModel>;
 };
 
 export type WorkflowGraphSelectedNode = {

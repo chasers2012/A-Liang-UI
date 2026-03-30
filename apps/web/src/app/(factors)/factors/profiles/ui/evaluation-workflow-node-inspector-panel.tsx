@@ -27,7 +27,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
     onParamChange,
     onDeleteNode,
   } = props;
-  const workflowParamSpecs = node?.data.params || [];
+  const workflowParamSpecs = Object.values(node?.data.params || {}) || [];
 
   if (!node) {
     return (

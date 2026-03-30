@@ -19,6 +19,11 @@ from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 
+metric_source_validators = [
+    validate_source_syntax,
+    EvaluationMetricPackageManager.load_user_evaluation_metric_class,
+]
+
 
 def _detail(rec: EvaluationMetricRecord) -> EvaluationMetricDetailPublic:
     summary = record_to_summary(rec)
@@ -35,41 +40,22 @@ def _merge_patch(rec: EvaluationMetricRecord, patch: EvaluationMetricPatch) -> N
         rec.description = (data["description"] or "").strip()
 
 
-def _validate_and_write_source(rec: EvaluationMetricRecord, source: str) -> None:
-    try:
-        EvaluationMetricsRegistry.write_source(
-            rec,
-            source,
-            validators=[
-                validate_source_syntax,
-                EvaluationMetricPackageManager.load_user_evaluation_metric_class,
-            ],
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-
 @router.get("", response_model=list[EvaluationMetricSummaryPublic])
 def list_evaluation_metrics() -> list[EvaluationMetricSummaryPublic]:
+    """获取评价指标列表"""
     items = EvaluationMetricsRegistry.list_items()
     return [record_to_summary(i) for i in items]
 
 
 @router.get("/template", response_model=str)
 def get_evaluation_metric_template() -> str:
+    """获取评价指标模板"""
     return DEFAULT_METRIC_SOURCE
-
-
-@router.get("/{metric_id}", response_model=EvaluationMetricDetailPublic)
-def get_evaluation_metric(metric_id: str) -> EvaluationMetricDetailPublic:
-    rec = EvaluationMetricsRegistry.get_item(metric_id)
-    if rec is None:
-        raise HTTPException(status_code=404, detail="评价指标不存在")
-    return _detail(rec)
 
 
 @router.post("", response_model=EvaluationMetricDetailPublic)
 def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDetailPublic:
+    """创建评价指标"""
     mid = new_metric_id()
     now = utc_now_iso()
     rec = body.to_record(mid, now)
@@ -77,10 +63,7 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
         EvaluationMetricPackageManager.write_metric_package(
             mid,
             body.source,
-            validators=[
-                validate_source_syntax,
-                EvaluationMetricPackageManager.load_user_evaluation_metric_class,
-            ],
+            validators=metric_source_validators,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -88,10 +71,20 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     return _detail(rec)
 
 
+@router.get("/{metric_id}", response_model=EvaluationMetricDetailPublic)
+def get_evaluation_metric(metric_id: str) -> EvaluationMetricDetailPublic:
+    """获取评价指标详情"""
+    rec = EvaluationMetricsRegistry.get_item(metric_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="评价指标不存在")
+    return _detail(rec)
+
+
 @router.patch("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def patch_evaluation_metric(
     metric_id: str, body: EvaluationMetricPatch
 ) -> EvaluationMetricDetailPublic:
+    """修改评价指标"""
     unset = body.model_dump(exclude_unset=True)
 
     def _apply(rec: EvaluationMetricRecord) -> None:
@@ -99,7 +92,14 @@ def patch_evaluation_metric(
         if "workflow_parameters" in unset and body.workflow_parameters is not None:
             rec.workflow_parameters = list(body.workflow_parameters)
         if "source" in unset and body.source is not None:
-            _validate_and_write_source(rec, body.source)
+            try:
+                EvaluationMetricsRegistry.write_source(
+                    rec,
+                    body.source,
+                    validators=metric_source_validators,
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
         rec.updated_at = utc_now_iso()
 
     rec = EvaluationMetricsRegistry.update_item(metric_id, _apply)
@@ -110,6 +110,7 @@ def patch_evaluation_metric(
 
 @router.delete("/{metric_id}", status_code=204)
 def delete_evaluation_metric(metric_id: str) -> None:
+    """删除评价指标"""
     rec = EvaluationMetricsRegistry.get_item(metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
