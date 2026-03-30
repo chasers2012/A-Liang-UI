@@ -56,3 +56,71 @@ def test_handler_evaluate_entry_calls_evaluate_and_publish():
         {"clean_factor": [1, 2], "q": 5},
     )
     assert out == {"out": "done:5", "hit": "published:n1:out"}
+
+
+@workflow_node(
+    label="t2",
+    description="",
+    entry="evaluate",
+    input_sockets=[
+        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+    ],
+    output_sockets=[
+        workflow_socket("first", value_type="scalar_json"),
+        workflow_socket("second", value_type="scalar_json"),
+    ],
+)
+class TestEvalTupleNode:
+    def evaluate(self, clean_factor: object, **kwargs: object) -> tuple[str, str]:
+        _ = (clean_factor, kwargs)
+        return "a", "b"
+
+
+def test_handler_evaluate_tuple_without_publisher() -> None:
+    from workflow import workflow_node_type_key
+
+    tid = workflow_node_type_key(TestEvalTupleNode)
+    node = WorkflowNode(id="n2", type=tid, params={})
+    handler = handler_from_node_class(TestEvalTupleNode)
+    out = handler(node, {"clean_factor": [1]})
+    assert dict(out) == {"first": "a", "second": "b"}
+
+
+@workflow_node(
+    label="t3",
+    description="",
+    entry="evaluate",
+    input_sockets=[
+        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+    ],
+    output_sockets=[
+        workflow_socket("first", value_type="scalar_json"),
+        workflow_socket("second", value_type="scalar_json"),
+    ],
+)
+class TestEvalTupleWithPublishNode:
+    @classmethod
+    def workflow_publish_evaluate_result(
+        cls,
+        node: WorkflowNode,
+        inputs: dict[str, Any],
+        raw: Any,
+        primary_socket: str,
+    ) -> dict[str, Any]:
+        _ = inputs
+        return {"second": f"pub:{primary_socket}:{raw[1]}"}
+
+    def evaluate(self, clean_factor: object, **kwargs: object) -> tuple[str, str]:
+        _ = (clean_factor, kwargs)
+        return "x", "y"
+
+
+def test_handler_evaluate_tuple_with_publisher_prefers_publisher_for_second() -> None:
+    from workflow import workflow_node_type_key
+
+    tid = workflow_node_type_key(TestEvalTupleWithPublishNode)
+    node = WorkflowNode(id="n3", type=tid, params={})
+    handler = handler_from_node_class(TestEvalTupleWithPublishNode)
+    out = handler(node, {"clean_factor": [1]})
+    assert out["first"] == "x"
+    assert out["second"] == "pub:first:y"

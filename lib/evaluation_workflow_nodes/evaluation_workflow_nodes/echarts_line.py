@@ -31,6 +31,6 @@ def _demo_line_option() -> dict[str, Any]:
     entry="execute",
 )
 class EchartsLineNode:
-    def execute(self, **kwargs: Any) -> dict[str, Any]:
+    def execute(self, **kwargs: Any) -> tuple[dict[str, Any]]:
         option = _demo_line_option()
-        return {"out": option}
+        return (option,)

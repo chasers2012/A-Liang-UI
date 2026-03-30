@@ -23,15 +23,14 @@ from workflow import workflow_node, workflow_socket
     ],
 )
 class BuiltinMeanReturnSpreadNode:
-    def execute(self, **kwargs: Any) -> dict[str, Any]:
+    def execute(self, **kwargs: Any) -> tuple[Any, dict[str, float]]:
         fdc = kwargs["clean_factor"]
         if not isinstance(fdc, pd.DataFrame):
             raise TypeError("clean_factor 须为 DataFrame")
         last_quantiles: int = int(kwargs["last_quantiles"])
         raw = MeanReturnSpreadMetric().evaluate(fdc, quantiles=last_quantiles)
-        sock = "mean_return_spread"
         spread_val = jsonable_metric_value(raw)
         merged: dict[str, float] = {}
         if isinstance(raw, pd.Series):
             merged = series_to_period_dict(raw)
-        return {sock: spread_val, "merged_spread": merged}
+        return spread_val, merged

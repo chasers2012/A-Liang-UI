@@ -26,7 +26,7 @@ def factor_class_to_workflow_node(factor_class: type[Factor], *, record_id: str)
     fc = factor_class
     safe = "".join(c if c.isalnum() or c in "._-" else "_" for c in record_id)
 
-    def execute(self, **kwargs: Any) -> Any:
+    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
         from evaluation_workflow_nodes.calculate_factor_value import (
             clean_factor_from_alphalens_evaluator,
         )
@@ -40,7 +40,7 @@ def factor_class_to_workflow_node(factor_class: type[Factor], *, record_id: str)
             stock_codes=kwargs.get("stock_codes"),
             long_short=bool(kwargs.get("long_short", True)),
         )
-        return clean_factor_from_alphalens_evaluator(ev, dict(kwargs))
+        return (clean_factor_from_alphalens_evaluator(ev, dict(kwargs)),)
 
     cls_name = f"FactorWorkflowNode_{safe}"
     node_cls = type(cls_name, (), {"execute": execute, "__module__": __name__})

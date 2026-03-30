@@ -20,11 +20,13 @@ from workflow import (
 def forward_periods_tuple(raw: Any) -> tuple[int, ...]:
     if isinstance(raw, list):
         out = tuple(int(float(x)) for x in raw)
-        return out if out else (1, 5, 10, 20)
+        if not out:
+            return 1, 5, 10, 20
+        return out
     s = str(raw).strip() if raw is not None and raw != "" else "1,5,10,20"
     parts = [p.strip() for p in re.split(r"[,，\s]+", s) if p.strip()]
     if not parts:
-        return (1, 5, 10, 20)
+        return 1, 5, 10, 20
     return tuple(int(float(x)) for x in parts)
 
 
@@ -97,7 +99,7 @@ def clean_factor_from_alphalens_evaluator(
     entry="execute",
 )
 class CalculateFactorValueNode:
-    def execute(self, **kwargs: Any) -> Any:
+    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
         factor: Factor = kwargs["factor"]
         if factor._dependency_resolver is None:
             raise ValueError("factor 须设置 dependency_resolver")
@@ -109,4 +111,4 @@ class CalculateFactorValueNode:
             stock_codes=kwargs.get("stock_codes"),
             long_short=bool(kwargs.get("long_short", True)),
         )
-        return clean_factor_from_alphalens_evaluator(ev, dict(kwargs))
+        return (clean_factor_from_alphalens_evaluator(ev, dict(kwargs)),)

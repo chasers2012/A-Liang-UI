@@ -57,8 +57,8 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 '    entry="execute",',
                 ")",
                 "class ExtNode:",
-                "    def execute(self, **kwargs: Any) -> dict[str, Any]:",
-                "        return {'out': 1}",
+                "    def execute(self, **kwargs: Any) -> tuple[int, ...]:",
+                "        return 1,",
                 "",
             ]
         ),

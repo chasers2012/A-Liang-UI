@@ -18,6 +18,8 @@ from workflow import workflow_node, workflow_socket
 class BuiltinMeanICMetric(MeanInformationCoefficientMetric):
     """各持有期平均信息系数（Alphalens）。"""
 
-    def evaluate(self, factor_data_clean: pd.DataFrame, **kwargs: Any) -> pd.Series | pd.DataFrame:
+    def evaluate(
+        self, factor_data_clean: pd.DataFrame, **kwargs: Any
+    ) -> tuple[pd.Series | pd.DataFrame]:
         _ = kwargs
-        return super().evaluate(factor_data_clean)
+        return (super().evaluate(factor_data_clean),)

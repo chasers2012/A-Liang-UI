@@ -15,5 +15,5 @@ from workflow import workflow_node, workflow_socket
     entry="execute",
 )
 class EvaluateNode:
-    def execute(self, **kwargs: Any) -> dict[str, Any]:
+    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
         raise NotImplementedError

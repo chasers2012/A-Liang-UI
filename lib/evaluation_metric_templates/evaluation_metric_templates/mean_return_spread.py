@@ -24,6 +24,6 @@ class BuiltinMeanReturnSpreadMetric(MeanReturnSpreadMetric):
         *,
         quantiles: int,
         **kwargs: Any,
-    ) -> pd.Series:
+    ) -> tuple[pd.Series]:
         _ = kwargs
-        return super().evaluate(factor_data_clean, quantiles=quantiles)
+        return (super().evaluate(factor_data_clean, quantiles=quantiles),)

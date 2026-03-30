@@ -110,9 +110,9 @@ REGISTRY_METRIC_ID = "{metric_id}"
 class UserEvaluationMetric(RegistryUserEvaluationMetric):
     REGISTRY_METRIC_ID = REGISTRY_METRIC_ID
 
-    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> dict[str, float]:
+    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> tuple[Any, dict[str, Any], dict[str, Any]]:
         _ = clean_factor
-        return {{"demo": 0.0}}
+        return 0.0, {{}}, {{}}
 """
 
 

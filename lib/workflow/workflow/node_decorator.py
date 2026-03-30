@@ -57,6 +57,12 @@ def workflow_node(
     - ``workflow_metric_kwargs(node, inputs)`` -> ``dict`` used as ``**kwargs``
     - ``workflow_publish_evaluate_result(node, inputs, raw, primary_socket)``
       -> ``dict`` merged into handler outputs
+
+    **Return values** (see :func:`~workflow.executor.handler_from_node_class`): prefer a
+    ``tuple`` with one element per declared output socket in order (including a
+    one-element tuple when there is a single output). A plain ``dict`` (keys =
+    output socket names) is still accepted. Non-``dict`` mappings (e.g.
+    :class:`pandas.Series`) are not treated as socket-keyed outputs.
     """
 
     input_specs = _socket_tuple(input_sockets)

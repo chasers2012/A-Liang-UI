@@ -20,5 +20,5 @@ from workflow import workflow_node, workflow_socket
     entry="execute",
 )
 class ValidateNode:
-    def execute(self, **kwargs: Any) -> dict[str, Any]:
+    def execute(self, **kwargs: Any) -> tuple[Any, Any, Any, Any]:
         raise NotImplementedError

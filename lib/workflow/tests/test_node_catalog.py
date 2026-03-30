@@ -41,7 +41,7 @@ def test_merge_node_catalogs_later_overrides() -> None:
     )
     class First:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     @workflow_node(
         label="2",
@@ -52,7 +52,7 @@ def test_merge_node_catalogs_later_overrides() -> None:
     )
     class Second:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     m1 = types.ModuleType("m1")
     m1.First = First
@@ -80,7 +80,7 @@ def test_build_merges_types_from_two_modules() -> None:
     )
     class X:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     @workflow_node(
         label="",
@@ -91,7 +91,7 @@ def test_build_merges_types_from_two_modules() -> None:
     )
     class Y:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     m1 = types.ModuleType("m1")
     m1.X = X
@@ -115,7 +115,7 @@ def test_build_node_catalog_includes_workflow_parameters() -> None:
     )
     class WithParamsNode:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     m = types.ModuleType("mwp")
     m.WithParamsNode = WithParamsNode
@@ -150,7 +150,7 @@ def test_workflow_parameters_string_and_enum() -> None:
     )
     class MixedNode:
         def execute(self, **kwargs):
-            return {}
+            return (None,)
 
     m = types.ModuleType("mmixed")
     m.MixedNode = MixedNode
