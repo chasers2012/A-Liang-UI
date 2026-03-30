@@ -3,7 +3,6 @@
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import {
   IoBlockHeader,
@@ -39,8 +38,15 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {node.data.label}
+      <div className="space-y-1">
+        {node.data.category ? (
+          <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span>{node.data.category}</span>
+          </div>
+        ) : null}
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {node.data.label}
+        </div>
       </div>
       {node.data.inputs.length > 0 ? (
         <div className="overflow-hidden rounded-md border border-border/80">

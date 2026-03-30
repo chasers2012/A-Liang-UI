@@ -1,5 +1,9 @@
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from inspect import isawaitable, iscoroutinefunction
 
+from app.startup_jobs import STARTUP_JOBS
 from app.workflow_nodes.seed_builtin import ensure_all_builtin_workflow_domains
 
 ensure_all_builtin_workflow_domains()
@@ -16,7 +20,26 @@ from app.routers import evaluation_metrics as evaluation_metrics_router  # noqa:
 from app.routers import evaluation_profiles as evaluation_profiles_router  # noqa: E402
 from app.routers import factors as factors_router  # noqa: E402
 
-app = FastAPI(title="quant-agent API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    for job in STARTUP_JOBS:
+        try:
+            if iscoroutinefunction(job):
+                await job()  # type: ignore[misc]
+            else:
+                result = job()
+                if isawaitable(result):
+                    await result  # type: ignore[misc]
+        except Exception:
+            # Startup jobs are best-effort; failures should not crash the app.
+            # If needed, integrate with the project's logging solution here.
+            continue
+
+    yield
+
+
+app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
 app.include_router(agent_llm_router.router)
 app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)

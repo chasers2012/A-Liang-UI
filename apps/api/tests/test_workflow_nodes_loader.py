@@ -6,10 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from app.workflow_nodes.loader import (
-    load_workspace_extension_registries,
-    load_workspace_node_registry,
-)
+from app.workflow_nodes import WorkflowNodeLoader
 from workspace import set_workspace_root
 
 
@@ -40,7 +37,7 @@ def test_evaluation_catalog_excludes_agent_nodes(tmp_path: Path) -> None:
 
 def test_load_workspace_registry_includes_evaluation_and_agent_nodes(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
-    reg = load_workspace_node_registry()
+    reg = WorkflowNodeLoader.load_workspace_node_registry()
     keys = set(reg.keys())
     assert any(k.endswith(".CalculateFactorValueNode") for k in keys)
     assert any("echarts_line" in k for k in keys)
@@ -83,14 +80,14 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
     parent_eval = str(domain_root.resolve())
     parent_agent = str((tmp_path / "workflow_nodes" / "agent").resolve())
     try:
-        regs = load_workspace_extension_registries()
+        regs = WorkflowNodeLoader.load_workspace_extension_registries()
         assert len(regs) >= 1
         ext_regs = [r for r in regs if any(k.endswith(".ExtNode") for k in r)]
         assert len(ext_regs) == 1
         ext_keys = set(ext_regs[0].keys())
         assert any(k.endswith(".ExtNode") for k in ext_keys)
 
-        merged = load_workspace_node_registry()
+        merged = WorkflowNodeLoader.load_workspace_node_registry()
         mk = set(merged.keys())
         assert any(k.endswith(".ExtNode") for k in mk)
         assert any(k.endswith(".CalculateFactorValueNode") for k in mk)

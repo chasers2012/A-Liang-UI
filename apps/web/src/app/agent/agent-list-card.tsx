@@ -122,14 +122,20 @@ export function AgentListCard({
             <ul className="flex flex-col">
               {items.map((item) => (
                 <li key={item.id}>
-                  <button
-                    type="button"
-                    className={`w-full flex items-center justify-between gap-1 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 ${
-                      item.id === selectedId
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className={`group w-full flex items-center justify-between gap-1 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 cursor-pointer outline-none ${item.id === selectedId
                         ? "bg-muted font-medium"
                         : ""
-                    }`}
+                      }`}
                     onClick={() => onSelect(item.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSelect(item.id);
+                      }
+                    }}
                   >
                     <span className="truncate">{item.name}</span>
                     <Button
@@ -143,7 +149,7 @@ export function AgentListCard({
                     >
                       <Trash2 className="size-3" />
                     </Button>
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>

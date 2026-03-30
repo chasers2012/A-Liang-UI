@@ -45,6 +45,8 @@ export interface EvaluationNodeTypeCatalogItemPublic {
   type: string;
   label: string;
   description: string;
+  /** workflow.Node.category：前端用于分组/展示 */
+  category: string;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
   /** 来自 workflow.Node.parameters（用于 JSON/节点参数回显） */

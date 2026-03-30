@@ -12,6 +12,8 @@ export type WorkflowSocketDefinition = {
 export type WorkflowNodeTypeDefinition = {
   type: string;
   label: string;
+  /** 可选分类：由上层业务决定是否使用 */
+  category?: string;
   inputs: WorkflowSocketDefinition[];
   outputs: WorkflowSocketDefinition[];
 };
@@ -47,6 +49,7 @@ export type WorkflowGraphState = {
 export type WorkflowNodeDisplayData = {
   backendType: string;
   label: string;
+  category?: string;
   inputs: WorkflowSocketDefinition[];
   outputs: WorkflowSocketDefinition[];
   params: Record<string, NodeParamModel>;

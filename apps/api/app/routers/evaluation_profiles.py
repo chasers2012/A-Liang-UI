@@ -5,7 +5,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.profile_node_types import list_evaluation_profile_node_types_public
 from app.evaluation.scheme.profile_schemas import (
@@ -66,8 +65,7 @@ def _merge_evaluation_profile_patch(
 
 @router.get("/node-types", response_model=list[dict[str, Any]])
 def list_node_types() -> list[dict[str, Any]]:
-    metrics_reg = EvaluationMetricsRegistry.load()
-    return list_evaluation_profile_node_types_public(metrics_reg)
+    return list_evaluation_profile_node_types_public()
 
 
 @router.get("", response_model=list[EvaluationProfilePublic])

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from workflow import Node, ordered_definitions
 
-from app.workflow_nodes import load_workspace_node_registry
+from app.workflow_nodes import WorkflowNodeLoader
 
 AGENT_NODE_ORDER: list[str] = [
     "agent_workflow_nodes.init_context.InitContextNode",
@@ -19,5 +19,5 @@ AGENT_NODE_ORDER: list[str] = [
 
 def get_agent_node_types() -> list[Node]:
     """Ordered agent node definitions from the unified workspace registry."""
-    reg = load_workspace_node_registry()
+    reg = WorkflowNodeLoader.load_workspace_node_registry()
     return ordered_definitions(reg, AGENT_NODE_ORDER)

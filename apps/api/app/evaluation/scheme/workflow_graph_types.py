@@ -7,15 +7,20 @@ import functools
 from workflow import Node, NodeRegistry, WorkflowGraph, merge_node_registries
 
 from app.evaluation.factor_workflow_nodes import build_factor_workflow_node_registry
-from app.workflow_nodes import load_workspace_node_registry
+from app.workflow_nodes import WorkflowNodeLoader
 
 
-def _is_evaluation_catalog_type_id(type_id: str) -> bool:
-    """Exclude agent built-in nodes from evaluation profile catalog / allowed types."""
-    tid = (type_id or "").strip()
-    if not tid:
-        return False
-    return not tid.startswith("agent_workflow_nodes.")
+def _is_evaluation_catalog_node_category(category: str) -> bool:
+    """Exclude agent nodes from evaluation profile catalog / allowed types."""
+    return (category or "").strip() != "agent"
+
+
+def _evaluation_catalog_nodes() -> list[Node]:
+    return [
+        n
+        for n in WorkflowNodeLoader.list_nodes()
+        if _is_evaluation_catalog_node_category(n.category)
+    ]
 
 
 @functools.lru_cache(maxsize=1)
@@ -25,18 +30,17 @@ def get_evaluation_node_registry() -> NodeRegistry:
     Cached per process; clear with ``get_evaluation_node_registry.cache_clear()`` if
     workspace node packages change at runtime (e.g. in tests).
     """
-    base = load_workspace_node_registry()
+    base = WorkflowNodeLoader.load_workspace_node_registry()
     return merge_node_registries(base, build_factor_workflow_node_registry())
 
 
 def sorted_workflow_node_type_ids() -> list[str]:
-    """Evaluation-profile node type keys (excludes ``agent_workflow_nodes.*``), sorted."""
-    reg = get_evaluation_node_registry()
-    return sorted(t for t in reg if _is_evaluation_catalog_type_id(t))
+    """Evaluation-profile node type keys (excludes nodes with category ``agent``), sorted."""
+    return sorted(n.type for n in _evaluation_catalog_nodes())
 
 
 def all_workflow_node_type_ids() -> frozenset[str]:
-    return frozenset(t for t in get_evaluation_node_registry() if _is_evaluation_catalog_type_id(t))
+    return frozenset(n.type for n in _evaluation_catalog_nodes())
 
 
 def workflow_node_definition(node_type: str) -> Node:

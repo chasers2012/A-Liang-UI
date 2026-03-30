@@ -20,6 +20,7 @@ export function enrichNodeData(
   return {
     backendType: n.type,
     label: def?.label ?? n.type,
+    category: def?.category,
     inputs: def?.inputs ?? [],
     outputs: def?.outputs ?? [],
     params: { ...(n.params ?? {}) },

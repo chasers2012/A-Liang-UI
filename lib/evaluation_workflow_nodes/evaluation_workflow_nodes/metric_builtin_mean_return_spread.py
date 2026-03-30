@@ -13,6 +13,7 @@ from workflow import workflow_node, workflow_socket
 @workflow_node(
     label="多空收益差",
     description="分位多空平均收益差（按持有期）",
+    category="factor_evaluation",
     input_sockets=[
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
         workflow_socket("last_quantiles", required=True, value_type="scalar_json"),

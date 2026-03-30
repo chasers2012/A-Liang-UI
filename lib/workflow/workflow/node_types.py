@@ -152,6 +152,7 @@ class Node(BaseModel):
     type: str
     label: str = ""
     description: str = ""
+    category: str = ""
     entry: str = "execute"
     inputs: tuple[Socket, ...] = ()
     outputs: tuple[Socket, ...] = ()
@@ -170,6 +171,7 @@ class Node(BaseModel):
             "type": self.type,
             "label": self.label,
             "description": self.description,
+            "category": self.category,
             "inputs": [s.serialize() for s in self.inputs],
             "outputs": [s.serialize() for s in self.outputs],
             "parameters": [p.serialize() for p in self.parameters],

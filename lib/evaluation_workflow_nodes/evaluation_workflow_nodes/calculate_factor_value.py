@@ -62,6 +62,7 @@ def clean_factor_from_alphalens_evaluator(
 @workflow_node(
     label="计算因子",
     description="根据 Factor 实例与评价窗口计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
+    category="factor_evaluation",
     input_sockets=[
         workflow_socket("factor", required=True, value_type="any"),
         workflow_socket("start_date", required=True, value_type="scalar_json"),

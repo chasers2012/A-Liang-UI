@@ -13,6 +13,7 @@ from workflow import workflow_node, workflow_socket
 @workflow_node(
     label="平均 IC",
     description="各持有期平均信息系数（Alphalens）",
+    category="factor_evaluation",
     input_sockets=[
         workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],

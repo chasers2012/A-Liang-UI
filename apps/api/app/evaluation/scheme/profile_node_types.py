@@ -8,18 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.evaluation.metrics.metric_schemas import (
-    EvaluationMetricsRegistryFile,
-)
 from app.evaluation.scheme.workflow_graph_types import (
     sorted_workflow_node_type_ids,
     workflow_node_definition,
 )
 
 
-def list_evaluation_profile_node_types_public(
-    metrics_reg: EvaluationMetricsRegistryFile,
-) -> list[dict[str, Any]]:
+def list_evaluation_profile_node_types_public() -> list[dict[str, Any]]:
     """Ordered node types from the evaluation catalog with API extras (unified iteration)."""
     out: list[dict[str, Any]] = []
     for nt in sorted_workflow_node_type_ids():
