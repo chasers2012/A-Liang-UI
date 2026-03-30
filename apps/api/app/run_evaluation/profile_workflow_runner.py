@@ -14,7 +14,10 @@ from app.evaluation.scheme.workflow_graph_types import (
 )
 from app.factors.schemas import utc_now_iso
 
-from .runner import build_alphalens_evaluator_for_factor
+from .runner import (
+    build_factor_alphalens_setup,
+    stock_count_for_alphalens_setup,
+)
 from .schemas import FactorEvaluationRecord
 
 
@@ -25,21 +28,22 @@ def run_evaluation_profile_workflow(
     data_set_id: str | None,
 ) -> FactorEvaluationRecord:
     wf = normalize_evaluation_workflow_node_types(profile.workflow)
-    err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
-        factor_id, data_set_id=data_set_id
-    )
-    if err is not None:
-        return err.model_copy(update={"evaluation_profile_id": profile.id})
-
-    assert ev is not None
+    setup = build_factor_alphalens_setup(factor_id, data_set_id=data_set_id)
+    if setup.error is not None:
+        return setup.error.model_copy(update={"evaluation_profile_id": profile.id})
+    assert setup.factor is not None
+    window = setup.window
 
     try:
         node_results = WorkflowExecutor(get_evaluation_node_catalog().handlers).execute(
             wf,
             input_sockets={
-                "ev": ev,
-                "last_quantiles": base_quantiles,
-                # n_stocks / merged_* are produced by downstream nodes.
+                "factor": setup.factor,
+                "dependency_resolver": setup.resolver,
+                "last_quantiles": setup.quantiles,
+                "start_date": setup.start_date,
+                "end_date": setup.end_date,
+                "stock_codes": setup.stock_codes,
             },
         )
     except ValueError as e:
@@ -66,10 +70,10 @@ def run_evaluation_profile_workflow(
     metric_results: dict[str, Any] = {}
     merged_mean_ic: dict[str, Any] = {}
     merged_spread: dict[str, Any] = {}
-    stock_count: int | None = None
+    stock_count: int | None = stock_count_for_alphalens_setup(setup)
 
     for nid, node_out in node_results.items():
-        # prepare_alphalens
+        # calculate_factor / metric nodes
         if "clean_factor" in node_out:
             metric_results[nid] = {"clean_factor": "[DataFrame]"}
         else:
@@ -83,8 +87,6 @@ def run_evaluation_profile_workflow(
             merged_mean_ic = dict(node_out.get("merged_mean_ic") or {})
         if "merged_spread" in node_out:
             merged_spread = dict(node_out.get("merged_spread") or {})
-        if "n_stocks" in node_out:
-            stock_count = node_out.get("n_stocks")
 
     return FactorEvaluationRecord(
         evaluated_at=utc_now_iso(),

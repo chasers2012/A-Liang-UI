@@ -11,6 +11,7 @@ from workflow import (
     NodeCatalog,
     NumberNodeParam,
     StringNodeParam,
+    WorkflowNode,
     build_node_catalog_from_modules,
     handler_from_node_class,
     merge_node_catalogs,
@@ -160,3 +161,20 @@ def test_workflow_parameters_string_and_enum() -> None:
     assert spec.parameters[1].type == "enum"
     assert spec.parameters[1].enum_values == ("a", "b")
     assert spec.parameters[1].default == "a"
+
+
+def test_handler_execute_wraps_non_mapping_as_primary_socket() -> None:
+    @workflow_node(
+        label="",
+        description="",
+        input_sockets=[],
+        output_sockets=[workflow_socket("primary_out")],
+        entry="execute",
+    )
+    class BareReturnNode:
+        def execute(self, **kwargs):
+            return 42
+
+    h = handler_from_node_class(BareReturnNode)
+    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
+    assert dict(h(node, {})) == {"primary_out": 42}

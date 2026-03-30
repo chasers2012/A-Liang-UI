@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
-from workflow import Node, NodeCatalog, WorkflowGraph, WorkflowNode
+from workflow import Node, NodeCatalog, WorkflowGraph, WorkflowNode, merge_node_catalogs
 
+from app.evaluation.factor_workflow_nodes import build_factor_workflow_node_catalog
 from app.workflow_nodes import load_domain_node_catalog
 
 
 def get_evaluation_node_catalog() -> NodeCatalog:
-    """Load evaluation domain catalog from ``workflow_nodes/evaluation/*``."""
-    return load_domain_node_catalog("evaluation")
+    """Built-in evaluation packages plus per-factor nodes from the workspace registry."""
+    base = load_domain_node_catalog("evaluation")
+    return merge_node_catalogs(base, build_factor_workflow_node_catalog())
+
+
+_LEGACY_PREPARE = "evaluation_workflow_nodes.prepare_alphalens.PrepareAlphalensNode"
+_CURRENT_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
 
 
 def resolve_evaluation_workflow_node_type_to_fqn(node_type: str) -> str:
-    """Return ``node.type`` as stored: the catalog key (``module.qualname`` of the node class)."""
-    return (node_type or "").strip()
+    """Return catalog key; map legacy prepare node id to :class:`CalculateFactorValueNode`."""
+    t = (node_type or "").strip()
+    if t == _LEGACY_PREPARE:
+        return _CURRENT_CALC
+    return t
 
 
 def sorted_workflow_node_type_ids() -> list[str]:

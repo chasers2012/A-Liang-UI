@@ -77,14 +77,14 @@ def test_evaluation_profiles_node_types(client):
     assert r.status_code == 200
     rows = r.json()
     types = {x["type"] for x in rows}
-    assert any("prepare_alphalens" in t for t in types)
+    assert any("calculate_factor_value" in t for t in types)
     assert any(t.endswith(".EchartsLineNode") for t in types)
     assert any(t.endswith(".EchartsBarNode") for t in types)
     assert any(t.endswith(".BuiltinMeanIcNode") for t in types)
     assert any(t.endswith(".BuiltinMeanReturnSpreadNode") for t in types)
     echarts_types = [x for x in types if "echarts_" in x]
     assert len(echarts_types) == 2
-    prep_row = next(x for x in rows if "PrepareAlphalensNode" in x["type"])
+    prep_row = next(x for x in rows if "CalculateFactorValueNode" in x["type"])
     assert len(prep_row["workflow_parameters"]) >= 4
     assert "node_category" not in prep_row
     assert "viz_mode" not in prep_row

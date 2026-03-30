@@ -6,7 +6,6 @@ from typing import Any
 
 import pandas as pd
 from evaluate import MeanInformationCoefficientMetric
-from evaluate.alphalens_panel_utils import jsonable_metric_value, series_to_period_dict
 from workflow import workflow_node, workflow_socket
 
 
@@ -26,13 +25,4 @@ class BuiltinMeanIcNode:
         fdc = kwargs["clean_factor"]
         if not isinstance(fdc, pd.DataFrame):
             raise TypeError("clean_factor 须为 DataFrame")
-        raw = MeanInformationCoefficientMetric().evaluate(fdc)
-        sock = "mean_ic"
-        mean_ic_val = jsonable_metric_value(raw)
-        merged: dict[str, float] = {}
-        series = raw
-        if isinstance(series, pd.DataFrame):
-            series = series.iloc[:, 0]
-        if isinstance(series, pd.Series):
-            merged = series_to_period_dict(series)
-        return {sock: mean_ic_val, "merged_mean_ic": merged}
+        return MeanInformationCoefficientMetric().evaluate(fdc)

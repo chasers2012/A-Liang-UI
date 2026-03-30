@@ -610,12 +610,14 @@ version = "0.1.0"
 source = { editable = "lib/evaluation_workflow_nodes" }
 dependencies = [
     { name = "evaluate" },
+    { name = "factor" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "evaluate", editable = "lib/evaluate" },
+    { name = "factor", editable = "lib/factor" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 

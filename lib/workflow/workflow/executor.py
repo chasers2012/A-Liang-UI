@@ -70,7 +70,11 @@ def handler_from_node_class(cls: type) -> NodeHandler:
         node: WorkflowNode,
         inputs: Mapping[str, Any],
     ) -> Mapping[str, Any]:
-        return getattr(cls(), entry_name)(**dict(inputs))  # type: ignore[no-any-return]
+        raw = getattr(cls(), entry_name)(**dict(inputs))
+        if isinstance(raw, Mapping):
+            return dict(raw)
+        primary = _primary_output_socket_name(cls)
+        return {primary: raw}
 
     return _handler
 

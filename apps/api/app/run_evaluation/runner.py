@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import traceback
+from dataclasses import dataclass
 
 from evaluate.alphalens_panel_utils import series_to_period_dict, stock_count_from_alignment
 from factor import DependencyResolver, load_factor_class
@@ -214,16 +215,24 @@ def _import_alphalens_evaluator():
     return AlphalensFactorEvaluator
 
 
-def build_alphalens_evaluator_for_factor(
+@dataclass
+class FactorAlphalensSetup:
+    """Resolved factor + data bindings for Alphalens (workflow root inputs or evaluator ctor)."""
+
+    error: FactorEvaluationRecord | None
+    factor: object | None
+    resolver: DependencyResolver | None
+    window: FactorEvaluationWindow
+    quantiles: int
+    stock_codes: list[str] | None
+    start_date: str | None
+    end_date: str
+
+
+def build_factor_alphalens_setup(
     factor_id: str, *, data_set_id: str | None = None
-) -> tuple[
-    FactorEvaluationRecord | None,
-    object | None,
-    FactorEvaluationWindow,
-    int,
-    list[str] | None,
-]:
-    """Return (error_record, evaluator, window, quantiles, stock_codes); on success error_record is None."""
+) -> FactorAlphalensSetup:
+    """Build factor instance; on failure ``error`` is set and ``factor`` is None."""
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise ValueError("因子不存在")
@@ -235,46 +244,80 @@ def build_alphalens_evaluator_for_factor(
     try:
         cls, _ = load_factor_class(src)
     except ValueError as e:
-        return _eval_failure_tuple(
+        r, _, _, _, _ = _eval_failure_tuple(
             str(e), window=window, quantiles=quantiles, stock_codes=stock_codes
         )
+        return FactorAlphalensSetup(r, None, None, window, quantiles, stock_codes, start, end)
 
     deps = list(cls.dependencies)
     if not deps:
-        return _eval_failure_tuple(
+        r, _, _, _, _ = _eval_failure_tuple(
             "因子 dependencies 为空",
             window=window,
             quantiles=quantiles,
             stock_codes=stock_codes,
         )
+        return FactorAlphalensSetup(r, None, None, window, quantiles, stock_codes, start, end)
 
     resolver, fail = _build_dependency_resolver(
         ds_rec, deps, window=window, quantiles=quantiles, stock_codes=stock_codes
     )
     if fail is not None:
-        return fail
+        r, _, _, _, _ = fail
+        return FactorAlphalensSetup(r, None, None, window, quantiles, stock_codes, start, end)
     assert resolver is not None
 
     inst = cls(dependency_resolver=resolver)
+    return FactorAlphalensSetup(None, inst, resolver, window, quantiles, stock_codes, start, end)
+
+
+def stock_count_for_alphalens_setup(setup: FactorAlphalensSetup) -> int:
+    """Rebuild evaluator for alignment index (same panel load as workflow calculate node)."""
+    assert setup.factor is not None
+    AlphalensFactorEvaluator = _import_alphalens_evaluator()
+    ev = AlphalensFactorEvaluator(
+        setup.factor,
+        start_date=setup.start_date,
+        end_date=setup.end_date,
+        stock_codes=setup.stock_codes,
+        long_short=True,
+    )
+    return stock_count_from_alignment(ev.alignment_index())
+
+
+def build_alphalens_evaluator_for_factor(
+    factor_id: str, *, data_set_id: str | None = None
+) -> tuple[
+    FactorEvaluationRecord | None,
+    object | None,
+    FactorEvaluationWindow,
+    int,
+    list[str] | None,
+]:
+    """Return (error_record, evaluator, window, quantiles, stock_codes); on success error_record is None."""
+    setup = build_factor_alphalens_setup(factor_id, data_set_id=data_set_id)
+    if setup.error is not None:
+        return setup.error, None, setup.window, setup.quantiles, setup.stock_codes
 
     try:
         AlphalensFactorEvaluator = _import_alphalens_evaluator()
     except Exception as e:
         return _eval_failure_tuple(
             f"评价依赖未就绪: {e}",
-            window=window,
-            quantiles=quantiles,
-            stock_codes=stock_codes,
+            window=setup.window,
+            quantiles=setup.quantiles,
+            stock_codes=setup.stock_codes,
         )
 
+    assert setup.factor is not None
     ev = AlphalensFactorEvaluator(
-        inst,
-        start_date=start,
-        end_date=end,
-        stock_codes=stock_codes,
+        setup.factor,
+        start_date=setup.start_date,
+        end_date=setup.end_date,
+        stock_codes=setup.stock_codes,
         long_short=True,
     )
-    return None, ev, window, quantiles, stock_codes
+    return None, ev, setup.window, setup.quantiles, setup.stock_codes
 
 
 def run_evaluation_for_factor(
