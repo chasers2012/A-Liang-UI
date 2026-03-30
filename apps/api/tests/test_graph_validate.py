@@ -5,9 +5,9 @@ from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.profile_schemas import EvaluationWorkflow
 from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
-from workflow import WorkflowLink, WorkflowNode
+from workflow import Node, WorkflowLink
 
-_PREP = "evaluation_workflow_nodes.prepare_alphalens.PrepareAlphalensNode"
+_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
 _MIC = "evaluation_workflow_nodes.metric_builtin_mean_ic.BuiltinMeanIcNode"
 
 
@@ -15,9 +15,9 @@ def test_duplicate_node_types_allowed(workspace_tmp):
     EvaluationMetricsRegistry.load()
     wf = EvaluationWorkflow(
         nodes=[
-            WorkflowNode(id="a", type=_PREP, pos=[0, 0], params={}),
-            WorkflowNode(id="m1", type=_MIC, pos=[1, 0], params={}),
-            WorkflowNode(id="m2", type=_MIC, pos=[2, 0], params={}),
+            Node(id="a", type=_CALC, pos=[0, 0], params={}),
+            Node(id="m1", type=_MIC, pos=[1, 0], params={}),
+            Node(id="m2", type=_MIC, pos=[2, 0], params={}),
         ],
         links=[
             WorkflowLink(
@@ -35,8 +35,8 @@ def test_duplicate_target_socket_rejected(workspace_tmp):
     EvaluationMetricsRegistry.load()
     wf = EvaluationWorkflow(
         nodes=[
-            WorkflowNode(id="a", type=_PREP, pos=[0, 0], params={}),
-            WorkflowNode(id="m1", type=_MIC, pos=[1, 0], params={}),
+            Node(id="a", type=_CALC, pos=[0, 0], params={}),
+            Node(id="m1", type=_MIC, pos=[1, 0], params={}),
         ],
         links=[
             WorkflowLink(

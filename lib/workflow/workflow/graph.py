@@ -2,23 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel, Field, field_validator
-
-
-class WorkflowNode(BaseModel):
-    id: str
-    type: str
-    pos: list[float] = Field(default_factory=lambda: [0.0, 0.0])
-    params: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("pos")
-    @classmethod
-    def _two_floats(cls, v: list[float]) -> list[float]:
-        if len(v) != 2:
-            raise ValueError("pos must be [x, y]")
-        return [float(v[0]), float(v[1])]
+from .node_types import Node
 
 
 class WorkflowLink(BaseModel):
@@ -36,6 +22,6 @@ class WorkflowViewport(BaseModel):
 
 
 class WorkflowGraph(BaseModel):
-    nodes: list[WorkflowNode] = Field(default_factory=list)
+    nodes: list[Node] = Field(default_factory=list)
     links: list[WorkflowLink] = Field(default_factory=list)
     viewport: WorkflowViewport | None = None

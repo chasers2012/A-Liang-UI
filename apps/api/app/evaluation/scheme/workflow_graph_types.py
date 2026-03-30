@@ -1,47 +1,50 @@
-"""Evaluation workflow node types from the unified evaluation NodeCatalog."""
+"""Evaluation workflow node types from the merged workspace + factor registry."""
 
 from __future__ import annotations
 
-from workflow import Node, NodeCatalog, WorkflowGraph, WorkflowNode, merge_node_catalogs
+import functools
 
-from app.evaluation.factor_workflow_nodes import build_factor_workflow_node_catalog
-from app.workflow_nodes import load_domain_node_catalog
+from workflow import Node, NodeRegistry, WorkflowGraph, merge_node_registries
 
-
-def get_evaluation_node_catalog() -> NodeCatalog:
-    """Built-in evaluation packages plus per-factor nodes from the workspace registry."""
-    base = load_domain_node_catalog("evaluation")
-    return merge_node_catalogs(base, build_factor_workflow_node_catalog())
+from app.evaluation.factor_workflow_nodes import build_factor_workflow_node_registry
+from app.workflow_nodes import load_workspace_node_registry
 
 
-_LEGACY_PREPARE = "evaluation_workflow_nodes.prepare_alphalens.PrepareAlphalensNode"
-_CURRENT_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
+def _is_evaluation_catalog_type_id(type_id: str) -> bool:
+    """Exclude agent built-in nodes from evaluation profile catalog / allowed types."""
+    tid = (type_id or "").strip()
+    if not tid:
+        return False
+    return not tid.startswith("agent_workflow_nodes.")
 
 
-def resolve_evaluation_workflow_node_type_to_fqn(node_type: str) -> str:
-    """Return catalog key; map legacy prepare node id to :class:`CalculateFactorValueNode`."""
-    t = (node_type or "").strip()
-    if t == _LEGACY_PREPARE:
-        return _CURRENT_CALC
-    return t
+@functools.lru_cache(maxsize=1)
+def get_evaluation_node_registry() -> NodeRegistry:
+    """Full workspace node registry plus per-factor nodes (handlers for execution / validation).
+
+    Cached per process; clear with ``get_evaluation_node_registry.cache_clear()`` if
+    workspace node packages change at runtime (e.g. in tests).
+    """
+    base = load_workspace_node_registry()
+    return merge_node_registries(base, build_factor_workflow_node_registry())
 
 
 def sorted_workflow_node_type_ids() -> list[str]:
-    """All evaluation node type keys (class FQNs) in lexicographic order."""
-    return sorted(get_evaluation_node_catalog().specs.keys())
+    """Evaluation-profile node type keys (excludes ``agent_workflow_nodes.*``), sorted."""
+    reg = get_evaluation_node_registry()
+    return sorted(t for t in reg if _is_evaluation_catalog_type_id(t))
 
 
 def all_workflow_node_type_ids() -> frozenset[str]:
-    return frozenset(get_evaluation_node_catalog().specs.keys())
+    return frozenset(t for t in get_evaluation_node_registry() if _is_evaluation_catalog_type_id(t))
 
 
 def workflow_node_definition(node_type: str) -> Node:
     nt = (node_type or "").strip()
-    resolved = resolve_evaluation_workflow_node_type_to_fqn(nt)
-    spec = get_evaluation_node_catalog().specs.get(resolved)
-    if spec is None:
+    reg = get_evaluation_node_registry().get(nt)
+    if reg is None:
         raise KeyError(nt)
-    return spec
+    return reg.definition
 
 
 def workflow_node_definition_or_fail(node_type: str) -> Node:
@@ -53,8 +56,7 @@ def workflow_node_definition_or_fail(node_type: str) -> Node:
 
 def normalize_evaluation_workflow_node_types(workflow: WorkflowGraph) -> WorkflowGraph:
     """Normalize each node's ``type`` (trimmed catalog key)."""
-    nodes: list[WorkflowNode] = [
-        n.model_copy(update={"type": resolve_evaluation_workflow_node_type_to_fqn(n.type)})
-        for n in workflow.nodes
+    nodes: list[Node] = [
+        n.model_copy(update={"type": (n.type or "").strip()}) for n in workflow.nodes
     ]
     return workflow.model_copy(update={"nodes": nodes})

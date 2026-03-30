@@ -5,11 +5,11 @@ from __future__ import annotations
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
-from workflow import WorkflowGraph, WorkflowLink, WorkflowNode, WorkflowViewport
+from workflow import Node, WorkflowGraph, WorkflowLink, WorkflowViewport
 
 from app.datetime_utils import utc_now_iso
 
-AgentGraphNode = WorkflowNode
+AgentGraphNode = Node
 AgentGraphLink = WorkflowLink
 AgentGraphViewport = WorkflowViewport
 AgentGraphState = WorkflowGraph

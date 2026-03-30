@@ -42,13 +42,16 @@ def workflow_node(
     label: str = "",
     description: str = "",
 ) -> Callable[[type[_T]], type[_T]]:
-    """Attach graph I/O metadata and a ``__node_spec__()`` classmethod.
+    """Return a wrapped subclass carrying workflow metadata.
 
-    The node type string is :func:`workflow_node_type_key` (``module.qualname``);
-    decorated classes are discovered by :func:`collect_node_classes`.
+    The node type string is :func:`workflow_node_type_key` (``module.qualname``).
+    The returned class stores node-definition fields on class attributes:
+    ``type``, ``label``, ``description``, ``inputs``, ``outputs``, ``parameters``.
 
     If ``entry="evaluate"`` (typical for evaluation metric classes), use
-    :func:`handler_from_node_class`: it calls ``evaluate(clean_factor, **kwargs)``
+    :func:`handler_from_node_class` with the class and its type-definition
+    :class:`~workflow.node_types.Node` (from :func:`~workflow.node_registry.workflow_node_definition_from_class`
+    or a registry entry's ``definition``): it calls ``evaluate(clean_factor, **kwargs)``
     instead of ``execute(**kwargs)`` (merged node params, root inputs, and linked
     sockets). Expect an input socket named
     ``clean_factor``. Optional **classmethods** on the node class:
@@ -58,11 +61,10 @@ def workflow_node(
     - ``workflow_publish_evaluate_result(node, inputs, raw, primary_socket)``
       -> ``dict`` merged into handler outputs
 
-    **Return values** (see :func:`~workflow.executor.handler_from_node_class`): prefer a
-    ``tuple`` with one element per declared output socket in order (including a
-    one-element tuple when there is a single output). A plain ``dict`` (keys =
-    output socket names) is still accepted. Non-``dict`` mappings (e.g.
-    :class:`pandas.Series`) are not treated as socket-keyed outputs.
+    **Return values** (see :func:`~workflow.executor.handler_from_node_class`): values map
+    1:1 to ``output_sockets`` in order (``tuple``/``list``, or a scalar when there is
+    a single output). ``output_sockets`` may be empty (side-effect-only node; handler
+    output mapping is empty).
     """
 
     input_specs = _socket_tuple(input_sockets)
@@ -71,42 +73,46 @@ def workflow_node(
     param_specs: tuple[NodeParam, ...] = tuple(p for p in _wp if (p.key or "").strip())
 
     def decorate(cls: type[_T]) -> type[_T]:
-        cls.INPUT_SOCKETS = list(input_sockets)  # type: ignore[attr-defined]
-        cls.OUTPUT_SOCKETS = list(output_sockets)  # type: ignore[attr-defined]
-        cls.WORKFLOW_PARAMETERS = list(_wp)  # type: ignore[attr-defined]
-        cls.ENTRY = entry  # type: ignore[attr-defined]
-        cls.WORKFLOW_LABEL = label  # type: ignore[attr-defined]
-        cls.WORKFLOW_DESCRIPTION = description  # type: ignore[attr-defined]
-
-        @classmethod  # type: ignore[misc]
-        def __node_spec__(
-            klass,
-            *,
-            label: str = "",
-            description: str = "",
-            default_inputs: tuple[Socket, ...] | None = None,
-            default_outputs: tuple[Socket, ...] | None = None,
-        ) -> Node:
-            return Node(
-                type=workflow_node_type_key(klass),
-                label=label or klass.WORKFLOW_LABEL,
-                description=description or klass.WORKFLOW_DESCRIPTION,
-                inputs=input_specs if input_specs else (default_inputs or ()),
-                outputs=output_specs if output_specs else (default_outputs or ()),
-                parameters=param_specs,
-            )
-
-        cls.__node_spec__ = __node_spec__  # type: ignore[attr-defined]
-        return cls
+        return type(  # type: ignore[return-value]
+            cls.__name__,
+            (cls, Node),
+            {
+                "__module__": cls.__module__,
+                "__doc__": cls.__doc__,
+                "__qualname__": cls.__qualname__,
+                "__test__": False,
+                "__init__": cls.__init__,
+                "__annotations__": {
+                    "type": str,
+                    "label": str,
+                    "description": str,
+                    "entry": str,
+                    "inputs": tuple[Socket, ...],
+                    "outputs": tuple[Socket, ...],
+                    "parameters": tuple[NodeParam, ...],
+                },
+                "type": workflow_node_type_key(cls),
+                "label": label,
+                "description": description,
+                "entry": entry,
+                "inputs": input_specs,
+                "outputs": output_specs,
+                "parameters": param_specs,
+            },
+        )
 
     return decorate
 
 
 def _is_workflow_node_class(obj: type) -> bool:
+    fields = getattr(obj, "model_fields", None)
     return bool(
-        getattr(obj, "__node_spec__", None) is not None
-        and getattr(obj, "INPUT_SOCKETS", None) is not None
-        and getattr(obj, "OUTPUT_SOCKETS", None) is not None
+        isinstance(obj, type)
+        and issubclass(obj, Node)
+        and isinstance(fields, dict)
+        and "type" in fields
+        and "inputs" in fields
+        and "outputs" in fields
     )
 
 

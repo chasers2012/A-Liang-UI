@@ -1,4 +1,4 @@
-"""Load :class:`~workflow.NodeCatalog` for a domain from workspace workflow node packages."""
+"""Load merged workflow node registry from all workspace workflow node segments."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import importlib
 import sys
 from pathlib import Path
 
-from workflow import NodeCatalog, build_node_catalog_from_modules, merge_node_catalogs
+from workflow import NodeRegistry, build_node_registry_from_modules, merge_node_registries
 from workspace import workspace_path
 
 from app.workflow_nodes.seed_builtin import (
@@ -15,13 +15,16 @@ from app.workflow_nodes.seed_builtin import (
     ensure_builtin_workflow_packages,
 )
 
+# Fixed merge order: evaluation segment before agent (later merge wins on duplicate keys).
+WORKFLOW_NODE_SEGMENTS: tuple[str, ...] = ("evaluation", "agent")
 
-def _domain_root(domain: str) -> Path:
-    return workspace_path(WORKFLOW_NODES_RELATIVE_ROOT, domain)
+
+def _segment_root(segment: str) -> Path:
+    return workspace_path(WORKFLOW_NODES_RELATIVE_ROOT, segment)
 
 
-def _ensure_domain_parent_on_sys_path(domain: str) -> None:
-    root = _domain_root(domain)
+def _ensure_segment_parent_on_sys_path(segment: str) -> None:
+    root = _segment_root(segment)
     if not root.is_dir():
         return
     parent = str(root.resolve())
@@ -29,43 +32,64 @@ def _ensure_domain_parent_on_sys_path(domain: str) -> None:
         sys.path.insert(0, parent)
 
 
-def _package_dirs(domain: str) -> list[Path]:
-    root = _domain_root(domain)
+def _package_dirs(segment: str) -> list[Path]:
+    root = _segment_root(segment)
     if not root.is_dir():
         return []
     return sorted(p for p in root.iterdir() if p.is_dir() and (p / "__init__.py").is_file())
 
 
-def _catalog_from_package_dir(domain: str, pkg_dir: Path) -> NodeCatalog:
-    _ensure_domain_parent_on_sys_path(domain)
-    return build_node_catalog_from_modules(importlib.import_module(pkg_dir.name))
+def _registry_from_package_dir(segment: str, pkg_dir: Path) -> NodeRegistry:
+    _ensure_segment_parent_on_sys_path(segment)
+    return build_node_registry_from_modules(importlib.import_module(pkg_dir.name))
 
 
-def load_workspace_extension_catalogs(domain: str) -> list[NodeCatalog]:
-    """Each immediate subdirectory of ``workflow_nodes/<domain>/`` that is a package becomes one catalog."""
-    return [_catalog_from_package_dir(domain, p) for p in _package_dirs(domain)]
-
-
-def load_domain_node_catalog(domain: str) -> NodeCatalog:
-    """Load catalogs only from ``workflow_nodes/<domain>/*`` (seeded built-in dir + user packages).
-
-    Built-in package directory is merged first; remaining directories are merged in sorted order.
-    Later merges win on duplicate node type keys (user packages override built-in).
-    """
-    key = domain.strip()
-    builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(key)
+def _ordered_package_dirs(segment: str) -> list[Path]:
+    builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(segment)
     if builtin_pkg is None:
-        raise KeyError(f"unknown workflow node domain: {domain!r}")
-    ensure_builtin_workflow_packages(key)
-    dirs = _package_dirs(key)
+        raise KeyError(f"unknown workflow node segment: {segment!r}")
+    ensure_builtin_workflow_packages(segment)
+    dirs = _package_dirs(segment)
     if not dirs:
-        raise RuntimeError(f"no workflow node packages under workflow_nodes/{key!r}")
-
+        raise RuntimeError(f"no workflow node packages under workflow_nodes/{segment!r}")
     builtin_dirs = [p for p in dirs if p.name == builtin_pkg]
     user_dirs = sorted(p for p in dirs if p.name != builtin_pkg)
-    ordered = builtin_dirs + user_dirs
+    return builtin_dirs + user_dirs
 
-    catalogs = [_catalog_from_package_dir(key, p) for p in ordered]
-    if len(catalogs) == 1:
-        return catalogs[0]
-    return merge_node_catalogs(*catalogs)
+
+def load_workspace_extension_registries() -> list[NodeRegistry]:
+    """One registry per user (non-builtin) package under any ``workflow_nodes/<segment>/``."""
+    out: list[NodeRegistry] = []
+    for seg in WORKFLOW_NODE_SEGMENTS:
+        builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN[seg]
+        try:
+            ordered = _ordered_package_dirs(seg)
+        except RuntimeError:
+            continue
+        for p in ordered:
+            if p.name == builtin_pkg:
+                continue
+            out.append(_registry_from_package_dir(seg, p))
+    return out
+
+
+def _load_segment_registry(segment: str) -> NodeRegistry:
+    ordered = _ordered_package_dirs(segment)
+    registries = [_registry_from_package_dir(segment, p) for p in ordered]
+    if len(registries) == 1:
+        return registries[0]
+    return merge_node_registries(*registries)
+
+
+def load_workspace_node_registry() -> NodeRegistry:
+    """Load and merge all workflow node packages from every configured workspace segment.
+
+    Segments are merged in :data:`WORKFLOW_NODE_SEGMENTS` order (evaluation, then agent).
+    Later segments override earlier on duplicate node type keys.
+    """
+    merged: list[NodeRegistry] = []
+    for seg in WORKFLOW_NODE_SEGMENTS:
+        merged.append(_load_segment_registry(seg))
+    if len(merged) == 1:
+        return merged[0]
+    return merge_node_registries(*merged)

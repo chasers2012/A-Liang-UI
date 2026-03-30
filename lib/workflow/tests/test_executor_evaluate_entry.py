@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow import WorkflowNode, handler_from_node_class, workflow_node, workflow_socket
+from workflow import (
+    Node,
+    handler_from_node_class,
+    workflow_node,
+    workflow_node_definition_from_class,
+    workflow_socket,
+)
 
 
 @workflow_node(
@@ -22,13 +28,13 @@ from workflow import WorkflowNode, handler_from_node_class, workflow_node, workf
 )
 class TestEvalMetricNode:
     @classmethod
-    def workflow_metric_kwargs(cls, node: WorkflowNode, inputs: dict[str, Any]) -> dict[str, Any]:
+    def workflow_metric_kwargs(cls, node: Node, inputs: dict[str, Any]) -> dict[str, Any]:
         return {"quantiles": int(inputs["q"]), **dict(node.params or {})}
 
     @classmethod
     def workflow_publish_evaluate_result(
         cls,
-        node: WorkflowNode,
+        node: Node,
         inputs: dict[str, Any],
         raw: Any,
         primary_socket: str,
@@ -45,12 +51,15 @@ def test_handler_evaluate_entry_calls_evaluate_and_publish():
     from workflow import workflow_node_type_key
 
     tid = workflow_node_type_key(TestEvalMetricNode)
-    node = WorkflowNode(
+    node = Node(
         id="n1",
         type=tid,
         params={"x": 1},
     )
-    handler = handler_from_node_class(TestEvalMetricNode)
+    handler = handler_from_node_class(
+        TestEvalMetricNode,
+        workflow_node_definition_from_class(TestEvalMetricNode),
+    )
     out = handler(
         node,
         {"clean_factor": [1, 2], "q": 5},
@@ -80,8 +89,11 @@ def test_handler_evaluate_tuple_without_publisher() -> None:
     from workflow import workflow_node_type_key
 
     tid = workflow_node_type_key(TestEvalTupleNode)
-    node = WorkflowNode(id="n2", type=tid, params={})
-    handler = handler_from_node_class(TestEvalTupleNode)
+    node = Node(id="n2", type=tid, params={})
+    handler = handler_from_node_class(
+        TestEvalTupleNode,
+        workflow_node_definition_from_class(TestEvalTupleNode),
+    )
     out = handler(node, {"clean_factor": [1]})
     assert dict(out) == {"first": "a", "second": "b"}
 
@@ -102,7 +114,7 @@ class TestEvalTupleWithPublishNode:
     @classmethod
     def workflow_publish_evaluate_result(
         cls,
-        node: WorkflowNode,
+        node: Node,
         inputs: dict[str, Any],
         raw: Any,
         primary_socket: str,
@@ -119,8 +131,51 @@ def test_handler_evaluate_tuple_with_publisher_prefers_publisher_for_second() ->
     from workflow import workflow_node_type_key
 
     tid = workflow_node_type_key(TestEvalTupleWithPublishNode)
-    node = WorkflowNode(id="n3", type=tid, params={})
-    handler = handler_from_node_class(TestEvalTupleWithPublishNode)
+    node = Node(id="n3", type=tid, params={})
+    handler = handler_from_node_class(
+        TestEvalTupleWithPublishNode,
+        workflow_node_definition_from_class(TestEvalTupleWithPublishNode),
+    )
     out = handler(node, {"clean_factor": [1]})
     assert out["first"] == "x"
     assert out["second"] == "pub:first:y"
+
+
+@workflow_node(
+    label="t0",
+    description="",
+    entry="evaluate",
+    input_sockets=[
+        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+    ],
+    output_sockets=[],
+)
+class TestEvalZeroOutWithPublishNode:
+    @classmethod
+    def workflow_publish_evaluate_result(
+        cls,
+        node: Node,
+        inputs: dict[str, Any],
+        raw: Any,
+        primary_socket: str,
+    ) -> dict[str, Any]:
+        _ = (inputs, raw, primary_socket)
+        return {"published_only": f"node:{node.id}"}
+
+    def evaluate(self, clean_factor: object, **kwargs: object) -> str:
+        _ = (clean_factor, kwargs)
+        return "raw-ignored"
+
+
+def test_handler_evaluate_zero_outputs_publisher_no_primary_injection() -> None:
+    from workflow import workflow_node_type_key
+
+    tid = workflow_node_type_key(TestEvalZeroOutWithPublishNode)
+    node = Node(id="n0", type=tid, params={})
+    handler = handler_from_node_class(
+        TestEvalZeroOutWithPublishNode,
+        workflow_node_definition_from_class(TestEvalZeroOutWithPublishNode),
+    )
+    out = dict(handler(node, {"clean_factor": [1]}))
+    assert out == {"published_only": "node:n0"}
+    assert "out" not in out

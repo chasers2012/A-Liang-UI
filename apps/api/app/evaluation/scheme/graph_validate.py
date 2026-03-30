@@ -4,14 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Set as AbstractSet
 
-from workflow import Node
-from workflow import validate_workflow_graph as _validate_generic
+from workflow import validate_workflow_graph_against_registry
 
 from .profile_schemas import EvaluationWorkflow
-from .workflow_graph_types import (
-    get_evaluation_node_catalog,
-    resolve_evaluation_workflow_node_type_to_fqn,
-)
+from .workflow_graph_types import get_evaluation_node_registry
 
 
 def validate_workflow_graph(
@@ -21,18 +17,10 @@ def validate_workflow_graph(
 ) -> None:
     """Validate DAG structure and sockets for an evaluation workflow.
 
-    ``node.type`` must be the catalog key (class ``module.qualname``) and in ``allowed_types``.
+    ``node.type`` must be the registry key (class ``module.qualname``) and in ``allowed_types``.
     """
-    cat = get_evaluation_node_catalog()
-    specs: dict[str, Node] = {}
-    for n in workflow.nodes:
-        t = (n.type or "").strip()
-        if not t:
-            raise ValueError(f"节点 {n.id!r} 的 type 不能为空")
-        resolved = resolve_evaluation_workflow_node_type_to_fqn(t)
-        if resolved not in cat.specs:
-            raise ValueError(f"未知节点类型: {t!r}")
-        if resolved not in allowed_types:
-            raise ValueError(f"不允许的节点类型: {t!r}")
-        specs[t] = cat.specs[resolved]
-    _validate_generic(workflow, node_type_specs=specs)
+    validate_workflow_graph_against_registry(
+        workflow,
+        get_evaluation_node_registry(),
+        allowed_types=allowed_types,
+    )

@@ -1,15 +1,16 @@
-"""Pure graph algorithms operating on WorkflowNode / WorkflowLink sequences."""
+"""Pure graph algorithms operating on :class:`~workflow.node_types.Node` / :class:`WorkflowLink` sequences."""
 
 from __future__ import annotations
 
 from collections import defaultdict, deque
 from collections.abc import Sequence
 
-from .graph import WorkflowLink, WorkflowNode
+from .graph import WorkflowLink
+from .node_types import Node
 
 
 def topological_order(
-    nodes: Sequence[WorkflowNode],
+    nodes: Sequence[Node],
     links: Sequence[WorkflowLink],
 ) -> list[str]:
     """Return node ids in topological order.  Raises ``ValueError`` on cycle."""
@@ -34,7 +35,7 @@ def topological_order(
 
 
 def assert_acyclic(
-    nodes: Sequence[WorkflowNode],
+    nodes: Sequence[Node],
     links: Sequence[WorkflowLink],
 ) -> None:
     """Raise ``ValueError`` if the graph has a cycle."""

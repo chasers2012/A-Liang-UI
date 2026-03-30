@@ -36,18 +36,13 @@ def node_spec_to_public(
     extra: dict[str, Any] | None = None,
 ) -> NodeTypeDefinitionPublic:
     """Convert a :class:`workflow.Node` to the API response model."""
+    data = spec.serialize()
     return NodeTypeDefinitionPublic(
-        type=spec.type,
-        label=spec.label,
-        description=spec.description,
-        inputs=[
-            SocketSpecPublic(name=s.name, required=s.required, value_type=s.value_type)
-            for s in spec.inputs
-        ],
-        outputs=[
-            SocketSpecPublic(name=s.name, required=s.required, value_type=s.value_type)
-            for s in spec.outputs
-        ],
+        type=str(data["type"]),
+        label=str(data["label"]),
+        description=str(data["description"]),
+        inputs=[SocketSpecPublic.model_validate(s) for s in data["inputs"]],
+        outputs=[SocketSpecPublic.model_validate(s) for s in data["outputs"]],
         extra=dict(extra) if extra else {},
     )
 

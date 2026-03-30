@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from collections.abc import Set as AbstractSet
 
-from .graph import WorkflowGraph, WorkflowLink, WorkflowNode
+from .graph import WorkflowGraph, WorkflowLink
 from .graph_algo import assert_acyclic
+from .node_registry import RegisteredNode
 from .node_types import Node
 
 
-def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNode]:
+def _validate_unique_node_ids(nodes: list[Node]) -> dict[str, Node]:
     ids = [n.id for n in nodes]
     if len(ids) != len(set(ids)):
         raise ValueError("节点 id 重复")
@@ -17,7 +19,7 @@ def _validate_unique_node_ids(nodes: list[WorkflowNode]) -> dict[str, WorkflowNo
 
 
 def _validate_node_types(
-    nodes: list[WorkflowNode],
+    nodes: list[Node],
     specs: Mapping[str, Node],
 ) -> None:
     for n in nodes:
@@ -31,7 +33,7 @@ def _validate_node_types(
 def _validate_link_endpoints(
     li: int,
     link: WorkflowLink,
-    by_id: dict[str, WorkflowNode],
+    by_id: dict[str, Node],
 ) -> None:
     if link.from_node not in by_id:
         raise ValueError(f"连线[{li}] from_node 不存在: {link.from_node!r}")
@@ -44,7 +46,7 @@ def _validate_link_endpoints(
 def _validate_link_sockets(
     li: int,
     link: WorkflowLink,
-    by_id: dict[str, WorkflowNode],
+    by_id: dict[str, Node],
     specs: Mapping[str, Node],
 ) -> None:
     ft = by_id[link.from_node].type
@@ -77,7 +79,7 @@ def _validate_unique_link_targets(links: list[WorkflowLink]) -> None:
 
 def _validate_links(
     links: list[WorkflowLink],
-    by_id: dict[str, WorkflowNode],
+    by_id: dict[str, Node],
     specs: Mapping[str, Node],
 ) -> None:
     _validate_unique_link_targets(links)
@@ -102,3 +104,28 @@ def validate_workflow_graph(
     _validate_node_types(nodes, node_type_specs)
     _validate_links(links, by_id, node_type_specs)
     assert_acyclic(nodes, links)
+
+
+def validate_workflow_graph_against_registry(
+    graph: WorkflowGraph,
+    registry: Mapping[str, RegisteredNode],
+    *,
+    allowed_types: AbstractSet[str] | None = None,
+) -> None:
+    """Validate graph using a ``type_id -> RegisteredNode`` map.
+
+    For each graph node: ``type`` is trimmed; must be non-empty, present in
+    *registry*, and (if *allowed_types* is set) in *allowed_types*. Then
+    :func:`validate_workflow_graph` runs with definitions from the registry.
+    """
+    node_type_specs: dict[str, Node] = {}
+    for n in graph.nodes:
+        t = (n.type or "").strip()
+        if not t:
+            raise ValueError(f"节点 {n.id!r} 的 type 不能为空")
+        if t not in registry:
+            raise ValueError(f"未知节点类型: {t!r}")
+        if allowed_types is not None and t not in allowed_types:
+            raise ValueError(f"不允许的节点类型: {t!r}")
+        node_type_specs[t] = registry[t].definition
+    validate_workflow_graph(graph, node_type_specs=node_type_specs)

@@ -1,4 +1,4 @@
-"""Tests for :mod:`workflow.node_catalog`."""
+"""Tests for :mod:`workflow.node_registry`."""
 
 from __future__ import annotations
 
@@ -8,30 +8,37 @@ import pytest
 from workflow import (
     EnumNodeParam,
     Node,
-    NodeCatalog,
     NumberNodeParam,
+    RegisteredNode,
     StringNodeParam,
-    WorkflowNode,
-    build_node_catalog_from_modules,
+    build_node_registry_from_modules,
     handler_from_node_class,
-    merge_node_catalogs,
-    ordered_specs,
+    merge_node_registries,
+    ordered_definitions,
     workflow_node,
+    workflow_node_definition_from_class,
     workflow_node_type_key,
     workflow_socket,
 )
 
 
-def test_ordered_specs_order_and_keyerror() -> None:
+def test_ordered_definitions_order_and_keyerror() -> None:
     a = Node(type="a", label="", description="", inputs=(), outputs=())
     b = Node(type="b", label="", description="", inputs=(), outputs=())
-    m = {"a": a, "b": b}
-    assert ordered_specs(m, ["b", "a"]) == [b, a]
+
+    def _stub(_n, _i):
+        return {}
+
+    m = {
+        "a": RegisteredNode(definition=a, handler=_stub),
+        "b": RegisteredNode(definition=b, handler=_stub),
+    }
+    assert ordered_definitions(m, ["b", "a"]) == [b, a]
     with pytest.raises(KeyError):
-        ordered_specs(m, ["c"])
+        ordered_definitions(m, ["c"])
 
 
-def test_merge_node_catalogs_later_overrides() -> None:
+def test_merge_node_registries_later_overrides() -> None:
     @workflow_node(
         label="1",
         description="",
@@ -56,18 +63,19 @@ def test_merge_node_catalogs_later_overrides() -> None:
 
     m1 = types.ModuleType("m1")
     m1.First = First
-    c1 = build_node_catalog_from_modules(m1)
+    r1 = build_node_registry_from_modules(m1)
     k = workflow_node_type_key(First)
-    merged = merge_node_catalogs(
-        c1,
-        NodeCatalog(
-            classes={k: Second},
-            specs={k: Second.__node_spec__()},  # type: ignore[attr-defined]
-            handlers={k: handler_from_node_class(Second)},
-        ),
+    defn2 = workflow_node_definition_from_class(Second)
+    merged = merge_node_registries(
+        r1,
+        {
+            k: RegisteredNode(
+                definition=defn2,
+                handler=handler_from_node_class(Second, defn2),
+            ),
+        },
     )
-    assert merged.classes[k] is Second
-    assert merged.specs[k].label == "2"
+    assert merged[k].definition.label == "2"
 
 
 def test_build_merges_types_from_two_modules() -> None:
@@ -97,11 +105,11 @@ def test_build_merges_types_from_two_modules() -> None:
     m1.X = X
     m2 = types.ModuleType("m2")
     m2.Y = Y
-    cat = build_node_catalog_from_modules(m1, m2)
-    assert set(cat.specs.keys()) == {workflow_node_type_key(X), workflow_node_type_key(Y)}
+    reg = build_node_registry_from_modules(m1, m2)
+    assert set(reg.keys()) == {workflow_node_type_key(X), workflow_node_type_key(Y)}
 
 
-def test_build_node_catalog_includes_workflow_parameters() -> None:
+def test_build_node_registry_includes_workflow_parameters() -> None:
     @workflow_node(
         label="",
         description="",
@@ -119,8 +127,8 @@ def test_build_node_catalog_includes_workflow_parameters() -> None:
 
     m = types.ModuleType("mwp")
     m.WithParamsNode = WithParamsNode
-    cat = build_node_catalog_from_modules(m)
-    spec = cat.specs[workflow_node_type_key(WithParamsNode)]
+    reg = build_node_registry_from_modules(m)
+    spec = reg[workflow_node_type_key(WithParamsNode)].definition
     assert len(spec.parameters) == 2
     assert spec.parameters[0].key == "k1"
     assert spec.parameters[0].label == "L1"
@@ -154,8 +162,8 @@ def test_workflow_parameters_string_and_enum() -> None:
 
     m = types.ModuleType("mmixed")
     m.MixedNode = MixedNode
-    cat = build_node_catalog_from_modules(m)
-    spec = cat.specs[workflow_node_type_key(MixedNode)]
+    reg = build_node_registry_from_modules(m)
+    spec = reg[workflow_node_type_key(MixedNode)].definition
     assert len(spec.parameters) == 2
     assert spec.parameters[0].key == "legacy"
     assert spec.parameters[1].type == "enum"
@@ -175,6 +183,7 @@ def test_handler_execute_wraps_non_mapping_as_primary_socket() -> None:
         def execute(self, **kwargs):
             return 42
 
-    h = handler_from_node_class(BareReturnNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
+    defn = workflow_node_definition_from_class(BareReturnNode)
+    h = handler_from_node_class(BareReturnNode, defn)
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
     assert dict(h(node, {})) == {"primary_out": 42}

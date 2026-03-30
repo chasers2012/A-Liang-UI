@@ -1,14 +1,32 @@
-"""Tests for node return value coercion (dict / tuple / scalar)."""
+"""Tests for node return value coercion (aligned with OUTPUT_SOCKETS order)."""
 
 from __future__ import annotations
 
 import pytest
 from workflow import (
-    WorkflowNode,
+    Node,
     handler_from_node_class,
     workflow_node,
+    workflow_node_definition_from_class,
     workflow_socket,
 )
+
+
+def test_handler_execute_zero_outputs_returns_empty() -> None:
+    @workflow_node(
+        label="",
+        description="",
+        input_sockets=[workflow_socket("x")],
+        output_sockets=[],
+        entry="execute",
+    )
+    class NoOutNode:
+        def execute(self, **kwargs):
+            return "ignored"
+
+    h = handler_from_node_class(NoOutNode, workflow_node_definition_from_class(NoOutNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
+    assert dict(h(node, {"x": 1})) == {}
 
 
 def test_handler_execute_tuple_matches_output_sockets() -> None:
@@ -26,8 +44,8 @@ def test_handler_execute_tuple_matches_output_sockets() -> None:
         def execute(self, **kwargs):
             return 1, 2
 
-    h = handler_from_node_class(TupleOutNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
+    h = handler_from_node_class(TupleOutNode, workflow_node_definition_from_class(TupleOutNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
     assert dict(h(node, {})) == {"a": 1, "b": 2}
 
 
@@ -43,8 +61,8 @@ def test_handler_execute_single_socket_accepts_unit_tuple() -> None:
         def execute(self, **kwargs):
             return ("x",)
 
-    h = handler_from_node_class(UnitTupleNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
+    h = handler_from_node_class(UnitTupleNode, workflow_node_definition_from_class(UnitTupleNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
     assert dict(h(node, {})) == {"only": "x"}
 
 
@@ -60,9 +78,9 @@ def test_handler_execute_multi_output_scalar_raises() -> None:
         def execute(self, **kwargs):
             return 99
 
-    h = handler_from_node_class(BadNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
-    with pytest.raises(ValueError, match="neither dict nor tuple"):
+    h = handler_from_node_class(BadNode, workflow_node_definition_from_class(BadNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
+    with pytest.raises(ValueError, match="tuple or list"):
         h(node, {})
 
 
@@ -78,14 +96,34 @@ def test_handler_execute_tuple_length_mismatch_raises() -> None:
         def execute(self, **kwargs):
             return 1, 2, 3
 
-    h = handler_from_node_class(BadTupleNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
-    with pytest.raises(ValueError, match="tuple return length"):
+    h = handler_from_node_class(BadTupleNode, workflow_node_definition_from_class(BadTupleNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
+    with pytest.raises(ValueError, match="return has 3 value"):
         h(node, {})
 
 
-def test_handler_execute_non_dict_not_treated_as_socket_map() -> None:
-    """Only ``dict`` is socket-keyed; other objects use single-socket or tuple rules."""
+def test_handler_execute_list_matches_output_sockets() -> None:
+    @workflow_node(
+        label="",
+        description="",
+        input_sockets=[],
+        output_sockets=[
+            workflow_socket("a"),
+            workflow_socket("b"),
+        ],
+        entry="execute",
+    )
+    class ListOutNode:
+        def execute(self, **kwargs):
+            return [1, 2]
+
+    h = handler_from_node_class(ListOutNode, workflow_node_definition_from_class(ListOutNode))
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
+    assert dict(h(node, {})) == {"a": 1, "b": 2}
+
+
+def test_handler_execute_single_socket_wraps_arbitrary_value() -> None:
+    """Single output socket wraps any return value (including ``dict``)."""
 
     sentinel = object()
 
@@ -100,7 +138,9 @@ def test_handler_execute_non_dict_not_treated_as_socket_map() -> None:
         def execute(self, **kwargs):
             return sentinel
 
-    h = handler_from_node_class(ReturnsObjectNode)
-    node = WorkflowNode(id="n1", type="t", pos=[0.0, 0.0], params={})
+    h = handler_from_node_class(
+        ReturnsObjectNode, workflow_node_definition_from_class(ReturnsObjectNode)
+    )
+    node = Node(id="n1", type="t", pos=[0.0, 0.0], params={})
     out = dict(h(node, {}))
     assert out["only"] is sentinel

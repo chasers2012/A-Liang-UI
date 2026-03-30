@@ -9,7 +9,7 @@ from workflow import WorkflowExecutor
 
 from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
 from app.evaluation.scheme.workflow_graph_types import (
-    get_evaluation_node_catalog,
+    get_evaluation_node_registry,
     normalize_evaluation_workflow_node_types,
 )
 from app.factors.schemas import utc_now_iso
@@ -35,7 +35,7 @@ def run_evaluation_profile_workflow(
     window = setup.window
 
     try:
-        node_results = WorkflowExecutor(get_evaluation_node_catalog().handlers).execute(
+        node_results = WorkflowExecutor.from_registry(get_evaluation_node_registry()).execute(
             wf,
             input_sockets={
                 "factor": setup.factor,

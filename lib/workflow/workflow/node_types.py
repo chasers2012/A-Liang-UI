@@ -130,16 +130,56 @@ class EnumNodeParam(NodeParam):
         }
 
 
-@dataclass(frozen=True)
-class Node:
-    """Static definition of a node *kind* (type id, sockets, parameters)."""
+class Node(BaseModel):
+    """Unified workflow node model for both type-definition and graph-instance data."""
 
+    model_config = ConfigDict(extra="ignore")
+
+    # Graph-instance fields
+    id: str = ""
+    pos: list[float] = Field(default_factory=lambda: [0.0, 0.0])
+    params: dict[str, Any] = Field(default_factory=dict)
+
+    # Type-definition fields
     type: str
-    label: str
-    description: str
-    inputs: tuple[Socket, ...]
-    outputs: tuple[Socket, ...]
+    label: str = ""
+    description: str = ""
+    entry: str = "execute"
+    inputs: tuple[Socket, ...] = ()
+    outputs: tuple[Socket, ...] = ()
     parameters: tuple[NodeParam, ...] = ()
+
+    @field_validator("pos")
+    @classmethod
+    def _two_floats(cls, v: list[float]) -> list[float]:
+        if len(v) != 2:
+            raise ValueError("pos must be [x, y]")
+        return [float(v[0]), float(v[1])]
+
+    def serialize(self) -> dict[str, Any]:
+        """JSON-friendly node definition payload."""
+        return {
+            "type": self.type,
+            "label": self.label,
+            "description": self.description,
+            "inputs": [
+                {
+                    "name": s.name,
+                    "required": s.required,
+                    "value_type": s.value_type,
+                }
+                for s in self.inputs
+            ],
+            "outputs": [
+                {
+                    "name": s.name,
+                    "required": s.required,
+                    "value_type": s.value_type,
+                }
+                for s in self.outputs
+            ],
+            "parameters": [p.to_public_dict() for p in self.parameters],
+        }
 
 
 # --- Pydantic (JSON interchange) ------------------------------------------------

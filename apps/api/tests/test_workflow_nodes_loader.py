@@ -6,7 +6,10 @@ import sys
 from pathlib import Path
 
 import pytest
-from app.workflow_nodes.loader import load_domain_node_catalog, load_workspace_extension_catalogs
+from app.workflow_nodes.loader import (
+    load_workspace_extension_registries,
+    load_workspace_node_registry,
+)
 from workspace import set_workspace_root
 
 
@@ -16,20 +19,33 @@ def _reset_workspace_root() -> None:
     set_workspace_root(None)
 
 
-def test_load_evaluation_domain_includes_calculate_factor(tmp_path: Path) -> None:
+def test_evaluation_catalog_excludes_agent_nodes(tmp_path: Path) -> None:
+    from app.evaluation.scheme.workflow_graph_types import (
+        all_workflow_node_type_ids,
+        get_evaluation_node_registry,
+    )
+
+    get_evaluation_node_registry.cache_clear()
     set_workspace_root(tmp_path)
-    cat = load_domain_node_catalog("evaluation")
-    keys = set(cat.specs.keys())
+    try:
+        ids = all_workflow_node_type_ids()
+        assert all(not t.startswith("agent_workflow_nodes.") for t in ids)
+        assert any(t.startswith("evaluation_workflow_nodes.") for t in ids)
+        full = get_evaluation_node_registry()
+        assert any(k.startswith("agent_workflow_nodes.") for k in full)
+    finally:
+        get_evaluation_node_registry.cache_clear()
+        set_workspace_root(None)
+
+
+def test_load_workspace_registry_includes_evaluation_and_agent_nodes(tmp_path: Path) -> None:
+    set_workspace_root(tmp_path)
+    reg = load_workspace_node_registry()
+    keys = set(reg.keys())
     assert any(k.endswith(".CalculateFactorValueNode") for k in keys)
     assert any("echarts_line" in k for k in keys)
     assert any(k.endswith(".BuiltinMeanIcNode") for k in keys)
-    assert any(k.endswith(".BuiltinMeanReturnSpreadNode") for k in cat.handlers)
-
-
-def test_load_agent_domain_ordered_types(tmp_path: Path) -> None:
-    set_workspace_root(tmp_path)
-    cat = load_domain_node_catalog("agent")
-    keys = set(cat.specs.keys())
+    assert any(k.endswith(".BuiltinMeanReturnSpreadNode") for k in keys)
     assert any(k.endswith(".InitContextNode") for k in keys)
     assert any(k.endswith(".ValidateNode") for k in keys)
     assert any(k.endswith(".FinalizeNode") for k in keys)
@@ -64,17 +80,21 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    parent = str(domain_root.resolve())
+    parent_eval = str(domain_root.resolve())
+    parent_agent = str((tmp_path / "workflow_nodes" / "agent").resolve())
     try:
-        cats = load_workspace_extension_catalogs("evaluation")
-        assert len(cats) == 1
-        ext_keys = set(cats[0].specs.keys())
+        regs = load_workspace_extension_registries()
+        assert len(regs) >= 1
+        ext_regs = [r for r in regs if any(k.endswith(".ExtNode") for k in r)]
+        assert len(ext_regs) == 1
+        ext_keys = set(ext_regs[0].keys())
         assert any(k.endswith(".ExtNode") for k in ext_keys)
 
-        merged = load_domain_node_catalog("evaluation")
-        mk = set(merged.specs.keys())
+        merged = load_workspace_node_registry()
+        mk = set(merged.keys())
         assert any(k.endswith(".ExtNode") for k in mk)
         assert any(k.endswith(".CalculateFactorValueNode") for k in mk)
     finally:
-        while parent in sys.path:
-            sys.path.remove(parent)
+        for parent in (parent_eval, parent_agent):
+            while parent in sys.path:
+                sys.path.remove(parent)

@@ -1,10 +1,10 @@
-"""Agent built-in node specs and handlers (loader + workspace extensions)."""
+"""Agent built-in node definitions and handlers (loader + workspace extensions)."""
 
 from __future__ import annotations
 
-from workflow import Node, ordered_specs
+from workflow import Node, ordered_definitions
 
-from app.workflow_nodes import load_domain_node_catalog
+from app.workflow_nodes import load_workspace_node_registry
 
 AGENT_NODE_ORDER: list[str] = [
     "agent_workflow_nodes.init_context.InitContextNode",
@@ -18,6 +18,6 @@ AGENT_NODE_ORDER: list[str] = [
 
 
 def get_agent_node_types() -> list[Node]:
-    """Ordered node specs for the agent domain (uses current :func:`workspace.get_workspace_root`)."""
-    cat = load_domain_node_catalog("agent")
-    return ordered_specs(cat.specs, AGENT_NODE_ORDER)
+    """Ordered agent node definitions from the unified workspace registry."""
+    reg = load_workspace_node_registry()
+    return ordered_definitions(reg, AGENT_NODE_ORDER)
