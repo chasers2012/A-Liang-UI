@@ -2,18 +2,11 @@ from __future__ import annotations
 
 import uuid
 
-from app import datetime_utils
-
 USER_METRIC_WORKFLOW_ROOT = "workflow_nodes/evaluation"
-utc_now_iso = datetime_utils.utc_now_iso
 
 
 def user_metric_package_dir(metric_id: str) -> str:
     return f"em_{metric_id.replace('-', '_')}"
-
-
-def user_metric_workflow_type_id(metric_id: str) -> str:
-    return f"{user_metric_package_dir(metric_id)}.metric_node.UserEvaluationMetric"
 
 
 def user_metric_source_path(metric_id: str) -> str:

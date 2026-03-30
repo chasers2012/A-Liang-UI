@@ -18,8 +18,7 @@ export interface EvaluationMetricSummaryPublic {
   name: string;
   description: string;
   source_path: string;
-  /** 工作流节点 ``type``：节点类 FQN（如 ``evaluation_workflow_nodes.*`` / ``em_*``），或兼容旧短 id。 */
-  workflow_type_id: string;
+  /** 评价指标节点 id（与后端路由参数 `metric_id` 一致）。 */
   created_at: string;
   updated_at: string;
   workflow_parameters?: NodeParamModel[];

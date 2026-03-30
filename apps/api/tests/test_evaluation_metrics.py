@@ -7,9 +7,7 @@ def test_evaluation_metrics_crud(client):
     data = r.json()
     mid = data["id"]
     assert data["name"] == "em_test"
-    assert (
-        data["workflow_type_id"] == f"em_{mid.replace('-', '_')}.metric_node.UserEvaluationMetric"
-    )
+    assert "workflow_type_id" not in data
     assert data["source_path"].startswith("workflow_nodes/evaluation/em_")
     assert "UserEvaluationMetric" in data["source"]
 

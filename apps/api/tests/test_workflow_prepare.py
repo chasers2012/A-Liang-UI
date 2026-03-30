@@ -5,7 +5,8 @@ def test_list_evaluation_metrics_is_user_registry_only(client):
     r = client.get("/evaluation-metrics")
     assert r.status_code == 200
     for row in r.json():
-        assert "workflow_type_id" in row
+        assert "id" in row
+        assert "workflow_type_id" not in row
 
 
 def test_node_types_include_builtin_eval_metric_nodes(client):

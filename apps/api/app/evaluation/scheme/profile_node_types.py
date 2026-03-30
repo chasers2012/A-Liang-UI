@@ -64,16 +64,9 @@ def _metric_record_and_metric_id(
     if registry_id is None:
         registry_id = builtin_metric_id_from_workflow_node_fqn(workflow_type_id)
     mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, registry_id) if registry_id else None
-    if mrec is None:
-        for rec in metrics_reg.items:
-            if rec.workflow_type_id == workflow_type_id:
-                mrec = rec
-                break
-
-    metric_id_out = registry_id
-    if metric_id_out is None and mrec is not None:
-        metric_id_out = mrec.id
-    return mrec, metric_id_out
+    # `registry_id` already represents the metric id for both user metrics (UUID) and built-ins.
+    # For built-ins we won't have a record in the registry, but the metric id is still useful to the frontend.
+    return mrec, registry_id
 
 
 def list_evaluation_profile_node_types_public(

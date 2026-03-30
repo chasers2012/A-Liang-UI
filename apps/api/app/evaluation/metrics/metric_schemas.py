@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
 from uuid import uuid4
 
 from custom_code import validate_identifier_name as validate_metric_name
@@ -24,11 +23,6 @@ def user_metric_package_dir(metric_id: str) -> str:
 def user_metric_workflow_node_fqn(metric_id: str) -> str:
     """Class FQN for the user metric node (``em_<id>.metric_node.UserEvaluationMetric``)."""
     return f"{user_metric_package_dir(metric_id)}.metric_node.UserEvaluationMetric"
-
-
-def user_metric_workflow_type_id(metric_id: str) -> str:
-    """Alias for :func:`user_metric_workflow_node_fqn` (stored in ``workflow_type_id``)."""
-    return user_metric_workflow_node_fqn(metric_id)
 
 
 def user_metric_source_path(metric_id: str) -> str:
@@ -115,22 +109,9 @@ class EvaluationMetricRecord(BaseModel):
     name: str
     description: str = ""
     source_path: str
-    workflow_type_id: str = ""
     created_at: str
     updated_at: str
     workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _fill_workflow_type_id(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        if data.get("workflow_type_id"):
-            return data
-        mid = data.get("id")
-        if isinstance(mid, str) and mid.strip():
-            data["workflow_type_id"] = user_metric_workflow_type_id(mid.strip())
-        return data
 
     @model_validator(mode="after")
     def _validate_workflow_parameters(self) -> EvaluationMetricRecord:
@@ -164,13 +145,11 @@ class EvaluationMetricCreate(BaseModel):
         return self
 
     def to_record(self, metric_id: str, now: str) -> EvaluationMetricRecord:
-        wf = user_metric_workflow_type_id(metric_id)
         return EvaluationMetricRecord(
             id=metric_id,
             name=self.name.strip(),
             description=self.description.strip(),
             source_path=user_metric_source_path(metric_id),
-            workflow_type_id=wf,
             created_at=now,
             updated_at=now,
             workflow_parameters=list(self.workflow_parameters),
@@ -206,7 +185,6 @@ class EvaluationMetricSummaryPublic(BaseModel):
     name: str
     description: str
     source_path: str
-    workflow_type_id: str
     created_at: str
     updated_at: str
     workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
@@ -220,7 +198,6 @@ def record_to_summary(
     rec: EvaluationMetricRecord,
 ) -> EvaluationMetricSummaryPublic:
     data = rec.model_dump()
-    data["workflow_type_id"] = data["workflow_type_id"] or user_metric_workflow_type_id(rec.id)
     return EvaluationMetricSummaryPublic.model_validate(data)
 
 
