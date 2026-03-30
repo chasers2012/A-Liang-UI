@@ -6,70 +6,12 @@ from custom_code import validate_identifier_name as validate_metric_name
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from workflow import NodeParamModel
 
-from app import datetime_utils
+from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 from app.evaluation.scheme.metric_workflow_parameters import (
     validate_metric_workflow_parameters,
 )
 
 USER_METRIC_WORKFLOW_ROOT = "workflow_nodes/evaluation"
-
-utc_now_iso = datetime_utils.utc_now_iso
-
-
-def user_metric_package_dir(metric_id: str) -> str:
-    return f"em_{metric_id.replace('-', '_')}"
-
-
-def user_metric_workflow_node_fqn(metric_id: str) -> str:
-    """Class FQN for the user metric node (``em_<id>.metric_node.UserEvaluationMetric``)."""
-    return f"{user_metric_package_dir(metric_id)}.metric_node.UserEvaluationMetric"
-
-
-def user_metric_source_path(metric_id: str) -> str:
-    return f"{USER_METRIC_WORKFLOW_ROOT}/{user_metric_package_dir(metric_id)}/metric_node.py"
-
-
-def user_metric_init_path(metric_id: str) -> str:
-    return f"{USER_METRIC_WORKFLOW_ROOT}/{user_metric_package_dir(metric_id)}/__init__.py"
-
-
-def user_metric_package_parts(metric_id: str) -> tuple[str, str, str]:
-    d = user_metric_package_dir(metric_id)
-    return d, user_metric_init_path(metric_id), user_metric_source_path(metric_id)
-
-
-def _metric_id_from_em_package_name(pkg: str) -> str | None:
-    if not pkg.startswith("em_"):
-        return None
-    tail = pkg[3:]
-    parts = tail.split("_")
-    if len(parts) != 5:
-        return None
-    a, b, c, d, e = parts
-    if len(a) != 8 or len(b) != 4 or len(c) != 4 or len(d) != 4 or len(e) != 12:
-        return None
-    return f"{a}-{b}-{c}-{d}-{e}"
-
-
-def registry_metric_id_from_workflow_type(workflow_type_id: str) -> str | None:
-    """Resolve registry metric id from ``em_<id>.metric_node.UserEvaluationMetric`` node type FQN."""
-    w = (workflow_type_id or "").strip()
-    if w.endswith(".UserEvaluationMetric"):
-        parts = w.split(".")
-        if len(parts) >= 3 and parts[-2] == "metric_node":
-            return _metric_id_from_em_package_name(parts[-3])
-    return None
-
-
-def builtin_metric_id_from_workflow_node_fqn(workflow_type_id: str) -> str | None:
-    """Map built-in metric node class FQN to registry metric id."""
-    w = (workflow_type_id or "").strip()
-    if w.endswith(".BuiltinMeanIcNode") and "metric_builtin_mean_ic" in w:
-        return "builtin_mean_ic"
-    if w.endswith(".BuiltinMeanReturnSpreadNode") and "metric_builtin_mean_return_spread" in w:
-        return "builtin_mean_return_spread"
-    return None
-
 
 DEFAULT_METRIC_SOURCE = """
 from __future__ import annotations
@@ -149,7 +91,7 @@ class EvaluationMetricCreate(BaseModel):
             id=metric_id,
             name=self.name.strip(),
             description=self.description.strip(),
-            source_path=user_metric_source_path(metric_id),
+            source_path=EvaluationMetricPackageManager.get_source_path(metric_id),
             created_at=now,
             updated_at=now,
             workflow_parameters=list(self.workflow_parameters),

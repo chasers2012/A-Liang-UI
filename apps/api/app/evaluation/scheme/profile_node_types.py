@@ -10,12 +10,7 @@ from typing import Any
 
 from workflow import Node, NodeParamModel
 
-from app.evaluation.metric_workflow.metric_workflow_helpers import (
-    builtin_metric_id_from_workflow_node_fqn,
-    registry_metric_id_from_workflow_type,
-)
 from app.evaluation.metrics.metric_schemas import (
-    EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
@@ -41,32 +36,18 @@ def workflow_node_api_extra(
     metrics_reg: EvaluationMetricsRegistryFile,
 ) -> dict[str, Any]:
     """Build flattened ``extra`` fields for ``/evaluation-profiles/node-types``."""
-    nt = (node_type or "").strip()
+    metric_id = (node_type or "").strip()
     spec_wp = _workflow_parameters_from_node_spec(spec)
     if spec_wp:
         return {"workflow_parameters": spec_wp}
 
-    mrec, metric_id_out = _metric_record_and_metric_id(metrics_reg, nt)
+    mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, metric_id)
     wp = [p.model_dump() for p in mrec.workflow_parameters] if mrec is not None else []
     return {
         "workflow_parameters": wp,
-        "metric_id": metric_id_out,
+        "metric_id": metric_id,
         "user_defined": bool(mrec is not None),
     }
-
-
-def _metric_record_and_metric_id(
-    metrics_reg: EvaluationMetricsRegistryFile,
-    workflow_type_id: str,
-) -> tuple[EvaluationMetricRecord | None, str | None]:
-    """Resolve (metric record, metric_id) for a workflow node type id."""
-    registry_id = registry_metric_id_from_workflow_type(workflow_type_id)
-    if registry_id is None:
-        registry_id = builtin_metric_id_from_workflow_node_fqn(workflow_type_id)
-    mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, registry_id) if registry_id else None
-    # `registry_id` already represents the metric id for both user metrics (UUID) and built-ins.
-    # For built-ins we won't have a record in the registry, but the metric id is still useful to the frontend.
-    return mrec, registry_id
 
 
 def list_evaluation_profile_node_types_public(

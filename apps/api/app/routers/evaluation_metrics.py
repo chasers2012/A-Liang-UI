@@ -3,11 +3,8 @@ from __future__ import annotations
 from custom_code import validate_source_syntax
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.metric_workflow.user_metric_loader import load_user_evaluation_metric_class
-from app.evaluation.metric_workflow.user_metric_package import (
-    delete_user_metric_package,
-    write_user_metric_package,
-)
+from app.datetime_utils import utc_now_iso
+from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 from app.evaluation.metrics.metric_schemas import (
     DEFAULT_METRIC_SOURCE,
     EvaluationMetricCreate,
@@ -17,7 +14,6 @@ from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricSummaryPublic,
     new_metric_id,
     record_to_summary,
-    utc_now_iso,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
@@ -44,20 +40,18 @@ def _validate_and_write_source(rec: EvaluationMetricRecord, source: str) -> None
         EvaluationMetricsRegistry.write_source(
             rec,
             source,
-            validators=[validate_source_syntax, load_user_evaluation_metric_class],
+            validators=[
+                validate_source_syntax,
+                EvaluationMetricPackageManager.load_user_evaluation_metric_class,
+            ],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-def _metric_sort_key(rec: EvaluationMetricRecord) -> tuple[str]:
-    # Metrics are user-created; sort alphabetically for stable UX.
-    return (rec.name,)
-
-
 @router.get("", response_model=list[EvaluationMetricSummaryPublic])
 def list_evaluation_metrics() -> list[EvaluationMetricSummaryPublic]:
-    items = sorted(EvaluationMetricsRegistry.list_items(), key=_metric_sort_key)
+    items = EvaluationMetricsRegistry.list_items()
     return [record_to_summary(i) for i in items]
 
 
@@ -79,12 +73,15 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     mid = new_metric_id()
     now = utc_now_iso()
     rec = body.to_record(mid, now)
-    src = body.source
+    src = body.source or DEFAULT_METRIC_SOURCE
     try:
-        write_user_metric_package(
+        EvaluationMetricPackageManager.write_metric_package(
             mid,
             src,
-            validators=[validate_source_syntax, load_user_evaluation_metric_class],
+            validators=[
+                validate_source_syntax,
+                EvaluationMetricPackageManager.load_user_evaluation_metric_class,
+            ],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -117,5 +114,5 @@ def delete_evaluation_metric(metric_id: str) -> None:
     rec = EvaluationMetricsRegistry.get_item(metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
-    delete_user_metric_package(metric_id)
+    EvaluationMetricPackageManager.delete_user_metric_package(metric_id)
     EvaluationMetricsRegistry.delete_item(metric_id)
