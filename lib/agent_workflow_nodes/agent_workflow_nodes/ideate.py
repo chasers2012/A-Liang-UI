@@ -9,7 +9,6 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
 
 
 @workflow_node(
-    type_id="ideate",
     label="立意",
     description="",
     input_sockets=[workflow_socket("prev", value_type="flow")],

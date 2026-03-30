@@ -12,7 +12,6 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
 
 
 @workflow_node(
-    type_id="builtin_mean_ic",
     label="平均 IC",
     description="各持有期平均信息系数（Alphalens）",
     input_sockets=[

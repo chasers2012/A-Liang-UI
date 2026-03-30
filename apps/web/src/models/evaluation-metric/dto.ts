@@ -31,7 +31,7 @@ export interface EvaluationMetricSummaryPublic {
   name: string;
   description: string;
   source_path: string;
-  /** 工作流节点 ``type``，与 ``user_metric_<uuid>`` 或后端内置前缀一致。 */
+  /** 工作流节点 ``type``：节点类 FQN（如 ``evaluation_workflow_nodes.*`` / ``em_*``），或兼容旧短 id。 */
   workflow_type_id: string;
   created_at: string;
   updated_at: string;

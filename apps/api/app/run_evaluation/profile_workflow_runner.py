@@ -8,7 +8,10 @@ from typing import Any
 from workflow import WorkflowExecutor
 
 from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
-from app.evaluation.scheme.workflow_graph_types import get_evaluation_node_catalog
+from app.evaluation.scheme.workflow_graph_types import (
+    get_evaluation_node_catalog,
+    normalize_evaluation_workflow_node_types,
+)
 from app.factors.schemas import utc_now_iso
 
 from .runner import build_alphalens_evaluator_for_factor
@@ -21,7 +24,7 @@ def run_evaluation_profile_workflow(
     *,
     data_set_id: str | None,
 ) -> FactorEvaluationRecord:
-    wf = profile.workflow
+    wf = normalize_evaluation_workflow_node_types(profile.workflow)
     err, ev, window, base_quantiles, _ = build_alphalens_evaluator_for_factor(
         factor_id, data_set_id=data_set_id
     )

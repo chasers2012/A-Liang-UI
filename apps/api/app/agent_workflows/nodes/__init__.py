@@ -6,16 +6,18 @@ from workflow import Node, ordered_specs
 
 from app.workflow_nodes import load_domain_node_catalog
 
-_AGENT_CATALOG = load_domain_node_catalog("agent")
-
 AGENT_NODE_ORDER: list[str] = [
-    "init_context",
-    "ideate",
-    "generate_pseudocode",
-    "generate_code",
-    "validate",
-    "evaluate",
-    "finalize",
+    "agent_workflow_nodes.init_context.InitContextNode",
+    "agent_workflow_nodes.ideate.IdeateNode",
+    "agent_workflow_nodes.generate_pseudocode.GeneratePseudocodeNode",
+    "agent_workflow_nodes.generate_code.GenerateCodeNode",
+    "agent_workflow_nodes.validate_node.ValidateNode",
+    "agent_workflow_nodes.evaluate_node.EvaluateNode",
+    "agent_workflow_nodes.finalize.FinalizeNode",
 ]
 
-AGENT_NODE_TYPES: list[Node] = ordered_specs(_AGENT_CATALOG.specs, AGENT_NODE_ORDER)
+
+def get_agent_node_types() -> list[Node]:
+    """Ordered node specs for the agent domain (uses current :func:`workspace.get_workspace_root`)."""
+    cat = load_domain_node_catalog("agent")
+    return ordered_specs(cat.specs, AGENT_NODE_ORDER)

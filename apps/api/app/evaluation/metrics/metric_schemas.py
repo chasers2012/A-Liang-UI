@@ -22,8 +22,14 @@ def user_metric_package_dir(metric_id: str) -> str:
     return f"em_{metric_id.replace('-', '_')}"
 
 
+def user_metric_workflow_node_fqn(metric_id: str) -> str:
+    """Class FQN for the user metric node (``em_<id>.metric_node.UserEvaluationMetric``)."""
+    return f"{user_metric_package_dir(metric_id)}.metric_node.UserEvaluationMetric"
+
+
 def user_metric_workflow_type_id(metric_id: str) -> str:
-    return f"user_metric_{metric_id.replace('-', '_')}"
+    """Alias for :func:`user_metric_workflow_node_fqn` (stored in ``workflow_type_id``)."""
+    return user_metric_workflow_node_fqn(metric_id)
 
 
 def user_metric_source_path(metric_id: str) -> str:
@@ -39,11 +45,10 @@ def user_metric_package_parts(metric_id: str) -> tuple[str, str, str]:
     return d, user_metric_init_path(metric_id), user_metric_source_path(metric_id)
 
 
-def registry_metric_id_from_workflow_type(workflow_type_id: str) -> str | None:
-    prefix = "user_metric_"
-    if not workflow_type_id.startswith(prefix):
+def _metric_id_from_em_package_name(pkg: str) -> str | None:
+    if not pkg.startswith("em_"):
         return None
-    tail = workflow_type_id[len(prefix) :]
+    tail = pkg[3:]
     parts = tail.split("_")
     if len(parts) != 5:
         return None
@@ -53,9 +58,28 @@ def registry_metric_id_from_workflow_type(workflow_type_id: str) -> str | None:
     return f"{a}-{b}-{c}-{d}-{e}"
 
 
+def registry_metric_id_from_workflow_type(workflow_type_id: str) -> str | None:
+    """Resolve registry metric id from ``em_<id>.metric_node.UserEvaluationMetric`` node type FQN."""
+    w = (workflow_type_id or "").strip()
+    if w.endswith(".UserEvaluationMetric"):
+        parts = w.split(".")
+        if len(parts) >= 3 and parts[-2] == "metric_node":
+            return _metric_id_from_em_package_name(parts[-3])
+    return None
+
+
+def builtin_metric_id_from_workflow_node_fqn(workflow_type_id: str) -> str | None:
+    """Map built-in metric node class FQN to registry metric id."""
+    w = (workflow_type_id or "").strip()
+    if w.endswith(".BuiltinMeanIcNode") and "metric_builtin_mean_ic" in w:
+        return "builtin_mean_ic"
+    if w.endswith(".BuiltinMeanReturnSpreadNode") and "metric_builtin_mean_return_spread" in w:
+        return "builtin_mean_return_spread"
+    return None
+
+
 def default_metric_source(name: str, metric_id: str) -> str:
     label = (name or "metric").strip() or "metric"
-    wf_tid = user_metric_workflow_type_id(metric_id)
     label_js = json.dumps(label, ensure_ascii=False)
     return f"""# User evaluation metric: {label}
 from __future__ import annotations
@@ -70,7 +94,6 @@ REGISTRY_METRIC_ID = "{metric_id}"
 
 
 @workflow_node(
-    type_id="{wf_tid}",
     label={label_js},
     description="",
     entry="evaluate",

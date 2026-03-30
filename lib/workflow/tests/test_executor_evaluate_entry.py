@@ -8,7 +8,6 @@ from workflow import WorkflowNode, handler_from_node_class, workflow_node, workf
 
 
 @workflow_node(
-    type_id="test_eval_metric",
     label="t",
     description="",
     entry="evaluate",
@@ -21,7 +20,7 @@ from workflow import WorkflowNode, handler_from_node_class, workflow_node, workf
         workflow_socket("hit", value_type="scalar_json"),
     ],
 )
-class _DemoMetric:
+class TestEvalMetricNode:
     @classmethod
     def workflow_metric_kwargs(cls, node: WorkflowNode, inputs: dict[str, Any]) -> dict[str, Any]:
         return {"quantiles": int(inputs["q"]), **dict(node.params or {})}
@@ -43,12 +42,15 @@ class _DemoMetric:
 
 
 def test_handler_evaluate_entry_calls_evaluate_and_publish():
+    from workflow import workflow_node_type_key
+
+    tid = workflow_node_type_key(TestEvalMetricNode)
     node = WorkflowNode(
         id="n1",
-        type="test_eval_metric",
+        type=tid,
         params={"x": 1},
     )
-    handler = handler_from_node_class(_DemoMetric)
+    handler = handler_from_node_class(TestEvalMetricNode)
     out = handler(
         node,
         {"clean_factor": [1, 2], "q": 5},

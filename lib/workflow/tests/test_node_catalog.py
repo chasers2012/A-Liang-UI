@@ -8,12 +8,15 @@ import pytest
 from workflow import (
     EnumNodeParam,
     Node,
+    NodeCatalog,
     NumberNodeParam,
     StringNodeParam,
     build_node_catalog_from_modules,
+    handler_from_node_class,
     merge_node_catalogs,
     ordered_specs,
     workflow_node,
+    workflow_node_type_key,
     workflow_socket,
 )
 
@@ -29,7 +32,6 @@ def test_ordered_specs_order_and_keyerror() -> None:
 
 def test_merge_node_catalogs_later_overrides() -> None:
     @workflow_node(
-        type_id="dup",
         label="1",
         description="",
         input_sockets=[],
@@ -41,7 +43,6 @@ def test_merge_node_catalogs_later_overrides() -> None:
             return {}
 
     @workflow_node(
-        type_id="dup",
         label="2",
         description="",
         input_sockets=[],
@@ -54,18 +55,22 @@ def test_merge_node_catalogs_later_overrides() -> None:
 
     m1 = types.ModuleType("m1")
     m1.First = First
-    m2 = types.ModuleType("m2")
-    m2.Second = Second
     c1 = build_node_catalog_from_modules(m1)
-    c2 = build_node_catalog_from_modules(m2)
-    merged = merge_node_catalogs(c1, c2)
-    assert merged.classes["dup"] is Second
-    assert merged.specs["dup"].label == "2"
+    k = workflow_node_type_key(First)
+    merged = merge_node_catalogs(
+        c1,
+        NodeCatalog(
+            classes={k: Second},
+            specs={k: Second.__node_spec__()},  # type: ignore[attr-defined]
+            handlers={k: handler_from_node_class(Second)},
+        ),
+    )
+    assert merged.classes[k] is Second
+    assert merged.specs[k].label == "2"
 
 
 def test_build_merges_types_from_two_modules() -> None:
     @workflow_node(
-        type_id="x",
         label="",
         description="",
         input_sockets=[],
@@ -77,7 +82,6 @@ def test_build_merges_types_from_two_modules() -> None:
             return {}
 
     @workflow_node(
-        type_id="y",
         label="",
         description="",
         input_sockets=[],
@@ -93,12 +97,11 @@ def test_build_merges_types_from_two_modules() -> None:
     m2 = types.ModuleType("m2")
     m2.Y = Y
     cat = build_node_catalog_from_modules(m1, m2)
-    assert set(cat.specs.keys()) == {"x", "y"}
+    assert set(cat.specs.keys()) == {workflow_node_type_key(X), workflow_node_type_key(Y)}
 
 
 def test_build_node_catalog_includes_workflow_parameters() -> None:
     @workflow_node(
-        type_id="with_params",
         label="",
         description="",
         input_sockets=[],
@@ -109,14 +112,14 @@ def test_build_node_catalog_includes_workflow_parameters() -> None:
         ],
         entry="execute",
     )
-    class WithParams:
+    class WithParamsNode:
         def execute(self, node, inputs):
             return {}
 
     m = types.ModuleType("mwp")
-    m.WithParams = WithParams
+    m.WithParamsNode = WithParamsNode
     cat = build_node_catalog_from_modules(m)
-    spec = cat.specs["with_params"]
+    spec = cat.specs[workflow_node_type_key(WithParamsNode)]
     assert len(spec.parameters) == 2
     assert spec.parameters[0].key == "k1"
     assert spec.parameters[0].label == "L1"
@@ -129,7 +132,6 @@ def test_build_node_catalog_includes_workflow_parameters() -> None:
 
 def test_workflow_parameters_string_and_enum() -> None:
     @workflow_node(
-        type_id="mixed_params",
         label="",
         description="",
         input_sockets=[],
@@ -145,14 +147,14 @@ def test_workflow_parameters_string_and_enum() -> None:
         ],
         entry="execute",
     )
-    class Mixed:
+    class MixedNode:
         def execute(self, node, inputs):
             return {}
 
     m = types.ModuleType("mmixed")
-    m.Mixed = Mixed
+    m.MixedNode = MixedNode
     cat = build_node_catalog_from_modules(m)
-    spec = cat.specs["mixed_params"]
+    spec = cat.specs[workflow_node_type_key(MixedNode)]
     assert len(spec.parameters) == 2
     assert spec.parameters[0].key == "legacy"
     assert spec.parameters[1].type == "enum"

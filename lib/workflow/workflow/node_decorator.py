@@ -12,6 +12,13 @@ from .node_types import Node, NodeParam, Socket
 _T = TypeVar("_T")
 
 
+def workflow_node_type_key(cls: type) -> str:
+    """Stable string id for a node class: ``module.qualname`` (used as :attr:`Node.type`)."""
+    mod = getattr(cls, "__module__", None) or ""
+    qn = getattr(cls, "__qualname__", None) or getattr(cls, "__name__", "") or ""
+    return f"{mod}.{qn}" if mod else qn
+
+
 def workflow_socket(
     name: str,
     *,
@@ -32,14 +39,13 @@ def workflow_node(
     output_sockets: list[Socket],
     workflow_parameters: list[NodeParam] | None = None,
     entry: str = "execute",
-    type_id: str = "",
     label: str = "",
     description: str = "",
 ) -> Callable[[type[_T]], type[_T]]:
     """Attach graph I/O metadata and a ``__node_spec__()`` classmethod.
 
-    When ``type_id`` is provided the class fully self-describes a node type
-    and can be discovered by :func:`collect_node_classes`.
+    The node type string is :func:`workflow_node_type_key` (``module.qualname``);
+    decorated classes are discovered by :func:`collect_node_classes`.
 
     If ``entry="evaluate"`` (typical for evaluation metric classes), use
     :func:`handler_from_node_class`: it calls ``evaluate(clean_factor, **kwargs)``
@@ -62,7 +68,6 @@ def workflow_node(
         cls.OUTPUT_SOCKETS = list(output_sockets)  # type: ignore[attr-defined]
         cls.WORKFLOW_PARAMETERS = list(_wp)  # type: ignore[attr-defined]
         cls.ENTRY = entry  # type: ignore[attr-defined]
-        cls.WORKFLOW_TYPE_ID = type_id  # type: ignore[attr-defined]
         cls.WORKFLOW_LABEL = label  # type: ignore[attr-defined]
         cls.WORKFLOW_DESCRIPTION = description  # type: ignore[attr-defined]
 
@@ -70,14 +75,13 @@ def workflow_node(
         def __node_spec__(
             klass,
             *,
-            type_id: str = "",
             label: str = "",
             description: str = "",
             default_inputs: tuple[Socket, ...] | None = None,
             default_outputs: tuple[Socket, ...] | None = None,
         ) -> Node:
             return Node(
-                type=type_id or klass.WORKFLOW_TYPE_ID,
+                type=workflow_node_type_key(klass),
                 label=label or klass.WORKFLOW_LABEL,
                 description=description or klass.WORKFLOW_DESCRIPTION,
                 inputs=input_specs if input_specs else (default_inputs or ()),
@@ -91,34 +95,58 @@ def workflow_node(
     return decorate
 
 
+def _is_workflow_node_class(obj: type) -> bool:
+    return bool(
+        getattr(obj, "__node_spec__", None) is not None
+        and getattr(obj, "INPUT_SOCKETS", None) is not None
+        and getattr(obj, "OUTPUT_SOCKETS", None) is not None
+    )
+
+
+def _import_package_submodules(module: types.ModuleType) -> None:
+    if not hasattr(module, "__path__"):
+        return
+    import importlib
+    import pkgutil
+
+    for info in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
+        importlib.import_module(info.name)
+
+
+def _classes_from_module(mod: types.ModuleType, add: Callable[[type], None]) -> None:
+    for _name, obj in inspect.getmembers(mod, inspect.isclass):
+        add(obj)
+
+
 def collect_node_classes(module: types.ModuleType) -> dict[str, type]:
-    """Scan *module* for ``@workflow_node``-decorated classes that have a non-empty ``WORKFLOW_TYPE_ID``.
+    """Scan *module* for ``@workflow_node``-decorated classes.
+
+    Keys are :func:`workflow_node_type_key` (``module.qualname``).
 
     If *module* is a package its direct sub-modules are imported first so that
     all node files participate in the scan.
     """
-    if hasattr(module, "__path__"):
-        import importlib
-        import pkgutil
-
-        for info in pkgutil.iter_modules(module.__path__, module.__name__ + "."):
-            importlib.import_module(info.name)
+    _import_package_submodules(module)
 
     out: dict[str, type] = {}
-    for _name, obj in inspect.getmembers(module, inspect.isclass):
-        tid = getattr(obj, "WORKFLOW_TYPE_ID", None)
-        if tid and isinstance(tid, str) and tid.strip():
-            out[tid.strip()] = obj
 
-    if hasattr(module, "__path__"):
-        import sys
+    def _add(obj: type) -> None:
+        if not _is_workflow_node_class(obj):
+            return
+        key = workflow_node_type_key(obj)
+        if key not in out:
+            out[key] = obj
 
-        for sub_name, sub_mod in list(sys.modules.items()):
-            if sub_mod is None or not sub_name.startswith(module.__name__ + "."):
-                continue
-            for _name, obj in inspect.getmembers(sub_mod, inspect.isclass):
-                tid = getattr(obj, "WORKFLOW_TYPE_ID", None)
-                if tid and isinstance(tid, str) and tid.strip() and tid.strip() not in out:
-                    out[tid.strip()] = obj
+    _classes_from_module(module, _add)
+
+    if not hasattr(module, "__path__"):
+        return out
+    import sys
+
+    prefix = module.__name__ + "."
+    for sub_name, sub_mod in list(sys.modules.items()):
+        if sub_mod is None or not sub_name.startswith(prefix):
+            continue
+        _classes_from_module(sub_mod, _add)
 
     return out

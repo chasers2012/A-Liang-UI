@@ -13,5 +13,5 @@ def test_node_types_include_builtin_eval_metric_nodes(client):
     r = client.get("/evaluation-profiles/node-types")
     assert r.status_code == 200
     types = {x["type"] for x in r.json()}
-    assert "builtin_mean_ic" in types
-    assert "builtin_mean_return_spread" in types
+    assert any("metric_builtin_mean_ic" in t for t in types)
+    assert any("metric_builtin_mean_return_spread" in t for t in types)

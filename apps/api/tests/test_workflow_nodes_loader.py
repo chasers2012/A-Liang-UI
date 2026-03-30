@@ -19,20 +19,20 @@ def _reset_workspace_root() -> None:
 def test_load_evaluation_domain_includes_prepare(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
     cat = load_domain_node_catalog("evaluation")
-    assert "prepare_alphalens" in cat.specs
-    assert "echarts_line" in cat.handlers
-    assert "builtin_mean_ic" in cat.specs
-    assert "builtin_mean_return_spread" in cat.handlers
+    keys = set(cat.specs.keys())
+    assert any(k.endswith(".PrepareAlphalensNode") for k in keys)
+    assert any("echarts_line" in k for k in keys)
+    assert any(k.endswith(".BuiltinMeanIcNode") for k in keys)
+    assert any(k.endswith(".BuiltinMeanReturnSpreadNode") for k in cat.handlers)
 
 
 def test_load_agent_domain_ordered_types(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
     cat = load_domain_node_catalog("agent")
-    assert set(cat.specs.keys()) >= {
-        "init_context",
-        "validate",
-        "finalize",
-    }
+    keys = set(cat.specs.keys())
+    assert any(k.endswith(".InitContextNode") for k in keys)
+    assert any(k.endswith(".ValidateNode") for k in keys)
+    assert any(k.endswith(".FinalizeNode") for k in keys)
 
 
 def test_workspace_extension_merges(tmp_path: Path) -> None:
@@ -51,7 +51,6 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 "from workflow import WorkflowNode, workflow_node, workflow_socket",
                 "",
                 "@workflow_node(",
-                '    type_id="ext_only_node",',
                 '    label="ext",',
                 '    description="",',
                 "    input_sockets=[],",
@@ -71,11 +70,13 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
     try:
         cats = load_workspace_extension_catalogs("evaluation")
         assert len(cats) == 1
-        assert "ext_only_node" in cats[0].specs
+        ext_keys = set(cats[0].specs.keys())
+        assert any(k.endswith(".ExtNode") for k in ext_keys)
 
         merged = load_domain_node_catalog("evaluation")
-        assert "ext_only_node" in merged.specs
-        assert "prepare_alphalens" in merged.specs
+        mk = set(merged.specs.keys())
+        assert any(k.endswith(".ExtNode") for k in mk)
+        assert any(k.endswith(".PrepareAlphalensNode") for k in mk)
     finally:
         while parent in sys.path:
             sys.path.remove(parent)

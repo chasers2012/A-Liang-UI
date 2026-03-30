@@ -25,7 +25,6 @@ def _demo_line_option() -> dict[str, Any]:
 
 
 @workflow_node(
-    type_id="echarts_line",
     label="ECharts 线图",
     description="返回静态 ECharts 折线图 option（演示）；不处理上游输入",
     input_sockets=[workflow_socket("in", required=False, value_type="scalar_json")],

@@ -13,7 +13,7 @@ from .node_types import Node
 
 @dataclass(frozen=True)
 class NodeCatalog:
-    """Maps ``WORKFLOW_TYPE_ID`` to class, :class:`Node`, and runtime :class:`NodeHandler`."""
+    """Maps node type key (``module.qualname``) to class, :class:`Node`, and :class:`NodeHandler`."""
 
     classes: dict[str, type]
     specs: dict[str, Node]
@@ -31,7 +31,7 @@ def build_node_catalog_from_modules(*modules: ModuleType) -> NodeCatalog:
 
 
 def merge_node_catalogs(*catalogs: NodeCatalog) -> NodeCatalog:
-    """Merge catalogs; later catalogs override earlier on duplicate ``WORKFLOW_TYPE_ID``."""
+    """Merge catalogs; later catalogs override earlier on duplicate node type keys."""
     classes: dict[str, type] = {}
     for c in catalogs:
         classes.update(c.classes)

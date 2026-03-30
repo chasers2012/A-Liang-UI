@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.agent_workflows.nodes import AGENT_NODE_TYPES
+from app.agent_workflows.nodes import get_agent_node_types
 from app.agent_workflows.registry import AgentWorkflowRegistry
 from app.agent_workflows.schemas import (
     AgentWorkflowCreate,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/agent/workflows", tags=["agent"])
 
 @router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
 def list_node_types() -> list[NodeTypeDefinitionPublic]:
-    return [node_spec_to_public(s) for s in AGENT_NODE_TYPES]
+    return [node_spec_to_public(s) for s in get_agent_node_types()]
 
 
 @router.get("", response_model=list[AgentWorkflowSummaryPublic])

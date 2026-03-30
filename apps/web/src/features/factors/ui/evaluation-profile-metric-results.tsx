@@ -331,7 +331,7 @@ function renderScalarNumber(val: number) {
 export function EvaluationProfileMetricResultsPanel(props: {
   metricResults: Record<string, unknown>;
   profile?: EvaluationProfilePublic | null;
-  /** Per registry metric id: display name（``user_metric_*`` 节点标题） */
+  /** Per registry metric id: display name（user metric 节点标题） */
   metricMetaById?: Record<string, MetricMetaEntry>;
 }) {
   const { metricResults, profile, metricMetaById } = props;

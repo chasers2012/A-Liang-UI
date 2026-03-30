@@ -30,7 +30,6 @@ def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
 
 
 @workflow_node(
-    type_id="prepare_alphalens",
     label="计算因子",
     description="根据因子与数据源计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     input_sockets=[

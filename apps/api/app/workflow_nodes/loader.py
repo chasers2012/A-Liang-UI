@@ -50,7 +50,7 @@ def load_domain_node_catalog(domain: str) -> NodeCatalog:
     """Load catalogs only from ``workflow_nodes/<domain>/*`` (seeded built-in dir + user packages).
 
     Built-in package directory is merged first; remaining directories are merged in sorted order.
-    Later merges win on duplicate ``WORKFLOW_TYPE_ID`` (user packages override built-in).
+    Later merges win on duplicate node type keys (user packages override built-in).
     """
     key = domain.strip()
     builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(key)

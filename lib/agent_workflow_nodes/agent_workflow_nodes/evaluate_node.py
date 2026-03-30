@@ -9,7 +9,6 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
 
 
 @workflow_node(
-    type_id="evaluate",
     label="Alphalens 评价",
     description="",
     input_sockets=[workflow_socket("prev", value_type="flow")],

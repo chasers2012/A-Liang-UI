@@ -22,6 +22,7 @@ from .node_catalog import (
 from .node_decorator import (
     collect_node_classes,
     workflow_node,
+    workflow_node_type_key,
     workflow_socket,
 )
 from .node_types import (
@@ -67,5 +68,6 @@ __all__ = [
     "validate_node_param_list",
     "validate_workflow_graph",
     "workflow_node",
+    "workflow_node_type_key",
     "workflow_socket",
 ]

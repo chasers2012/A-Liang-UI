@@ -13,6 +13,7 @@ from workflow import Node, NodeParamModel
 from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
+    builtin_metric_id_from_workflow_node_fqn,
     registry_metric_id_from_workflow_type,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
@@ -59,6 +60,8 @@ def _metric_record_and_metric_id(
 ) -> tuple[EvaluationMetricRecord | None, str | None]:
     """Resolve (metric record, metric_id) for a workflow node type id."""
     registry_id = registry_metric_id_from_workflow_type(workflow_type_id)
+    if registry_id is None:
+        registry_id = builtin_metric_id_from_workflow_node_fqn(workflow_type_id)
     mrec = EvaluationMetricsRegistry.get_by_id(metrics_reg, registry_id) if registry_id else None
     if mrec is None:
         for rec in metrics_reg.items:
@@ -69,8 +72,6 @@ def _metric_record_and_metric_id(
     metric_id_out = registry_id
     if metric_id_out is None and mrec is not None:
         metric_id_out = mrec.id
-    if metric_id_out is None and workflow_type_id.startswith("builtin_"):
-        metric_id_out = workflow_type_id
     return mrec, metric_id_out
 
 

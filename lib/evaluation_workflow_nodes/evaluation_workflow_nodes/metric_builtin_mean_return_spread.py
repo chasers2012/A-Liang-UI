@@ -12,7 +12,6 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
 
 
 @workflow_node(
-    type_id="builtin_mean_return_spread",
     label="多空收益差",
     description="分位多空平均收益差（按持有期）",
     input_sockets=[

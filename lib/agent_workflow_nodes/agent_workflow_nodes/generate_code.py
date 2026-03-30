@@ -9,7 +9,6 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
 
 
 @workflow_node(
-    type_id="generate_code",
     label="生成代码",
     description="",
     input_sockets=[workflow_socket("prev", value_type="flow")],
