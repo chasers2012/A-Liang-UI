@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 from uuid import uuid4
 
 from custom_code import validate_identifier_name as validate_metric_name
@@ -107,24 +107,6 @@ class NewEvaluationMetric(EvaluationMetric):
         return 0.0
 """
 
-MetricVisualizationMode = Literal[
-    "auto",
-    "bars",
-    "bars_diverging",
-    "table",
-    "json",
-    "scalar",
-]
-
-
-class MetricVisualizationSpec(BaseModel):
-    """How factor-detail UI renders this metric's structured output."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    mode: MetricVisualizationMode = "auto"
-    period_day_keys: bool = False
-
 
 class EvaluationMetricRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -136,8 +118,6 @@ class EvaluationMetricRecord(BaseModel):
     workflow_type_id: str = ""
     created_at: str
     updated_at: str
-    visualization: MetricVisualizationSpec | None = None
-    builtin: bool = False
     workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
 
     @model_validator(mode="before")
@@ -193,8 +173,6 @@ class EvaluationMetricCreate(BaseModel):
             workflow_type_id=wf,
             created_at=now,
             updated_at=now,
-            visualization=None,
-            builtin=False,
             workflow_parameters=list(self.workflow_parameters),
         )
 
@@ -231,8 +209,6 @@ class EvaluationMetricSummaryPublic(BaseModel):
     workflow_type_id: str
     created_at: str
     updated_at: str
-    visualization: MetricVisualizationSpec | None = None
-    builtin: bool = False
     workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
 
 
@@ -245,7 +221,6 @@ def record_to_summary(
 ) -> EvaluationMetricSummaryPublic:
     data = rec.model_dump()
     data["workflow_type_id"] = data["workflow_type_id"] or user_metric_workflow_type_id(rec.id)
-    data["visualization"] = None
     return EvaluationMetricSummaryPublic.model_validate(data)
 
 

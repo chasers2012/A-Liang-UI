@@ -51,7 +51,7 @@ def workflow_node_api_extra(
     return {
         "workflow_parameters": wp,
         "metric_id": metric_id_out,
-        "user_defined": bool(mrec is not None and not mrec.builtin),
+        "user_defined": bool(mrec is not None),
     }
 
 

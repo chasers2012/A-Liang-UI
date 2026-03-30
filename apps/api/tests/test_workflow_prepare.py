@@ -5,7 +5,6 @@ def test_list_evaluation_metrics_is_user_registry_only(client):
     r = client.get("/evaluation-metrics")
     assert r.status_code == 200
     for row in r.json():
-        assert row.get("builtin") is not True
         assert "workflow_type_id" in row
 
 

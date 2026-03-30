@@ -50,8 +50,9 @@ def _validate_and_write_source(rec: EvaluationMetricRecord, source: str) -> None
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-def _metric_sort_key(rec: EvaluationMetricRecord) -> tuple[bool, str]:
-    return (not rec.builtin, rec.name)
+def _metric_sort_key(rec: EvaluationMetricRecord) -> tuple[str]:
+    # Metrics are user-created; sort alphabetically for stable UX.
+    return (rec.name,)
 
 
 @router.get("", response_model=list[EvaluationMetricSummaryPublic])
@@ -91,10 +92,6 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     return _detail(rec)
 
 
-def _is_protected_builtin(rec: EvaluationMetricRecord) -> bool:
-    return rec.builtin
-
-
 @router.patch("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def patch_evaluation_metric(
     metric_id: str, body: EvaluationMetricPatch
@@ -102,8 +99,6 @@ def patch_evaluation_metric(
     unset = body.model_dump(exclude_unset=True)
 
     def _apply(rec: EvaluationMetricRecord) -> None:
-        if _is_protected_builtin(rec):
-            raise HTTPException(status_code=400, detail="内置指标不可修改")
         _merge_patch(rec, body)
         if "workflow_parameters" in unset and body.workflow_parameters is not None:
             rec.workflow_parameters = list(body.workflow_parameters)
@@ -122,7 +117,5 @@ def delete_evaluation_metric(metric_id: str) -> None:
     rec = EvaluationMetricsRegistry.get_item(metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
-    if _is_protected_builtin(rec):
-        raise HTTPException(status_code=400, detail="内置指标不可删除")
     delete_user_metric_package(metric_id)
     EvaluationMetricsRegistry.delete_item(metric_id)

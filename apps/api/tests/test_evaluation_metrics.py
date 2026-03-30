@@ -12,7 +12,6 @@ def test_evaluation_metrics_crud(client):
     )
     assert data["source_path"].startswith("workflow_nodes/evaluation/em_")
     assert "UserEvaluationMetric" in data["source"]
-    assert data.get("visualization") is None
 
     r2 = client.get(f"/evaluation-metrics/{mid}")
     assert r2.status_code == 200
@@ -25,7 +24,6 @@ def test_evaluation_metrics_crud(client):
     assert r3.status_code == 200
     body3 = r3.json()
     assert body3["description"] == "d1"
-    assert body3.get("visualization") is None
 
     r4 = client.delete(f"/evaluation-metrics/{mid}")
     assert r4.status_code == 204

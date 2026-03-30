@@ -8,16 +8,14 @@ import type {
 } from "@/lib/quant-agent-api";
 import { listEvaluationNodeTypes } from "@/lib/quant-agent-api";
 import type { EvaluationNodeTypeCatalogItemPublic } from "@/models";
-import type { MetricVisualizationSpec } from "@/models/evaluation-metric/dto";
 
 export type MetricMetaEntry = {
   name: string;
 };
 
-const DEFAULT_VIZ: MetricVisualizationSpec = {
-  mode: "auto",
-  period_day_keys: false,
-};
+type MetricVizMode = "auto" | "bars" | "bars_diverging" | "table" | "json" | "scalar";
+
+const DEFAULT_MODE: MetricVizMode = "auto";
 
 function metricDisplayName(
   metricId: string | null,
@@ -215,7 +213,7 @@ function NumericRecordTable({
 }
 
 function effectiveBarMode(
-  mode: MetricVisualizationSpec["mode"],
+  mode: MetricVizMode,
   data: Record<string, number>,
 ): "positive" | "diverging" | "abs_left" {
   const vals = Object.values(data);
@@ -228,10 +226,9 @@ function effectiveBarMode(
 
 function renderNumericRecord(
   data: Record<string, number>,
-  viz: MetricVisualizationSpec | null,
+  mode: MetricVizMode,
   periodDayStyle: boolean,
 ) {
-  const mode = viz?.mode ?? "auto";
   const entries = Object.entries(data);
   if (mode === "scalar" && entries.length === 1) {
     const [k, v] = entries[0]!;
@@ -400,7 +397,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
                   <p className="mb-1.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
                     {skLabel}
                   </p>
-                  {renderNumericRecord(val, DEFAULT_VIZ, periodDay)}
+                  {renderNumericRecord(val, DEFAULT_MODE, periodDay)}
                 </div>
               );
             }
