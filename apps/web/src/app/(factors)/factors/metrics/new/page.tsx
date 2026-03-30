@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
@@ -8,20 +8,79 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createEvaluationMetric } from "@/lib/quant-agent-api";
+import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/lib/quant-agent-api";
 
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 
 const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
 
+function EvaluationMetricSourceEditor({
+  templatePromise,
+  sourceRef,
+  name,
+}: {
+  templatePromise: Promise<string>;
+  sourceRef: React.MutableRefObject<string>;
+  name: string;
+}) {
+  const template = use(templatePromise);
+  const [source, setSource] = useState(template);
+
+  const trimmedName = name.trim();
+  const applyNameToWorkflowNodeLabel = (src: string, label: string) => {
+    const escaped = label
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
+
+    // Template format: @workflow_node( ... label="...",
+    // Only replace the label value inside the workflow_node decorator.
+    return src.replace(
+      /(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/,
+      (_, prefix: string, _oldLabel: string, suffix: string) => {
+        return `${prefix}${escaped}${suffix}`;
+      },
+    );
+  };
+
+  const displaySource = useMemo(() => {
+    if (!trimmedName) return source;
+    return applyNameToWorkflowNodeLabel(source, trimmedName);
+  }, [source, trimmedName]);
+
+  useEffect(() => {
+    sourceRef.current = displaySource;
+  }, [displaySource, sourceRef]);
+
+  return (
+    <FactorCodeJar
+      id="new-evaluation-metric-source"
+      value={displaySource}
+      onChange={(v) => {
+        setSource(v);
+        if (trimmedName) {
+          sourceRef.current = applyNameToWorkflowNodeLabel(v, trimmedName);
+        } else {
+          sourceRef.current = v;
+        }
+      }}
+    />
+  );
+}
+
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [source, setSource] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const sourceRef = useRef("");
+
+  const templatePromise = useMemo(
+    () => getEvaluationMetricTemplate(),
+    [],
+  );
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +90,9 @@ export default function NewEvaluationMetricPage() {
       const created = await createEvaluationMetric({
         name: name.trim(),
         description: description.trim(),
-        ...(source.trim() ? { source: source.trim() } : {}),
+        ...(sourceRef.current.trim()
+          ? { source: sourceRef.current.trim() }
+          : {}),
       });
       router.push(`/factors/metrics/${encodeURIComponent(created.id)}`);
     } catch (err) {
@@ -68,7 +129,7 @@ export default function NewEvaluationMetricPage() {
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="em-name">名称（Python 标识符）</Label>
+            <Label htmlFor="em-name">名称</Label>
             <Input
               id="em-name"
               className="font-mono text-sm"
@@ -89,12 +150,20 @@ export default function NewEvaluationMetricPage() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label>源码（可选，留空使用模板）</Label>
-          <FactorCodeJar
-            id="new-evaluation-metric-source"
-            value={source}
-            onChange={setSource}
-          />
+          <Label>源码</Label>
+          <Suspense
+            fallback={
+              <div className="text-sm text-muted-foreground">
+                正在加载源码模板…
+              </div>
+            }
+          >
+            <EvaluationMetricSourceEditor
+              templatePromise={templatePromise}
+              sourceRef={sourceRef}
+              name={name}
+            />
+          </Suspense>
         </div>
       </form>
     </FactorFormPageContainer>
