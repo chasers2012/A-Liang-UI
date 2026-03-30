@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
@@ -14,7 +16,6 @@ from app.evaluation.scheme.profile_schemas import (
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
-from app.shared.node_type_dto import NodeTypeDefinitionPublic
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -63,8 +64,8 @@ def _merge_evaluation_profile_patch(
     rec.updated_at = utc_now_iso()
 
 
-@router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
-def list_node_types() -> list[NodeTypeDefinitionPublic]:
+@router.get("/node-types", response_model=list[dict[str, Any]])
+def list_node_types() -> list[dict[str, Any]]:
     metrics_reg = EvaluationMetricsRegistry.load()
     return list_evaluation_profile_node_types_public(metrics_reg)
 

@@ -7,7 +7,7 @@ import type {
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
 import { listEvaluationNodeTypes } from "@/lib/quant-agent-api";
-import type { NodeTypeDefinitionPublic } from "@/models";
+import type { EvaluationNodeTypeCatalogItemPublic } from "@/models";
 import type { MetricVisualizationSpec } from "@/models/evaluation-metric/dto";
 
 export type MetricMetaEntry = {
@@ -28,9 +28,9 @@ function metricDisplayName(
 }
 
 function nodeTypeDef(
-  catalogByType: Map<string, NodeTypeDefinitionPublic>,
+  catalogByType: Map<string, EvaluationNodeTypeCatalogItemPublic>,
   typeKey: string | undefined,
-): NodeTypeDefinitionPublic | undefined {
+): EvaluationNodeTypeCatalogItemPublic | undefined {
   if (!typeKey) return undefined;
   return catalogByType.get(typeKey);
 }
@@ -275,7 +275,7 @@ function workflowNodeTitle(
   profile: EvaluationProfilePublic | undefined,
   nodeId: string,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
-  catalogByType: Map<string, NodeTypeDefinitionPublic>,
+  catalogByType: Map<string, EvaluationNodeTypeCatalogItemPublic>,
 ): string {
   const n = profile?.workflow?.nodes?.find((x) => x.id === nodeId);
   if (!n) return "工作流节点";
@@ -294,7 +294,7 @@ function outputSectionLabel(
   socketKey: string,
   node: WorkflowNodeDto | undefined,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
-  catalogByType: Map<string, NodeTypeDefinitionPublic>,
+  catalogByType: Map<string, EvaluationNodeTypeCatalogItemPublic>,
 ): string {
   const def = nodeTypeDef(catalogByType, node?.type);
   if (socketKey === "out" && def?.metric_id) {
@@ -314,7 +314,7 @@ function asObjectRecord(v: unknown): Record<string, unknown> | null {
 function periodDayStyleForSocket(
   socketKey: string,
   node: WorkflowNodeDto | undefined,
-  catalogByType: Map<string, NodeTypeDefinitionPublic>,
+  catalogByType: Map<string, EvaluationNodeTypeCatalogItemPublic>,
 ): boolean {
   const def = nodeTypeDef(catalogByType, node?.type);
   return Boolean(def?.period_day_style_sockets?.includes(socketKey));
@@ -335,7 +335,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
   metricMetaById?: Record<string, MetricMetaEntry>;
 }) {
   const { metricResults, profile, metricMetaById } = props;
-  const [nodeCatalog, setNodeCatalog] = useState<NodeTypeDefinitionPublic[]>(
+  const [nodeCatalog, setNodeCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>(
     [],
   );
   useEffect(() => {

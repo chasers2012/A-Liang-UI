@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from app.agent_workflows.nodes import get_agent_node_types
@@ -15,14 +17,14 @@ from app.agent_workflows.schemas import (
     record_to_summary,
 )
 from app.datetime_utils import utc_now_iso
-from app.shared.node_type_dto import NodeTypeDefinitionPublic, node_spec_to_public
 
 router = APIRouter(prefix="/agent/workflows", tags=["agent"])
 
 
-@router.get("/node-types", response_model=list[NodeTypeDefinitionPublic])
-def list_node_types() -> list[NodeTypeDefinitionPublic]:
-    return [node_spec_to_public(s) for s in get_agent_node_types()]
+@router.get("/node-types", response_model=list[dict[str, Any]])
+def list_node_types() -> list[dict[str, Any]]:
+    # Return the node's own serialized shape directly (no DTO conversion layer).
+    return [s.serialize() for s in get_agent_node_types()]
 
 
 @router.get("", response_model=list[AgentWorkflowSummaryPublic])

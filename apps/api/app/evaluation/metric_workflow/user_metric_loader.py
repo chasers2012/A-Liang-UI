@@ -9,7 +9,7 @@ from custom_code.subclass_loader import direct_base_symbol_name, strip_markdown_
 from evaluate.evaluation_metric import EvaluationMetric
 from evaluate.metric_loader import METRIC_GLOBALS
 
-from app.evaluation.metrics.user_metric_workflow import RegistryUserEvaluationMetric
+from app.evaluation.metric_workflow.user_metric_workflow import RegistryUserEvaluationMetric
 
 
 def _build_loader_globals_and_base_ast() -> tuple[dict[str, object], frozenset[str]]:
@@ -79,3 +79,4 @@ def load_user_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetri
             else _inheritance.invalid_message
         )
     return cls, class_name
+

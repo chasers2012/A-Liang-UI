@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import {
   listEvaluationNodeTypes,
   type EvaluationProfilePublic,
-  type NodeTypeDefinitionPublic,
+  type EvaluationNodeTypeCatalogItemPublic,
 } from "@/lib/quant-agent-api";
 
 import { EvaluationWorkflowCanvas } from "./evaluation-workflow-canvas";
@@ -27,7 +27,7 @@ export function ProfileDetailWorkflowCard(props: {
   profileId: string;
 }) {
   const { profile, profileId } = props;
-  const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
+  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
   const [workflowView, setWorkflowView] = useState<"canvas" | "json">(
     "canvas",
   );

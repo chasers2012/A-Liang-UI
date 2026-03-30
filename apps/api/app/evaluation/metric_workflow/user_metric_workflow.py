@@ -1,4 +1,4 @@
-"""Registry-backed user metrics: hooks for workflow entry="evaluate"."""
+"""Registry-backed user metrics: workflow integration for entry="evaluate"."""
 
 from __future__ import annotations
 
@@ -59,3 +59,4 @@ class RegistryUserEvaluationMetric(EvaluationMetric[Any]):
                 "merged_spread": series_to_period_dict(raw),
             }
         return {primary_socket: out_val}
+

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from app.run_evaluation.schemas import FactorEvaluationWindow
+from app.evaluation_run.schemas import FactorEvaluationWindow
 
 
 class FactorEvaluationHistoryEntry(BaseModel):

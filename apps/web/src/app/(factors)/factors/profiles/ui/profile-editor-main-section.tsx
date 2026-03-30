@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   EvaluationWorkflowDto,
-  NodeTypeDefinitionPublic,
+  EvaluationNodeTypeCatalogItemPublic,
 } from "@/lib/quant-agent-api";
 
 import {
@@ -24,7 +24,7 @@ export function ProfileWorkflowEditorBlock(props: {
   wfMetaLoading?: boolean;
   canvasKey: number;
   canvasRef: RefObject<EvaluationWorkflowCanvasHandle | null>;
-  catalog: NodeTypeDefinitionPublic[];
+  catalog: EvaluationNodeTypeCatalogItemPublic[];
   initialWorkflow: EvaluationWorkflowDto;
 }) {
   const {

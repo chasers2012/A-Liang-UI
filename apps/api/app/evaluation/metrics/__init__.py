@@ -1,1 +1,4 @@
-"""Custom evaluation metrics: schemas, registry, loaders, and built-in seeds."""
+"""Evaluation metric registry: CRUD schemas and persistence.
+
+Workflow/runtime integration code lives under :mod:`app.evaluation.metric_workflow`.
+"""

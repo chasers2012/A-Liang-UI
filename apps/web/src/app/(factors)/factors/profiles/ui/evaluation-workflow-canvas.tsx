@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   EvaluationWorkflowDto,
-  NodeTypeDefinitionPublic,
+  EvaluationNodeTypeCatalogItemPublic,
 } from "@/lib/quant-agent-api";
 
 import { EvaluationWorkflowNodeInspectorPanel } from "./evaluation-workflow-node-inspector-panel";
@@ -28,14 +28,14 @@ export type EvaluationWorkflowCanvasHandle = {
 };
 
 export type EvaluationWorkflowCanvasProps = {
-  catalog: NodeTypeDefinitionPublic[];
+  catalog: EvaluationNodeTypeCatalogItemPublic[];
   initialWorkflow: EvaluationWorkflowDto;
   readOnly?: boolean;
   className?: string;
 };
 
 function toWorkflowNodeTypes(
-  catalog: NodeTypeDefinitionPublic[],
+  catalog: EvaluationNodeTypeCatalogItemPublic[],
 ): WorkflowNodeTypeDefinition[] {
   return catalog.map((c) => ({
     type: c.type,

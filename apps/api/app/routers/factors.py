@@ -6,6 +6,16 @@ from custom_code import validate_identifier_name as validate_factor_name
 from custom_code import validate_source_syntax
 from fastapi import APIRouter, Body, HTTPException, Query
 
+from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
+from app.evaluation_run.history_schemas import FactorEvaluationHistoryEntry
+from app.evaluation_run.history_store import delete_history_for_factor, list_history_for_factor
+from app.evaluation_run.schemas import (
+    FactorEvaluationRowPublic,
+    FactorEvaluationRunBody,
+    FactorEvaluationsAggregatePublic,
+    FactorEvaluationsSummaryPublic,
+)
+from app.evaluation_run.service import execute_and_persist_factor_evaluation_run
 from app.factors.registry import (
     FactorItemsRegistry,
     delete_source_file,
@@ -25,24 +35,6 @@ from app.factors.schemas import (
     utc_now_iso,
 )
 from app.http_errors import http_bad_request, http_internal_server_error
-from app.run_evaluation.evaluations_store import (
-    delete_evaluation_for_factor,
-    upsert_evaluation_for_factor,
-)
-from app.run_evaluation.history_schemas import FactorEvaluationHistoryEntry
-from app.run_evaluation.history_store import (
-    append_history_entry,
-    delete_history_for_factor,
-    entry_from_latest_evaluation,
-    list_history_for_factor,
-)
-from app.run_evaluation.runner import run_evaluation_for_factor
-from app.run_evaluation.schemas import (
-    FactorEvaluationRowPublic,
-    FactorEvaluationRunBody,
-    FactorEvaluationsAggregatePublic,
-    FactorEvaluationsSummaryPublic,
-)
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 
@@ -115,7 +107,7 @@ def list_factors() -> list[FactorSummaryPublic]:
 
 @router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
 def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
-    from app.run_evaluation.evaluations_store import load_evaluations_file
+    from app.evaluation_run.evaluations_store import load_evaluations_file
 
     try:
         ev_file = load_evaluations_file()
@@ -222,20 +214,14 @@ def post_factor_evaluation_run(
             except ValueError as e:
                 http_bad_request(e)
     try:
-        eval_rec = run_evaluation_for_factor(
+        eval_rec = execute_and_persist_factor_evaluation_run(
             factor_id,
             data_set_id=run_data_set_id,
             evaluation_profile=prof,
+            with_history=True,
         )
     except ValueError as e:
         http_bad_request(e)
-    try:
-        upsert_evaluation_for_factor(factor_id, eval_rec)
-    except ValueError as e:
-        http_internal_server_error(e)
-    entry = entry_from_latest_evaluation(eval_rec)
-    with contextlib.suppress(ValueError):
-        append_history_entry(factor_id, entry)
     err_raw = (eval_rec.error or "").strip()
     err: str | None = err_raw or None
     return FactorEvaluationRowPublic(

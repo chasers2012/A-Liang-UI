@@ -4,7 +4,7 @@ import type {
 } from "@/components/workflow-graph";
 
 import type {
-  NodeTypeDefinitionPublic,
+  EvaluationNodeTypeCatalogItemPublic,
   WorkflowNodeDto,
 } from "@/lib/quant-agent-api";
 
@@ -14,7 +14,7 @@ export type EvalWorkflowCanvasNode = WorkflowGraphSelectedNode;
 
 export function enrichNodeData(
   n: WorkflowNodeDto,
-  catalog: Map<string, NodeTypeDefinitionPublic>,
+  catalog: Map<string, EvaluationNodeTypeCatalogItemPublic>,
 ): EvalWorkflowNodeData {
   const def = catalog.get(n.type);
   return {
@@ -27,7 +27,7 @@ export function enrichNodeData(
 }
 
 export function catalogToMap(
-  defs: NodeTypeDefinitionPublic[],
-): Map<string, NodeTypeDefinitionPublic> {
+  defs: EvaluationNodeTypeCatalogItemPublic[],
+): Map<string, EvaluationNodeTypeCatalogItemPublic> {
   return new Map(defs.map((d) => [d.type, d]));
 }

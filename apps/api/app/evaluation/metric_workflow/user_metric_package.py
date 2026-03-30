@@ -8,7 +8,7 @@ from collections.abc import Callable
 from custom_code import SourceFiles
 from workspace import workspace_path
 
-from .metric_schemas import (
+from .metric_workflow_helpers import (
     user_metric_init_path,
     user_metric_package_parts,
     user_metric_source_path,
@@ -41,3 +41,4 @@ def delete_user_metric_package(metric_id: str) -> None:
     pkg_root = workspace_path("workflow_nodes", "evaluation", pkg_dir)
     if pkg_root.is_dir():
         shutil.rmtree(pkg_root, ignore_errors=True)
+

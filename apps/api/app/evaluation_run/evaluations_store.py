@@ -3,11 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from app.persistence.workspace_registry import WorkspaceJsonStore
-from app.run_evaluation.schemas import (
+from app.evaluation_run.schemas import (
     FactorEvaluationRecord,
     FactorEvaluationsFile,
 )
+from app.persistence.workspace_registry import WorkspaceJsonStore
 
 FACTOR_EVALUATIONS_FILENAME = "factors/data/evaluations.json"
 

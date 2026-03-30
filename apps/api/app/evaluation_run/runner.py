@@ -14,12 +14,12 @@ from app.data_set.data_sets_store import DataSetsStore
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import DataSourceRecord
 from app.datasources.sql_url import build_sqlalchemy_url
-from app.factors.registry import FactorItemsRegistry, read_source
-from app.factors.schemas import utc_now_iso
-from app.run_evaluation.schemas import (
+from app.evaluation_run.schemas import (
     FactorEvaluationRecord,
     FactorEvaluationWindow,
 )
+from app.factors.registry import FactorItemsRegistry, read_source
+from app.factors.schemas import utc_now_iso
 
 
 def _datasource_for_data_set(ds_id: str) -> DataSourceRecord:
@@ -342,7 +342,7 @@ def run_evaluation_for_factor(
         and isinstance(evaluation_profile, EvaluationProfileRecord)
         and evaluation_profile.workflow.nodes
     ):
-        from app.run_evaluation.profile_workflow_runner import run_evaluation_profile_workflow
+        from app.evaluation_run.profile_workflow_runner import run_evaluation_profile_workflow
 
         return run_evaluation_profile_workflow(
             factor_id,

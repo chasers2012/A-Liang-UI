@@ -27,7 +27,7 @@ import {
   listEvaluationNodeTypes,
   listDataSets,
   type DataSetPublic,
-  type NodeTypeDefinitionPublic,
+  type EvaluationNodeTypeCatalogItemPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationWorkflowCanvasHandle } from "../ui/evaluation-workflow-canvas";
 import { ProfileWorkflowEditorBlock } from "../ui/profile-editor-main-section";
@@ -53,7 +53,7 @@ export default function NewEvaluationProfilePage() {
   );
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
-  const [catalog, setCatalog] = useState<NodeTypeDefinitionPublic[]>([]);
+  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
   const [dataSets, setDataSets] = useState<DataSetPublic[]>([]);
   const [error, setError] = useState<string | null>(null);

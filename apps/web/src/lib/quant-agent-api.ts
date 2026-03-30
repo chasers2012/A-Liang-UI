@@ -15,7 +15,7 @@ import type {
   FactorEvaluationRowPublic,
   FactorEvaluationsSummaryPublic,
   FactorSummaryPublic,
-  NodeTypeDefinitionPublic,
+  EvaluationNodeTypeCatalogItemPublic,
   SqlTableColumnsRequestBody,
   SqlTableColumnsResponseBody,
   TestResult,
@@ -456,8 +456,8 @@ export function deleteEvaluationProfile(id: string): Promise<void> {
   });
 }
 
-export function listEvaluationNodeTypes(): Promise<NodeTypeDefinitionPublic[]> {
-  return apiFetchJson<NodeTypeDefinitionPublic[]>(
+export function listEvaluationNodeTypes(): Promise<EvaluationNodeTypeCatalogItemPublic[]> {
+  return apiFetchJson<EvaluationNodeTypeCatalogItemPublic[]>(
     "/evaluation-profiles/node-types",
   );
 }

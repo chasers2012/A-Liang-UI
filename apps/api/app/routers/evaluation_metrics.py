@@ -3,23 +3,23 @@ from __future__ import annotations
 from custom_code import validate_source_syntax
 from fastapi import APIRouter, HTTPException
 
+from app.evaluation.metric_workflow.metric_workflow_helpers import default_metric_source
+from app.evaluation.metric_workflow.user_metric_loader import load_user_evaluation_metric_class
+from app.evaluation.metric_workflow.user_metric_package import (
+    delete_user_metric_package,
+    write_user_metric_package,
+)
 from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
     EvaluationMetricRecord,
     EvaluationMetricSummaryPublic,
-    default_metric_source,
     new_metric_id,
     record_to_summary,
     utc_now_iso,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.evaluation.metrics.user_metric_loader import load_user_evaluation_metric_class
-from app.evaluation.metrics.user_metric_package import (
-    delete_user_metric_package,
-    write_user_metric_package,
-)
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 

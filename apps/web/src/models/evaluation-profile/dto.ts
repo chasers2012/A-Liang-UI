@@ -40,12 +40,16 @@ export interface NodeTypeSocketPublic {
   value_type: string;
 }
 
-export interface NodeTypeDefinitionPublic {
+/** /evaluation-profiles/node-types 的目录项（节点定义 + 业务扩展字段）。 */
+export interface EvaluationNodeTypeCatalogItemPublic {
   type: string;
   label: string;
   description: string;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
+  /** 来自 workflow.Node.parameters（用于 JSON/节点参数回显） */
+  parameters?: NodeParamModel[];
+  /** 来自后端额外计算：指标绑定/用户自定义的工作流参数 spec */
   workflow_parameters: NodeParamModel[];
   user_defined: boolean;
   metric_id: string | null;
