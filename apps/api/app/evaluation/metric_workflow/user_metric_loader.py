@@ -1,4 +1,4 @@
-"""Load user evaluation metric source (supports RegistryUserEvaluationMetric)."""
+"""Load user evaluation metric source."""
 
 from __future__ import annotations
 
@@ -9,23 +9,13 @@ from custom_code.subclass_loader import direct_base_symbol_name, strip_markdown_
 from evaluate.evaluation_metric import EvaluationMetric
 from evaluate.metric_loader import METRIC_GLOBALS
 
-from app.evaluation.metric_workflow.user_metric_workflow import RegistryUserEvaluationMetric
-
 
 def _build_loader_globals_and_base_ast() -> tuple[dict[str, object], frozenset[str]]:
     """Build exec globals + acceptable base class names for AST scanning."""
     globals_ = {
         **METRIC_GLOBALS,
-        "RegistryUserEvaluationMetric": RegistryUserEvaluationMetric,
     }
-    base_ast = frozenset(
-        {
-            "EvaluationMetric",
-            "MeanInformationCoefficientMetric",
-            "MeanReturnSpreadMetric",
-            "RegistryUserEvaluationMetric",
-        }
-    )
+    base_ast = frozenset({"EvaluationMetric"})
     return globals_, base_ast
 
 
@@ -44,9 +34,6 @@ def _pick_class_name(module_ast: ast.Module) -> str | None:
             sym = direct_base_symbol_name(base)
             if sym:
                 syms.add(sym)
-        if "RegistryUserEvaluationMetric" in syms:
-            preferred.append(node.name)
-        elif syms & _BASE_AST:
             fallback.append(node.name)
     if preferred:
         return preferred[-1]
@@ -79,4 +66,3 @@ def load_user_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetri
             else _inheritance.invalid_message
         )
     return cls, class_name
-

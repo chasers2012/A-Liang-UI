@@ -3,13 +3,13 @@ from __future__ import annotations
 from custom_code import validate_source_syntax
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.metric_workflow.metric_workflow_helpers import default_metric_source
 from app.evaluation.metric_workflow.user_metric_loader import load_user_evaluation_metric_class
 from app.evaluation.metric_workflow.user_metric_package import (
     delete_user_metric_package,
     write_user_metric_package,
 )
 from app.evaluation.metrics.metric_schemas import (
+    DEFAULT_METRIC_SOURCE,
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -60,6 +60,11 @@ def list_evaluation_metrics() -> list[EvaluationMetricSummaryPublic]:
     return [record_to_summary(i) for i in items]
 
 
+@router.get("/template", response_model=str)
+def get_evaluation_metric_template() -> str:
+    return DEFAULT_METRIC_SOURCE
+
+
 @router.get("/{metric_id}", response_model=EvaluationMetricDetailPublic)
 def get_evaluation_metric(metric_id: str) -> EvaluationMetricDetailPublic:
     rec = EvaluationMetricsRegistry.get_item(metric_id)
@@ -73,7 +78,7 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     mid = new_metric_id()
     now = utc_now_iso()
     rec = body.to_record(mid, now)
-    src = body.source if body.source is not None else default_metric_source(rec.name, mid)
+    src = body.source
     try:
         write_user_metric_package(
             mid,

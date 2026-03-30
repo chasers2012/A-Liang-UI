@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import uuid
 
 from app import datetime_utils
@@ -57,41 +56,3 @@ def builtin_metric_id_from_workflow_node_fqn(workflow_type_id: str) -> str | Non
     if w.endswith(".BuiltinMeanReturnSpreadNode") and "metric_builtin_mean_return_spread" in w:
         return "builtin_mean_return_spread"
     return None
-
-
-def default_metric_source(name: str, metric_id: str) -> str:
-    label = (name or "metric").strip() or "metric"
-    label_js = json.dumps(label, ensure_ascii=False)
-    return f"""# User evaluation metric: {label}
-from __future__ import annotations
-
-from typing import Any
-
-import pandas as pd
-from app.evaluation.metric_workflow.user_metric_workflow import RegistryUserEvaluationMetric
-from workflow import workflow_node, workflow_socket
-
-REGISTRY_METRIC_ID = "{metric_id}"
-
-
-@workflow_node(
-    label={label_js},
-    description="",
-    entry="evaluate",
-    input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
-        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
-    ],
-    output_sockets=[
-        workflow_socket("out", value_type="scalar_json"),
-        workflow_socket("merged_mean_ic", required=False, value_type="scalar_json"),
-        workflow_socket("merged_spread", required=False, value_type="scalar_json"),
-    ],
-)
-class UserEvaluationMetric(RegistryUserEvaluationMetric):
-    REGISTRY_METRIC_ID = REGISTRY_METRIC_ID
-
-    def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> tuple[Any, dict[str, Any], dict[str, Any]]:
-        _ = clean_factor
-        return 0.0, {{}}, {{}}
-"""

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any, Literal
 from uuid import uuid4
 
@@ -78,23 +77,17 @@ def builtin_metric_id_from_workflow_node_fqn(workflow_type_id: str) -> str | Non
     return None
 
 
-def default_metric_source(name: str, metric_id: str) -> str:
-    label = (name or "metric").strip() or "metric"
-    label_js = json.dumps(label, ensure_ascii=False)
-    return f"""# User evaluation metric: {label}
+DEFAULT_METRIC_SOURCE = """
 from __future__ import annotations
-
 from typing import Any
-
 import pandas as pd
-from app.evaluation.metrics.user_metric_workflow import RegistryUserEvaluationMetric
+from evaluate import EvaluationMetric
 from workflow import workflow_node, workflow_socket
 
-REGISTRY_METRIC_ID = "{metric_id}"
 
 
 @workflow_node(
-    label={label_js},
+    label="新指标",
     description="",
     entry="evaluate",
     input_sockets=[
@@ -107,14 +100,12 @@ REGISTRY_METRIC_ID = "{metric_id}"
         workflow_socket("merged_spread", required=False, value_type="scalar_json"),
     ],
 )
-class UserEvaluationMetric(RegistryUserEvaluationMetric):
-    REGISTRY_METRIC_ID = REGISTRY_METRIC_ID
+class NewEvaluationMetric(EvaluationMetric):
 
     def evaluate(self, clean_factor: pd.DataFrame, **kwargs: Any) -> tuple[Any, dict[str, Any], dict[str, Any]]:
         _ = clean_factor
-        return 0.0, {{}}, {{}}
+        return 0.0
 """
-
 
 MetricVisualizationMode = Literal[
     "auto",

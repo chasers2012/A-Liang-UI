@@ -332,9 +332,7 @@ export function listDataSets(): Promise<DataSetPublic[]> {
 }
 
 export function getDataSet(id: string): Promise<DataSetPublic> {
-  return apiFetchJson<DataSetPublic>(
-    `/data-sets/${encodeURIComponent(id)}`,
-  );
+  return apiFetchJson<DataSetPublic>(`/data-sets/${encodeURIComponent(id)}`);
 }
 
 export function createDataSet(body: unknown): Promise<DataSetPublic> {
@@ -348,10 +346,10 @@ export function patchDataSet(
   id: string,
   body: unknown,
 ): Promise<DataSetPublic> {
-  return apiFetchJson<DataSetPublic>(
-    `/data-sets/${encodeURIComponent(id)}`,
-    { method: "PATCH", body: JSON.stringify(body) },
-  );
+  return apiFetchJson<DataSetPublic>(`/data-sets/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export function deleteDataSet(id: string): Promise<void> {
@@ -392,6 +390,10 @@ export function getEvaluationMetric(
   return apiFetchJson<EvaluationMetricDetailPublic>(
     `/evaluation-metrics/${encodeURIComponent(id)}`,
   );
+}
+
+export function getEvaluationMetricTemplate(): Promise<string> {
+  return apiFetchJson<string>("/evaluation-metrics/template");
 }
 
 export function createEvaluationMetric(
@@ -456,7 +458,9 @@ export function deleteEvaluationProfile(id: string): Promise<void> {
   });
 }
 
-export function listEvaluationNodeTypes(): Promise<EvaluationNodeTypeCatalogItemPublic[]> {
+export function listEvaluationNodeTypes(): Promise<
+  EvaluationNodeTypeCatalogItemPublic[]
+> {
   return apiFetchJson<EvaluationNodeTypeCatalogItemPublic[]>(
     "/evaluation-profiles/node-types",
   );
