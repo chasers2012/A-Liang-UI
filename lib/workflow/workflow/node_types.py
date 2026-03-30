@@ -3,7 +3,7 @@
 - **Dataclasses** ``Socket``, ``NodeParam`` subclasses, ``Node``: used by ``@workflow_node`` and
   :meth:`collect_node_classes` / catalogs.
 - **Pydantic** ``NodeParamModel`` / :func:`validate_node_param_list`: same public JSON shape as
-  ``NodeParam.to_public_dict()``; used by API layers that need validation without Python node classes.
+  ``NodeParam.serialize()``; used by API layers that need validation without Python node classes.
 """
 
 from __future__ import annotations
@@ -24,6 +24,14 @@ class Socket:
     required: bool = False
     value_type: str = "any"
 
+    def serialize(self) -> dict[str, Any]:
+        """JSON-friendly socket specification used by API responses."""
+        return {
+            "name": self.name,
+            "required": self.required,
+            "value_type": self.value_type,
+        }
+
 
 @dataclass(frozen=True)
 class NodeParam(ABC):
@@ -38,7 +46,7 @@ class NodeParam(ABC):
         """Discriminator for JSON: ``number`` | ``string`` | ``boolean`` | ``enum``."""
 
     @abstractmethod
-    def to_public_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Shape aligned with :class:`NodeParamModel` JSON."""
 
 
@@ -52,7 +60,7 @@ class NumberNodeParam(NodeParam):
     def type(self) -> str:
         return "number"
 
-    def to_public_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "key": self.key,
             "label": self.label,
@@ -72,7 +80,7 @@ class StringNodeParam(NodeParam):
     def type(self) -> str:
         return "string"
 
-    def to_public_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "key": self.key,
             "label": self.label,
@@ -92,7 +100,7 @@ class BooleanNodeParam(NodeParam):
     def type(self) -> str:
         return "boolean"
 
-    def to_public_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "key": self.key,
             "label": self.label,
@@ -118,7 +126,7 @@ class EnumNodeParam(NodeParam):
     def type(self) -> str:
         return "enum"
 
-    def to_public_dict(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "key": self.key,
             "label": self.label,
@@ -162,23 +170,9 @@ class Node(BaseModel):
             "type": self.type,
             "label": self.label,
             "description": self.description,
-            "inputs": [
-                {
-                    "name": s.name,
-                    "required": s.required,
-                    "value_type": s.value_type,
-                }
-                for s in self.inputs
-            ],
-            "outputs": [
-                {
-                    "name": s.name,
-                    "required": s.required,
-                    "value_type": s.value_type,
-                }
-                for s in self.outputs
-            ],
-            "parameters": [p.to_public_dict() for p in self.parameters],
+            "inputs": [s.serialize() for s in self.inputs],
+            "outputs": [s.serialize() for s in self.outputs],
+            "parameters": [p.serialize() for p in self.parameters],
         }
 
 
