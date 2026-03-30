@@ -49,7 +49,8 @@ def workflow_node(
 
     If ``entry="evaluate"`` (typical for evaluation metric classes), use
     :func:`handler_from_node_class`: it calls ``evaluate(clean_factor, **kwargs)``
-    instead of ``execute(node, inputs)``. Expect an input socket named
+    instead of ``execute(**kwargs)`` (merged node params, root inputs, and linked
+    sockets). Expect an input socket named
     ``clean_factor``. Optional **classmethods** on the node class:
 
     - ``workflow_validate_clean_factor(value)``

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from workflow import workflow_node, workflow_socket
 
 
 def _demo_bar_option() -> dict[str, Any]:
@@ -31,11 +30,6 @@ def _demo_bar_option() -> dict[str, Any]:
     entry="execute",
 )
 class EchartsBarNode:
-    def execute(
-        self,
-        node: WorkflowNode,
-        inputs: Mapping[str, Any],
-    ) -> dict[str, Any]:
-        del inputs
+    def execute(self, **kwargs: Any) -> dict[str, Any]:
         option = _demo_bar_option()
         return {"out": option}

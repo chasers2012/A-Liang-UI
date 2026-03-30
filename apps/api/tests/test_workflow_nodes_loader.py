@@ -45,10 +45,9 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
         "\n".join(
             [
                 "from __future__ import annotations",
-                "from collections.abc import Mapping",
                 "from typing import Any",
                 "",
-                "from workflow import WorkflowNode, workflow_node, workflow_socket",
+                "from workflow import workflow_node, workflow_socket",
                 "",
                 "@workflow_node(",
                 '    label="ext",',
@@ -58,8 +57,7 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 '    entry="execute",',
                 ")",
                 "class ExtNode:",
-                "    def execute(self, node: WorkflowNode, inputs: Mapping[str, Any]) -> dict[str, Any]:",
-                "        del inputs",
+                "    def execute(self, **kwargs: Any) -> dict[str, Any]:",
                 "        return {'out': 1}",
                 "",
             ]

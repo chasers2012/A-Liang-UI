@@ -148,7 +148,11 @@ _PARAM_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
 class NodeParamModel(BaseModel):
-    """Declarative kwargs for ``execute`` / ``evaluate`` (besides graph inputs)."""
+    """Declarative schema for workflow node parameters (besides graph inputs).
+
+    For ``entry="execute"``, parameter keys are merged into the keyword arguments
+    passed to ``execute`` along with linked socket values.
+    """
 
     model_config = ConfigDict(extra="ignore")
 

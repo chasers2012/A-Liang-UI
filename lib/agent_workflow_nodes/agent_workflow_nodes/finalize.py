@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from workflow import workflow_node, workflow_socket
 
 
 @workflow_node(
@@ -16,9 +15,5 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
     entry="execute",
 )
 class FinalizeNode:
-    def execute(
-        self,
-        node: WorkflowNode,
-        inputs: Mapping[str, Any],
-    ) -> dict[str, Any]:
+    def execute(self, **kwargs: Any) -> dict[str, Any]:
         raise NotImplementedError

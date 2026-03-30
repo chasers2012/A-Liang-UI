@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
 from evaluate import MeanInformationCoefficientMetric
 from evaluate.alphalens_panel_utils import jsonable_metric_value, series_to_period_dict
-from workflow import WorkflowNode, workflow_node, workflow_socket
+from workflow import workflow_node, workflow_socket
 
 
 @workflow_node(
@@ -23,12 +22,8 @@ from workflow import WorkflowNode, workflow_node, workflow_socket
     ],
 )
 class BuiltinMeanIcNode:
-    def execute(
-        self,
-        node: WorkflowNode,
-        inputs: Mapping[str, Any],
-    ) -> dict[str, Any]:
-        fdc = inputs["clean_factor"]
+    def execute(self, **kwargs: Any) -> dict[str, Any]:
+        fdc = kwargs["clean_factor"]
         if not isinstance(fdc, pd.DataFrame):
             raise TypeError("clean_factor 须为 DataFrame")
         raw = MeanInformationCoefficientMetric().evaluate(fdc)

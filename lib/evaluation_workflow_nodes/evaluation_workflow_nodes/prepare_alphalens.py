@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Mapping
 from typing import Any
 
 from evaluate.alphalens_panel_utils import stock_count_from_alignment
@@ -12,7 +11,6 @@ from workflow import (
     BooleanNodeParam,
     NumberNodeParam,
     StringNodeParam,
-    WorkflowNode,
     workflow_node,
     workflow_socket,
 )
@@ -68,27 +66,21 @@ def _forward_periods_tuple(raw: Any) -> tuple[int, ...]:
     entry="execute",
 )
 class PrepareAlphalensNode:
-    def execute(
-        self,
-        node: WorkflowNode,
-        inputs: Mapping[str, Any],
-    ) -> dict[str, Any]:
-        nid = node.id
-        ev = inputs["ev"]
-        last_quantiles: int = inputs["last_quantiles"]
-        params = dict(node.params or {})
-        periods = _forward_periods_tuple(params.get("forward_return_periods"))
+    def execute(self, **kwargs: Any) -> dict[str, Any]:
+        ev = kwargs["ev"]
+        last_quantiles: int = kwargs["last_quantiles"]
+        periods = _forward_periods_tuple(kwargs.get("forward_return_periods"))
 
-        q_raw = params.get("alphalens_quantiles", params.get("quantiles"))
+        q_raw = kwargs.get("alphalens_quantiles", kwargs.get("quantiles"))
         if isinstance(q_raw, (int, float)) and not isinstance(q_raw, bool):
             last_quantiles = max(2, int(q_raw))
         elif q_raw is not None and str(q_raw).strip() != "":
             with contextlib.suppress(TypeError, ValueError):
                 last_quantiles = max(2, int(float(str(q_raw).strip())))
 
-        ls = bool(params.get("long_short", True))
+        ls = bool(kwargs.get("long_short", True))
         try:
-            ml = float(params.get("max_loss", 0.5))
+            ml = float(kwargs.get("max_loss", 0.5))
         except (TypeError, ValueError):
             ml = 0.5
         ev.long_short = ls
@@ -99,7 +91,6 @@ class PrepareAlphalensNode:
             max_loss=ml,
         )
         n_stocks = stock_count_from_alignment(ev.alignment_index())
-        _ = nid
         return {
             "clean_factor": out.factor_data_clean,
             "last_quantiles": last_quantiles,

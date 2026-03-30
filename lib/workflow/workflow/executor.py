@@ -25,7 +25,9 @@ def handler_from_node_class(cls: type) -> NodeHandler:
     """Create a :data:`NodeHandler` from a ``@workflow_node``-decorated class.
 
     Each invocation instantiates the class and calls its *ENTRY* method
-    (defaults to ``"execute"``). When *ENTRY* is ``"evaluate"``, the handler
+    (defaults to ``"execute"``, invoked as ``execute(**merged)`` where *merged*
+    combines node params, root ``input_sockets``, and linked outputs). When *ENTRY*
+    is ``"evaluate"``, the handler
     forwards to :meth:`evaluate` with ``clean_factor`` from *inputs* and kwargs
     from optional ``workflow_metric_kwargs``. If ``workflow_publish_evaluate_result``
     exists, its returned dict will be merged into handler outputs (see
@@ -68,7 +70,7 @@ def handler_from_node_class(cls: type) -> NodeHandler:
         node: WorkflowNode,
         inputs: Mapping[str, Any],
     ) -> Mapping[str, Any]:
-        return getattr(cls(), entry_name)(node, inputs)  # type: ignore[no-any-return]
+        return getattr(cls(), entry_name)(**dict(inputs))  # type: ignore[no-any-return]
 
     return _handler
 
@@ -128,9 +130,8 @@ class WorkflowExecutor:
             if handler is None:
                 raise WorkflowUnknownNodeTypeError(nid, nt)
             inputs = gather_node_inputs(workflow.links, out, nid)
-            # Root injection: merge provided initial sockets into node inputs.
-            # Linked socket wiring has higher priority.
-            node_inputs = {**initial, **inputs}
+            # Node params, then root injection, then linked sockets (highest priority).
+            node_inputs = {**(node.params or {}), **initial, **inputs}
             node_out = handler(node, node_inputs)
             node_out_dict = dict(node_out)
             # Keep root-provided socket values in sync with produced outputs.
