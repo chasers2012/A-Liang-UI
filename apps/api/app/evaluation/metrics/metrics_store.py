@@ -5,10 +5,10 @@ from pathlib import Path
 from custom_code import SourceFiles
 from workspace import ensure_dir
 
+from app.evaluation.metrics.constants import USER_METRIC_WORKFLOW_ROOT
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 from .metric_schemas import (
-    USER_METRIC_WORKFLOW_ROOT,
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
 )

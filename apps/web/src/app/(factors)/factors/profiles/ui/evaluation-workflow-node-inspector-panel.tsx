@@ -10,28 +10,24 @@ import {
   SocketTypeBadge,
 } from "./evaluation-workflow-canvas-io";
 import {
-  MetricWorkflowParamFieldRow,
-  metricWorkflowParamEffectiveValue,
-} from "./metric-workflow-param-field-row";
+  WorkflowNodeParamFieldRow,
+  workflowNodeParamEffectiveValue,
+} from "../../../../../components/workflow-graph/workflow-node-param-field-row";
 import type { EvalWorkflowCanvasNode } from "./workflow-rf-utils";
 
 export function EvaluationWorkflowNodeInspectorPanel(props: {
   readOnly: boolean;
   node: EvalWorkflowCanvasNode | null;
-  workflowParamSpecs: NodeParamModel[];
-  /** 节点目录中 ``metric_id`` 非空（指标类工作流节点） */
-  isMetricNode: boolean;
   onParamChange: (key: string, value: unknown) => void;
   onDeleteNode: () => void;
 }) {
   const {
     readOnly,
     node,
-    workflowParamSpecs,
-    isMetricNode,
     onParamChange,
     onDeleteNode,
   } = props;
+  const workflowParamSpecs = node?.data.params || [];
 
   if (!node) {
     return (
@@ -44,13 +40,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
   return (
     <div className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {readOnly ? "节点" : "节点属性"}
-      </div>
-      <div
-        className="break-all font-mono text-xs leading-snug text-muted-foreground"
-        title={node.data.backendType}
-      >
-        {node.data.backendType}
+        {node.data.label}
       </div>
       {node.data.inputs.length > 0 ? (
         <div className="overflow-hidden rounded-md border border-border/80">
@@ -115,11 +105,11 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
           </div>
           <div className="space-y-2">
             {workflowParamSpecs.map((spec) => (
-              <MetricWorkflowParamFieldRow
+              <WorkflowNodeParamFieldRow
                 key={spec.key}
                 spec={spec}
                 readOnly={readOnly}
-                value={metricWorkflowParamEffectiveValue(
+                value={workflowNodeParamEffectiveValue(
                   node.data.params,
                   spec,
                 )}
@@ -133,20 +123,7 @@ export function EvaluationWorkflowNodeInspectorPanel(props: {
         <p className="leading-relaxed text-muted-foreground">
           只读预览。修改工作流请使用「编辑」。
         </p>
-      ) : workflowParamSpecs.length > 0 ? (
-        <p className="leading-relaxed text-muted-foreground">
-          其余 params 请在「JSON」模式中编辑。
-        </p>
-      ) : isMetricNode ? (
-        <p className="leading-relaxed text-muted-foreground">
-          指标已绑定到该节点类型。可在指标编辑中配置工作流参数，或使用「JSON」模式编辑
-          params。
-        </p>
-      ) : (
-        <p className="leading-relaxed text-muted-foreground">
-          params 请在「JSON」模式中编辑。
-        </p>
-      )}
+      ) : null}
       {!readOnly ? (
         <Button
           type="button"

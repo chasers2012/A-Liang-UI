@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
-export function metricWorkflowParamEffectiveValue(
+export function workflowNodeParamEffectiveValue(
   params: Record<string, unknown>,
   spec: NodeParamModel,
 ): unknown {
@@ -147,7 +147,7 @@ function NumberParamRow(props: {
   );
 }
 
-export function MetricWorkflowParamFieldRow(props: {
+export function WorkflowNodeParamFieldRow(props: {
   spec: NodeParamModel;
   value: unknown;
   readOnly: boolean;

@@ -11,6 +11,8 @@ from evaluate.evaluation_metric import EvaluationMetric
 from evaluate.metric_loader import METRIC_GLOBALS
 from workspace import workspace_path
 
+from app.evaluation.metrics.constants import USER_METRIC_WORKFLOW_ROOT
+
 
 def _build_loader_globals_and_base_ast() -> tuple[dict[str, object], frozenset[str]]:
     """Build exec globals + acceptable base class names for AST scanning."""
@@ -62,8 +64,6 @@ class EvaluationMetricPackageManager:
     - resolve metric ids from workflow node type FQN
     """
 
-    USER_METRIC_WORKFLOW_ROOT: str = "workflow_nodes/evaluation"
-
     @staticmethod
     def get_package_dir(metric_id: str) -> str:
         return f"em_{metric_id.replace('-', '_')}"
@@ -71,7 +71,7 @@ class EvaluationMetricPackageManager:
     @staticmethod
     def get_source_path(metric_id: str) -> str:
         return (
-            f"{EvaluationMetricPackageManager.USER_METRIC_WORKFLOW_ROOT}/"
+            f"{USER_METRIC_WORKFLOW_ROOT}/"
             f"{EvaluationMetricPackageManager.get_package_dir(metric_id)}/metric_node.py"
         )
 

@@ -51,7 +51,6 @@ export interface EvaluationNodeTypeCatalogItemPublic {
   parameters?: NodeParamModel[];
   /** 来自后端额外计算：指标绑定/用户自定义的工作流参数 spec */
   workflow_parameters: NodeParamModel[];
-  user_defined: boolean;
   metric_id: string | null;
   socket_labels?: Record<string, string>;
   period_day_style_sockets?: string[];

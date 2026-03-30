@@ -4,9 +4,9 @@ from custom_code import validate_source_syntax
 from fastapi import APIRouter, HTTPException
 
 from app.datetime_utils import utc_now_iso
+from app.evaluation.metrics.constants import DEFAULT_METRIC_SOURCE
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 from app.evaluation.metrics.metric_schemas import (
-    DEFAULT_METRIC_SOURCE,
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -73,11 +73,10 @@ def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDe
     mid = new_metric_id()
     now = utc_now_iso()
     rec = body.to_record(mid, now)
-    src = body.source or DEFAULT_METRIC_SOURCE
     try:
         EvaluationMetricPackageManager.write_metric_package(
             mid,
-            src,
+            body.source,
             validators=[
                 validate_source_syntax,
                 EvaluationMetricPackageManager.load_user_evaluation_metric_class,

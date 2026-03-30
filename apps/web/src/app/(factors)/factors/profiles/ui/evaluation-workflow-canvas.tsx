@@ -126,15 +126,11 @@ const EvaluationWorkflowCanvasInner = forwardRef<
       initialGraph={initialGraph}
       readOnly={readOnly}
       renderInspector={(ctx) => {
-        const def = ctx.selectedNode
-          ? catalog.find((c) => c.type === ctx.selectedNode?.data.backendType)
-          : undefined;
+
         return (
           <EvaluationWorkflowNodeInspectorPanel
             readOnly={ctx.readOnly}
             node={ctx.selectedNode}
-            workflowParamSpecs={def?.workflow_parameters ?? []}
-            isMetricNode={Boolean(def?.metric_id)}
             onParamChange={ctx.patchNodeParam}
             onDeleteNode={ctx.deleteSelectedNode}
           />
