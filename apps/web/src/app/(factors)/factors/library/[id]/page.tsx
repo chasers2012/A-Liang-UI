@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { ChevronRight, History, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -138,12 +138,11 @@ function FactorEvaluationRunControls(props: {
 }
 
 function FactorEvaluationDetails(props: {
-  id: string;
   evalRow: FactorEvaluationRowPublic;
   evalProfile: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
 }) {
-  const { id, evalRow, evalProfile, metricMetaById } = props;
+  const { evalRow, evalProfile, metricMetaById } = props;
 
   return (
     <>
@@ -197,16 +196,6 @@ function FactorEvaluationDetails(props: {
         profile={evalProfile}
         metricMetaById={metricMetaById}
       />
-      <Link
-        href={`/factors/library/${encodeURIComponent(id)}/history`}
-        className={cn(
-          buttonVariants({ variant: "outline", size: "sm" }),
-          "inline-flex gap-1",
-        )}
-      >
-        查看评价历史
-        <ChevronRight className="size-4" />
-      </Link>
     </>
   );
 }
@@ -225,13 +214,6 @@ function FactorDetailHeaderActions(props: {
       >
         <Pencil className="size-4" />
         编辑
-      </Link>
-      <Link
-        href={`/factors/library/${encodeURIComponent(id)}/history`}
-        className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
-      >
-        <History className="size-4" />
-        历史
       </Link>
       <Button
         type="button"
@@ -302,7 +284,6 @@ function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
 }
 
 function FactorEvaluationCard(props: {
-  id: string;
   evalRow: FactorEvaluationRowPublic | null;
   evalProfile: EvaluationProfilePublic | null;
   metricMetaById: Record<string, MetricMetaEntry>;
@@ -316,7 +297,6 @@ function FactorEvaluationCard(props: {
   onRunEvaluation: () => void;
 }) {
   const {
-    id,
     evalRow,
     evalProfile,
     metricMetaById,
@@ -355,18 +335,10 @@ function FactorEvaluationCard(props: {
         />
         {!evalRow?.has_evaluation ? (
           <p className="text-sm text-muted-foreground">
-            暂无评价结果。请选择评价方案后点击「运行评价」，或查看
-            <Link
-              href={`/factors/library/${encodeURIComponent(id)}/history`}
-              className="mx-1 font-medium text-foreground underline-offset-4 hover:underline"
-            >
-              评价历史
-            </Link>
-            。
+            暂无评价结果。请选择评价方案后点击「运行评价」。
           </p>
         ) : (
           <FactorEvaluationDetails
-            id={id}
             evalRow={evalRow}
             evalProfile={evalProfile}
             metricMetaById={metricMetaById}
@@ -378,7 +350,6 @@ function FactorEvaluationCard(props: {
 }
 
 function FactorDetailLoadedView(props: {
-  id: string;
   detail: FactorDetailPublic;
   loadError: string | null;
   evalRow: FactorEvaluationRowPublic | null;
@@ -394,7 +365,6 @@ function FactorDetailLoadedView(props: {
   onRunEvaluation: () => void;
 }) {
   const {
-    id,
     detail,
     loadError,
     evalRow,
@@ -422,7 +392,6 @@ function FactorDetailLoadedView(props: {
       <div className="grid gap-6 lg:grid-cols-2">
         <FactorMetadataCard detail={detail} />
         <FactorEvaluationCard
-          id={id}
           evalRow={evalRow}
           evalProfile={evalProfile}
           metricMetaById={metricMetaById}
@@ -606,7 +575,6 @@ export default function FactorDetailPage() {
       }
     >
       <FactorDetailLoadedView
-        id={id}
         detail={detail}
         loadError={loadError}
         evalRow={evalRow}

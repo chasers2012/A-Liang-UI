@@ -90,17 +90,6 @@ function factorsLibraryHeaderBreadcrumbs(
     ];
   }
 
-  const hist = /^\/factors\/library\/([^/]+)\/history$/.exec(pathname);
-  if (hist) {
-    const id = hist[1];
-    const base = `/factors/library/${encodeURIComponent(id)}`;
-    return [
-      { href: FACTOR_LIBRARY_LIST, label: "因子库" },
-      { href: base, label: "因子详情" },
-      { label: "历史版本" },
-    ];
-  }
-
   const detail = /^\/factors\/library\/([^/]+)$/.exec(pathname);
   if (detail) {
     return [
@@ -158,9 +147,6 @@ function factorsLibraryBackHref(pathname: string): string | null {
 
   const edit = /^\/factors\/library\/([^/]+)\/edit$/.exec(pathname);
   if (edit) return `/factors/library/${encodeURIComponent(edit[1])}`;
-
-  const hist = /^\/factors\/library\/([^/]+)\/history$/.exec(pathname);
-  if (hist) return `/factors/library/${encodeURIComponent(hist[1])}`;
 
   const detail = /^\/factors\/library\/([^/]+)$/.exec(pathname);
   if (detail) return FACTOR_LIBRARY_LIST;

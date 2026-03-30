@@ -7,8 +7,7 @@ from custom_code import validate_source_syntax
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
-from app.evaluation_run.history_schemas import FactorEvaluationHistoryEntry
-from app.evaluation_run.history_store import delete_history_for_factor, list_history_for_factor
+from app.evaluation_run.history_store import delete_history_for_factor
 from app.evaluation_run.schemas import (
     FactorEvaluationRowPublic,
     FactorEvaluationRunBody,
@@ -171,20 +170,6 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     return FactorEvaluationsSummaryPublic(aggregate=aggregate, rows=rows)
 
 
-@router.get(
-    "/{factor_id}/evaluations/history",
-    response_model=list[FactorEvaluationHistoryEntry],
-)
-def factor_evaluation_history(factor_id: str) -> list[FactorEvaluationHistoryEntry]:
-    if FactorItemsRegistry.get_item(factor_id) is None:
-        raise HTTPException(status_code=404, detail="因子不存在")
-    try:
-        rows = list_history_for_factor(factor_id)
-    except ValueError as e:
-        http_internal_server_error(e)
-    return list(reversed(rows))
-
-
 @router.post(
     "/{factor_id}/evaluations/run",
     response_model=FactorEvaluationRowPublic,
@@ -218,7 +203,7 @@ def post_factor_evaluation_run(
             factor_id,
             data_set_id=run_data_set_id,
             evaluation_profile=prof,
-            with_history=True,
+            with_history=False,
         )
     except ValueError as e:
         http_bad_request(e)

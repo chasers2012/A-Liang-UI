@@ -11,7 +11,6 @@ import type {
   DataSetPublic,
   FactorDefaultSourcePublic,
   FactorDetailPublic,
-  FactorEvaluationHistoryEntry,
   FactorEvaluationRowPublic,
   FactorEvaluationsSummaryPublic,
   FactorSummaryPublic,
@@ -316,14 +315,6 @@ export function deleteFactor(id: string): Promise<void> {
 export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
   return apiFetchJson<FactorEvaluationsSummaryPublic>(
     "/factors/evaluations/summary",
-  );
-}
-
-export function getFactorEvaluationHistory(
-  factorId: string,
-): Promise<FactorEvaluationHistoryEntry[]> {
-  return apiFetchJson<FactorEvaluationHistoryEntry[]>(
-    `/factors/${encodeURIComponent(factorId)}/evaluations/history`,
   );
 }
 

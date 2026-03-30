@@ -3,10 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import Link from "next/link";
-
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { getFactor, patchFactor } from "@/lib/quant-agent-api";
 
 import {
@@ -139,15 +135,7 @@ export default function EditFactorPage() {
 
       <p className="text-sm text-muted-foreground">
         保存且源码有变更时会自动生成代码快照。{" "}
-        <Link
-          href={`/factors/library/${encodeURIComponent(id)}/history`}
-          className={cn(
-            buttonVariants({ variant: "link" }),
-            "h-auto p-0 text-foreground underline-offset-4",
-          )}
-        >
-          查看代码与评价历史
-        </Link>
+        （评价历史已移除）
       </p>
     </FactorFormPageContainer>
   );

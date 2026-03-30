@@ -49,13 +49,3 @@ export interface FactorEvaluationsSummaryPublic {
   aggregate: FactorEvaluationsAggregatePublic;
   rows: FactorEvaluationRowPublic[];
 }
-
-export interface FactorEvaluationHistoryEntry {
-  id: string;
-  evaluated_at: string;
-  window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
-  mean_ic: Record<string, number>;
-  mean_return_spread?: Record<string, number>;
-  error?: string | null;
-}
