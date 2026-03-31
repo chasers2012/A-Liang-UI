@@ -11,12 +11,11 @@ from workflow import Node, NodeRegistry, build_node_registry_from_modules, merge
 from workspace import workspace_path
 
 from app.workflow_nodes.seed_builtin import (
-    WORKFLOW_NODES_RELATIVE_ROOT,
     builtin_package_for_domain,
     ensure_builtin_workflow_packages,
 )
 
-from .package_manager import list_domain_packages
+from .package_manager import WORKFLOW_NODES_RELATIVE_ROOT, list_domain_packages
 
 
 class WorkflowNodeLoader:

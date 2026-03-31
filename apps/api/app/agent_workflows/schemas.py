@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from pydantic import BaseModel, ConfigDict, Field
 from workflow import Node, WorkflowGraph, WorkflowLink, WorkflowViewport
 
+from app.common.id import create_id_generator
 from app.datetime_utils import utc_now_iso
 
 AgentGraphNode = Node
 AgentGraphLink = WorkflowLink
 AgentGraphViewport = WorkflowViewport
 AgentGraphState = WorkflowGraph
+
+generate_id = create_id_generator("agent_workflows")
 
 
 class AgentWorkflowRecord(BaseModel):
@@ -36,7 +37,7 @@ class AgentWorkflowCreate(BaseModel):
     def to_record(self) -> AgentWorkflowRecord:
         now = utc_now_iso()
         return AgentWorkflowRecord(
-            id=str(uuid4()),
+            id=str(generate_id()),
             name=self.name,
             description=self.description,
             graph=self.graph or AgentGraphState(),

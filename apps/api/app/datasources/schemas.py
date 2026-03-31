@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.common.id import create_id_generator
 from app.datetime_utils import utc_now_iso
 
 DataSourceType = Literal["sql", "csv"]
+
+generate_id = create_id_generator("datasources")
 
 
 class SqlConfigStored(BaseModel):
@@ -119,7 +121,7 @@ class DataSourceCreate(BaseModel):
 
     def to_record(self) -> DataSourceRecord:
         now = utc_now_iso()
-        rid = str(uuid4())
+        rid = generate_id()
         if self.type == "sql" and self.sql:
             s = self.sql
             sql = SqlConfigStored(

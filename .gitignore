@@ -25,6 +25,7 @@ build
 .vscode
 .DS_Store
 Thumbs.db
+.cursor/plans
 
 # Logs
 *.log

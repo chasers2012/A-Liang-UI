@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from custom_code import validate_identifier_name as validate_metric_name
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from workflow import NodeParamModel
 
+from app.common.id import create_id_generator
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 from app.evaluation.scheme.metric_workflow_parameters import (
     validate_metric_workflow_parameters,
 )
+
+generate_id = create_id_generator("evaluation_metrics")
 
 
 class EvaluationMetricRecord(BaseModel):
@@ -112,4 +113,4 @@ def record_to_summary(
 
 
 def new_metric_id() -> str:
-    return str(uuid4())
+    return generate_id()

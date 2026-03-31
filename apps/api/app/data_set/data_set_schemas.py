@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
+from app.common.id import create_id_generator
 from app.datasources.schemas import utc_now_iso
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+generate_id = create_id_generator("data_sets")
 
 
 class DataSetDatasourceBindingStored(BaseModel):
@@ -67,7 +68,7 @@ class DataSetCreate(BaseModel):
 
     def to_record(self) -> DataSetRecord:
         now = utc_now_iso()
-        rid = str(uuid4())
+        rid = str(generate_id())
         bindings = [
             DataSetDatasourceBindingStored(
                 datasource_id=b.datasource_id.strip(),

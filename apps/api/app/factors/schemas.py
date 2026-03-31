@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app import datetime_utils
+from app.common.id import create_id_generator
 
 FACTORS_DIR = "factors/source"
 
 utc_now_iso = datetime_utils.utc_now_iso
+generate_id = create_id_generator("factors")
 
 
 def default_factor_source(factor_name: str) -> str:
@@ -145,4 +145,4 @@ def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
 
 
 def new_factor_id() -> str:
-    return str(uuid4())
+    return generate_id()
