@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import contextlib
 
-from custom_code import validate_identifier_name as validate_factor_name
-from custom_code import validate_source_syntax
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException
 
 from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
 from app.evaluation_run.history_store import delete_history_for_factor
@@ -15,23 +13,15 @@ from app.evaluation_run.schemas import (
     FactorEvaluationsSummaryPublic,
 )
 from app.evaluation_run.service import execute_and_persist_factor_evaluation_run
-from app.factors.registry import (
-    FactorItemsRegistry,
-    delete_source_file,
-    read_source,
-    write_source,
-)
+from app.factors.constants import NEW_FACTOR_TEMPLATE
+from app.factors.registry import FactorItemsRegistry, delete_source_file, read_source
 from app.factors.schemas import (
     FactorCreate,
-    FactorDefaultSourcePublic,
     FactorDetailPublic,
     FactorPatch,
     FactorRecord,
     FactorSummaryPublic,
-    default_factor_source,
-    new_factor_id,
     record_to_summary,
-    utc_now_iso,
 )
 from app.http_errors import http_bad_request, http_internal_server_error
 
@@ -43,60 +33,6 @@ PRIMARY_IC_PERIOD = "5"
 def _detail(rec: FactorRecord) -> FactorDetailPublic:
     summary = record_to_summary(rec)
     return FactorDetailPublic(**summary.model_dump(), source=read_source(rec))
-
-
-def _merge_patch(rec, patch: FactorPatch) -> None:
-    data = patch.model_dump(exclude_unset=True)
-    if "name" in data:
-        v = data["name"]
-        if v is None or not str(v).strip():
-            raise ValueError("name 不能为空")
-        rec.name = str(v).strip()
-    if "group" in data:
-        rec.group = (data["group"] or "").strip()
-    if "description" in data:
-        rec.description = (data["description"] or "").strip()
-    if "max_window" in data:
-        mw = data["max_window"]
-        if mw is not None:
-            rec.max_window = mw
-    if "dependencies" in data and data["dependencies"] is not None:
-        deps = [d.strip() for d in data["dependencies"] if str(d).strip()]
-        if not deps:
-            raise ValueError("dependencies 不能为空")
-        rec.dependencies = deps
-
-
-def _patch_factor_validate_and_merge(
-    rec: FactorRecord,
-    body: FactorPatch,
-    unset: dict,
-) -> None:
-    if "name" in unset:
-        if body.name is None or not str(body.name).strip():
-            raise HTTPException(status_code=400, detail="name 不能为空")
-        try:
-            validate_factor_name(str(body.name))
-        except ValueError as e:
-            http_bad_request(e)
-
-    if "max_window" in unset and body.max_window is not None and body.max_window < 1:
-        raise HTTPException(status_code=400, detail="max_window 须 >= 1")
-
-    try:
-        _merge_patch(rec, body)
-    except ValueError as e:
-        http_bad_request(e)
-
-
-def _apply_source_change(rec: FactorRecord, new_source: str) -> None:
-    old_src = read_source(rec)
-    if new_source == old_src:
-        return
-    try:
-        write_source(rec, new_source, validators=[validate_source_syntax])
-    except ValueError as e:
-        http_bad_request(e)
 
 
 @router.get("", response_model=list[FactorSummaryPublic])
@@ -224,14 +160,9 @@ def post_factor_evaluation_run(
     )
 
 
-@router.get("/default-source", response_model=FactorDefaultSourcePublic)
-def get_default_factor_source(
-    name: str | None = Query(
-        default=None,
-        description="Embedded as UserFactor.name in the template; empty uses my_factor",
-    ),
-) -> FactorDefaultSourcePublic:
-    return FactorDefaultSourcePublic(source=default_factor_source(name or ""))
+@router.get("/template", response_model=str)
+def get_default_factor_source() -> str:
+    return NEW_FACTOR_TEMPLATE
 
 
 @router.get("/{factor_id}", response_model=FactorDetailPublic)
@@ -245,32 +176,18 @@ def get_factor(factor_id: str) -> FactorDetailPublic:
 @router.post("", response_model=FactorDetailPublic)
 def create_factor(body: FactorCreate) -> FactorDetailPublic:
     try:
-        validate_factor_name(body.name)
+        rec = FactorItemsRegistry.create_factor(body)
     except ValueError as e:
         http_bad_request(e)
-    fid = new_factor_id()
-    now = utc_now_iso()
-    rec = body.to_record(fid, now)
-    src = body.source if body.source is not None else default_factor_source(rec.name)
-    try:
-        write_source(rec, src, validators=[validate_source_syntax])
-    except ValueError as e:
-        http_bad_request(e)
-    FactorItemsRegistry.add_item(rec)
     return _detail(rec)
 
 
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
 def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
-    unset = body.model_dump(exclude_unset=True)
-
-    def _apply(rec: FactorRecord) -> None:
-        _patch_factor_validate_and_merge(rec, body, unset)
-        if "source" in unset and body.source is not None:
-            _apply_source_change(rec, body.source)
-        rec.updated_at = utc_now_iso()
-
-    rec = FactorItemsRegistry.update_item(factor_id, _apply)
+    try:
+        rec = FactorItemsRegistry.update_factor(factor_id, body)
+    except ValueError as e:
+        http_bad_request(e)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     return _detail(rec)

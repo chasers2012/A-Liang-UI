@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createFactor, getFactorDefaultSource } from "@/lib/quant-agent-api";
+import { createFactor, getFactorTemplate } from "@/lib/quant-agent-api";
 
 import {
   bodyFromForm,
@@ -28,10 +28,9 @@ import {
 
 export default function NewFactorPage() {
   const router = useRouter();
-  const initialFactorName = useMemo(() => defaultNewFactorName(), []);
   const [form, setForm] = useState<FactorFormState>(() => ({
     ...emptyForm(),
-    name: initialFactorName,
+    name: '',
   }));
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -42,9 +41,10 @@ export default function NewFactorPage() {
     let cancelled = false;
     (async () => {
       try {
-        const { source } = await getFactorDefaultSource(initialFactorName);
+        const source = await getFactorTemplate();
         if (!cancelled) {
           setForm((prev) => ({ ...prev, source }));
+          setForm((f) => applyFactorFormPatch(f, { name: defaultNewFactorName() }));
         }
       } catch (e) {
         if (!cancelled) {
@@ -59,7 +59,7 @@ export default function NewFactorPage() {
     return () => {
       cancelled = true;
     };
-  }, [initialFactorName]);
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

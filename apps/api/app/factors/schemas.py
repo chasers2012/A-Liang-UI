@@ -11,28 +11,6 @@ utc_now_iso = datetime_utils.utc_now_iso
 generate_id = create_id_generator("factors")
 
 
-def default_factor_source(factor_name: str) -> str:
-    """Minimal UserFactor skeleton; ``factor_name`` becomes the ``name`` class attribute."""
-    safe = factor_name.strip() or "my_factor"
-    return f'''from __future__ import annotations
-
-import pandas as pd
-from factor.factor import Factor
-
-
-class UserFactor(Factor):
-    name = "{safe}"
-    group = "custom"
-    description = ""
-    dependencies = ["close"]
-    max_window = 2
-
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        close = data["close"]
-        return close.groupby(level="asset", group_keys=False).pct_change(periods=1)
-'''
-
-
 def source_relative_path(factor_id: str) -> str:
     return f"{FACTORS_DIR}/{factor_id}.py"
 
@@ -121,12 +99,6 @@ class FactorSummaryPublic(BaseModel):
 
 
 class FactorDetailPublic(FactorSummaryPublic):
-    source: str
-
-
-class FactorDefaultSourcePublic(BaseModel):
-    """Editor bootstrap: Python skeleton from :func:`default_factor_source`."""
-
     source: str
 
 

@@ -36,7 +36,7 @@ function replaceDependenciesAttr(block: string, items: string[]): string {
 function findUserFactorClassBodyRange(
   source: string,
 ): { start: number; end: number } | null {
-  const classRe = /^class\s+UserFactor\s*\(\s*Factor\s*\)\s*:\s*/m;
+  const classRe = /^class\s+NewFactor\s*\(\s*Factor\s*\)\s*:\s*/m;
   const m = classRe.exec(source);
   if (!m || m.index === undefined) return null;
   const bodyStart = m.index + m[0].length;
@@ -62,7 +62,7 @@ function patchUserFactorBody(block: string, form: FactorFormState): string {
 }
 
 /**
- * Push form field values into `UserFactor` class attributes in source when that
+ * Push form field values into `NewFactor` class attributes in source when that
  * class exists; otherwise returns the original source (no whole-file guess).
  */
 export function applyFormMetadataToSource(
@@ -103,16 +103,10 @@ function unescapePyString(raw: string): string {
 }
 
 function parseStringAttr(block: string, attr: string): string | null {
-  const reD = new RegExp(
-    `^\\s*${attr}\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`,
-    "m",
-  );
+  const reD = new RegExp(`^\\s*${attr}\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`, "m");
   let m = reD.exec(block);
   if (m) return unescapePyString(m[1]);
-  const reS = new RegExp(
-    `^\\s*${attr}\\s*=\\s*'((?:[^'\\\\]|\\\\.)*)'`,
-    "m",
-  );
+  const reS = new RegExp(`^\\s*${attr}\\s*=\\s*'((?:[^'\\\\]|\\\\.)*)'`, "m");
   m = reS.exec(block);
   if (m) return unescapePyString(m[1]);
   return null;
@@ -138,7 +132,7 @@ function parseDependenciesCsv(block: string): string | null {
 }
 
 /**
- * Read `UserFactor` class attributes from source into form-shaped fields.
+ * Read `NewFactor` class attributes from source into form-shaped fields.
  * Only keys that are successfully parsed are set (partial object).
  */
 export function parseUserFactorMetadataFromSource(

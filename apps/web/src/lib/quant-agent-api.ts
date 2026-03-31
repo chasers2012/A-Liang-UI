@@ -9,7 +9,6 @@ import type {
   EvaluationMetricSummaryPublic,
   EvaluationProfilePublic,
   DataSetPublic,
-  FactorDefaultSourcePublic,
   FactorDetailPublic,
   FactorEvaluationRowPublic,
   FactorEvaluationsSummaryPublic,
@@ -279,14 +278,8 @@ export function getFactor(id: string): Promise<FactorDetailPublic> {
   return apiFetchJson<FactorDetailPublic>(`/factors/${encodeURIComponent(id)}`);
 }
 
-export function getFactorDefaultSource(
-  name?: string,
-): Promise<FactorDefaultSourcePublic> {
-  const q =
-    name !== undefined && name !== ""
-      ? `?name=${encodeURIComponent(name)}`
-      : "";
-  return apiFetchJson<FactorDefaultSourcePublic>(`/factors/default-source${q}`);
+export function getFactorTemplate(): Promise<string> {
+  return apiFetchJson<string>(`/factors/template`);
 }
 
 export function createFactor(body: unknown): Promise<FactorDetailPublic> {

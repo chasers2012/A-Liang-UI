@@ -21,7 +21,7 @@ export function defaultNewFactorName(d = new Date()): string {
   return `新因子_${y}${mo}${day}_${h}${mi}${s}`;
 }
 
-/** Initial shell; `source` is filled from GET /factors/default-source on the new-factor page. */
+/** Initial shell; `source` is filled from GET /factors/template on the new-factor page. */
 export function emptyForm(): FactorFormState {
   return {
     name: "新因子",

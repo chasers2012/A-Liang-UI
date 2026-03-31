@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from workspace import get_workspace_root
+from workspace import ensure_dir, get_workspace_root
 
 
 class SourceFiles:
@@ -34,7 +34,7 @@ class SourceFiles:
         if validators:
             SourceFiles.validate_source(text, validators)
         path = SourceFiles.resolve_source_path(source_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_dir(path.parent)
         path.write_text(text, encoding="utf-8", newline="\n")
 
     @staticmethod
