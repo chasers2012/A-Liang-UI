@@ -46,7 +46,7 @@ class EvaluationMetricCreate(BaseModel):
         if not s:
             raise ValueError("source 不能为空")
         validate_source_syntax(s)
-        name, _, workflow_parameters, _ = parse_workflow_node_source(s)
+        name, _, workflow_parameters, _, _, _ = parse_workflow_node_source(s)
         validate_metric_name(name)
         validate_metric_workflow_parameters(workflow_parameters)
 
@@ -58,7 +58,14 @@ class EvaluationMetricCreate(BaseModel):
         now: str,
         source_path: str,
     ) -> EvaluationMetricRecord:
-        name, description, workflow_parameters, _ = parse_workflow_node_source(self.source)
+        (
+            name,
+            description,
+            workflow_parameters,
+            inputs,
+            outputs,
+            _,
+        ) = parse_workflow_node_source(self.source)
         return EvaluationMetricRecord(
             id=metric_id,
             name=name,
@@ -67,8 +74,8 @@ class EvaluationMetricCreate(BaseModel):
             created_at=now,
             updated_at=now,
             workflow_parameters=workflow_parameters,
-            inputs=[],
-            outputs=[],
+            inputs=inputs,
+            outputs=outputs,
         )
 
 

@@ -22,8 +22,9 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
                 label=metric.name,
                 description=metric.description,
                 category=None,
-                inputs=[],
-                outputs=[],
+                inputs=metric.inputs,
+                outputs=metric.outputs,
+                parameters=metric.workflow_parameters,
             )
         )
     return out
