@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
 from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.profile_node_types import list_evaluation_profile_node_types_public
 from app.evaluation.scheme.profile_schemas import (
+    EvaluationNodeTypePublic,
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
@@ -63,8 +62,8 @@ def _merge_evaluation_profile_patch(
     rec.updated_at = utc_now_iso()
 
 
-@router.get("/node-types", response_model=list[dict[str, Any]])
-def list_node_types() -> list[dict[str, Any]]:
+@router.get("/node-types", response_model=list[EvaluationNodeTypePublic])
+def list_node_types() -> list[EvaluationNodeTypePublic]:
     return list_evaluation_profile_node_types_public()
 
 

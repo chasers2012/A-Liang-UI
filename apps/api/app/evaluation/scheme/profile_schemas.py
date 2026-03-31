@@ -3,7 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
-from workflow import WorkflowGraph
+from workflow import Socket, WorkflowGraph
 
 from app.datasources.schemas import utc_now_iso
 
@@ -69,3 +69,12 @@ class EvaluationProfilePublic(BaseModel):
     is_default: bool
     created_at: str
     updated_at: str
+
+
+class EvaluationNodeTypePublic(BaseModel):
+    type: str
+    label: str
+    description: str
+    category: str | None = None
+    inputs: list[Socket]
+    outputs: list[Socket]

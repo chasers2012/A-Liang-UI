@@ -9,7 +9,7 @@ def test_evaluation_metrics_crud(client):
     assert data["name"] == "em_test"
     assert "workflow_type_id" not in data
     assert data["source_path"].startswith("workflow_nodes/evaluation/em_")
-    assert "UserEvaluationMetric" in data["source"]
+    assert "NewEvaluationMetric" in data["source"]
 
     r2 = client.get(f"/evaluation-metrics/{mid}")
     assert r2.status_code == 200
@@ -76,7 +76,7 @@ def test_evaluation_profiles_node_types(client):
     assert any("calculate_factor_value" in t for t in types)
     assert any(t.endswith(".EchartsLineNode") for t in types)
     assert any(t.endswith(".EchartsBarNode") for t in types)
-    assert any(t.endswith(".BuiltinMeanIcNode") for t in types)
+    assert any(t.endswith(".MeanIC") for t in types)
     assert any(t.endswith(".BuiltinMeanReturnSpreadNode") for t in types)
     echarts_types = [x for x in types if "echarts_" in x]
     assert len(echarts_types) == 2
@@ -91,5 +91,5 @@ def test_evaluation_profiles_node_types(client):
         assert "viz_mode" not in row
     line_row = next(x for x in rows if x["type"].endswith(".EchartsLineNode"))
     assert line_row["workflow_parameters"] == []
-    builtin_row = next(x for x in rows if x["type"].endswith(".BuiltinMeanIcNode"))
+    builtin_row = next(x for x in rows if x["type"].endswith(".MeanIC"))
     assert builtin_row.get("metric_id") == "builtin_mean_ic"

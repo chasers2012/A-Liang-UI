@@ -6,19 +6,24 @@ when non-empty; otherwise from the metrics registry (user metrics and built-ins)
 
 from __future__ import annotations
 
-from typing import Any
+from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
-from app.evaluation.scheme.workflow_graph_types import (
-    sorted_workflow_node_type_ids,
-    workflow_node_definition,
-)
+from .profile_schemas import EvaluationNodeTypePublic
 
 
-def list_evaluation_profile_node_types_public() -> list[dict[str, Any]]:
+def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic]:
     """Ordered node types from the evaluation catalog with API extras (unified iteration)."""
-    out: list[dict[str, Any]] = []
-    for nt in sorted_workflow_node_type_ids():
-        spec = workflow_node_definition(nt)
-        data = spec.serialize()
-        out.append(data)
+    out: list[EvaluationNodeTypePublic] = []
+    # metrics nodes
+    for metric in EvaluationMetricsRegistry.list_items():
+        out.append(
+            EvaluationNodeTypePublic(
+                type=metric.id,
+                label=metric.name,
+                description=metric.description,
+                category=None,
+                inputs=[],
+                outputs=[],
+            )
+        )
     return out

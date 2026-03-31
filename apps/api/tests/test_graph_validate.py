@@ -8,7 +8,7 @@ from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_id
 from workflow import Node, WorkflowLink
 
 _CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
-_MIC = "evaluation_workflow_nodes.metric_builtin_mean_ic.BuiltinMeanIcNode"
+_MIC = "evaluation_workflow_nodes.mean_ic.MeanIC"
 
 
 def test_duplicate_node_types_allowed(workspace_tmp):

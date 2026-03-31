@@ -54,7 +54,7 @@ def test_load_workspace_registry_includes_evaluation_and_agent_nodes(tmp_path: P
     keys = set(reg.keys())
     assert any(k.endswith(".CalculateFactorValueNode") for k in keys)
     assert any("echarts_line" in k for k in keys)
-    assert any(k.endswith(".BuiltinMeanIcNode") for k in keys)
+    assert any(k.endswith(".MeanIC") for k in keys)
     assert any(k.endswith(".BuiltinMeanReturnSpreadNode") for k in keys)
     assert any(k.endswith(".InitContextNode") for k in keys)
     assert any(k.endswith(".ValidateNode") for k in keys)
