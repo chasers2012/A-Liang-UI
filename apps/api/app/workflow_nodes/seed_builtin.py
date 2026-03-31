@@ -6,7 +6,6 @@ from .package_manager import (
     ensure_all_builtin_seeded,
     ensure_builtin_domain_seeded,
     list_domain_packages,
-    migrate_registry_if_missing,
     register_workflow_node_package,
 )
 
@@ -33,14 +32,10 @@ def register_builtin_workflow_domain(domain: str, package_name: str) -> None:
 
 
 def registered_builtin_workflow_domains() -> tuple[str, ...]:
-    _ensure_registry_bootstrapped()
-    domains = set(BUILTIN_PACKAGE_BY_DOMAIN.keys())
-    domains.update(i.domain for i in _all_builtin_records())
-    return tuple(sorted(domains))
+    return tuple(sorted(BUILTIN_PACKAGE_BY_DOMAIN.keys()))
 
 
 def builtin_package_for_domain(domain: str) -> str:
-    _ensure_registry_bootstrapped()
     key = (domain or "").strip()
     pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(key)
     if pkg is not None:
@@ -56,7 +51,6 @@ def builtin_package_for_domain(domain: str) -> str:
 
 def ensure_builtin_workflow_packages(domain: str) -> None:
     """If ``workflow_nodes/<domain>/<builtin_pkg>/`` is missing, copy from the installed distribution."""
-    _ensure_registry_bootstrapped()
     key = domain.strip()
     pkg = builtin_package_for_domain(key)
     register_workflow_node_package(key, pkg, kind="builtin", append=True)
@@ -64,21 +58,6 @@ def ensure_builtin_workflow_packages(domain: str) -> None:
 
 
 def ensure_all_builtin_workflow_domains() -> None:
-    _ensure_registry_bootstrapped()
     for d in registered_builtin_workflow_domains():
         ensure_builtin_workflow_packages(d)
     ensure_all_builtin_seeded()
-
-
-def _ensure_registry_bootstrapped() -> None:
-    migrate_registry_if_missing(builtin_packages=BUILTIN_PACKAGE_BY_DOMAIN)
-
-
-def _all_builtin_records():
-    out = []
-    from .package_registry_store import WorkflowNodePackagesRegistry
-
-    for i in WorkflowNodePackagesRegistry.list_items():
-        if i.kind == "builtin":
-            out.append(i)
-    return out

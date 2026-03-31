@@ -7,7 +7,7 @@ import traceback
 from typing import Any
 
 import pandas as pd
-from factor import load_factor_class
+from factor import is_valid_factor_class
 from langchain_core.tools import tool
 
 from agent.context import get_dependency_resolver, list_registered_dependency_fields
@@ -72,7 +72,7 @@ def run_factor_dry_run(
     end = dry_run_end_date
 
     try:
-        cls, class_name = load_factor_class(factor_source)
+        cls, class_name = is_valid_factor_class(factor_source)
         inst = cls(dependency_resolver=resolver)
         out = inst.calculate(start_date=start, end_date=end, stock_codes=stock_codes)
         if out.empty:
@@ -131,7 +131,7 @@ def run_alphalens_evaluation(
 
         from evaluate import AlphalensFactorEvaluator
 
-        cls, _ = load_factor_class(factor_source)
+        cls, _ = is_valid_factor_class(factor_source)
         factor = cls(dependency_resolver=resolver)
         ev = AlphalensFactorEvaluator(
             factor,

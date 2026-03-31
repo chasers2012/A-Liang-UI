@@ -3,8 +3,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from inspect import isawaitable, iscoroutinefunction
 
-import app.agent_workflows
-import app.evaluation
 from app.startup_jobs import STARTUP_JOBS
 from app.workflow_nodes import ensure_all_builtin_workflow_domains
 
@@ -70,3 +68,15 @@ def health() -> dict[str, str]:
 @app.get("/")
 def root() -> dict[str, str]:
     return {"service": "quant-agent-api"}
+
+
+if __name__ == "__main__":
+    # Allow `python app/main.py` to start the API directly.
+    import uvicorn
+
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    log_level = os.getenv("LOG_LEVEL", "info")
+
+    print(f"Starting quant-agent API on http://{host}:{port}")
+    uvicorn.run(app, host=host, port=port, log_level=log_level)

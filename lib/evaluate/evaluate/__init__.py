@@ -6,7 +6,7 @@ from factor.batch import (
 )
 
 from .evaluation_metric import EvaluationMetric
-from .metric_loader import METRIC_GLOBALS, load_evaluation_metric_class
+from .metric_loader import is_valid_evaluation_metric_class
 
 _ALPHALENS_EXPORTS = frozenset(
     {
@@ -31,7 +31,6 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    "METRIC_GLOBALS",
     "AlphalensEvaluateResult",
     "AlphalensFactorEvaluator",
     "AlphalensMetrics",
@@ -43,7 +42,7 @@ __all__ = [
     "compute_factor_values",
     "compute_factor_values_from_source",
     "compute_forward_return_from_wide",
-    "load_evaluation_metric_class",
+    "is_valid_evaluation_metric_class",
     "max_lookback",
     "merged_dependencies",
 ]

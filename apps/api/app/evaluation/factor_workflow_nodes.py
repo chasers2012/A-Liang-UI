@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from factor import Factor, load_factor_class
+from factor import Factor, is_valid_factor_class
 from workflow import (
     NodeRegistry,
     build_node_registry_from_classes,
@@ -41,7 +41,7 @@ def build_factor_workflow_node_registry() -> NodeRegistry:
     classes: dict[str, type] = {}
     for rec in FactorItemsRegistry.list_items():
         try:
-            cls, _ = load_factor_class(read_source(rec))
+            cls, _ = is_valid_factor_class(read_source(rec))
         except ValueError:
             continue
         node_cls = factor_class_to_workflow_node(cls, record_id=rec.id)

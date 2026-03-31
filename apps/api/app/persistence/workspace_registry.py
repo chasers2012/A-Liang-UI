@@ -9,6 +9,7 @@ from typing import Any, ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
 
+from app.common.id import create_id_generator
 from app.persistence.registry_helpers import HasId, get_item_by_id
 from app.workspace_config import load_workspace_config, save_workspace_config, workspace_config_path
 
@@ -62,6 +63,15 @@ class WorkspaceItemsRegistry(WorkspaceJsonStore[TFile], Generic[TItem, TFile]):
     CRUD helpers load/save the registry file; use :meth:`get_by_id` when you already
     hold the root model (e.g. batch work on one loaded file).
     """
+
+    id_generator: Callable[[str | None], str] = None
+
+    @classmethod
+    def generate_id(cls, name: str | None = None) -> str:
+        if cls.id_generator is None:
+            namespace = cls.__name__
+            cls.id_generator = create_id_generator(namespace)
+        return cls.id_generator(name)
 
     @classmethod
     def get_by_id(cls, reg: TFile, item_id: str) -> TItem | None:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import keyword
 
 
 def validate_source_syntax(source: str) -> None:
@@ -21,7 +20,3 @@ def validate_identifier_name(name: str) -> None:
     n = name.strip()
     if not n:
         raise ValueError("name 不能为空")
-    if not n.isidentifier():
-        raise ValueError("name 须为合法 Python 标识符")
-    if keyword.iskeyword(n):
-        raise ValueError("name 不能为 Python 关键字")

@@ -7,9 +7,10 @@ from pathlib import Path
 from workspace import workspace_path
 
 from .package_registry_schemas import WorkflowNodePackageKind, WorkflowNodePackageRecord
-from .package_registry_store import WorkflowNodePackagesRegistry
 
 WORKFLOW_NODES_RELATIVE_ROOT = "workflow_nodes"
+_PACKAGE_RECORDS_BY_ID: dict[str, WorkflowNodePackageRecord] = {}
+_DOMAIN_PACKAGE_ORDER: dict[str, list[str]] = {}
 
 
 def _installed_package_root(package_name: str) -> Path:
@@ -38,27 +39,27 @@ def register_workflow_node_package(
         raise ValueError("domain 不能为空")
     if not pkg:
         raise ValueError("package_name 不能为空")
-    existing = WorkflowNodePackagesRegistry.get_item(f"{key}:{pkg}")
-    # Builtin packages are registered as part of application bootstrap.
-    # Avoid repeating upserts (and unnecessary registry writes) when the workspace
-    # registry + builtin record already exist.
+    pkg_id = f"{key}:{pkg}"
+    existing = _PACKAGE_RECORDS_BY_ID.get(pkg_id)
     if existing is not None:
-        if kind == "builtin" and WorkflowNodePackagesRegistry.path().is_file():
-            return existing
-        if existing.kind == kind and existing.enabled == enabled:
-            return existing
-        return WorkflowNodePackagesRegistry.upsert_package(
-            domain=key,
-            package_name=pkg,
-            kind=kind,
-            enabled=enabled,
-        )
-    return WorkflowNodePackagesRegistry.upsert_package(
+        existing.kind = kind
+        existing.enabled = enabled
+        return existing
+
+    rec = WorkflowNodePackageRecord(
+        id=pkg_id,
         domain=key,
         package_name=pkg,
         kind=kind,
         enabled=enabled,
     )
+    _PACKAGE_RECORDS_BY_ID[pkg_id] = rec
+    order = _DOMAIN_PACKAGE_ORDER.setdefault(key, [])
+    if append:
+        order.append(pkg_id)
+    else:
+        order.insert(0, pkg_id)
+    return rec
 
 
 def list_domain_packages(
@@ -67,12 +68,12 @@ def list_domain_packages(
     key = (domain or "").strip()
     if not key:
         return []
-    items = [i for i in WorkflowNodePackagesRegistry.list_items() if i.domain == key]
+    ordered_ids = _DOMAIN_PACKAGE_ORDER.get(key, [])
+    items = [
+        _PACKAGE_RECORDS_BY_ID[pkg_id] for pkg_id in ordered_ids if pkg_id in _PACKAGE_RECORDS_BY_ID
+    ]
     if not include_disabled:
         items = [i for i in items if i.enabled]
-    # Do not impose builtin/user priority or registry "order" precedence.
-    # Deterministic output for tests and stable runtime behavior.
-    items.sort(key=lambda i: i.package_name)
     return items
 
 
@@ -99,27 +100,7 @@ def ensure_builtin_domain_seeded(domain: str) -> list[Path]:
 
 
 def ensure_all_builtin_seeded() -> None:
-    items = [
-        i for i in WorkflowNodePackagesRegistry.list_items() if i.enabled and i.kind == "builtin"
-    ]
+    items = [i for i in _PACKAGE_RECORDS_BY_ID.values() if i.enabled and i.kind == "builtin"]
     items.sort(key=lambda i: (i.domain, i.package_name))
     for rec in items:
         ensure_package_on_disk(rec)
-
-
-def migrate_registry_if_missing(*, builtin_packages: dict[str, str]) -> None:
-    if WorkflowNodePackagesRegistry.path().is_file():
-        return
-    for domain, pkg in builtin_packages.items():
-        register_workflow_node_package(domain, pkg, kind="builtin", append=True)
-    root = workspace_path(WORKFLOW_NODES_RELATIVE_ROOT)
-    if not root.is_dir():
-        return
-    for domain_dir in sorted(p for p in root.iterdir() if p.is_dir()):
-        domain = domain_dir.name
-        for pkg_dir in sorted(
-            p for p in domain_dir.iterdir() if p.is_dir() and (p / "__init__.py").is_file()
-        ):
-            if domain in builtin_packages and pkg_dir.name == builtin_packages[domain]:
-                continue
-            register_workflow_node_package(domain, pkg_dir.name, kind="user", append=True)

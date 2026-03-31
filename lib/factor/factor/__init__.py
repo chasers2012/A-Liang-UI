@@ -7,7 +7,7 @@ from factor.batch import (
 from factor.datasource import FactorDataSource
 from factor.dependency_resolver import DependencyResolver, panel_load_start_date
 from factor.factor import Factor
-from factor.loader import FACTOR_GLOBALS, load_factor_class
+from factor.loader import FACTOR_GLOBALS, is_valid_factor_class
 
 __all__ = [
     "FACTOR_GLOBALS",
@@ -16,7 +16,7 @@ __all__ = [
     "FactorDataSource",
     "compute_factor_values",
     "compute_factor_values_from_source",
-    "load_factor_class",
+    "is_valid_factor_class",
     "max_lookback",
     "merged_dependencies",
     "panel_load_start_date",

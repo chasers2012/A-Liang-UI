@@ -11,7 +11,6 @@ from app.workflow_nodes import (
     register_builtin_workflow_domain,
     register_workflow_node_package,
 )
-from app.workflow_nodes.package_registry_store import WorkflowNodePackagesRegistry
 from workspace import set_workspace_root
 
 
@@ -111,18 +110,11 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 sys.path.remove(parent)
 
 
-def test_seed_updates_workflow_package_registry(tmp_path: Path) -> None:
+def test_seed_works_without_workflow_package_registry_file(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
-    reg = WorkflowNodePackagesRegistry.load()
-    assert reg.items == []
     WorkflowNodeLoader.load_workspace_node_registry()
-    reg = WorkflowNodePackagesRegistry.load()
-    builtin_eval = [i for i in reg.items if i.domain == "evaluation" and i.kind == "builtin"]
-    builtin_agent = [i for i in reg.items if i.domain == "agent" and i.kind == "builtin"]
-    assert len(builtin_eval) == 1
-    assert len(builtin_agent) == 1
-    assert builtin_eval[0].package_name == "evaluation_workflow_nodes"
-    assert builtin_agent[0].package_name == "agent_workflow_nodes"
+    registry_path = tmp_path / "workflow_nodes" / "registry.json"
+    assert not registry_path.exists()
 
 
 def test_loader_order_follows_registry(tmp_path: Path) -> None:

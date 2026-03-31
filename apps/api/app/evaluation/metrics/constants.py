@@ -1,6 +1,8 @@
 USER_METRIC_WORKFLOW_ROOT = "workflow_nodes/evaluation"
 REGISTRY_FILENAME = "evaluation/metrics/registry.json"
 
+INTERNAL_EVALUATION_METRIC_PACKAGES = ["evaluation_workflow_nodes"]
+
 DEFAULT_METRIC_SOURCE = """
 from __future__ import annotations
 from typing import Any

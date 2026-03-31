@@ -5,7 +5,6 @@ from custom_code.subclass_loader import (
     Inheritance,
     direct_base_symbol_name,
     find_subclass_name,
-    strip_markdown_fences,
 )
 from custom_code.validate import validate_identifier_name, validate_source_syntax
 
@@ -14,7 +13,6 @@ __all__ = [
     "SourceFiles",
     "direct_base_symbol_name",
     "find_subclass_name",
-    "strip_markdown_fences",
     "validate_identifier_name",
     "validate_source_syntax",
 ]

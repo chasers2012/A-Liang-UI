@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from custom_code import validate_source_syntax
 from fastapi import APIRouter, HTTPException
 
 from app.datetime_utils import utc_now_iso
@@ -12,17 +11,12 @@ from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricPatch,
     EvaluationMetricRecord,
     EvaluationMetricSummaryPublic,
-    new_metric_id,
+    metric_source_validators,
     record_to_summary,
 )
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
-
-metric_source_validators = [
-    validate_source_syntax,
-    EvaluationMetricPackageManager.load_user_evaluation_metric_class,
-]
 
 
 def _detail(rec: EvaluationMetricRecord) -> EvaluationMetricDetailPublic:
@@ -56,18 +50,11 @@ def get_evaluation_metric_template() -> str:
 @router.post("", response_model=EvaluationMetricDetailPublic)
 def create_evaluation_metric(body: EvaluationMetricCreate) -> EvaluationMetricDetailPublic:
     """创建评价指标"""
-    mid = new_metric_id()
-    now = utc_now_iso()
-    rec = body.to_record(mid, now)
+
     try:
-        EvaluationMetricPackageManager.write_metric_package(
-            mid,
-            body.source,
-            validators=metric_source_validators,
-        )
+        rec = EvaluationMetricsRegistry.create_evaluation_metric(body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    EvaluationMetricsRegistry.add_item(rec)
     return _detail(rec)
 
 
@@ -114,5 +101,5 @@ def delete_evaluation_metric(metric_id: str) -> None:
     rec = EvaluationMetricsRegistry.get_item(metric_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="评价指标不存在")
-    EvaluationMetricPackageManager.delete_user_metric_package(metric_id)
+    EvaluationMetricPackageManager.delete_evaluation_metric_package(metric_id)
     EvaluationMetricsRegistry.delete_item(metric_id)

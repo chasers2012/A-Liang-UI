@@ -7,7 +7,7 @@ import traceback
 from dataclasses import dataclass
 
 from evaluate.alphalens_panel_utils import series_to_period_dict, stock_count_from_alignment
-from factor import DependencyResolver, load_factor_class
+from factor import DependencyResolver, is_valid_factor_class
 
 from app.data_set.data_set_schemas import DataSetRecord
 from app.data_set.data_sets_store import DataSetsStore
@@ -242,7 +242,7 @@ def build_factor_alphalens_setup(
 
     src = read_source(rec)
     try:
-        cls, _ = load_factor_class(src)
+        cls, _ = is_valid_factor_class(src)
     except ValueError as e:
         r, _, _, _, _ = _eval_failure_tuple(
             str(e), window=window, quantiles=quantiles, stock_codes=stock_codes

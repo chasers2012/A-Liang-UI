@@ -1,56 +1,15 @@
 from __future__ import annotations
 
-import ast
 import shutil
 from collections.abc import Callable
-from typing import Any
 
-from custom_code import Inheritance, SourceFiles
-from custom_code.subclass_loader import direct_base_symbol_name, strip_markdown_fences
+from custom_code import SourceFiles
+from evaluate import is_valid_evaluation_metric_class
 from evaluate.evaluation_metric import EvaluationMetric
-from evaluate.metric_loader import METRIC_GLOBALS
 from workspace import workspace_path
 
-from app.evaluation.metrics.constants import USER_METRIC_WORKFLOW_ROOT
-
-
-def _build_loader_globals_and_base_ast() -> tuple[dict[str, object], frozenset[str]]:
-    """Build exec globals + acceptable base class names for AST scanning."""
-    globals_: dict[str, object] = {
-        **METRIC_GLOBALS,
-    }
-    base_ast = frozenset({"EvaluationMetric"})
-    return globals_, base_ast
-
-
-_GLOBALS, _BASE_AST = _build_loader_globals_and_base_ast()
-
-
-def _pick_class_name(module_ast: ast.Module) -> str | None:
-    """Pick the concrete metric class name from a user-provided module."""
-    preferred: list[str] = []
-    fallback: list[str] = []
-    for node in module_ast.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        syms: set[str] = set()
-        for base in node.bases:
-            sym = direct_base_symbol_name(base)
-            if sym:
-                syms.add(sym)
-            fallback.append(node.name)
-    if preferred:
-        return preferred[-1]
-    return fallback[0] if fallback else None
-
-
-_inheritance = Inheritance(
-    EvaluationMetric,
-    _GLOBALS,
-    exec_filename="<evaluation_metric>",
-    missing_message="源码中未找到继承 EvaluationMetric 的类",
-    invalid_message=lambda n: f"{n} 不是有效的 EvaluationMetric 子类",
-    base_ast_names=_BASE_AST,
+from app.evaluation.metrics.constants import (
+    USER_METRIC_WORKFLOW_ROOT,
 )
 
 
@@ -76,7 +35,7 @@ class EvaluationMetricPackageManager:
         )
 
     @staticmethod
-    def write_metric_package(
+    def write_evaluation_metric_package(
         metric_id: str,
         source: str,
         *,
@@ -95,26 +54,12 @@ class EvaluationMetricPackageManager:
         SourceFiles.write_source_text(source_path, source, validators=validators)
 
     @staticmethod
-    def delete_user_metric_package(metric_id: str) -> None:
+    def delete_evaluation_metric_package(metric_id: str) -> None:
         pkg_dir = EvaluationMetricPackageManager.get_package_dir(metric_id)
         pkg_root = workspace_path("workflow_nodes", "evaluation", pkg_dir)
         if pkg_root.is_dir():
             shutil.rmtree(pkg_root, ignore_errors=True)
 
     @staticmethod
-    def load_user_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetric], str]:
-        cleaned = strip_markdown_fences(source)
-        tree = ast.parse(cleaned)
-        class_name = _pick_class_name(tree)
-        if not class_name:
-            raise ValueError(_inheritance.missing_message)
-        ns: dict[str, Any] = dict(_GLOBALS)
-        exec(compile(tree, filename=_inheritance.exec_filename, mode="exec"), ns, ns)
-        cls = ns.get(class_name)
-        if cls is None or not isinstance(cls, type) or not issubclass(cls, EvaluationMetric):
-            raise ValueError(
-                _inheritance.invalid_message(class_name)
-                if callable(_inheritance.invalid_message)
-                else _inheritance.invalid_message
-            )
-        return cls, class_name
+    def is_valid_evaluation_metric_class(source: str) -> tuple[type[EvaluationMetric], str]:
+        return is_valid_evaluation_metric_class(source)
