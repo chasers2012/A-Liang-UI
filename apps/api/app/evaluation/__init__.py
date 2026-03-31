@@ -8,6 +8,11 @@ Factor evaluation domain.
 from __future__ import annotations
 
 from app.startup_jobs import register_startup_job
+from app.workflow_nodes import register_workflow_node_package
+
+register_workflow_node_package(
+    "evaluation", "evaluation_workflow_nodes", kind="builtin", append=True
+)
 
 
 @register_startup_job

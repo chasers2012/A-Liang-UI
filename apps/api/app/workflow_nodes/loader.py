@@ -11,10 +11,12 @@ from workflow import Node, NodeRegistry, build_node_registry_from_modules, merge
 from workspace import workspace_path
 
 from app.workflow_nodes.seed_builtin import (
-    BUILTIN_PACKAGE_BY_DOMAIN,
     WORKFLOW_NODES_RELATIVE_ROOT,
+    builtin_package_for_domain,
     ensure_builtin_workflow_packages,
 )
+
+from .package_manager import list_domain_packages
 
 
 class WorkflowNodeLoader:
@@ -86,29 +88,38 @@ class WorkflowNodeLoader:
 
     @classmethod
     def _ordered_package_dirs(cls, segment: str) -> list[Path]:
-        builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(segment)
-        if builtin_pkg is None:
-            raise KeyError(f"unknown workflow node segment: {segment!r}")
         ensure_builtin_workflow_packages(segment)
+        dirs_by_name = {p.name: p for p in cls._package_dirs(segment)}
+        ordered = []
+        records = list_domain_packages(segment)
+        for rec in records:
+            pkg_dir = dirs_by_name.get(rec.package_name)
+            if pkg_dir is not None:
+                ordered.append(pkg_dir)
+        if ordered:
+            return ordered
         dirs = cls._package_dirs(segment)
         if not dirs:
             raise RuntimeError(f"no workflow node packages under workflow_nodes/{segment!r}")
-        builtin_dirs = [p for p in dirs if p.name == builtin_pkg]
-        user_dirs = sorted(p for p in dirs if p.name != builtin_pkg)
-        return builtin_dirs + user_dirs
+        # "无先后顺序": 不对 builtin/user 做强制优先级；用名字排序获得确定性。
+        return sorted(dirs, key=lambda p: p.name)
 
     @classmethod
     def load_workspace_extension_registries(cls) -> list[NodeRegistry]:
         """One registry per user (non-builtin) package under any ``workflow_nodes/<segment>/``."""
         out: list[NodeRegistry] = []
         for seg in cls.registered_workflow_node_segments():
-            builtin_pkg = BUILTIN_PACKAGE_BY_DOMAIN[seg]
+            builtin_names = {
+                i.package_name for i in list_domain_packages(seg) if i.kind == "builtin"
+            }
+            if not builtin_names:
+                builtin_names = {builtin_package_for_domain(seg)}
             try:
                 ordered = cls._ordered_package_dirs(seg)
             except RuntimeError:
                 continue
             for p in ordered:
-                if p.name == builtin_pkg:
+                if p.name in builtin_names:
                     continue
                 out.append(cls._registry_from_package_dir(seg, p))
         return out

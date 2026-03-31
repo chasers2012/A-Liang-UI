@@ -3,8 +3,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from inspect import isawaitable, iscoroutinefunction
 
+import app.agent_workflows
+import app.evaluation
 from app.startup_jobs import STARTUP_JOBS
-from app.workflow_nodes.seed_builtin import ensure_all_builtin_workflow_domains
+from app.workflow_nodes import ensure_all_builtin_workflow_domains
 
 ensure_all_builtin_workflow_domains()
 

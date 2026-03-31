@@ -2,46 +2,83 @@
 
 from __future__ import annotations
 
-import importlib.util
-import shutil
-from pathlib import Path
+from .package_manager import (
+    ensure_all_builtin_seeded,
+    ensure_builtin_domain_seeded,
+    list_domain_packages,
+    migrate_registry_if_missing,
+    register_workflow_node_package,
+)
 
-from workspace import workspace_path
-
-WORKFLOW_NODES_RELATIVE_ROOT = "workflow_nodes"
-
-BUILTIN_PACKAGE_BY_DOMAIN: dict[str, str] = {
-    "evaluation": "evaluation_workflow_nodes",
-    "agent": "agent_workflow_nodes",
-}
+BUILTIN_PACKAGE_BY_DOMAIN: dict[str, str] = {}
 
 
-def _installed_package_root(package_name: str) -> Path:
-    spec = importlib.util.find_spec(package_name)
-    if spec is None or not spec.submodule_search_locations:
-        raise RuntimeError(f"cannot locate installed package {package_name!r}")
-    loc = spec.submodule_search_locations[0]
-    return Path(loc)
+def register_builtin_workflow_domain(domain: str, package_name: str) -> None:
+    key = (domain or "").strip()
+    pkg = (package_name or "").strip()
+    if not key:
+        raise ValueError("domain 不能为空")
+    if not pkg:
+        raise ValueError("package_name 不能为空")
+    existing = BUILTIN_PACKAGE_BY_DOMAIN.get(key)
+    if existing is None:
+        BUILTIN_PACKAGE_BY_DOMAIN[key] = pkg
+        register_workflow_node_package(key, pkg, kind="builtin", append=True)
+        return
+    if existing != pkg:
+        raise ValueError(
+            f"workflow node domain {key!r} already registered with package {existing!r}"
+        )
+    register_workflow_node_package(key, pkg, kind="builtin", append=True)
 
 
-def _needs_seed(dest: Path) -> bool:
-    return not dest.is_dir() or not (dest / "__init__.py").is_file()
+def registered_builtin_workflow_domains() -> tuple[str, ...]:
+    _ensure_registry_bootstrapped()
+    domains = set(BUILTIN_PACKAGE_BY_DOMAIN.keys())
+    domains.update(i.domain for i in _all_builtin_records())
+    return tuple(sorted(domains))
+
+
+def builtin_package_for_domain(domain: str) -> str:
+    _ensure_registry_bootstrapped()
+    key = (domain or "").strip()
+    pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(key)
+    if pkg is not None:
+        return pkg
+    builtins = [i for i in list_domain_packages(key) if i.kind == "builtin"]
+    if not builtins:
+        raise KeyError(f"unknown workflow node domain: {domain!r}")
+    builtins.sort(key=lambda i: i.package_name)
+    pkg = builtins[0].package_name
+    BUILTIN_PACKAGE_BY_DOMAIN[key] = pkg
+    return pkg
 
 
 def ensure_builtin_workflow_packages(domain: str) -> None:
     """If ``workflow_nodes/<domain>/<builtin_pkg>/`` is missing, copy from the installed distribution."""
+    _ensure_registry_bootstrapped()
     key = domain.strip()
-    pkg = BUILTIN_PACKAGE_BY_DOMAIN.get(key)
-    if pkg is None:
-        raise KeyError(f"unknown workflow node domain: {domain!r}")
-    dest = workspace_path(WORKFLOW_NODES_RELATIVE_ROOT, key, pkg)
-    if not _needs_seed(dest):
-        return
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    src = _installed_package_root(pkg)
-    shutil.copytree(src, dest)
+    pkg = builtin_package_for_domain(key)
+    register_workflow_node_package(key, pkg, kind="builtin", append=True)
+    ensure_builtin_domain_seeded(key)
 
 
 def ensure_all_builtin_workflow_domains() -> None:
-    for d in BUILTIN_PACKAGE_BY_DOMAIN:
+    _ensure_registry_bootstrapped()
+    for d in registered_builtin_workflow_domains():
         ensure_builtin_workflow_packages(d)
+    ensure_all_builtin_seeded()
+
+
+def _ensure_registry_bootstrapped() -> None:
+    migrate_registry_if_missing(builtin_packages=BUILTIN_PACKAGE_BY_DOMAIN)
+
+
+def _all_builtin_records():
+    out = []
+    from .package_registry_store import WorkflowNodePackagesRegistry
+
+    for i in WorkflowNodePackagesRegistry.list_items():
+        if i.kind == "builtin":
+            out.append(i)
+    return out

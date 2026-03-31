@@ -6,7 +6,12 @@ import sys
 from pathlib import Path
 
 import pytest
-from app.workflow_nodes import WorkflowNodeLoader
+from app.workflow_nodes import (
+    WorkflowNodeLoader,
+    register_builtin_workflow_domain,
+    register_workflow_node_package,
+)
+from app.workflow_nodes.package_registry_store import WorkflowNodePackagesRegistry
 from workspace import set_workspace_root
 
 
@@ -14,6 +19,15 @@ from workspace import set_workspace_root
 def _reset_workspace_root() -> None:
     yield
     set_workspace_root(None)
+
+
+@pytest.fixture(autouse=True)
+def _setup_workflow_node_domains() -> None:
+    WorkflowNodeLoader._segments = []
+    register_builtin_workflow_domain("evaluation", "evaluation_workflow_nodes")
+    register_builtin_workflow_domain("agent", "agent_workflow_nodes")
+    WorkflowNodeLoader.register_workflow_node_segment("evaluation", append=True)
+    WorkflowNodeLoader.register_workflow_node_segment("agent", append=True)
 
 
 def test_evaluation_catalog_excludes_agent_nodes(tmp_path: Path) -> None:
@@ -95,3 +109,55 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
         for parent in (parent_eval, parent_agent):
             while parent in sys.path:
                 sys.path.remove(parent)
+
+
+def test_seed_updates_workflow_package_registry(tmp_path: Path) -> None:
+    set_workspace_root(tmp_path)
+    reg = WorkflowNodePackagesRegistry.load()
+    assert reg.items == []
+    WorkflowNodeLoader.load_workspace_node_registry()
+    reg = WorkflowNodePackagesRegistry.load()
+    builtin_eval = [i for i in reg.items if i.domain == "evaluation" and i.kind == "builtin"]
+    builtin_agent = [i for i in reg.items if i.domain == "agent" and i.kind == "builtin"]
+    assert len(builtin_eval) == 1
+    assert len(builtin_agent) == 1
+    assert builtin_eval[0].package_name == "evaluation_workflow_nodes"
+    assert builtin_agent[0].package_name == "agent_workflow_nodes"
+
+
+def test_loader_order_follows_registry(tmp_path: Path) -> None:
+    set_workspace_root(tmp_path)
+    domain_root = tmp_path / "workflow_nodes" / "evaluation"
+    ext_low = domain_root / "ext_low_pkg"
+    ext_high = domain_root / "ext_high_pkg"
+    for pkg, label in ((ext_low, "low"), (ext_high, "high")):
+        pkg.mkdir(parents=True, exist_ok=True)
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        (pkg / "extra.py").write_text(
+            "\n".join(
+                [
+                    "from __future__ import annotations",
+                    "from typing import Any",
+                    "",
+                    "from workflow import workflow_node, workflow_socket",
+                    "",
+                    "@workflow_node(",
+                    f'    label="{label}",',
+                    '    description="",',
+                    "    input_sockets=[],",
+                    "    output_sockets=[workflow_socket('out', value_type='scalar_json')],",
+                    '    entry="execute",',
+                    ")",
+                    "class ExtNode:",
+                    "    def execute(self, **kwargs: Any) -> tuple[int, ...]:",
+                    "        return 1,",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+    register_workflow_node_package("evaluation", "ext_high_pkg", kind="user", append=True)
+    register_workflow_node_package("evaluation", "ext_low_pkg", kind="user", append=False)
+    ordered = WorkflowNodeLoader._ordered_package_dirs("evaluation")
+    names = [p.name for p in ordered]
+    assert {"evaluation_workflow_nodes", "ext_low_pkg", "ext_high_pkg"}.issubset(set(names))
