@@ -22,6 +22,7 @@ export type EvaluationWorkflowCanvasHandle = {
   /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getWorkflow: () => string;
   importWorkflow: (json: string) => void;
+  addNode: (typeKey: string) => void;
 };
 
 export type EvaluationWorkflowCanvasProps = {
@@ -66,9 +67,14 @@ export const EvaluationWorkflowCanvas = forwardRef<
     innerRef.current?.importGraphJson(json);
   }, []);
 
-  useImperativeHandle(ref, () => ({ getWorkflow, importWorkflow }), [
+  const addNode = useCallback((typeKey: string) => {
+    innerRef.current?.addNode(typeKey);
+  }, []);
+
+  useImperativeHandle(ref, () => ({ getWorkflow, importWorkflow, addNode }), [
     getWorkflow,
     importWorkflow,
+    addNode,
   ]);
 
   return (

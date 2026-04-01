@@ -6,6 +6,8 @@ export type WorkflowGraphCanvasHandle = {
   /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getGraphJson: () => string;
   importGraphJson: (json: string) => void;
+  /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
+  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => void;
 };
 
 export type WorkflowGraphCanvasProps = {

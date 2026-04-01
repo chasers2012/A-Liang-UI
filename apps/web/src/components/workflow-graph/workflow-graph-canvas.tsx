@@ -4,6 +4,7 @@ import { Maximize2, Minus, Plus } from "lucide-react";
 import {
   createContext,
   forwardRef,
+  useCallback,
   useContext,
   useEffect,
   useImperativeHandle,
@@ -33,6 +34,7 @@ import "reactflow/dist/style.css";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { catalogToMap } from "./graph-model";
+import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas-constants";
 import type {
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps,
@@ -123,6 +125,10 @@ type ZoomApi = {
   fitView: () => void;
 };
 
+type ReactFlowApi = {
+  screenToFlowPosition: (pt: { x: number; y: number }) => { x: number; y: number };
+};
+
 function ReactFlowZoomBridge({
   zoomApiRef,
 }: {
@@ -179,6 +185,8 @@ export const WorkflowGraphCanvas = forwardRef<
     );
 
     const zoomApiRef = useRef<ZoomApi | null>(null);
+    const rfApiRef = useRef<ReactFlowApi | null>(null);
+    const dropAreaRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
       setNodes(initialNodes);
@@ -218,26 +226,99 @@ export const WorkflowGraphCanvas = forwardRef<
     const zoomBy = (factor: number) => zoomApiRef.current?.zoomBy(factor);
     const zoomFit = () => zoomApiRef.current?.fitView();
 
-    const getGraphJson = () => {
+    const addNode = useCallback(
+      (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
+        if (readOnly) return;
+        const def = catalog.get(typeKey);
+        setNodes((prev) => {
+          const idx = prev.length;
+          const fallbackPos = {
+            x: 40 + (idx % 3) * 260,
+            y: 40 + Math.floor(idx / 3) * 120,
+          };
+          const position = opts?.position ?? fallbackPos;
+          return [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              type: "workflowStep",
+              position,
+              data: {
+                backendType: typeKey,
+                label: def?.label ?? typeKey,
+                inputs: def?.inputs ?? [],
+                outputs: def?.outputs ?? [],
+                params: {},
+              },
+            } satisfies Node,
+          ];
+        });
+      },
+      [catalog, readOnly],
+    );
+
+    const getGraphJson = useCallback(() => {
       const ser = toPersistedWorkflowGraph(nodes, edges, viewport);
       return stringifyPersistedWorkflowGraph(ser);
-    };
+    }, [nodes, edges, viewport]);
 
-    const importGraphJson = (json: string) => {
+    const importGraphJson = useCallback(
+      (json: string) => {
       const g = parsePersistedWorkflowGraphJson(
         json.trim() ? json : EMPTY_WORKFLOW_GRAPH_JSON,
       );
       setNodes(toReactFlowNodes(g, catalog));
       setEdges(toReactFlowEdges(g));
       setViewport(persistedViewportToReactFlowViewport(g.viewport) ?? null);
-    };
+      },
+      [catalog],
+    );
 
-    useImperativeHandle(ref, () => ({ getGraphJson, importGraphJson }));
+    useImperativeHandle(ref, () => ({ getGraphJson, importGraphJson, addNode }), [
+      getGraphJson,
+      importGraphJson,
+      addNode,
+    ]);
 
     const nodeTypesMap = useMemo(
       () => ({ workflowStep: WorkflowStepNode }),
       [],
     );
+
+    const onDragOver = (e: React.DragEvent) => {
+      if (readOnly) return;
+      const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+      if (!has) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    };
+
+    const onDrop = (e: React.DragEvent) => {
+      if (readOnly) return;
+      const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+      if (!typeKey) return;
+      e.preventDefault();
+
+      const el = dropAreaRef.current;
+      const rfApi = rfApiRef.current;
+      if (!el || !rfApi) {
+        addNode(typeKey);
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const clientPoint = { x: e.clientX, y: e.clientY };
+      const flowPos = rfApi.screenToFlowPosition(clientPoint);
+      if (
+        clientPoint.x < rect.left ||
+        clientPoint.x > rect.right ||
+        clientPoint.y < rect.top ||
+        clientPoint.y > rect.bottom
+      ) {
+        addNode(typeKey);
+        return;
+      }
+      addNode(typeKey, { position: flowPos });
+    };
 
     return (
       <div
@@ -255,7 +336,12 @@ export const WorkflowGraphCanvas = forwardRef<
           )}
         >
           <WorkflowGraphZoomContext.Provider value={{ zoomBy, zoomFit }}>
-            <div className="relative min-h-[280px] flex-1">
+            <div
+              ref={dropAreaRef}
+              className="relative min-h-[280px] flex-1"
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+            >
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -274,6 +360,7 @@ export const WorkflowGraphCanvas = forwardRef<
                 proOptions={{ hideAttribution: true }}
               >
                 <ReactFlowZoomBridge zoomApiRef={zoomApiRef} />
+                <ReactFlowApiBridge rfApiRef={rfApiRef} />
                 <Background
                   id="workflow-graph-bg"
                   gap={22}
@@ -290,3 +377,30 @@ export const WorkflowGraphCanvas = forwardRef<
       </div>
     );
   });
+
+function ReactFlowApiBridge({
+  rfApiRef,
+}: {
+  rfApiRef: React.MutableRefObject<ReactFlowApi | null>;
+}) {
+  const rf = useReactFlow();
+
+  useEffect(() => {
+    rfApiRef.current = {
+      screenToFlowPosition: (pt: { x: number; y: number }) => {
+        const anyRf = rf as unknown as {
+          screenToFlowPosition?: (p: { x: number; y: number }) => { x: number; y: number };
+          project?: (p: { x: number; y: number }) => { x: number; y: number };
+        };
+        if (typeof anyRf.screenToFlowPosition === "function") return anyRf.screenToFlowPosition(pt);
+        if (typeof anyRf.project === "function") return anyRf.project(pt);
+        return pt;
+      },
+    };
+    return () => {
+      rfApiRef.current = null;
+    };
+  }, [rf, rfApiRef]);
+
+  return null;
+}
