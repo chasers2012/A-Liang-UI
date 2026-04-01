@@ -21,7 +21,14 @@ class Socket:
     label: str = ""
     value_type: str = ""
 
-    def __init__(self, name: str, required: bool = False, label: str = "", value_type: str = ""):
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        **_ignored: Any,
+    ):
         self.name = name
         self.required = required
         self.label = label if label else name
@@ -49,6 +56,18 @@ class Socket:
 class NodeParam(Socket):
     default = None
 
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        default: Any | None = None,
+        **_ignored: Any,
+    ):
+        super().__init__(name, required, label, value_type)
+        self.default = default
+
     def serialize(self) -> dict[str, Any]:
         """JSON-friendly socket specification used by API responses."""
         return {
@@ -59,6 +78,19 @@ class NodeParam(Socket):
 
 class OptionsNodeParam(NodeParam):
     options: list[str | float | int] | Callable | None = None
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        options: list[str | float | int] | Callable | None = None,
+        default: Any | None = None,
+        **_ignored: Any,
+    ):
+        super().__init__(name, required, label, value_type, default)
+        self.options = options
 
     def serialize(self) -> dict[str, Any]:
         opts = self.options
@@ -74,6 +106,21 @@ class NumberNodeParam(NodeParam):
     minimum: float | int | None = None
     maximum: float | int | None = None
     value_type: str = "number"
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        default: float | int | None = None,
+        minimum: float | int | None = None,
+        maximum: float | int | None = None,
+        **_ignored: Any,
+    ):
+        super().__init__(name, required, label, value_type, default)
+        self.minimum = minimum
+        self.maximum = maximum
 
     def serialize(self) -> dict[str, Any]:
         return {**super().serialize(), "minimum": self.minimum, "maximum": self.maximum}

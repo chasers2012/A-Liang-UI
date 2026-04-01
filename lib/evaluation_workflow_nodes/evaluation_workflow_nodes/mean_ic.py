@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 from evaluate import EvaluationMetric, MeanInformationCoefficientMetric
 from evaluate.alphalens_panel_utils import jsonable_metric_value, series_to_period_dict
-from workflow import Socket, workflow_node
+from workflow import OptionsNodeParam, Socket, workflow_node
 
 
 @workflow_node(
@@ -16,6 +16,7 @@ from workflow import Socket, workflow_node
     category="factor_evaluation",
     input_sockets=[
         Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        OptionsNodeParam("test_param", options=lambda: [1, 2, 3]),
     ],
     output_sockets=[
         Socket("mean_ic", value_type="scalar_json"),

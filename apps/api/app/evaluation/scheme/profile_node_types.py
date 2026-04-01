@@ -18,16 +18,10 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     out: list[EvaluationNodeTypePublic] = []
     # metrics nodes
     for metric in EvaluationMetricsRegistry.list_items():
-        try:
-            source = EvaluationMetricsRegistry.read_source(metric)
-            _, _, _, inputs, outputs, _ = parse_workflow_node_source(source)
-            input_names = [s.name for s in inputs]
-            output_names = [s.name for s in outputs]
-        except Exception:
-            # Keep the catalog resilient: if a single metric is broken, it should
-            # still show up in the list (with empty sockets) so users can fix it.
-            input_names = []
-            output_names = []
+        source = EvaluationMetricsRegistry.read_source(metric)
+        _, _, inputs, outputs = parse_workflow_node_source(source)
+        inputs = [s.serialize() for s in inputs]
+        outputs = [s.serialize() for s in outputs]
 
         out.append(
             EvaluationNodeTypePublic(
@@ -35,8 +29,8 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
                 label=metric.name,
                 description=metric.description,
                 category=None,
-                inputs=input_names,
-                outputs=output_names,
+                inputs=inputs,
+                outputs=outputs,
             )
         )
     return out

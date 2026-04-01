@@ -13,6 +13,7 @@ from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
 from .metric_schemas import (
     EvaluationMetricCreate,
+    EvaluationMetricDetailPublic,
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
     EvaluationMetricSummaryPublic,
@@ -78,8 +79,7 @@ class EvaluationMetricsRegistry(
 
         # Derive sockets from source to keep the registry record minimal.
         source = cls.read_source(rec)
-        _, _, _, inputs, outputs, _ = parse_workflow_node_source(source)
-
+        _, _, inputs, outputs = parse_workflow_node_source(source)
         return EvaluationMetricSummaryPublic(
             id=rec.id,
             name=rec.name,
@@ -87,6 +87,27 @@ class EvaluationMetricsRegistry(
             source_path=rec.source_path,
             created_at=rec.created_at,
             updated_at=rec.updated_at,
-            inputs=[s.name for s in inputs],
-            outputs=[s.name for s in outputs],
+            inputs=[s.serialize() for s in inputs],
+            outputs=[s.serialize() for s in outputs],
+        )
+
+    @classmethod
+    def load_metric_detail(cls, mid: str) -> EvaluationMetricDetailPublic | None:
+        rec = cls.get_item(mid)
+        if rec is None:
+            return None
+
+        # Derive sockets from source to keep the registry record minimal.
+        source = cls.read_source(rec)
+        _, _, inputs, outputs = parse_workflow_node_source(source)
+        return EvaluationMetricDetailPublic(
+            id=rec.id,
+            name=rec.name,
+            description=rec.description,
+            source_path=rec.source_path,
+            created_at=rec.created_at,
+            updated_at=rec.updated_at,
+            inputs=[s.serialize() for s in inputs],
+            outputs=[s.serialize() for s in outputs],
+            source=source,
         )

@@ -76,5 +76,5 @@ class EvaluationNodeTypePublic(BaseModel):
     label: str
     description: str
     category: str | None = None
-    inputs: list[str]
-    outputs: list[str]
+    inputs: list[dict]
+    outputs: list[dict]

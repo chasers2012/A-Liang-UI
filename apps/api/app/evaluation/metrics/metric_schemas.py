@@ -34,7 +34,7 @@ class EvaluationMetricCreate(BaseModel):
         if not s:
             raise ValueError("source 不能为空")
         validate_source_syntax(s)
-        name, _, _, _, _, _ = parse_workflow_node_source(s)
+        name, _, _, _ = parse_workflow_node_source(s)
         validate_metric_name(name)
 
         return s
@@ -45,14 +45,7 @@ class EvaluationMetricCreate(BaseModel):
         now: str,
         source_path: str,
     ) -> EvaluationMetricRecord:
-        (
-            name,
-            description,
-            _,
-            _,
-            _,
-            _,
-        ) = parse_workflow_node_source(self.source)
+        name, description, _, _ = parse_workflow_node_source(self.source)
         return EvaluationMetricRecord(
             id=metric_id,
             name=name,
@@ -87,19 +80,12 @@ class EvaluationMetricSummaryPublic(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
-    inputs: list[str]
-    outputs: list[str]
+    inputs: list[dict]
+    outputs: list[dict]
 
 
 class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):
     source: str
-
-
-def record_to_summary(
-    rec: EvaluationMetricRecord,
-) -> EvaluationMetricSummaryPublic:
-    data = rec.model_dump()
-    return EvaluationMetricSummaryPublic.model_validate(data)
 
 
 metric_source_validators = [
