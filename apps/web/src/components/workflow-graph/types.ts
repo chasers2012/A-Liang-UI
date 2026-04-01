@@ -2,8 +2,6 @@
 
 import { NodeParamModel } from "@/models";
 
-import type { LiteGraphExtendedConfig } from "./litegraph";
-
 export type WorkflowSocketDefinition = {
   name: string;
   required: boolean;
@@ -35,9 +33,6 @@ export type WorkflowStepProperties = {
   /** Catalog input slot count; extra slots are for multi-link. */
   _catalogInputCount?: number;
 };
-
-/** 传给 `loadWorkflowJsonIntoGraph` 的运行时开关（即 `LGraph.config` 扩展字段）。 */
-export type WorkflowGraphRuntimeConfig = LiteGraphExtendedConfig;
 
 /** 选中节点在侧栏展示用的聚合数据。 */
 export type WorkflowNodeDisplayData = {

@@ -1,18 +1,52 @@
 "use client";
 
-import "litegraph.js/css/litegraph.css";
 import { Maximize2, Minus, Plus } from "lucide-react";
 import {
   createContext,
   forwardRef,
   useContext,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  Controls,
+  ReactFlow,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  useReactFlow,
+  type Connection,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+  type OnConnect,
+  type Viewport,
+} from "reactflow";
+import "reactflow/dist/style.css";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { defaultWorkflowNodeColors } from "./runtime";
-import type { WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps } from "./workflow-graph-canvas-types";
-import { useWorkflowGraphCanvasRuntime } from "./use-workflow-graph-canvas-runtime";
+import { catalogToMap } from "./graph-model";
+import type {
+  WorkflowGraphCanvasHandle,
+  WorkflowGraphCanvasProps,
+} from "./workflow-graph-canvas-types";
+import { WorkflowStepNode } from "./reactflow/nodes";
+import {
+  EMPTY_WORKFLOW_GRAPH_JSON,
+  parsePersistedWorkflowGraphJson,
+  persistedViewportToReactFlowViewport,
+  stringifyPersistedWorkflowGraph,
+  toPersistedWorkflowGraph,
+  toReactFlowEdges,
+  toReactFlowNodes,
+} from "./reactflow/serialize";
 
 import "./workflow-graph-canvas.css";
 
@@ -20,6 +54,8 @@ export type {
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps,
 } from "./workflow-graph-canvas-types";
+
+export { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas-constants";
 
 type WorkflowGraphZoomContextValue = {
   zoomBy: (factor: number) => void;
@@ -82,26 +118,126 @@ export function WorkflowGraphZoomToolbar() {
   );
 }
 
+type ZoomApi = {
+  zoomBy: (factor: number) => void;
+  fitView: () => void;
+};
+
+function ReactFlowZoomBridge({
+  zoomApiRef,
+}: {
+  zoomApiRef: React.MutableRefObject<ZoomApi | null>;
+}) {
+  const rf = useReactFlow();
+
+  useEffect(() => {
+    zoomApiRef.current = {
+      zoomBy: (factor: number) => {
+        const vp = rf.getViewport();
+        const next = Math.max(0.05, Math.min(8, vp.zoom * factor));
+        rf.setViewport({ ...vp, zoom: next }, { duration: 120 });
+      },
+      fitView: () => {
+        rf.fitView({ padding: 0.18, duration: 200 });
+      },
+    };
+    return () => {
+      zoomApiRef.current = null;
+    };
+  }, [rf, zoomApiRef]);
+
+  return null;
+}
+
 export const WorkflowGraphCanvas = forwardRef<
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps
 >(
   function WorkflowGraphCanvas(
-    { className, canvasAreaClassName, nodeColors = defaultWorkflowNodeColors, children, ...rest },
+    { className, canvasAreaClassName, nodeTypes, initialGraphJson, readOnly = false, children },
     ref,
   ) {
-    const {
-      wrapRef,
-      canvasRef,
-      handleCanvasDragOver,
-      handleCanvasDrop,
-      zoomBy,
-      zoomFit,
-    } = useWorkflowGraphCanvasRuntime(
-      { ...(rest as WorkflowGraphCanvasProps), nodeColors },
-      ref,
+    const catalog = useMemo(() => catalogToMap(nodeTypes), [nodeTypes]);
+    const parsed = useMemo(
+      () => parsePersistedWorkflowGraphJson(initialGraphJson),
+      [initialGraphJson],
+    );
+    const initialNodes = useMemo(
+      () => toReactFlowNodes(parsed, catalog),
+      [parsed, catalog],
+    );
+    const initialEdges = useMemo(() => toReactFlowEdges(parsed), [parsed]);
+    const initialViewport = useMemo(
+      () => persistedViewportToReactFlowViewport(parsed.viewport),
+      [parsed.viewport],
     );
 
+    const [nodes, setNodes] = useState<Node[]>(initialNodes);
+    const [edges, setEdges] = useState<Edge[]>(initialEdges);
+    const [viewport, setViewport] = useState<Viewport | null>(
+      initialViewport ?? null,
+    );
+
+    const zoomApiRef = useRef<ZoomApi | null>(null);
+
+    useEffect(() => {
+      setNodes(initialNodes);
+    }, [initialNodes]);
+    useEffect(() => {
+      setEdges(initialEdges);
+    }, [initialEdges]);
+    useEffect(() => {
+      setViewport(initialViewport ?? null);
+    }, [initialViewport]);
+
+    const onNodesChange = (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+    };
+
+    const onEdgesChange = (changes: EdgeChange[]) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    };
+
+    const onConnect: OnConnect = (c: Connection) => {
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...c,
+            id: crypto.randomUUID(),
+            type: "default",
+          },
+          eds,
+        ),
+      );
+    };
+
+    const onMoveEnd = (_: unknown, vp: Viewport) => {
+      setViewport(vp);
+    };
+
+    const zoomBy = (factor: number) => zoomApiRef.current?.zoomBy(factor);
+    const zoomFit = () => zoomApiRef.current?.fitView();
+
+    const getGraphJson = () => {
+      const ser = toPersistedWorkflowGraph(nodes, edges, viewport);
+      return stringifyPersistedWorkflowGraph(ser);
+    };
+
+    const importGraphJson = (json: string) => {
+      const g = parsePersistedWorkflowGraphJson(
+        json.trim() ? json : EMPTY_WORKFLOW_GRAPH_JSON,
+      );
+      setNodes(toReactFlowNodes(g, catalog));
+      setEdges(toReactFlowEdges(g));
+      setViewport(persistedViewportToReactFlowViewport(g.viewport) ?? null);
+    };
+
+    useImperativeHandle(ref, () => ({ getGraphJson, importGraphJson }));
+
+    const nodeTypesMap = useMemo(
+      () => ({ workflowStep: WorkflowStepNode }),
+      [],
+    );
 
     return (
       <div
@@ -114,18 +250,39 @@ export const WorkflowGraphCanvas = forwardRef<
         <div
           className={cn(
             "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
-            (rest.readOnly ?? false) && "workflow-graph-canvas-root--readonly",
+            readOnly && "workflow-graph-canvas-root--readonly",
             canvasAreaClassName,
           )}
         >
           <WorkflowGraphZoomContext.Provider value={{ zoomBy, zoomFit }}>
-            <div ref={wrapRef} className="relative min-h-[280px] flex-1">
-              <canvas
-                ref={canvasRef}
-                className="workflow-graph-canvas-el block h-full w-full min-h-[280px]"
-                onDragOver={handleCanvasDragOver}
-                onDrop={handleCanvasDrop}
-              />
+            <div className="relative min-h-[280px] flex-1">
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={nodeTypesMap}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={readOnly ? undefined : onConnect}
+                onMoveEnd={onMoveEnd}
+                defaultViewport={initialViewport}
+                fitView={!initialViewport}
+                nodesDraggable={!readOnly}
+                nodesConnectable={!readOnly}
+                elementsSelectable={!readOnly}
+                zoomOnScroll={!readOnly}
+                panOnScroll
+                proOptions={{ hideAttribution: true }}
+              >
+                <ReactFlowZoomBridge zoomApiRef={zoomApiRef} />
+                <Background
+                  id="workflow-graph-bg"
+                  gap={22}
+                  size={1}
+                  variant={BackgroundVariant.Dots}
+                  className="opacity-60"
+                />
+                <Controls showInteractive={false} />
+              </ReactFlow>
               {children}
             </div>
           </WorkflowGraphZoomContext.Provider>

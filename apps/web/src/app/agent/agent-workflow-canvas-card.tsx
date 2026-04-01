@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  EMPTY_LITEGRAPH_GRAPH_JSON,
+  EMPTY_WORKFLOW_GRAPH_JSON,
   WorkflowGraphCanvas,
   WorkflowGraphZoomToolbar,
   type WorkflowGraphCanvasHandle,
@@ -33,7 +33,7 @@ export function AgentWorkflowCanvasCard({
 }: AgentWorkflowCanvasCardProps) {
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
   const [nodeTypes, setNodeTypes] = useState<WorkflowNodeTypeDefinition[]>([]);
-  const [graphJson, setGraphJson] = useState<string>(EMPTY_LITEGRAPH_GRAPH_JSON);
+  const [graphJson, setGraphJson] = useState<string>(EMPTY_WORKFLOW_GRAPH_JSON);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,7 +47,7 @@ export function AgentWorkflowCanvasCard({
 
   useEffect(() => {
     if (!workflowId) {
-      setGraphJson(EMPTY_LITEGRAPH_GRAPH_JSON);
+      setGraphJson(EMPTY_WORKFLOW_GRAPH_JSON);
       setName("");
       return;
     }
@@ -57,7 +57,7 @@ export function AgentWorkflowCanvasCard({
       .then((detail) => {
         if (cancelled) return;
         setName(detail.name);
-        setGraphJson(detail.graph?.trim() ? detail.graph : EMPTY_LITEGRAPH_GRAPH_JSON);
+        setGraphJson(detail.graph?.trim() ? detail.graph : EMPTY_WORKFLOW_GRAPH_JSON);
       })
       .catch(() => {})
       .finally(() => {

@@ -9,7 +9,7 @@ import {
 } from "react";
 
 import {
-  EMPTY_LITEGRAPH_GRAPH_JSON,
+  EMPTY_WORKFLOW_GRAPH_JSON,
   WorkflowGraphCanvas,
   WorkflowGraphZoomToolbar,
   type WorkflowGraphCanvasHandle,
@@ -19,14 +19,14 @@ import { cn } from "@/lib/utils";
 import type { EvaluationNodeTypeCatalogItemPublic } from "@/lib/quant-agent-api";
 
 export type EvaluationWorkflowCanvasHandle = {
-  /** LiteGraph `graph.serialize()` JSON 字符串。 */
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getWorkflow: () => string;
   importWorkflow: (json: string) => void;
 };
 
 export type EvaluationWorkflowCanvasProps = {
   catalog: EvaluationNodeTypeCatalogItemPublic[];
-  /** LiteGraph 序列化 JSON 字符串。 */
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   initialWorkflow: string;
   readOnly?: boolean;
   className?: string;
@@ -54,12 +54,12 @@ export const EvaluationWorkflowCanvas = forwardRef<
   const innerRef = useRef<WorkflowGraphCanvasHandle>(null);
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
   const initialGraphJson = useMemo(
-    () => (initialWorkflow.trim() ? initialWorkflow : EMPTY_LITEGRAPH_GRAPH_JSON),
+    () => (initialWorkflow.trim() ? initialWorkflow : EMPTY_WORKFLOW_GRAPH_JSON),
     [initialWorkflow],
   );
 
   const getWorkflow = useCallback((): string => {
-    return innerRef.current?.getGraphJson() ?? EMPTY_LITEGRAPH_GRAPH_JSON;
+    return innerRef.current?.getGraphJson() ?? EMPTY_WORKFLOW_GRAPH_JSON;
   }, []);
 
   const importWorkflow = useCallback((json: string) => {

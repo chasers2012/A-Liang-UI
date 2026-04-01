@@ -1,31 +1,16 @@
-import type { LGraph, LGraphCanvas } from "litegraph.js";
 import type { ReactNode } from "react";
 
 import type { WorkflowNodeAccent, WorkflowNodeTypeDefinition } from "./types";
 
-/** LiteGraph 画布上有、但类型声明未列出的字段 */
-export type LGraphCanvasChrome = LGraphCanvas & {
-  read_only: boolean;
-  allow_interaction: boolean;
-};
-
-/** LiteGraph 运行时在连接变化时调用的回调（d.ts 未声明）。 */
-export type LGraphWithConnectionHook = LGraph & {
-  onNodeConnectionChange?: (
-    kind: number,
-    node: import("litegraph.js").LGraphNode | null,
-  ) => void;
-};
-
 export type WorkflowGraphCanvasHandle = {
-  /** LiteGraph `graph.serialize()` JSON 字符串（含 `extra.viewport`）。 */
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getGraphJson: () => string;
   importGraphJson: (json: string) => void;
 };
 
 export type WorkflowGraphCanvasProps = {
   nodeTypes: WorkflowNodeTypeDefinition[];
-  /** LiteGraph 序列化 JSON 字符串。 */
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   initialGraphJson: string;
   readOnly?: boolean;
   /** 点阵间距（图坐标）。 */

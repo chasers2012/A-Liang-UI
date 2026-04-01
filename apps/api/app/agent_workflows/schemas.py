@@ -80,7 +80,7 @@ def record_to_detail(rec: AgentWorkflowRecord) -> AgentWorkflowDetailPublic:
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        graph=rec.graph or '{"nodes":[],"links":[]}',
+        graph=rec.graph or '{"nodes":[],"links":[],"viewport":null}',
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )

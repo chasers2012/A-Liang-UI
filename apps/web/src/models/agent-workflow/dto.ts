@@ -1,6 +1,6 @@
 import type { WorkflowNodeTypeDefinition } from "@/components/workflow-graph";
 
-/** LiteGraph `graph.serialize()` JSON 字符串。 */
+/** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
 export type AgentWorkflowGraphJson = string;
 
 export type AgentWorkflowSummaryPublic = {

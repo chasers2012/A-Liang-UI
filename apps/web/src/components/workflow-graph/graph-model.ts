@@ -12,33 +12,62 @@ export function catalogToMap(
   return new Map(defs.map((d) => [d.type, d]));
 }
 
-/**
- * 从 LiteGraph `graph.serialize()` JSON 中提取 `workflow_graph/step` 节点为 `WorkflowGraphNode[]`。
- */
-function parseOneSerializedStepNode(
-  n: unknown,
+function readPos(pos: unknown): [number, number] {
+  const px = Array.isArray(pos) ? Number(pos[0]) : 0;
+  const py = Array.isArray(pos) ? Number(pos[1]) : 0;
+  return [Number.isFinite(px) ? px : 0, Number.isFinite(py) ? py : 0];
+}
+
+function normalizeParams(params: unknown): Record<string, unknown> {
+  return params && typeof params === "object" && !Array.isArray(params)
+    ? (params as Record<string, unknown>)
+    : {};
+}
+
+function parseAsNewWorkflowNode(
+  node: Record<string, unknown>,
 ): WorkflowGraphNode | null {
-  if (!n || typeof n !== "object") return null;
-  const node = n as Record<string, unknown>;
+  const id = node.id;
+  const type = node.type;
+  if (typeof id !== "string" || typeof type !== "string") return null;
+  return {
+    id,
+    type,
+    pos: readPos(node.pos),
+    params: normalizeParams(node.params),
+  };
+}
+
+function parseAsLiteGraphNode(
+  node: Record<string, unknown>,
+): WorkflowGraphNode | null {
   const props = node.properties;
   if (!props || typeof props !== "object") return null;
   const p = props as Record<string, unknown>;
   const wid = p.workflowNodeId;
   const bt = p.backendType;
   if (typeof wid !== "string" || typeof bt !== "string") return null;
-  const pos = node.pos;
-  const px = Array.isArray(pos) ? Number(pos[0]) : 0;
-  const py = Array.isArray(pos) ? Number(pos[1]) : 0;
-  const params = p.params;
   return {
     id: wid,
     type: bt,
-    pos: [Number.isFinite(px) ? px : 0, Number.isFinite(py) ? py : 0],
-    params:
-      params && typeof params === "object" && !Array.isArray(params)
-        ? (params as Record<string, unknown>)
-        : {},
+    pos: readPos(node.pos),
+    params: normalizeParams(p.params),
   };
+}
+
+/**
+ * 从工作流图 JSON 中提取节点为 `WorkflowGraphNode[]`。
+ *
+ * 兼容两种历史形态：
+ * - 新 schema：`{ nodes: [{id,type,pos,params?}], links: [...] }`
+ * - 旧 LiteGraph：`graph.serialize()`，节点信息在 `nodes[].properties.workflowNodeId/backendType/params` 中
+ */
+function parseOneSerializedStepNode(
+  n: unknown,
+): WorkflowGraphNode | null {
+  if (!n || typeof n !== "object") return null;
+  const node = n as Record<string, unknown>;
+  return parseAsNewWorkflowNode(node) ?? parseAsLiteGraphNode(node);
 }
 
 export function parseWorkflowGraphNodesFromSerializedJson(
