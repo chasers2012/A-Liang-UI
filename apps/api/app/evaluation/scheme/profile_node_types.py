@@ -9,6 +9,7 @@ from __future__ import annotations
 from workflow.parse import parse_workflow_node_source
 
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+from app.evaluation.scheme.internal_nodes import get_internal_nodes
 
 from .profile_schemas import EvaluationNodeTypePublic
 
@@ -16,6 +17,10 @@ from .profile_schemas import EvaluationNodeTypePublic
 def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic]:
     """Ordered node types from the evaluation catalog with API extras (unified iteration)."""
     out: list[EvaluationNodeTypePublic] = []
+
+    internal_nodes = get_internal_nodes()
+    out.extend(internal_nodes)
+
     # metrics nodes
     for metric in EvaluationMetricsRegistry.list_items():
         source = EvaluationMetricsRegistry.read_source(metric)

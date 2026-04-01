@@ -10,13 +10,9 @@ from evaluate import AlphalensFactorEvaluator
 from evaluate.data_set import DataSet
 from factor import Factor
 from workflow import (
-    BooleanNodeParam,
-    NumberNodeParam,
-    StringNodeParam,
-    workflow_node,
     Socket,
+    workflow_node,
 )
-from workflow.node_types import ContextNodeParam
 
 
 def forward_periods_tuple(raw: Any) -> tuple[int, ...]:
@@ -66,52 +62,21 @@ def clean_factor_from_alphalens_evaluator(
     description="根据 Factor 实例与评价窗口计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     category="factor_evaluation",
     input_sockets=[
-        Socket("factor", required=True, value_type="any"),
-        Socket("dependency_resolver", required=True, value_type="any"),
-        Socket("start_date", required=True, value_type="scalar_json"),
-        Socket("end_date", required=True, value_type="scalar_json"),
-        Socket("last_quantiles", required=True, value_type="scalar_json"),
-        Socket("stock_codes", required=False, value_type="scalar_json"),
+        Socket("factor", required=True, value_type="any", label="因子"),
+        Socket("data_set", required=True, value_type="data_set", label="数据集"),
+        Socket("start_date", required=True, value_type="scalar_json", label="开始日期"),
+        Socket("end_date", required=True, value_type="scalar_json", label="结束日期"),
+        Socket("last_quantiles", required=True, value_type="scalar_json", label="分位数"),
+        Socket("stock_codes", required=False, value_type="scalar_json", label="股票代码"),
     ],
     output_sockets=[
         Socket("clean_factor", value_type="factor_data_clean"),
     ],
-    workflow_parameters=[
-        ContextNodeParam(
-            "data_set",
-            label="数据集 ID",
-            default="",
-        ),
-        StringNodeParam(
-            "forward_return_periods",
-            label="持有期 periods（逗号分隔）",
-            default="1,5,10,20",
-        ),
-        StringNodeParam(
-            "alphalens_quantiles",
-            label="分位数（留空则用环境变量 FACTOR_AGENT_QUANTILES，默认 5）",
-            default="",
-        ),
-        BooleanNodeParam(
-            "long_short",
-            label="多空 long_short",
-            default=True,
-        ),
-        NumberNodeParam(
-            "max_loss",
-            label="max_loss",
-            default=0.5,
-            minimum=0.0,
-            maximum=10.0,
-        ),
-    ],
-    entry="execute",
 )
 class CalculateFactorValueNode:
-
     def execute(self, **kwargs: Any) -> tuple[Any, ...]:
         FactorClass: type[Factor] = kwargs["factor"]
-        data_set: DataSet | None = kwargs.get("data_set", None)
+        data_set: DataSet | None = kwargs.get("data_set")
         if data_set is None:
             raise ValueError("数据集不能为空")
 

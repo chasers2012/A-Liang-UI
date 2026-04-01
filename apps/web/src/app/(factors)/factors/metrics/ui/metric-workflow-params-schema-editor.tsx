@@ -75,7 +75,7 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                   placeholder="e.g. window"
                 />
               </div>
-              <div className="min-w-[8rem] flex-1 space-y-1">
+              <div className="min-w-32 flex-1 space-y-1">
                 <Label className="text-xs">显示标签</Label>
                 <Input
                   className="h-8 text-xs"
@@ -110,7 +110,7 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                     }
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[9rem] text-xs">
+                  <SelectTrigger className="h-8 w-36 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

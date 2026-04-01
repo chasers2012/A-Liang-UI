@@ -8,4 +8,4 @@ def generate_id(namespace: str, name: str | None = None) -> str:
 
 
 def create_id_generator(namespace: str) -> Callable[[str | None], str]:
-    return lambda name: generate_id(namespace, name)
+    return lambda name=None: generate_id(namespace, name)
