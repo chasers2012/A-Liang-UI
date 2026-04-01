@@ -12,22 +12,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  EMPTY_LITEGRAPH_GRAPH_JSON,
   WorkflowGraphCanvas,
+  WorkflowGraphZoomToolbar,
   type WorkflowGraphCanvasHandle,
   type WorkflowNodeTypeDefinition,
-  type WorkflowGraphState,
 } from "@/components/workflow-graph";
 import {
   getAgentWorkflow,
   listAgentWorkflowNodeTypes,
   patchAgentWorkflow,
 } from "@/lib/quant-agent-api";
-
-const EMPTY_GRAPH: WorkflowGraphState = {
-  nodes: [],
-  links: [],
-  viewport: null,
-};
 
 export interface AgentWorkflowCanvasCardProps {
   workflowId: string | null;
@@ -38,7 +33,7 @@ export function AgentWorkflowCanvasCard({
 }: AgentWorkflowCanvasCardProps) {
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
   const [nodeTypes, setNodeTypes] = useState<WorkflowNodeTypeDefinition[]>([]);
-  const [graph, setGraph] = useState<WorkflowGraphState>(EMPTY_GRAPH);
+  const [graphJson, setGraphJson] = useState<string>(EMPTY_LITEGRAPH_GRAPH_JSON);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,7 +47,7 @@ export function AgentWorkflowCanvasCard({
 
   useEffect(() => {
     if (!workflowId) {
-      setGraph(EMPTY_GRAPH);
+      setGraphJson(EMPTY_LITEGRAPH_GRAPH_JSON);
       setName("");
       return;
     }
@@ -62,13 +57,15 @@ export function AgentWorkflowCanvasCard({
       .then((detail) => {
         if (cancelled) return;
         setName(detail.name);
-        setGraph(detail.graph);
+        setGraphJson(detail.graph?.trim() ? detail.graph : EMPTY_LITEGRAPH_GRAPH_JSON);
       })
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [workflowId]);
 
   const handleSave = useCallback(async () => {
@@ -76,7 +73,7 @@ export function AgentWorkflowCanvasCard({
     setSaving(true);
     setSaveOk(false);
     try {
-      const currentGraph = canvasRef.current.getGraph();
+      const currentGraph = canvasRef.current.getGraphJson();
       await patchAgentWorkflow(workflowId, { graph: currentGraph });
       setSaveOk(true);
       setTimeout(() => setSaveOk(false), 2000);
@@ -124,9 +121,11 @@ export function AgentWorkflowCanvasCard({
           <WorkflowGraphCanvas
             ref={canvasRef}
             nodeTypes={nodeTypes}
-            initialGraph={graph}
+            initialGraphJson={graphJson}
             className="h-full"
-          />
+          >
+            <WorkflowGraphZoomToolbar />
+          </WorkflowGraphCanvas>
         )}
       </CardContent>
     </Card>

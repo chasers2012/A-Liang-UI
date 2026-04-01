@@ -29,25 +29,6 @@ def _setup_workflow_node_domains() -> None:
     WorkflowNodeLoader.register_workflow_node_segment("agent", append=True)
 
 
-def test_evaluation_catalog_excludes_agent_nodes(tmp_path: Path) -> None:
-    from app.evaluation.scheme.workflow_graph_types import (
-        all_workflow_node_type_ids,
-        get_evaluation_node_registry,
-    )
-
-    get_evaluation_node_registry.cache_clear()
-    set_workspace_root(tmp_path)
-    try:
-        ids = all_workflow_node_type_ids()
-        assert all(not t.startswith("agent_workflow_nodes.") for t in ids)
-        assert any(t.startswith("evaluation_workflow_nodes.") for t in ids)
-        full = get_evaluation_node_registry()
-        assert any(k.startswith("agent_workflow_nodes.") for k in full)
-    finally:
-        get_evaluation_node_registry.cache_clear()
-        set_workspace_root(None)
-
-
 def test_load_workspace_registry_includes_evaluation_and_agent_nodes(tmp_path: Path) -> None:
     set_workspace_root(tmp_path)
     reg = WorkflowNodeLoader.load_workspace_node_registry()
@@ -73,13 +54,13 @@ def test_workspace_extension_merges(tmp_path: Path) -> None:
                 "from __future__ import annotations",
                 "from typing import Any",
                 "",
-                "from workflow import workflow_node, workflow_socket",
+                "from workflow import workflow_node, Socket",
                 "",
                 "@workflow_node(",
                 '    label="ext",',
                 '    description="",',
                 "    input_sockets=[],",
-                "    output_sockets=[workflow_socket('out', value_type='scalar_json')],",
+                "    output_sockets=[Socket('out', value_type='scalar_json')],",
                 '    entry="execute",',
                 ")",
                 "class ExtNode:",
@@ -131,13 +112,13 @@ def test_loader_order_follows_registry(tmp_path: Path) -> None:
                     "from __future__ import annotations",
                     "from typing import Any",
                     "",
-                    "from workflow import workflow_node, workflow_socket",
+                    "from workflow import workflow_node, Socket",
                     "",
                     "@workflow_node(",
                     f'    label="{label}",',
                     '    description="",',
                     "    input_sockets=[],",
-                    "    output_sockets=[workflow_socket('out', value_type='scalar_json')],",
+                    "    output_sockets=[Socket('out', value_type='scalar_json')],",
                     '    entry="execute",',
                     ")",
                     "class ExtNode:",

@@ -69,7 +69,6 @@ export default function EditEvaluationMetricPage() {
           ...p,
           key: p.key.trim(),
           label: (p.label || "").trim() || p.key.trim(),
-          enum_values: p.type === "enum" ? p.enum_values : [],
           minimum: p.type === "number" ? p.minimum : null,
           maximum: p.type === "number" ? p.maximum : null,
         }));

@@ -8,10 +8,6 @@ from typing import Any
 from workflow import WorkflowExecutor
 
 from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
-from app.evaluation.scheme.workflow_graph_types import (
-    get_evaluation_node_registry,
-    normalize_evaluation_workflow_node_types,
-)
 from app.factors.schemas import utc_now_iso
 
 from .runner import (
@@ -27,7 +23,7 @@ def run_evaluation_profile_workflow(
     *,
     data_set_id: str | None,
 ) -> FactorEvaluationRecord:
-    wf = normalize_evaluation_workflow_node_types(profile.workflow)
+    wf = None  # fixme
     setup = build_factor_alphalens_setup(factor_id, data_set_id=data_set_id)
     if setup.error is not None:
         return setup.error.model_copy(update={"evaluation_profile_id": profile.id})
@@ -35,7 +31,7 @@ def run_evaluation_profile_workflow(
     window = setup.window
 
     try:
-        node_results = WorkflowExecutor.from_registry(get_evaluation_node_registry()).execute(
+        node_results = WorkflowExecutor.execute(
             wf,
             input_sockets={
                 "factor": setup.factor,

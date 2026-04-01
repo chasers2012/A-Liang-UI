@@ -2,6 +2,10 @@
 
 import type { NodeParamModel } from "../evaluation-metric/dto";
 
+/** LiteGraph `graph.serialize()` 的 JSON 字符串（持久化字段）。 */
+export type EvaluationWorkflowGraphJson = string;
+
+/** 从 LiteGraph 序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
 export interface WorkflowNodeDto {
   id: string;
   type: string;
@@ -9,26 +13,12 @@ export interface WorkflowNodeDto {
   params: Record<string, unknown>;
 }
 
-export interface WorkflowLinkDto {
-  id?: string | null;
-  from_node: string;
-  from_socket: string;
-  to_node: string;
-  to_socket: string;
-}
-
-export interface EvaluationWorkflowDto {
-  nodes: WorkflowNodeDto[];
-  links: WorkflowLinkDto[];
-  viewport?: { x: number; y: number; zoom: number } | null;
-}
-
 export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
   data_set_id: string | null;
-  workflow: EvaluationWorkflowDto;
+  workflow: EvaluationWorkflowGraphJson;
   is_default: boolean;
   created_at: string;
   updated_at: string;

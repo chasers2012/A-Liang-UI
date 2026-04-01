@@ -19,16 +19,6 @@ def workflow_node_type_key(cls: type) -> str:
     return f"{mod}.{qn}" if mod else qn
 
 
-def workflow_socket(
-    name: str,
-    *,
-    required: bool = False,
-    value_type: str = "any",
-) -> Socket:
-    """Build a :class:`Socket` for ``@workflow_node`` ``input_sockets`` / ``output_sockets``."""
-    return Socket(name=name, required=required, value_type=value_type)
-
-
 def _socket_tuple(sockets: list[Socket]) -> tuple[Socket, ...]:
     return tuple(s for s in sockets if (s.name or "").strip())
 

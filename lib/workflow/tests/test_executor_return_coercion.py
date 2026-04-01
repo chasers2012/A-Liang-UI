@@ -5,18 +5,19 @@ from __future__ import annotations
 import pytest
 from workflow import (
     Node,
+    Socket,
     handler_from_node_class,
     workflow_node,
     workflow_node_definition_from_class,
-    workflow_socket,
 )
 
 
 def test_handler_execute_zero_outputs_returns_empty() -> None:
+
     @workflow_node(
         label="",
         description="",
-        input_sockets=[workflow_socket("x")],
+        input_sockets=[Socket("x")],
         output_sockets=[],
         entry="execute",
     )
@@ -30,13 +31,14 @@ def test_handler_execute_zero_outputs_returns_empty() -> None:
 
 
 def test_handler_execute_tuple_matches_output_sockets() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
         output_sockets=[
-            workflow_socket("a"),
-            workflow_socket("b"),
+            Socket("a"),
+            Socket("b"),
         ],
         entry="execute",
     )
@@ -50,11 +52,12 @@ def test_handler_execute_tuple_matches_output_sockets() -> None:
 
 
 def test_handler_execute_single_socket_accepts_unit_tuple() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("only")],
+        output_sockets=[Socket("only")],
         entry="execute",
     )
     class UnitTupleNode:
@@ -67,11 +70,12 @@ def test_handler_execute_single_socket_accepts_unit_tuple() -> None:
 
 
 def test_handler_execute_multi_output_scalar_raises() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("x"), workflow_socket("y")],
+        output_sockets=[Socket("x"), Socket("y")],
         entry="execute",
     )
     class BadNode:
@@ -85,11 +89,12 @@ def test_handler_execute_multi_output_scalar_raises() -> None:
 
 
 def test_handler_execute_tuple_length_mismatch_raises() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("a"), workflow_socket("b")],
+        output_sockets=[Socket("a"), Socket("b")],
         entry="execute",
     )
     class BadTupleNode:
@@ -103,13 +108,14 @@ def test_handler_execute_tuple_length_mismatch_raises() -> None:
 
 
 def test_handler_execute_list_matches_output_sockets() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
         output_sockets=[
-            workflow_socket("a"),
-            workflow_socket("b"),
+            Socket("a"),
+            Socket("b"),
         ],
         entry="execute",
     )
@@ -131,7 +137,7 @@ def test_handler_execute_single_socket_wraps_arbitrary_value() -> None:
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("only")],
+        output_sockets=[Socket("only")],
         entry="execute",
     )
     class ReturnsObjectNode:

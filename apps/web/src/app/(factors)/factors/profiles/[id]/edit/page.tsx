@@ -83,7 +83,18 @@ export default function EditEvaluationProfilePage() {
       setDescription(d.description);
       setDataSetId(d.data_set_id ?? "__none__");
       setIsDefault(d.is_default);
-      setWorkflowJson(JSON.stringify(d.workflow, null, 2));
+      try {
+        const w = d.workflow;
+        setWorkflowJson(
+          typeof w === "string"
+            ? JSON.stringify(JSON.parse(w), null, 2)
+            : JSON.stringify(w, null, 2),
+        );
+      } catch {
+        setWorkflowJson(
+          typeof d.workflow === "string" ? d.workflow : "{}",
+        );
+      }
       setCanvasKey((k) => k + 1);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
@@ -106,7 +117,13 @@ export default function EditEvaluationProfilePage() {
     if (next === workflowEditMode) return;
     if (workflowEditMode === "canvas" && next === "json") {
       const w = canvasRef.current?.getWorkflow();
-      if (w) setWorkflowJson(JSON.stringify(w, null, 2));
+      if (w) {
+        try {
+          setWorkflowJson(JSON.stringify(JSON.parse(w), null, 2));
+        } catch {
+          setWorkflowJson(w);
+        }
+      }
     }
     if (workflowEditMode === "json" && next === "canvas") {
       try {

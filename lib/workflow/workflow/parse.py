@@ -97,7 +97,9 @@ def _parse_param_call(call: ast.Call) -> NodeParamModel | None:
         data.setdefault("type", inferred_type)
     if "key" not in data:
         return None
-    return NodeParamModel.model_validate(data)
+    allowed = {"key", "label", "type", "default", "minimum", "maximum"}
+    kwargs = {k: v for k, v in data.items() if k in allowed}
+    return NodeParamModel(**kwargs)
 
 
 def _parse_workflow_parameters(node: ast.AST | None) -> list[NodeParamModel]:
@@ -152,7 +154,7 @@ def _parse_socket_keywords(
 
 
 def _parse_socket_call(call: ast.Call) -> Socket | None:
-    if _call_name(call) != "workflow_socket":
+    if _call_name(call) != "Socket":
         return None
 
     name, required, value_type = _parse_socket_positional(call)

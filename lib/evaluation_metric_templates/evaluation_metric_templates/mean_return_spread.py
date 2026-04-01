@@ -5,14 +5,14 @@ from typing import Any
 
 import pandas as pd
 from evaluate import MeanReturnSpreadMetric
-from workflow import workflow_node, workflow_socket
+from workflow import Socket, workflow_node
 
 
 @workflow_node(
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
-    output_sockets=[workflow_socket("mean_return_spread", value_type="scalar_json")],
+    output_sockets=[Socket("mean_return_spread", value_type="scalar_json")],
     entry="evaluate",
 )
 class BuiltinMeanReturnSpreadMetric(MeanReturnSpreadMetric):

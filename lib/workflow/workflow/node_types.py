@@ -9,147 +9,95 @@
 from __future__ import annotations
 
 import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from collections.abc import Callable
 from typing import Any, Literal
-
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # --- Dataclasses (compile-time node metadata) ---------------------------------
 
 
-@dataclass(frozen=True)
 class Socket:
     name: str
     required: bool = False
-    value_type: str = "any"
+    label: str = ""
+    value_type: str = ""
+
+    def __init__(self, name: str, required: bool = False, label: str = "", value_type: str = ""):
+        self.name = name
+        self.required = required
+        self.label = label if label else name
+        self.value_type = value_type
+
+    @staticmethod
+    def parse(config_dict: dict) -> Socket:
+        return Socket(
+            name=config_dict.get("name", ""),
+            required=config_dict.get("required", False),
+            label=config_dict.get("label", ""),
+            value_type=config_dict.get("value_type", ""),
+        )
 
     def serialize(self) -> dict[str, Any]:
         """JSON-friendly socket specification used by API responses."""
         return {
             "name": self.name,
             "required": self.required,
+            "label": self.label,
             "value_type": self.value_type,
         }
 
 
-@dataclass(frozen=True)
-class NodeParam(ABC):
-    """API-serializable description of one node execution kwarg (besides graph inputs)."""
+class NodeParam(Socket):
+    default = None
 
-    key: str
-    label: str = ""
-
-    @property
-    @abstractmethod
-    def type(self) -> str:
-        """Discriminator for JSON: ``number`` | ``string`` | ``boolean`` | ``enum``."""
-
-    @abstractmethod
     def serialize(self) -> dict[str, Any]:
-        """Shape aligned with :class:`NodeParamModel` JSON."""
+        """JSON-friendly socket specification used by API responses."""
+        return {
+            **super().serialize(),
+            "default": self.default,
+        }
 
 
-@dataclass(frozen=True)
+class OptionsNodeParam(NodeParam):
+    options: list[str | float | int] | Callable | None = None
+
+    def serialize(self) -> dict[str, Any]:
+        opts = self.options
+        options = list(opts()) if callable(opts) else list(opts or [])
+        return {
+            **super().serialize(),
+            "options": options,
+        }
+
+
 class NumberNodeParam(NodeParam):
-    default: Any = None
+    default: float | int | None = None
     minimum: float | int | None = None
     maximum: float | int | None = None
-
-    @property
-    def type(self) -> str:
-        return "number"
+    value_type: str = "number"
 
     def serialize(self) -> dict[str, Any]:
-        return {
-            "key": self.key,
-            "label": self.label,
-            "type": self.type,
-            "default": self.default,
-            "minimum": self.minimum,
-            "maximum": self.maximum,
-            "enum_values": [],
-        }
+        return {**super().serialize(), "minimum": self.minimum, "maximum": self.maximum}
 
 
-@dataclass(frozen=True)
 class StringNodeParam(NodeParam):
     default: str = ""
-
-    @property
-    def type(self) -> str:
-        return "string"
-
-    def serialize(self) -> dict[str, Any]:
-        return {
-            "key": self.key,
-            "label": self.label,
-            "type": self.type,
-            "default": self.default,
-            "minimum": None,
-            "maximum": None,
-            "enum_values": [],
-        }
+    value_type: str = "string"
 
 
-@dataclass(frozen=True)
 class BooleanNodeParam(NodeParam):
     default: bool = False
-
-    @property
-    def type(self) -> str:
-        return "boolean"
-
-    def serialize(self) -> dict[str, Any]:
-        return {
-            "key": self.key,
-            "label": self.label,
-            "type": self.type,
-            "default": self.default,
-            "minimum": None,
-            "maximum": None,
-            "enum_values": [],
-        }
+    value_type: str = "boolean"
 
 
-@dataclass(frozen=True)
-class EnumNodeParam(NodeParam):
-    enum_values: tuple[str, ...] = ()
-    default: Any = None
-
-    def __post_init__(self) -> None:
-        ev = self.enum_values
-        if isinstance(ev, list) or not isinstance(ev, tuple):
-            object.__setattr__(self, "enum_values", tuple(str(x) for x in ev))
-
-    @property
-    def type(self) -> str:
-        return "enum"
-
-    def serialize(self) -> dict[str, Any]:
-        return {
-            "key": self.key,
-            "label": self.label,
-            "type": self.type,
-            "default": self.default,
-            "minimum": None,
-            "maximum": None,
-            "enum_values": list(self.enum_values),
-        }
-
-
-class Node(BaseModel):
+class Node:
     """Unified workflow node model for both type-definition and graph-instance data."""
-
-    model_config = ConfigDict(extra="ignore")
 
     # Graph-instance fields
     id: str = ""
-    pos: list[float] = Field(default_factory=lambda: [0.0, 0.0])
-    params: dict[str, Any] = Field(default_factory=dict)
+    pos: list[float]
 
     # Type-definition fields
-    type: str
+    type: str = ""
     label: str = ""
     description: str = ""
     category: str = ""
@@ -158,12 +106,38 @@ class Node(BaseModel):
     outputs: tuple[Socket, ...] = ()
     parameters: tuple[NodeParam, ...] = ()
 
-    @field_validator("pos")
-    @classmethod
-    def _two_floats(cls, v: list[float]) -> list[float]:
-        if len(v) != 2:
-            raise ValueError("pos must be [x, y]")
-        return [float(v[0]), float(v[1])]
+    def __init__(
+        self,
+        *,
+        id: str = "",
+        pos: list[float] | None = None,
+        type: str = "",
+        label: str = "",
+        description: str = "",
+        category: str = "",
+        entry: str = "execute",
+        inputs: tuple[Socket, ...] = (),
+        outputs: tuple[Socket, ...] = (),
+        parameters: tuple[NodeParam, ...] = (),
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        # Note: `params` is accepted for graph-instance payloads (stored on the instance)
+        # while `parameters` is node type-definition metadata.
+        self.id = id
+        self.pos = list(pos or [0.0, 0.0])
+        self.type = type
+        self.label = label
+        self.description = description
+        self.category = category
+        self.entry = entry
+        self.inputs = inputs
+        self.outputs = outputs
+        self.parameters = parameters
+        if params is not None:
+            self.params = params
+
+    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
+        pass
 
     def serialize(self) -> dict[str, Any]:
         """JSON-friendly node definition payload."""
@@ -177,66 +151,44 @@ class Node(BaseModel):
             "parameters": [p.serialize() for p in self.parameters],
         }
 
+    @staticmethod
+    def parse(json_dict: dict[str, Any]) -> Node:
+        return Node(
+            id=json_dict.get("id", ""),
+            pos=json_dict.get("pos", [0.0, 0.0]),
+            type=json_dict.get("type", ""),
+            label=json_dict.get("label", ""),
+            description=json_dict.get("description", ""),
+        )
+
 
 # --- Pydantic (JSON interchange) ------------------------------------------------
 
 _PARAM_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
-class NodeParamModel(BaseModel):
+class NodeParamModel:
     """Declarative schema for workflow node parameters (besides graph inputs).
 
     For ``entry="execute"``, parameter keys are merged into the keyword arguments
     passed to ``execute`` along with linked socket values.
     """
 
-    model_config = ConfigDict(extra="ignore")
-
-    key: str
-    label: str = ""
-    type: Literal["number", "boolean", "enum", "string"] = "number"
-    default: Any | None = None
-    minimum: float | int | None = None
-    maximum: float | int | None = None
-    enum_values: list[str] = Field(default_factory=list)
-
-    @field_validator("key")
-    @classmethod
-    def _key_ok(cls, v: str) -> str:
-        s = str(v).strip()
-        if not s or not _PARAM_KEY_RE.match(s):
-            raise ValueError("参数 key 须为合法 Python 标识符")
-        return s
-
-    @field_validator("label")
-    @classmethod
-    def _label_strip(cls, v: str) -> str:
-        return str(v).strip()
-
-    @field_validator("enum_values", mode="before")
-    @classmethod
-    def _enum_strip(cls, v: object) -> list[str]:
-        if v is None:
-            return []
-        if not isinstance(v, list):
-            raise ValueError("enum_values 须为字符串数组")
-        out: list[str] = []
-        for x in v:
-            s = str(x).strip()
-            if s:
-                out.append(s)
-        return out
-
-    @model_validator(mode="after")
-    def _type_rules(self) -> NodeParamModel:
-        if self.type == "enum":
-            if not self.enum_values:
-                raise ValueError(f"枚举参数 {self.key!r} 须设置非空 enum_values")
-            if self.default is not None and str(self.default) not in self.enum_values:
-                raise ValueError(
-                    f"参数 {self.key!r} 的 default 须在 enum_values 内",
-                )
-        return self
+    def __init__(
+        self,
+        key: str,
+        label: str = "",
+        type: Literal["number", "boolean", "string"] = "number",
+        default: Any | None = None,
+        minimum: float | int | None = None,
+        maximum: float | int | None = None,
+    ) -> None:
+        self.key = key
+        self.label = label
+        self.type = type
+        self.default = default
+        self.minimum = minimum
+        self.maximum = maximum
 
 
 def validate_node_param_list(items: list[NodeParamModel]) -> None:

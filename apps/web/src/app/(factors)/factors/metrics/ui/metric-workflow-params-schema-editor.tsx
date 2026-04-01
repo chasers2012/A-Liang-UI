@@ -13,12 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 
 const TYPE_ITEMS: { value: NodeParamType; label: string }[] = [
   { value: "number", label: "数值" },
   { value: "boolean", label: "布尔" },
-  { value: "enum", label: "枚举（字符串）" },
   { value: "string", label: "字符串" },
 ];
 
@@ -30,7 +28,6 @@ function emptyRow(): NodeParamModel {
     default: null,
     minimum: null,
     maximum: null,
-    enum_values: [],
   };
 }
 
@@ -97,7 +94,6 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                     if (
                       v === "number" ||
                       v === "boolean" ||
-                      v === "enum" ||
                       v === "string"
                     ) {
                       updateRow(index, {
@@ -108,7 +104,6 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                             : v === "string"
                               ? ""
                               : null,
-                        enum_values: v === "enum" ? row.enum_values : [],
                         minimum: v === "number" ? row.minimum : null,
                         maximum: v === "number" ? row.maximum : null,
                       });
@@ -212,43 +207,6 @@ export function MetricWorkflowParamsSchemaEditor(props: {
                 />
                 <span>默认勾选（true）</span>
               </label>
-            ) : null}
-            {row.type === "enum" ? (
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <Label className="text-xs">可选值（每行一个）</Label>
-                  <Textarea
-                    className="min-h-[4rem] font-mono text-xs"
-                    disabled={disabled}
-                    value={row.enum_values.join("\n")}
-                    onChange={(e) =>
-                      updateRow(index, {
-                        enum_values: e.target.value
-                          .split(/\r?\n/)
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">默认值（须为可选值之一）</Label>
-                  <Input
-                    className="h-8 font-mono text-xs"
-                    disabled={disabled}
-                    value={
-                      row.default === null || row.default === undefined
-                        ? ""
-                        : String(row.default)
-                    }
-                    onChange={(e) =>
-                      updateRow(index, {
-                        default: e.target.value.trim() || null,
-                      })
-                    }
-                  />
-                </div>
-              </div>
             ) : null}
             {row.type === "string" ? (
               <div className="space-y-1">

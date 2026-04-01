@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from app.startup_jobs import register_startup_job
-from app.workflow_nodes import register_workflow_node_package
+from multiprocessing.process import parent_process
 
-register_workflow_node_package("agent", "agent_workflow_nodes", kind="builtin", append=True)
+from app.startup_jobs import register_startup_job
 
 
 @register_startup_job
 def _register_agent_workflow_node_segment() -> None:
-    from app.workflow_nodes import WorkflowNodeLoader
-
-    WorkflowNodeLoader.register_workflow_node_segment("agent", append=True)
+    # Avoid registering workflow node segments in forked/spawned worker processes.
+    if parent_process() is not None:
+        return

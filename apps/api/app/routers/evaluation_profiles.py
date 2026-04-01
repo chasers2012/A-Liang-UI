@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.scheme.graph_validate import validate_workflow_graph
 from app.evaluation.scheme.profile_node_types import list_evaluation_profile_node_types_public
 from app.evaluation.scheme.profile_schemas import (
     EvaluationNodeTypePublic,
@@ -13,7 +12,6 @@ from app.evaluation.scheme.profile_schemas import (
     EvaluationProfileRecord,
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
-from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -31,15 +29,6 @@ def _to_public(rec: EvaluationProfileRecord) -> EvaluationProfilePublic:
     )
 
 
-def _validate_workflow_if_needed(wf) -> None:
-    if not wf.nodes:
-        return
-    try:
-        validate_workflow_graph(wf, allowed_types=all_workflow_node_type_ids())
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-
-
 def _merge_evaluation_profile_patch(
     rec: EvaluationProfileRecord,
     body: EvaluationProfilePatch,
@@ -55,7 +44,6 @@ def _merge_evaluation_profile_patch(
         tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
         rec.data_set_id = tid or None
     if "workflow" in data and body.workflow is not None:
-        _validate_workflow_if_needed(body.workflow)
         rec.workflow = body.workflow
     if "is_default" in data and body.is_default is not None:
         rec.is_default = body.is_default
@@ -83,7 +71,6 @@ def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
 @router.post("", response_model=EvaluationProfilePublic)
 def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfilePublic:
     rec = body.to_record()
-    _validate_workflow_if_needed(rec.workflow)
     EvaluationProfilesRegistry.save(rec)
     if rec.is_default:
         EvaluationProfilesRegistry.apply_default_uniqueness(rec.id)

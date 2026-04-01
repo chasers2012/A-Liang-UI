@@ -122,18 +122,11 @@ def post_factor_evaluation_run(
     prof = None
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
     if pid:
-        from app.evaluation.scheme.graph_validate import validate_workflow_graph
         from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
-        from app.evaluation.scheme.workflow_graph_types import all_workflow_node_type_ids
 
         prof = EvaluationProfilesRegistry.get_by_id(pid)
         if prof is None:
             raise HTTPException(status_code=400, detail="评价方案不存在")
-        if prof.workflow.nodes:
-            try:
-                validate_workflow_graph(prof.workflow, allowed_types=all_workflow_node_type_ids())
-            except ValueError as e:
-                http_bad_request(e)
     try:
         eval_rec = execute_and_persist_factor_evaluation_run(
             factor_id,

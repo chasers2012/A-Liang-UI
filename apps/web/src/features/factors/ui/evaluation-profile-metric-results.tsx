@@ -2,12 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type {
-  EvaluationProfilePublic,
-  WorkflowNodeDto,
-} from "@/lib/quant-agent-api";
+import { parseWorkflowGraphNodesFromSerializedJson } from "@/components/workflow-graph";
+import type { EvaluationProfilePublic } from "@/lib/quant-agent-api";
 import { listEvaluationNodeTypes } from "@/lib/quant-agent-api";
-import type { EvaluationNodeTypeCatalogItemPublic } from "@/models";
+import type { EvaluationNodeTypeCatalogItemPublic, WorkflowNodeDto } from "@/models";
 
 export type MetricMetaEntry = {
   name: string;
@@ -268,13 +266,21 @@ function renderNumericRecord(
   );
 }
 
+function workflowNodesFromProfile(
+  profile: EvaluationProfilePublic | undefined,
+): WorkflowNodeDto[] {
+  const w = profile?.workflow;
+  if (!w || typeof w !== "string") return [];
+  return parseWorkflowGraphNodesFromSerializedJson(w) as WorkflowNodeDto[];
+}
+
 function workflowNodeTitle(
   profile: EvaluationProfilePublic | undefined,
   nodeId: string,
   metricMetaById: Record<string, MetricMetaEntry> | undefined,
   catalogByType: Map<string, EvaluationNodeTypeCatalogItemPublic>,
 ): string {
-  const n = profile?.workflow?.nodes?.find((x) => x.id === nodeId);
+  const n = workflowNodesFromProfile(profile).find((x) => x.id === nodeId);
   if (!n) return "工作流节点";
   const def = nodeTypeDef(catalogByType, n.type);
   const label = def?.label ?? n.type;
@@ -359,7 +365,9 @@ export function EvaluationProfileMetricResultsPanel(props: {
   const blocks = nodeIds.map((nid) => {
     const outs = asObjectRecord(metricResults[nid]);
     if (!outs) return null;
-    const node = profile?.workflow?.nodes?.find((x) => x.id === nid);
+    const node = workflowNodesFromProfile(profile ?? undefined).find(
+      (x) => x.id === nid,
+    );
     const entries = Object.entries(outs).filter(([sk, val]) => {
       if (sk === "clean_factor" && val === "[DataFrame]") return false;
       return true;

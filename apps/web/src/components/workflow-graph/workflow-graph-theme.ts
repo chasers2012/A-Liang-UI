@@ -54,13 +54,6 @@ export function readWorkflowLinkHighlightColor(el: HTMLElement | null): string {
   );
 }
 
-/** 点阵等，对应 --border */
-export function readWorkflowBorderColor(el: HTMLElement | null): string {
-  const r = canvasCssRoot(el);
-  if (!r) return "#e4e4e7";
-  return readVar(r, "--border", "#e4e4e7");
-}
-
 /** 背景点阵颜色，对应 --lg-grid-dot */
 export function readWorkflowGridDotColor(el: HTMLElement | null): string {
   const r = canvasCssRoot(el);

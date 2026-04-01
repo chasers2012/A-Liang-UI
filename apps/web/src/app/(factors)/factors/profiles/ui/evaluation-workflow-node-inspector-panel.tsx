@@ -11,7 +11,7 @@ import {
 import {
   WorkflowNodeParamFieldRow,
   workflowNodeParamEffectiveValue,
-} from "../../../../../components/workflow-graph/workflow-node-param-field-row";
+} from "@/components/workflow-graph";
 import type { EvalWorkflowCanvasNode } from "./workflow-rf-utils";
 
 export function EvaluationWorkflowNodeInspectorPanel(props: {

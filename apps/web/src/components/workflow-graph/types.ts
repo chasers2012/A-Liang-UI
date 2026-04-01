@@ -2,6 +2,8 @@
 
 import { NodeParamModel } from "@/models";
 
+import type { LiteGraphExtendedConfig } from "./litegraph";
+
 export type WorkflowSocketDefinition = {
   name: string;
   required: boolean;
@@ -25,25 +27,17 @@ export type WorkflowGraphNode = {
   params?: Record<string, unknown>;
 };
 
-export type WorkflowGraphLink = {
-  id?: string;
-  from_node: string;
-  from_socket: string;
-  to_node: string;
-  to_socket: string;
+/** LiteGraph `workflow_graph/step` 节点 `properties` 形状。 */
+export type WorkflowStepProperties = {
+  workflowNodeId: string;
+  backendType: string;
+  params: Record<string, unknown>;
+  /** Catalog input slot count; extra slots are for multi-link. */
+  _catalogInputCount?: number;
 };
 
-export type WorkflowGraphViewport = {
-  x: number;
-  y: number;
-  zoom: number;
-};
-
-export type WorkflowGraphState = {
-  nodes: WorkflowGraphNode[];
-  links: WorkflowGraphLink[];
-  viewport: WorkflowGraphViewport | null;
-};
+/** 传给 `loadWorkflowJsonIntoGraph` 的运行时开关（即 `LGraph.config` 扩展字段）。 */
+export type WorkflowGraphRuntimeConfig = LiteGraphExtendedConfig;
 
 /** 选中节点在侧栏展示用的聚合数据。 */
 export type WorkflowNodeDisplayData = {

@@ -22,6 +22,14 @@ import {
   parseEvaluationWorkflowJson,
 } from "./profile-form-shared";
 
+function prettyWorkflowForDisplay(workflow: string): string {
+  try {
+    return JSON.stringify(JSON.parse(workflow), null, 2);
+  } catch {
+    return workflow;
+  }
+}
+
 export function ProfileDetailWorkflowCard(props: {
   profile: EvaluationProfilePublic;
   profileId: string;
@@ -40,11 +48,16 @@ export function ProfileDetailWorkflowCard(props: {
 
   const initialWorkflow = useMemo(() => {
     try {
-      return parseEvaluationWorkflowJson(JSON.stringify(profile.workflow));
+      return parseEvaluationWorkflowJson(profile.workflow);
     } catch {
       return EMPTY_EVALUATION_WORKFLOW;
     }
   }, [profile.workflow]);
+
+  const workflowJsonDisplay = useMemo(
+    () => prettyWorkflowForDisplay(profile.workflow),
+    [profile.workflow],
+  );
 
   return (
     <Card>
@@ -86,7 +99,7 @@ export function ProfileDetailWorkflowCard(props: {
           )
         ) : (
           <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-xl border border-border/80 bg-muted/30 p-3 font-mono text-xs leading-relaxed shadow-sm">
-            {JSON.stringify(profile.workflow, null, 2)}
+            {workflowJsonDisplay}
           </pre>
         )}
       </CardContent>

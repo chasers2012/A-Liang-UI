@@ -84,7 +84,13 @@ export default function NewEvaluationProfilePage() {
     if (next === workflowEditMode) return;
     if (workflowEditMode === "canvas" && next === "json") {
       const w = canvasRef.current?.getWorkflow();
-      if (w) setWorkflowJson(JSON.stringify(w, null, 2));
+      if (w) {
+        try {
+          setWorkflowJson(JSON.stringify(JSON.parse(w), null, 2));
+        } catch {
+          setWorkflowJson(w);
+        }
+      }
     }
     if (workflowEditMode === "json" && next === "canvas") {
       try {
@@ -102,7 +108,7 @@ export default function NewEvaluationProfilePage() {
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    let workflow: unknown;
+    let workflow: string;
     try {
       workflow =
         workflowEditMode === "canvas"

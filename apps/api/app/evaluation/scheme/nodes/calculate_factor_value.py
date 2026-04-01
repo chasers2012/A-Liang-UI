@@ -7,14 +7,16 @@ import re
 from typing import Any
 
 from evaluate import AlphalensFactorEvaluator
+from evaluate.data_set import DataSet
 from factor import Factor
 from workflow import (
     BooleanNodeParam,
     NumberNodeParam,
     StringNodeParam,
     workflow_node,
-    workflow_socket,
+    Socket,
 )
+from workflow.node_types import ContextNodeParam
 
 
 def forward_periods_tuple(raw: Any) -> tuple[int, ...]:
@@ -64,16 +66,22 @@ def clean_factor_from_alphalens_evaluator(
     description="根据 Factor 实例与评价窗口计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     category="factor_evaluation",
     input_sockets=[
-        workflow_socket("factor", required=True, value_type="any"),
-        workflow_socket("start_date", required=True, value_type="scalar_json"),
-        workflow_socket("end_date", required=True, value_type="scalar_json"),
-        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
-        workflow_socket("stock_codes", required=False, value_type="scalar_json"),
+        Socket("factor", required=True, value_type="any"),
+        Socket("dependency_resolver", required=True, value_type="any"),
+        Socket("start_date", required=True, value_type="scalar_json"),
+        Socket("end_date", required=True, value_type="scalar_json"),
+        Socket("last_quantiles", required=True, value_type="scalar_json"),
+        Socket("stock_codes", required=False, value_type="scalar_json"),
     ],
     output_sockets=[
-        workflow_socket("clean_factor", value_type="factor_data_clean"),
+        Socket("clean_factor", value_type="factor_data_clean"),
     ],
     workflow_parameters=[
+        ContextNodeParam(
+            "data_set",
+            label="数据集 ID",
+            default="",
+        ),
         StringNodeParam(
             "forward_return_periods",
             label="持有期 periods（逗号分隔）",
@@ -100,11 +108,14 @@ def clean_factor_from_alphalens_evaluator(
     entry="execute",
 )
 class CalculateFactorValueNode:
-    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
-        factor: Factor = kwargs["factor"]
-        if factor._dependency_resolver is None:
-            raise ValueError("factor 须设置 dependency_resolver")
 
+    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
+        FactorClass: type[Factor] = kwargs["factor"]
+        data_set: DataSet | None = kwargs.get("data_set", None)
+        if data_set is None:
+            raise ValueError("数据集不能为空")
+
+        factor = FactorClass(dependency_resolver=data_set.create_resolver())
         ev = AlphalensFactorEvaluator(
             factor,
             start_date=kwargs.get("start_date"),
@@ -112,4 +123,4 @@ class CalculateFactorValueNode:
             stock_codes=kwargs.get("stock_codes"),
             long_short=bool(kwargs.get("long_short", True)),
         )
-        return (clean_factor_from_alphalens_evaluator(ev, dict(kwargs)),)
+        return clean_factor_from_alphalens_evaluator(ev, dict(kwargs))

@@ -5,10 +5,8 @@ import type { RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type {
-  EvaluationWorkflowDto,
-  EvaluationNodeTypeCatalogItemPublic,
-} from "@/lib/quant-agent-api";
+import type { EvaluationNodeTypeCatalogItemPublic } from "@/lib/quant-agent-api";
+import type { EvaluationWorkflowGraphJson } from "@/models/evaluation-profile/dto";
 
 import {
   EvaluationWorkflowCanvas,
@@ -25,7 +23,7 @@ export function ProfileWorkflowEditorBlock(props: {
   canvasKey: number;
   canvasRef: RefObject<EvaluationWorkflowCanvasHandle | null>;
   catalog: EvaluationNodeTypeCatalogItemPublic[];
-  initialWorkflow: EvaluationWorkflowDto;
+  initialWorkflow: EvaluationWorkflowGraphJson;
 }) {
   const {
     workflowJson,

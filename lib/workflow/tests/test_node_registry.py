@@ -6,10 +6,10 @@ import types
 
 import pytest
 from workflow import (
-    EnumNodeParam,
     Node,
     NumberNodeParam,
     RegisteredNode,
+    Socket,
     StringNodeParam,
     build_node_registry_from_modules,
     handler_from_node_class,
@@ -18,7 +18,6 @@ from workflow import (
     workflow_node,
     workflow_node_definition_from_class,
     workflow_node_type_key,
-    workflow_socket,
 )
 
 
@@ -39,11 +38,12 @@ def test_ordered_definitions_order_and_keyerror() -> None:
 
 
 def test_merge_node_registries_later_overrides() -> None:
+
     @workflow_node(
         label="1",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         entry="execute",
     )
     class First:
@@ -54,7 +54,7 @@ def test_merge_node_registries_later_overrides() -> None:
         label="2",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         entry="execute",
     )
     class Second:
@@ -79,11 +79,12 @@ def test_merge_node_registries_later_overrides() -> None:
 
 
 def test_build_merges_types_from_two_modules() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         entry="execute",
     )
     class X:
@@ -94,7 +95,7 @@ def test_build_merges_types_from_two_modules() -> None:
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         entry="execute",
     )
     class Y:
@@ -110,11 +111,12 @@ def test_build_merges_types_from_two_modules() -> None:
 
 
 def test_build_node_registry_includes_workflow_parameters() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         workflow_parameters=[
             StringNodeParam("k1", label="L1", default="x"),
             NumberNodeParam("k2", default=3, minimum=0, maximum=9),
@@ -139,20 +141,16 @@ def test_build_node_registry_includes_workflow_parameters() -> None:
     assert spec.parameters[1].maximum == 9
 
 
-def test_workflow_parameters_string_and_enum() -> None:
+def test_workflow_parameters_two_strings() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("o")],
+        output_sockets=[Socket("o")],
         workflow_parameters=[
             StringNodeParam("legacy", default="x"),
-            EnumNodeParam(
-                "mode",
-                label="M",
-                enum_values=["a", "b"],
-                default="a",
-            ),
+            StringNodeParam("mode", label="M", default="a"),
         ],
         entry="execute",
     )
@@ -166,17 +164,17 @@ def test_workflow_parameters_string_and_enum() -> None:
     spec = reg[workflow_node_type_key(MixedNode)].definition
     assert len(spec.parameters) == 2
     assert spec.parameters[0].key == "legacy"
-    assert spec.parameters[1].type == "enum"
-    assert spec.parameters[1].enum_values == ("a", "b")
+    assert spec.parameters[1].type == "string"
     assert spec.parameters[1].default == "a"
 
 
 def test_handler_execute_wraps_non_mapping_as_primary_socket() -> None:
+
     @workflow_node(
         label="",
         description="",
         input_sockets=[],
-        output_sockets=[workflow_socket("primary_out")],
+        output_sockets=[Socket("primary_out")],
         entry="execute",
     )
     class BareReturnNode:

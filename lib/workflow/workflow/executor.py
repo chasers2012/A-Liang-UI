@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from .graph import WorkflowGraph, WorkflowLink
 from .graph_algo import topological_order
 from .node_types import Node
-
-if TYPE_CHECKING:
-    from .node_registry import RegisteredNode
 
 NodeHandler = Callable[[Node, Mapping[str, Any]], Mapping[str, Any]]
 
@@ -197,10 +194,8 @@ class WorkflowExecutor:
     def __init__(self, handlers: Mapping[str, NodeHandler]) -> None:
         self._handlers = dict(handlers)
 
-    @classmethod
-    def from_registry(cls, registry: Mapping[str, RegisteredNode]) -> WorkflowExecutor:
-        """Build executor from ``type_id -> RegisteredNode`` (uses each ``.handler``)."""
-        return cls({k: v.handler for k, v in registry.items()})
+    def parse_workflow(self, workflow: str) -> WorkflowGraph:
+        return WorkflowGraph()
 
     def execute(
         self,

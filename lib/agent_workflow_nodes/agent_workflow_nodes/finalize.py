@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow import workflow_node, workflow_socket
+from workflow import Socket, workflow_node
 
 
 @workflow_node(
     label="生成报告",
     description="",
-    input_sockets=[workflow_socket("prev", value_type="flow")],
-    output_sockets=[workflow_socket("next", value_type="flow")],
+    input_sockets=[Socket(name="prev", value_type="flow")],
+    output_sockets=[Socket(name="next", value_type="flow")],
     entry="execute",
 )
 class FinalizeNode:

@@ -6,10 +6,10 @@ from typing import Any
 
 from workflow import (
     Node,
+    Socket,
     handler_from_node_class,
     workflow_node,
     workflow_node_definition_from_class,
-    workflow_socket,
 )
 
 
@@ -18,12 +18,12 @@ from workflow import (
     description="",
     entry="evaluate",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
-        workflow_socket("q", required=True, value_type="scalar_json"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("q", required=True, value_type="scalar_json"),
     ],
     output_sockets=[
-        workflow_socket("out", value_type="scalar_json"),
-        workflow_socket("hit", value_type="scalar_json"),
+        Socket("out", value_type="scalar_json"),
+        Socket("hit", value_type="scalar_json"),
     ],
 )
 class TestEvalMetricNode:
@@ -72,11 +72,11 @@ def test_handler_evaluate_entry_calls_evaluate_and_publish():
     description="",
     entry="evaluate",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[
-        workflow_socket("first", value_type="scalar_json"),
-        workflow_socket("second", value_type="scalar_json"),
+        Socket("first", value_type="scalar_json"),
+        Socket("second", value_type="scalar_json"),
     ],
 )
 class TestEvalTupleNode:
@@ -103,11 +103,11 @@ def test_handler_evaluate_tuple_without_publisher() -> None:
     description="",
     entry="evaluate",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[
-        workflow_socket("first", value_type="scalar_json"),
-        workflow_socket("second", value_type="scalar_json"),
+        Socket("first", value_type="scalar_json"),
+        Socket("second", value_type="scalar_json"),
     ],
 )
 class TestEvalTupleWithPublishNode:
@@ -146,7 +146,7 @@ def test_handler_evaluate_tuple_with_publisher_prefers_publisher_for_second() ->
     description="",
     entry="evaluate",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
     ],
     output_sockets=[],
 )

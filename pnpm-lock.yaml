@@ -21,6 +21,28 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
 
+  apps/react-lite-graph:
+    dependencies:
+      litegraph.js:
+        specifier: ^0.7.18
+        version: 0.7.18
+      react:
+        specifier: ^19
+        version: 19.2.4
+      react-dom:
+        specifier: ^19
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.14)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/web:
     dependencies:
       '@base-ui/react':
@@ -29,6 +51,9 @@ importers:
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@quant-agent/react-lite-graph':
+        specifier: workspace:*
+        version: link:../react-lite-graph
       '@tabler/icons-react':
         specifier: ^3.41.0
         version: 3.41.0(react@19.2.4)

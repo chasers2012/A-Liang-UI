@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
-from workflow import NodeParamModel, Socket, WorkflowGraph
+from pydantic import BaseModel, field_validator
+from workflow import WorkflowGraph
 
 from app.datasources.schemas import utc_now_iso
 
@@ -15,7 +15,7 @@ class EvaluationProfileRecord(BaseModel):
     name: str
     description: str = ""
     data_set_id: str | None = None
-    workflow: EvaluationWorkflow = Field(default_factory=EvaluationWorkflow)
+    workflow: str
     is_default: bool = False
     created_at: str
     updated_at: str
@@ -25,7 +25,7 @@ class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
     data_set_id: str | None = None
-    workflow: EvaluationWorkflow | None = None
+    workflow: str | None = None
     is_default: bool = False
 
     @field_validator("name")
@@ -39,7 +39,7 @@ class EvaluationProfileCreate(BaseModel):
     def to_record(self) -> EvaluationProfileRecord:
         now = utc_now_iso()
         rid = str(uuid4())
-        wf = self.workflow or EvaluationWorkflow()
+        wf = self.workflow
         return EvaluationProfileRecord(
             id=rid,
             name=self.name.strip(),
@@ -56,7 +56,7 @@ class EvaluationProfilePatch(BaseModel):
     name: str | None = None
     description: str | None = None
     data_set_id: str | None = None
-    workflow: EvaluationWorkflow | None = None
+    workflow: str | None = None
     is_default: bool | None = None
 
 
@@ -65,7 +65,7 @@ class EvaluationProfilePublic(BaseModel):
     name: str
     description: str
     data_set_id: str | None = None
-    workflow: EvaluationWorkflow
+    workflow: str
     is_default: bool
     created_at: str
     updated_at: str
@@ -76,6 +76,5 @@ class EvaluationNodeTypePublic(BaseModel):
     label: str
     description: str
     category: str | None = None
-    inputs: list[Socket]
-    outputs: list[Socket]
-    parameters: list[NodeParamModel]
+    inputs: list[str]
+    outputs: list[str]

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from custom_code import SourceFiles
+from workflow.parse import parse_workflow_node_source
 from workspace import ensure_dir
 
 from app.datetime_utils import utc_now_iso
@@ -14,6 +15,7 @@ from .metric_schemas import (
     EvaluationMetricCreate,
     EvaluationMetricRecord,
     EvaluationMetricsRegistryFile,
+    EvaluationMetricSummaryPublic,
     metric_source_validators,
 )
 
@@ -67,3 +69,24 @@ class EvaluationMetricsRegistry(
         )
         EvaluationMetricsRegistry.add_item(rec)
         return rec
+
+    @classmethod
+    def load_metric(cls, mid: str) -> EvaluationMetricSummaryPublic | None:
+        rec = cls.get_item(mid)
+        if rec is None:
+            return None
+
+        # Derive sockets from source to keep the registry record minimal.
+        source = cls.read_source(rec)
+        _, _, _, inputs, outputs, _ = parse_workflow_node_source(source)
+
+        return EvaluationMetricSummaryPublic(
+            id=rec.id,
+            name=rec.name,
+            description=rec.description,
+            source_path=rec.source_path,
+            created_at=rec.created_at,
+            updated_at=rec.updated_at,
+            inputs=[s.name for s in inputs],
+            outputs=[s.name for s in outputs],
+        )

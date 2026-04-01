@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow import workflow_node, workflow_socket
+from workflow import Socket, workflow_node
 
 
 def _demo_line_option() -> dict[str, Any]:
@@ -26,8 +26,8 @@ def _demo_line_option() -> dict[str, Any]:
 @workflow_node(
     label="ECharts 线图",
     description="返回静态 ECharts 折线图 option（演示）；不处理上游输入",
-    input_sockets=[workflow_socket("in", required=False, value_type="scalar_json")],
-    output_sockets=[workflow_socket("out", value_type="scalar_json")],
+    input_sockets=[Socket("in", required=False, value_type="scalar_json")],
+    output_sockets=[Socket("out", value_type="scalar_json")],
     entry="execute",
 )
 class EchartsLineNode:

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any
 import pandas as pd
 from evaluate import EvaluationMetric
-from workflow import workflow_node, workflow_socket
+from workflow import workflow_node, Socket
 
 
 
@@ -17,13 +17,13 @@ from workflow import workflow_node, workflow_socket
     description="",
     entry="evaluate",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
-        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("last_quantiles", required=True, value_type="scalar_json"),
     ],
     output_sockets=[
-        workflow_socket("out", value_type="scalar_json"),
-        workflow_socket("merged_mean_ic", required=False, value_type="scalar_json"),
-        workflow_socket("merged_spread", required=False, value_type="scalar_json"),
+        Socket("out", value_type="scalar_json"),
+        Socket("merged_mean_ic", required=False, value_type="scalar_json"),
+        Socket("merged_spread", required=False, value_type="scalar_json"),
     ],
 )
 class NewEvaluationMetric(EvaluationMetric):

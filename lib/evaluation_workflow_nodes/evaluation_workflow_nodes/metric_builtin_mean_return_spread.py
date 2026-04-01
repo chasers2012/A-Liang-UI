@@ -7,7 +7,7 @@ from typing import Any
 import pandas as pd
 from evaluate import MeanReturnSpreadMetric
 from evaluate.alphalens_panel_utils import jsonable_metric_value, series_to_period_dict
-from workflow import workflow_node, workflow_socket
+from workflow import Socket, workflow_node
 
 
 @workflow_node(
@@ -15,12 +15,12 @@ from workflow import workflow_node, workflow_socket
     description="分位多空平均收益差（按持有期）",
     category="factor_evaluation",
     input_sockets=[
-        workflow_socket("clean_factor", required=True, value_type="factor_data_clean"),
-        workflow_socket("last_quantiles", required=True, value_type="scalar_json"),
+        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket("last_quantiles", required=True, value_type="scalar_json"),
     ],
     output_sockets=[
-        workflow_socket("mean_return_spread", value_type="scalar_json"),
-        workflow_socket("merged_spread", value_type="scalar_json"),
+        Socket("mean_return_spread", value_type="scalar_json"),
+        Socket("merged_spread", value_type="scalar_json"),
     ],
 )
 class BuiltinMeanReturnSpreadNode:

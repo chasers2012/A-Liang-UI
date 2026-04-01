@@ -49,9 +49,8 @@ def test_evaluation_metric_workflow_parameters_patch(client):
                 {
                     "key": "mode",
                     "label": "模式",
-                    "type": "enum",
+                    "type": "string",
                     "default": "a",
-                    "enum_values": ["a", "b"],
                 },
             ],
         },

@@ -2,18 +2,14 @@ from __future__ import annotations
 
 from custom_code import validate_identifier_name as validate_metric_name
 from custom_code import validate_source_syntax
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from workflow import NodeParamModel, Socket
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from workflow.parse import parse_workflow_node_source
 
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
-from app.evaluation.scheme.metric_workflow_parameters import (
-    validate_metric_workflow_parameters,
-)
 
 
 class EvaluationMetricRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
 
     id: str
     name: str
@@ -21,14 +17,6 @@ class EvaluationMetricRecord(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
-    workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
-    inputs: list[Socket] = Field(default_factory=list)
-    outputs: list[Socket] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _validate_workflow_parameters(self) -> EvaluationMetricRecord:
-        validate_metric_workflow_parameters(list(self.workflow_parameters))
-        return self
 
 
 class EvaluationMetricsRegistryFile(BaseModel):
@@ -46,9 +34,8 @@ class EvaluationMetricCreate(BaseModel):
         if not s:
             raise ValueError("source 不能为空")
         validate_source_syntax(s)
-        name, _, workflow_parameters, _, _, _ = parse_workflow_node_source(s)
+        name, _, _, _, _, _ = parse_workflow_node_source(s)
         validate_metric_name(name)
-        validate_metric_workflow_parameters(workflow_parameters)
 
         return s
 
@@ -61,9 +48,9 @@ class EvaluationMetricCreate(BaseModel):
         (
             name,
             description,
-            workflow_parameters,
-            inputs,
-            outputs,
+            _,
+            _,
+            _,
             _,
         ) = parse_workflow_node_source(self.source)
         return EvaluationMetricRecord(
@@ -73,9 +60,6 @@ class EvaluationMetricCreate(BaseModel):
             source_path=source_path,
             created_at=now,
             updated_at=now,
-            workflow_parameters=workflow_parameters,
-            inputs=inputs,
-            outputs=outputs,
         )
 
 
@@ -83,7 +67,6 @@ class EvaluationMetricPatch(BaseModel):
     name: str | None = None
     description: str | None = None
     source: str | None = None
-    workflow_parameters: list[NodeParamModel] | None = None
 
     @field_validator("name")
     @classmethod
@@ -96,12 +79,6 @@ class EvaluationMetricPatch(BaseModel):
         validate_metric_name(s)
         return s
 
-    @model_validator(mode="after")
-    def _wp_unique(self) -> EvaluationMetricPatch:
-        if self.workflow_parameters is not None:
-            validate_metric_workflow_parameters(list(self.workflow_parameters))
-        return self
-
 
 class EvaluationMetricSummaryPublic(BaseModel):
     id: str
@@ -110,9 +87,8 @@ class EvaluationMetricSummaryPublic(BaseModel):
     source_path: str
     created_at: str
     updated_at: str
-    workflow_parameters: list[NodeParamModel] = Field(default_factory=list)
-    inputs: list[Socket] = Field(default_factory=list)
-    outputs: list[Socket] = Field(default_factory=list)
+    inputs: list[str]
+    outputs: list[str]
 
 
 class EvaluationMetricDetailPublic(EvaluationMetricSummaryPublic):

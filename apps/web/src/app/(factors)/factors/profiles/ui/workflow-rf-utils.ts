@@ -3,6 +3,8 @@ import type {
   WorkflowNodeDisplayData,
 } from "@/components/workflow-graph";
 
+import type { NodeParamModel } from "@/models/evaluation-metric/dto";
+
 import type {
   EvaluationNodeTypeCatalogItemPublic,
   WorkflowNodeDto,
@@ -23,7 +25,7 @@ export function enrichNodeData(
     category: def?.category,
     inputs: def?.inputs ?? [],
     outputs: def?.outputs ?? [],
-    params: { ...(n.params ?? {}) },
+    params: { ...(n.params ?? {}) } as Record<string, NodeParamModel>,
   };
 }
 
