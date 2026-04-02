@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import ast
 import importlib
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -14,7 +14,7 @@ class WorkflowNodeLoader:
     _instance: WorkflowNodeLoader | None = None
 
     def __init__(self) -> None:
-        self._resolvers: list[Callable[[str], type[Node] | None]] = []
+        self._registered: dict[str, type[Node]] = {}
         self._cache: dict[str, type[Node]] = {}
 
     @classmethod
@@ -23,16 +23,12 @@ class WorkflowNodeLoader:
             cls._instance = cls()
         return cls._instance
 
-    def register_resolver(
+    def register_node(
         self,
-        resolver: Callable[[str], type[Node] | None],
-        *,
-        prepend: bool = False,
+        type_key: str,
+        node_cls: type[Node],
     ) -> None:
-        if prepend:
-            self._resolvers.insert(0, resolver)
-        else:
-            self._resolvers.append(resolver)
+        self._registered[type_key] = node_cls
         self._cache.clear()
 
     def resolve(self, type_key: str) -> type[Node]:
@@ -47,11 +43,10 @@ class WorkflowNodeLoader:
         return resolved
 
     def _resolve(self, type_key: str) -> type[Node]:
-        # 1) Domain resolvers registered by the application.
-        for resolver in self._resolvers:
-            cls = resolver(type_key)
-            if cls is not None:
-                return cls
+        # 1) Explicit registrations from the application.
+        cls = self._registered.get(type_key)
+        if cls is not None:
+            return cls
 
         # 2) Default: importable ``module.qualname.Class`` string.
         if "." not in type_key:
@@ -91,3 +86,44 @@ class WorkflowNodeLoader:
                 return None
             obj = getattr(obj, qp)
         return obj
+
+    @staticmethod
+    def load_workflow_node_class_from_source(source: str) -> type[Node]:
+        """Load the first ``@workflow_node``-decorated Node class from python source."""
+        import workflow as workflow_lib
+
+        tree = ast.parse(source)
+        class_names_in_order: list[str] = [n.name for n in tree.body if isinstance(n, ast.ClassDef)]
+
+        module_name = "__workflow_node_source__"
+        env: dict[str, object] = {"__name__": module_name}
+        exec(compile(tree, filename=module_name, mode="exec"), env, env)
+
+        def _is_workflow_node_class(obj: object) -> bool:
+            if not isinstance(obj, type):
+                return False
+            if not issubclass(obj, workflow_lib.Node):
+                return False
+            return (
+                getattr(obj, "__module__", None) == module_name
+                and isinstance(getattr(obj, "label", None), str)
+                and isinstance(getattr(obj, "description", None), str)
+                and getattr(obj, "inputs", None) is not None
+                and getattr(obj, "outputs", None) is not None
+            )
+
+        workflow_classes: dict[str, type] = {
+            name: obj for name, obj in env.items() if name and _is_workflow_node_class(obj)
+        }
+
+        picked: type | None = None
+        for name in class_names_in_order:
+            candidate = workflow_classes.get(name)
+            if candidate is not None:
+                picked = candidate
+                break
+        if picked is None and workflow_classes:
+            picked = next(iter(workflow_classes.values()))
+        if picked is None:
+            raise ValueError("source 中未找到 @workflow_node(...) 装饰的类")
+        return picked

@@ -137,7 +137,7 @@ def parse_workflow_node_source(
     Note: this executes *source* to recover runtime metadata produced by the
     ``@workflow_node(...)`` decorator (including Socket subclasses and custom kwargs).
     """
-    node_cls = load_workflow_node_class_from_source(source)
+    node_cls = workflow_lib.WorkflowNodeLoader.load_workflow_node_class_from_source(source)
     try:
         node_obj = node_cls()  # type: ignore[call-arg]
     except Exception:
@@ -149,57 +149,3 @@ def parse_workflow_node_source(
     inputs = list(getattr(node_obj, "inputs", ()) or ())
     outputs = list(getattr(node_obj, "outputs", ()) or ())
     return label, description, inputs, outputs
-
-
-def load_workflow_node_class_from_source(source: str) -> type[workflow_lib.Node]:
-    """Load the first ``@workflow_node``-decorated Node class from python source.
-
-    This function executes *source* in an isolated module namespace to recover
-    the runtime metadata carried by the decorator.
-    """
-    tree = ast.parse(source)
-
-    # Keep original class definition order so we can deterministically pick the first
-    # workflow-node-decorated class in source.
-    class_names_in_order: list[str] = [n.name for n in tree.body if isinstance(n, ast.ClassDef)]
-
-    module_name = "__workflow_node_source__"
-    # IMPORTANT:
-    # Execute with a *single* namespace dict so that module-level imports
-    # (e.g. `import pandas as pd`) become available in the function globals.
-    # Otherwise `exec(code, glb, loc)` may place imports into `loc`, while
-    # functions resolve globals via `glb`, causing `NameError` at runtime.
-    env: dict[str, object] = {"__name__": module_name}
-    exec(compile(tree, filename=module_name, mode="exec"), env, env)
-
-    def _is_workflow_node_class(obj: object) -> bool:
-        if not isinstance(obj, type):
-            return False
-        if not issubclass(obj, workflow_lib.Node):
-            return False
-        # Decorator stores type-definition fields as class attributes.
-        return (
-            getattr(obj, "__module__", None) == module_name
-            and isinstance(getattr(obj, "label", None), str)
-            and isinstance(getattr(obj, "description", None), str)
-            and getattr(obj, "inputs", None) is not None
-            and getattr(obj, "outputs", None) is not None
-        )
-
-    workflow_classes: dict[str, type] = {
-        name: obj for name, obj in env.items() if name and _is_workflow_node_class(obj)
-    }
-
-    picked: type | None = None
-    for name in class_names_in_order:
-        cls = workflow_classes.get(name)
-        if cls is not None:
-            picked = cls
-            break
-    if picked is None and workflow_classes:
-        # Fallback: any one workflow node class found in this snippet.
-        picked = next(iter(workflow_classes.values()))
-    if picked is None:
-        raise ValueError("source 中未找到 @workflow_node(...) 装饰的类")
-
-    return picked

@@ -15,12 +15,9 @@ from app.startup_jobs import register_startup_job
 def _register_evaluation_workflow_node_segment() -> None:
     seed_internal_evaluation_metric_package()
 
-    # Register a stable resolver: workflow JSON stores evaluation metric ids
-    # (UUID-like) as `node.type`. Resolve them by consulting the
-    # EvaluationMetricsRegistry for the actual python source, so the workflow
-    # lib doesn't need to assume any on-disk directory layout.
+    # Register metric-id -> NodeClass mapping in WorkflowNodeLoader so workflow
+    # JSON can keep storing evaluation metric ids as `node.type`.
     from workflow import Node, WorkflowNodeLoader
-    from workflow.parse import load_workflow_node_class_from_source
 
     from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
@@ -30,15 +27,13 @@ def _register_evaluation_workflow_node_segment() -> None:
         if rec is None:
             return None
         src = EvaluationMetricsRegistry.read_source(rec)
-        return load_workflow_node_class_from_source(src)  # type: ignore[return-value]
+        return WorkflowNodeLoader.load_workflow_node_class_from_source(src)  # type: ignore[return-value]
 
-    def _resolve_type(type_key: str) -> type[Node] | None:
-        # Avoid interfering with module.qualname style types.
-        if "." in type_key:
-            return None
+    loader = WorkflowNodeLoader.instance()
+    for metric in EvaluationMetricsRegistry.list_items():
         try:
-            return _metric_id_to_node_cls(type_key)
+            node_cls = _metric_id_to_node_cls(metric.id)
         except Exception:
-            return None
-
-    WorkflowNodeLoader.instance().register_resolver(_resolve_type, prepend=True)
+            continue
+        if node_cls is not None:
+            loader.register_node(metric.id, node_cls)
