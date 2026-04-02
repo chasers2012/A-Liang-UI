@@ -1,7 +1,7 @@
 """Profile API: evaluation workflow node types as a single catalog list.
 
-Built-in node ``workflow_parameters`` come from :class:`workflow.Node.parameters`
-when non-empty; otherwise from the metrics registry (user metrics and built-ins).
+Built-in nodes and parsed metrics both expose a unified ``inputs`` list on
+:class:`workflow.Node` (wire sockets and value fields / :class:`~workflow.node_types.NodeParam`).
 """
 
 from __future__ import annotations

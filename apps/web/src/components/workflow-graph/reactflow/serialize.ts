@@ -7,7 +7,8 @@ import type {
   WorkflowGraphViewport,
 } from "./types";
 
-export const EMPTY_WORKFLOW_GRAPH_JSON = '{"nodes":[],"links":[],"viewport":null}';
+export const EMPTY_WORKFLOW_GRAPH_JSON =
+  '{"nodes":[],"links":[],"viewport":null}';
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -137,8 +138,7 @@ export function toReactFlowNodes(
 
 function edgeIdFromLink(l: WorkflowGraphLink): string {
   const stable =
-    l.id ??
-    `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`;
+    l.id ?? `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`;
   return stable;
 }
 
@@ -206,4 +206,3 @@ export function stringifyPersistedWorkflowGraph(
     viewport: g.viewport ?? null,
   } satisfies WorkflowGraphPersisted);
 }
-

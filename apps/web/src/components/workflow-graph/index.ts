@@ -38,5 +38,5 @@ export {
 
 export {
   WorkflowNodeParamFieldRow,
-  workflowNodeParamEffectiveValue,
-} from "./workflow-node-param-field-row";
+  nodeParamEffectiveValue as workflowNodeParamEffectiveValue,
+} from "./workflow-graph-param-row";

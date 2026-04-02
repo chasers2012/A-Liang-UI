@@ -1,5 +1,3 @@
-import type { NodeParamModel } from "@/models/evaluation-metric/dto";
-
 import type {
   WorkflowGraphNode,
   WorkflowNodeDisplayData,
@@ -103,6 +101,6 @@ export function buildNodeDisplayData(
     category: def?.category,
     inputs: def?.inputs ?? [],
     outputs: def?.outputs ?? [],
-    params: { ...(n.params ?? {}) } as Record<string, NodeParamModel>,
+    params: { ...(n.params ?? {}) },
   };
 }

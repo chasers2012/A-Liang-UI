@@ -55,6 +55,7 @@ class Socket:
 
 class NodeParam(Socket):
     default = None
+    render_type: str = None
 
     def __init__(
         self,
@@ -73,11 +74,13 @@ class NodeParam(Socket):
         return {
             **super().serialize(),
             "default": self.default,
+            "render_type": self.render_type,
         }
 
 
 class OptionsNodeParam(NodeParam):
     options: list[str | float | int] | Callable | None = None
+    render_type: str = "select"
 
     def __init__(
         self,
@@ -106,6 +109,7 @@ class NumberNodeParam(NodeParam):
     minimum: float | int | None = None
     maximum: float | int | None = None
     value_type: str = "number"
+    render_type: str = "number"
 
     def __init__(
         self,
@@ -129,11 +133,51 @@ class NumberNodeParam(NodeParam):
 class StringNodeParam(NodeParam):
     default: str = ""
     value_type: str = "string"
+    render_type: str = "input"
 
 
 class BooleanNodeParam(NodeParam):
     default: bool = False
     value_type: str = "boolean"
+    render_type: str = "toggle"
+
+
+class DateTimeNodeParam(NodeParam):
+    default: str = ""
+    value_type: str = "datetime"
+    render_type: str = "datetime"
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        default: str = "",
+        **_ignored: Any,
+    ):
+        super().__init__(
+            name, required, label, value_type or self.value_type, default or self.default
+        )
+
+
+class DateNodeParam(NodeParam):
+    default: str = ""
+    value_type: str = "date"
+    render_type: str = "date"
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        default: str = "",
+        **_ignored: Any,
+    ):
+        super().__init__(
+            name, required, label, value_type or self.value_type, default or self.default
+        )
 
 
 class Node:
@@ -151,7 +195,6 @@ class Node:
     entry: str = "execute"
     inputs: tuple[Socket, ...] = ()
     outputs: tuple[Socket, ...] = ()
-    parameters: tuple[NodeParam, ...] = ()
 
     def __init__(
         self,
@@ -165,11 +208,10 @@ class Node:
         entry: str = "execute",
         inputs: tuple[Socket, ...] = (),
         outputs: tuple[Socket, ...] = (),
-        parameters: tuple[NodeParam, ...] = (),
         params: dict[str, Any] | None = None,
     ) -> None:
-        # Note: `params` is accepted for graph-instance payloads (stored on the instance)
-        # while `parameters` is node type-definition metadata.
+        # Note: `params` is accepted for graph-instance payloads (stored on the instance).
+        # Type-definition metadata uses `inputs` only (wire sockets and value fields / NodeParam).
         self.id = id
         self.pos = list(pos or [0.0, 0.0])
         self.type = type
@@ -179,7 +221,6 @@ class Node:
         self.entry = entry
         self.inputs = inputs
         self.outputs = outputs
-        self.parameters = parameters
         if params is not None:
             self.params = params
 
@@ -195,7 +236,6 @@ class Node:
             "category": self.category,
             "inputs": [s.serialize() for s in self.inputs],
             "outputs": [s.serialize() for s in self.outputs],
-            "parameters": [p.serialize() for p in self.parameters],
         }
 
     @staticmethod

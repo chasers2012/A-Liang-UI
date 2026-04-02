@@ -1,15 +1,20 @@
-/** 评价指标（用户自定义 Python 指标）DTO。 */
-
-export type NodeParamType = "number" | "boolean" | "string";
-
 /** 与后端 ``workflow.NodeParamModel``（JSON）一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
 export interface NodeParamModel {
   key: string;
   label: string;
-  type: NodeParamType;
+  type: string;
   default?: string | number | boolean | null;
   minimum?: number | null;
   maximum?: number | null;
+  /**
+   * 后端 workflow.node_types.NodeParam.serialize() 扩展字段（用于前端渲染不同控件）。
+   * - "select" | "number" | "input" | "toggle" | "date" | "datetime" | ...
+   */
+  render_type?: string | null;
+  /** 仅当 render_type=select 时可能存在 */
+  options?: Array<
+    string | number | { label: string | number; value: string | number }
+  > | null;
 }
 
 export interface EvaluationMetricSummaryPublic {

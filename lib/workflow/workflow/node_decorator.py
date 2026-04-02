@@ -37,7 +37,8 @@ def workflow_node(
 
     The node type string is :func:`workflow_node_type_key` (``module.qualname``).
     The returned class stores node-definition fields on class attributes:
-    ``type``, ``label``, ``description``, ``inputs``, ``outputs``, ``parameters``.
+    ``type``, ``label``, ``description``, ``inputs``, ``outputs``.
+    ``workflow_parameters`` are appended to ``inputs`` (same tuple as wire sockets).
 
     If ``entry="evaluate"`` (typical for evaluation metric classes), use
     :func:`handler_from_node_class` with the class and its type-definition
@@ -61,7 +62,10 @@ def workflow_node(
     input_specs = _socket_tuple(input_sockets)
     output_specs = _socket_tuple(output_sockets)
     _wp = workflow_parameters if workflow_parameters is not None else []
-    param_specs: tuple[NodeParam, ...] = tuple(p for p in _wp if (p.key or "").strip())
+    param_specs: tuple[NodeParam, ...] = tuple(
+        p for p in _wp if (getattr(p, "name", None) or "").strip()
+    )
+    combined_inputs: tuple[Socket, ...] = input_specs + param_specs
 
     def decorate(cls: type[_T]) -> type[_T]:
         return type(  # type: ignore[return-value]
@@ -81,16 +85,14 @@ def workflow_node(
                     "entry": str,
                     "inputs": tuple[Socket, ...],
                     "outputs": tuple[Socket, ...],
-                    "parameters": tuple[NodeParam, ...],
                 },
                 "type": workflow_node_type_key(cls),
                 "label": label,
                 "description": description,
                 "category": category,
                 "entry": entry,
-                "inputs": input_specs,
+                "inputs": combined_inputs,
                 "outputs": output_specs,
-                "parameters": param_specs,
             },
         )
 

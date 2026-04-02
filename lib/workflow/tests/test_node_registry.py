@@ -131,14 +131,14 @@ def test_build_node_registry_includes_workflow_parameters() -> None:
     m.WithParamsNode = WithParamsNode
     reg = build_node_registry_from_modules(m)
     spec = reg[workflow_node_type_key(WithParamsNode)].definition
-    assert len(spec.parameters) == 2
-    assert spec.parameters[0].key == "k1"
-    assert spec.parameters[0].label == "L1"
-    assert spec.parameters[0].type == "string"
-    assert spec.parameters[0].default == "x"
-    assert spec.parameters[1].key == "k2"
-    assert spec.parameters[1].minimum == 0
-    assert spec.parameters[1].maximum == 9
+    assert len(spec.inputs) == 2
+    assert spec.inputs[0].name == "k1"
+    assert spec.inputs[0].label == "L1"
+    assert spec.inputs[0].value_type == "string"
+    assert spec.inputs[0].default == "x"
+    assert spec.inputs[1].name == "k2"
+    assert spec.inputs[1].minimum == 0
+    assert spec.inputs[1].maximum == 9
 
 
 def test_workflow_parameters_two_strings() -> None:
@@ -162,10 +162,10 @@ def test_workflow_parameters_two_strings() -> None:
     m.MixedNode = MixedNode
     reg = build_node_registry_from_modules(m)
     spec = reg[workflow_node_type_key(MixedNode)].definition
-    assert len(spec.parameters) == 2
-    assert spec.parameters[0].key == "legacy"
-    assert spec.parameters[1].type == "string"
-    assert spec.parameters[1].default == "a"
+    assert len(spec.inputs) == 2
+    assert spec.inputs[0].name == "legacy"
+    assert spec.inputs[1].value_type == "string"
+    assert spec.inputs[1].default == "a"
 
 
 def test_handler_execute_wraps_non_mapping_as_primary_socket() -> None:

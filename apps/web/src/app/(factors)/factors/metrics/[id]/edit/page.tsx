@@ -11,8 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
-import { MetricWorkflowParamsSchemaEditor } from "../../ui/metric-workflow-params-schema-editor";
-
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 
@@ -158,10 +156,6 @@ export default function EditEvaluationMetricPage() {
             />
           </div>
         </div>
-        <MetricWorkflowParamsSchemaEditor
-          value={workflowParams}
-          onChange={setWorkflowParams}
-        />
         <div className="space-y-2">
           <Label>源码</Label>
           <FactorCodeJar

@@ -39,7 +39,7 @@ function toWorkflowNodeTypes(
   return catalog.map((c) => ({
     type: c.type,
     label: c.label,
-    category: c.category,
+    category: c.category ?? undefined,
     inputs: c.inputs,
     outputs: c.outputs,
   }));

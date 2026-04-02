@@ -10,9 +10,12 @@ from evaluate import AlphalensFactorEvaluator
 from evaluate.data_set import DataSet
 from factor import Factor
 from workflow import (
+    NumberNodeParam,
     Socket,
+    StringNodeParam,
     workflow_node,
 )
+from workflow.node_types import DateNodeParam
 
 
 def forward_periods_tuple(raw: Any) -> tuple[int, ...]:
@@ -64,10 +67,10 @@ def clean_factor_from_alphalens_evaluator(
     input_sockets=[
         Socket("factor", required=True, value_type="any", label="因子"),
         Socket("data_set", required=True, value_type="data_set", label="数据集"),
-        Socket("start_date", required=True, value_type="scalar_json", label="开始日期"),
-        Socket("end_date", required=True, value_type="scalar_json", label="结束日期"),
-        Socket("last_quantiles", required=True, value_type="scalar_json", label="分位数"),
-        Socket("stock_codes", required=False, value_type="scalar_json", label="股票代码"),
+        DateNodeParam("start_date", required=True, label="开始日期"),
+        DateNodeParam("end_date", required=True, label="结束日期"),
+        NumberNodeParam("quantiles", required=True, default=5, label="分位数"),
+        StringNodeParam("stock_codes", required=False, default="", label="股票代码"),
     ],
     output_sockets=[
         Socket("clean_factor", value_type="factor_data_clean"),

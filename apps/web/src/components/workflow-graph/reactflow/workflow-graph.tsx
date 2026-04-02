@@ -34,7 +34,11 @@ import type {
   WorkflowGraphCanvasProps,
 } from "../workflow-graph-canvas-types";
 import { catalogToMap } from "../graph-model";
-import { WorkflowStepNode } from "./nodes";
+import { WorkflowGraphReadOnlyProvider } from "../workflow-graph-readonly-context";
+import {
+  WORKFLOW_GRAPH_RF_NODE_TYPES,
+  WORKFLOW_GRAPH_RF_PRO_OPTIONS,
+} from "./workflow-graph-reactflow-defaults";
 import {
   EMPTY_WORKFLOW_GRAPH_JSON,
   parsePersistedWorkflowGraphJson,
@@ -76,7 +80,8 @@ function WorkflowGraphReactFlowInner({
   }, [rf, zoomApiRef]);
 
   useEffect(() => {
-    rf.setInteractive(!readOnly);
+    const anyRf = rf as { setInteractive?: (v: boolean) => void };
+    anyRf.setInteractive?.(!readOnly);
   }, [readOnly, rf]);
 
   return null;
@@ -173,12 +178,42 @@ export const WorkflowGraph = forwardRef<
     [catalog],
   );
 
-  useImperativeHandle(ref, () => ({ getGraphJson, importGraphJson }), [
-    getGraphJson,
-    importGraphJson,
-  ]);
+  const addNode = useCallback(
+    (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
+      if (readOnly) return;
+      const def = catalog.get(typeKey);
+      setNodes((prev) => {
+        const idx = prev.length;
+        const fallbackPos = {
+          x: 40 + (idx % 3) * 260,
+          y: 40 + Math.floor(idx / 3) * 120,
+        };
+        const position = opts?.position ?? fallbackPos;
+        return [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            type: "workflowStep",
+            position,
+            data: {
+              backendType: typeKey,
+              label: def?.label ?? typeKey,
+              inputs: def?.inputs ?? [],
+              outputs: def?.outputs ?? [],
+              params: {},
+            },
+          } satisfies Node,
+        ];
+      });
+    },
+    [catalog, readOnly],
+  );
 
-  const nodeTypesMap = useMemo(() => ({ workflowStep: WorkflowStepNode }), []);
+  useImperativeHandle(
+    ref,
+    () => ({ getGraphJson, importGraphJson, addNode }),
+    [getGraphJson, importGraphJson, addNode],
+  );
 
   return (
     <div
@@ -193,33 +228,35 @@ export const WorkflowGraph = forwardRef<
         )}
       >
         <div className="relative min-h-[280px] flex-1">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypesMap}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={readOnly ? undefined : onConnect}
-            onMoveEnd={onMoveEnd}
-            defaultViewport={initialViewport}
-            fitView={!initialViewport}
-            nodesDraggable={!readOnly}
-            nodesConnectable={!readOnly}
-            elementsSelectable={!readOnly}
-            zoomOnScroll={!readOnly}
-            panOnScroll
-            proOptions={{ hideAttribution: true }}
-          >
-            <WorkflowGraphReactFlowInner readOnly={readOnly} zoomApiRef={zoomApiRef} />
-            <Background
-              id="workflow-graph-bg"
-              gap={22}
-              size={1}
-              variant={BackgroundVariant.Dots}
-              className="opacity-60"
-            />
-            <Controls showInteractive={false} />
-          </ReactFlow>
+          <WorkflowGraphReadOnlyProvider readOnly={readOnly}>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={readOnly ? undefined : onConnect}
+              onMoveEnd={onMoveEnd}
+              defaultViewport={initialViewport}
+              fitView={!initialViewport}
+              nodesDraggable={!readOnly}
+              nodesConnectable={!readOnly}
+              elementsSelectable={!readOnly}
+              zoomOnScroll={!readOnly}
+              panOnScroll
+              proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
+            >
+              <WorkflowGraphReactFlowInner readOnly={readOnly} zoomApiRef={zoomApiRef} />
+              <Background
+                id="workflow-graph-bg"
+                gap={22}
+                size={1}
+                variant={BackgroundVariant.Dots}
+                className="opacity-60"
+              />
+              <Controls showInteractive={false} />
+            </ReactFlow>
+          </WorkflowGraphReadOnlyProvider>
 
           {children}
         </div>

@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -485,21 +486,21 @@ export function DataSetForm({ mode, dataSetId }: Props) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="ts-start">开始日期</Label>
-                <Input
+                <DatePicker
                   id="ts-start"
-                  type="date"
                   value={form.start}
-                  onChange={(e) => set({ start: e.target.value })}
+                  onChange={(v) => set({ start: v })}
+                  placeholder="选择开始日期"
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ts-end">结束日期</Label>
-                <Input
+                <DatePicker
                   id="ts-end"
-                  type="date"
                   value={form.end}
-                  onChange={(e) => set({ end: e.target.value })}
+                  onChange={(v) => set({ end: v })}
+                  placeholder="选择结束日期"
                   required
                 />
               </div>
