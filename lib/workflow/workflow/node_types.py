@@ -22,6 +22,7 @@ class Socket:
     required: bool = False
     label: str = ""
     value_type: str = ""
+    render_type: str = "socket"
 
     def __init__(
         self,
@@ -29,12 +30,14 @@ class Socket:
         required: bool = False,
         label: str = "",
         value_type: str = "",
+        render_type: str = "socket",
         **_ignored: Any,
     ):
         self.name = name
         self.required = required
         self.label = label if label else name
         self.value_type = value_type
+        self.render_type = render_type
 
     @staticmethod
     def parse(config_dict: dict) -> Socket:
@@ -43,6 +46,7 @@ class Socket:
             required=config_dict.get("required", False),
             label=config_dict.get("label", ""),
             value_type=config_dict.get("value_type", ""),
+            render_type=config_dict.get("render_type", ""),
         )
 
     def serialize(self) -> dict[str, Any]:
@@ -52,7 +56,28 @@ class Socket:
             "required": self.required,
             "label": self.label,
             "value_type": self.value_type,
+            "render_type": self.render_type,
         }
+
+
+class AppendableSocket(Socket):
+    """Wire socket that supports adding more sibling sockets in editor UI."""
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        value_type: str = "",
+        **_ignored: Any,
+    ):
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            value_type=value_type,
+            render_type="appendable",
+        )
 
 
 class NodeParam(Socket):
@@ -68,8 +93,9 @@ class NodeParam(Socket):
         default: Any | None = None,
         **_ignored: Any,
     ):
-        super().__init__(name, required, label, value_type)
+        super().__init__(name, required, label, value_type, render_type="input")
         self.default = default
+        self.render_type = getattr(type(self), "render_type", None)
 
     def serialize(self) -> dict[str, Any]:
         """JSON-friendly socket specification used by API responses."""

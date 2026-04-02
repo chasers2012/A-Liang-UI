@@ -54,6 +54,7 @@ import {
   toReactFlowEdges,
   toReactFlowNodes,
 } from "./reactflow/serialize";
+import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
 
 import type { WorkflowNodeInputSpec } from "./types";
 import { isWireInputSpec } from "./workflow-node-input-spec";
@@ -232,6 +233,9 @@ export const WorkflowGraphCanvas = forwardRef<
         if (!c.source || !c.target) return false;
         if (!c.sourceHandle || !c.targetHandle) return false;
 
+        const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
+        const targetHandle = normalizeAppendableHandle(c.targetHandle);
+
         const sourceNode = nodes.find((n) => n.id === c.source);
         const targetNode = nodes.find((n) => n.id === c.target);
         const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
@@ -240,8 +244,8 @@ export const WorkflowGraphCanvas = forwardRef<
           ?.inputs;
         const targetInputs = (targetInputsRaw ?? []).filter(isWireInputSpec);
 
-        const out = sourceOutputs?.find((s) => s.name === c.sourceHandle);
-        const inp = targetInputs.find((s) => s.name === c.targetHandle);
+        const out = sourceOutputs?.find((s) => s.name === sourceHandle);
+        const inp = targetInputs.find((s) => s.name === targetHandle);
         if (!out || !inp) return false;
 
         return out.value_type === inp.value_type;

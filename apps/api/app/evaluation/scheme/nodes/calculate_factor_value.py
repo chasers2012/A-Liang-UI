@@ -21,7 +21,6 @@ from workflow.node_types import DateNodeParam
     description="根据 Factor 实例与评价窗口计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     category="factor_evaluation",
     input_sockets=[
-        Socket("factor", required=True, value_type="any", label="因子"),
         Socket("data_set", required=True, value_type="data_set", label="数据集"),
         DateNodeParam("start_date", required=True, label="开始日期"),
         DateNodeParam("end_date", required=True, label="结束日期"),

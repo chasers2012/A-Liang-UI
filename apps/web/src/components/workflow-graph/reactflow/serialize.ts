@@ -10,6 +10,10 @@ import type {
   WorkflowGraphPersisted,
   WorkflowGraphViewport,
 } from "./types";
+import {
+  appendableHandleId,
+  normalizeAppendableHandle,
+} from "./appendable-handle";
 
 export const EMPTY_WORKFLOW_GRAPH_JSON =
   '{"nodes":[],"links":[],"viewport":null}';
@@ -167,13 +171,30 @@ function edgeIdFromLink(l: WorkflowGraphLink): string {
 }
 
 export function toReactFlowEdges(persisted: WorkflowGraphPersisted): Edge[] {
+  const appendableTargets = new Set<string>();
+  for (const n of persisted.nodes) {
+    const inputs = Array.isArray(n.inputs) ? n.inputs : [];
+    for (const s of inputs) {
+      if (s?.render_type === "appendable") {
+        appendableTargets.add(`${n.id}:${s.name}`);
+      }
+    }
+  }
+  const perSocketCounter = new Map<string, number>();
   return persisted.links.map((l) => {
+    const targetKey = `${l.to_node}:${l.to_socket}`;
+    let targetHandle = l.to_socket;
+    if (appendableTargets.has(targetKey)) {
+      const nth = (perSocketCounter.get(targetKey) ?? 0) + 1;
+      perSocketCounter.set(targetKey, nth);
+      targetHandle = appendableHandleId(l.to_socket, nth);
+    }
     return {
       id: edgeIdFromLink(l),
       source: l.from_node,
       sourceHandle: l.from_socket,
       target: l.to_node,
-      targetHandle: l.to_socket,
+      targetHandle,
       type: "default",
     } satisfies Edge;
   });
@@ -208,8 +229,8 @@ export function toPersistedWorkflowGraph(
   const outLinks: WorkflowGraphLink[] = edges.flatMap((e) => {
     const from_node = e.source;
     const to_node = e.target;
-    const from_socket = e.sourceHandle ?? "";
-    const to_socket = e.targetHandle ?? "";
+    const from_socket = normalizeAppendableHandle(e.sourceHandle ?? "");
+    const to_socket = normalizeAppendableHandle(e.targetHandle ?? "");
     if (!from_node || !to_node) return [];
     return [
       {

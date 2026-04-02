@@ -1,10 +1,11 @@
+from evaluation_workflow_nodes.collect_result import CollectResult
 from workflow import Node
 
 from app.evaluation.scheme.nodes.calculate_factor_value import CalculateFactorValueNode
 from app.evaluation.scheme.nodes.data_set_node import LoadDataSet
 from app.evaluation.scheme.profile_schemas import EvaluationNodeTypePublic
 
-INTERNAL_NODES = [LoadDataSet, CalculateFactorValueNode]
+INTERNAL_NODES = [LoadDataSet, CalculateFactorValueNode, CollectResult]
 
 
 def get_internal_nodes() -> list[EvaluationNodeTypePublic]:

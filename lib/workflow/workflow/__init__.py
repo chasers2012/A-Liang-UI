@@ -10,6 +10,7 @@ from .graph_algo import assert_acyclic, topological_order
 from .node_decorator import collect_node_classes, workflow_node, workflow_node_type_key
 from .node_loader import WorkflowNodeLoader
 from .node_types import (
+    AppendableSocket,
     BooleanNodeParam,
     Node,
     NodeParam,
@@ -22,6 +23,7 @@ from .node_types import (
 )
 
 __all__ = [
+    "AppendableSocket",
     "BooleanNodeParam",
     "Node",
     "NodeParam",

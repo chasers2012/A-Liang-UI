@@ -2,6 +2,7 @@ export type WorkflowSocketDefinition = {
   name: string;
   required: boolean;
   value_type: string;
+  render_type?: string | null;
 };
 
 /**

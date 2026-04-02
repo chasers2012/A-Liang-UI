@@ -4,7 +4,12 @@ import type { WorkflowNodeInputSpec } from "./types";
 
 /** 后端 ``Socket.serialize()`` 无 ``default``；``NodeParam`` 序列化含 ``default``。 */
 export function isWireInputSpec(s: WorkflowNodeInputSpec): boolean {
-  return !s.render_type;
+  // socket / appendable 都是连线端口；其余 render_type 才是内联参数。
+  return (
+    !s.render_type ||
+    s.render_type === "socket" ||
+    s.render_type === "appendable"
+  );
 }
 
 export function inputSpecToNodeParamModel(
