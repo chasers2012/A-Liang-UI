@@ -14,9 +14,7 @@ class EvaluationProfileRecord(BaseModel):
     id: str
     name: str
     description: str = ""
-    data_set_id: str | None = None
     workflow: str
-    is_default: bool = False
     created_at: str
     updated_at: str
 
@@ -24,9 +22,7 @@ class EvaluationProfileRecord(BaseModel):
 class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
-    data_set_id: str | None = None
     workflow: str | None = None
-    is_default: bool = False
 
     @field_validator("name")
     @classmethod
@@ -44,9 +40,7 @@ class EvaluationProfileCreate(BaseModel):
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),
-            data_set_id=(self.data_set_id or "").strip() or None,
             workflow=wf,
-            is_default=self.is_default,
             created_at=now,
             updated_at=now,
         )
@@ -55,18 +49,14 @@ class EvaluationProfileCreate(BaseModel):
 class EvaluationProfilePatch(BaseModel):
     name: str | None = None
     description: str | None = None
-    data_set_id: str | None = None
     workflow: str | None = None
-    is_default: bool | None = None
 
 
 class EvaluationProfilePublic(BaseModel):
     id: str
     name: str
     description: str
-    data_set_id: str | None = None
     workflow: str
-    is_default: bool
     created_at: str
     updated_at: str
 

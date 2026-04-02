@@ -76,14 +76,6 @@ export default function EvaluationProfileDetailPage() {
           <CardTitle>配置摘要</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">默认方案：</span>
-            {row.is_default ? "是" : "否"}
-          </p>
-          <p>
-            <span className="text-muted-foreground">数据集 id：</span>
-            <span className="font-mono">{row.data_set_id ?? "—"}</span>
-          </p>
           <p className="text-muted-foreground">
             Alphalens 持有期、分位数等在工作流「计算因子」节点的节点参数中查看与编辑。
           </p>

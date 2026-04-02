@@ -40,23 +40,23 @@ def workflow_node(
     ``type``, ``label``, ``description``, ``inputs``, ``outputs``.
     ``workflow_parameters`` are appended to ``inputs`` (same tuple as wire sockets).
 
-    If ``entry="evaluate"`` (typical for evaluation metric classes), use
-    :func:`handler_from_node_class` with the class and its type-definition
-    :class:`~workflow.node_types.Node` (from :func:`~workflow.node_registry.workflow_node_definition_from_class`
-    or a registry entry's ``definition``): it calls ``evaluate(clean_factor, **kwargs)``
-    instead of ``execute(**kwargs)`` (merged node params, root inputs, and linked
-    sockets). Expect an input socket named
-    ``clean_factor``. Optional **classmethods** on the node class:
+    If ``entry="evaluate"`` (typical for evaluation metric classes),
+    :class:`~workflow.executor.WorkflowExecutor` resolves the class from ``node.type``,
+    builds the type-definition :class:`~workflow.node_types.Node` via
+    :func:`~workflow.node_registry.workflow_node_definition_from_class`, then calls
+    ``evaluate(clean_factor, **kwargs)`` instead of ``execute(**kwargs)`` (merged graph
+    root inputs, and linked sockets).
+    Expect an input socket named ``clean_factor``. Optional **classmethods** on the node class:
 
     - ``workflow_validate_clean_factor(value)``
     - ``workflow_metric_kwargs(node, inputs)`` -> ``dict`` used as ``**kwargs``
     - ``workflow_publish_evaluate_result(node, inputs, raw, primary_socket)``
-      -> ``dict`` merged into handler outputs
+      -> ``dict`` merged into graph outputs
 
-    **Return values** (see :func:`~workflow.executor.handler_from_node_class`): values map
+    **Return values** (see execution in :mod:`workflow.executor`): values map
     1:1 to ``output_sockets`` in order (``tuple``/``list``, or a scalar when there is
-    a single output). ``output_sockets`` may be empty (side-effect-only node; handler
-    output mapping is empty).
+    a single output). ``output_sockets`` may be empty (side-effect-only node; output
+    mapping is empty).
     """
 
     input_specs = _socket_tuple(input_sockets)
@@ -100,15 +100,16 @@ def workflow_node(
 
 
 def _is_workflow_node_class(obj: type) -> bool:
-    fields = getattr(obj, "model_fields", None)
-    return bool(
-        isinstance(obj, type)
-        and issubclass(obj, Node)
-        and isinstance(fields, dict)
-        and "type" in fields
-        and "inputs" in fields
-        and "outputs" in fields
-    )
+    if not isinstance(obj, type) or obj is Node:
+        return False
+    if not issubclass(obj, Node):
+        return False
+    t = getattr(obj, "type", None)
+    if not isinstance(t, str) or not t.strip():
+        return False
+    ins = getattr(obj, "inputs", None)
+    outs = getattr(obj, "outputs", None)
+    return ins is not None and outs is not None
 
 
 def _import_package_submodules(module: types.ModuleType) -> None:

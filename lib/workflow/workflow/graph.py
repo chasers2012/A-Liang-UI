@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from .node_types import Node
 
 
@@ -11,6 +13,21 @@ class WorkflowLink:
     from_socket: str
     to_node: str
     to_socket: str
+
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        from_node: str = "",
+        from_socket: str = "",
+        to_node: str = "",
+        to_socket: str = "",
+    ) -> None:
+        self.id = id
+        self.from_node = from_node
+        self.from_socket = from_socket
+        self.to_node = to_node
+        self.to_socket = to_socket
 
     def serialize(self) -> dict:
         return {
@@ -37,6 +54,11 @@ class WorkflowViewport:
     y: float = 0.0
     zoom: float = 1.0
 
+    def __init__(self, x: float = 0.0, y: float = 0.0, zoom: float = 1.0) -> None:
+        self.x = x
+        self.y = y
+        self.zoom = zoom
+
     def serialize(self) -> dict:
         return {
             "x": self.x,
@@ -46,6 +68,8 @@ class WorkflowViewport:
 
     @staticmethod
     def parse(config_dict: dict) -> WorkflowViewport:
+        if not isinstance(config_dict, dict):
+            config_dict = {}
         return WorkflowViewport(
             x=config_dict.get("x", 0.0),
             y=config_dict.get("y", 0.0),
@@ -70,17 +94,27 @@ class WorkflowGraph:
         self.viewport = viewport
 
     def serialize(self) -> dict:
+        nodes_payload: list[dict[str, Any]] = []
+        for node in self.nodes:
+            nodes_payload.append(node.serialize())
         return {
-            "nodes": [node.serialize() for node in self.nodes],
+            "nodes": nodes_payload,
             "links": [link.serialize() for link in self.links],
             "viewport": self.viewport.serialize() if self.viewport else None,
         }
 
     @staticmethod
     def parse(config_dict: dict) -> WorkflowGraph:
-        nodes = [Node.parse(node_conf) for node_conf in config_dict.get("nodes", [])]
+        nodes: list[Node] = []
+        for node_conf in config_dict.get("nodes", []):
+            n = Node.parse(node_conf)
+            nodes.append(n)
         links = [WorkflowLink.parse(link_conf) for link_conf in config_dict.get("links", [])]
-        viewport = WorkflowViewport.parse(config_dict.get("viewport", {}))
+        vp_raw = config_dict.get("viewport")
+        if vp_raw is None:
+            viewport = None
+        else:
+            viewport = WorkflowViewport.parse(vp_raw if isinstance(vp_raw, dict) else {})
         return WorkflowGraph(
             nodes=nodes,
             links=links,

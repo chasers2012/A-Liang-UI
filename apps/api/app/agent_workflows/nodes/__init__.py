@@ -1,4 +1,4 @@
-"""Agent built-in node definitions and handlers (loader + workspace extensions)."""
+"""Agent built-in node definitions (loader + workspace extensions)."""
 
 from __future__ import annotations
 

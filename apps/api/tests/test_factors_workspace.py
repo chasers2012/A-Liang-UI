@@ -6,8 +6,27 @@ import pytest
 from app.factors.registry import FactorItemsRegistry, read_source, resolve_source_path
 from custom_code import validate_identifier_name as validate_factor_name
 from custom_code import validate_source_syntax
+from factor import Factor
 
 MIN_SOURCE = "x = 1\n"
+
+FACTOR_SOURCE_TEMPLATE = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class NewFactor(Factor):
+    name = "{name}"
+    group = "custom"
+    description = ""
+    dependencies = ["close"]
+    max_window = 2
+
+    def calc(self, data: pd.DataFrame) -> pd.Series:
+        # Minimal implementation; this test only checks loading.
+        return data["close"]
+"""
 
 
 def test_validate_factor_name_ok():
@@ -136,3 +155,26 @@ def test_patch_and_delete(workspace_tmp, client):
     assert r3.status_code == 204
     assert client.get("/factors").json() == []
     assert not resolve_source_path(rec.source_path).is_file()
+
+
+def test_get_factor_loads_from_source(workspace_tmp, client):
+    src = FACTOR_SOURCE_TEMPLATE.format(name="alpha_test")
+    r = client.post(
+        "/factors",
+        json={
+            "name": "alpha_test",
+            "group": "custom",
+            "description": "",
+            "max_window": 2,
+            "dependencies": ["close"],
+            "source": src,
+        },
+    )
+    assert r.status_code == 200, r.text
+    fid = r.json()["id"]
+
+    factor_cls = FactorItemsRegistry.get_factor(fid)
+    assert factor_cls is not None
+    assert isinstance(factor_cls, type)
+    assert issubclass(factor_cls, Factor)
+    assert factor_cls.name == "alpha_test"

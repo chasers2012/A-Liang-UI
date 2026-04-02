@@ -1,11 +1,9 @@
 /** 评价方案（工作流图）与节点类型目录 DTO。 */
 
-import type { NodeParamType } from "../evaluation-metric/dto";
-
-/** LiteGraph `graph.serialize()` 的 JSON 字符串（持久化字段）。 */
+/** 工作流图 JSON 字符串（持久化字段）。 */
 export type EvaluationWorkflowGraphJson = string;
 
-/** 从 LiteGraph 序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
+/** 从工作流图序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
 export interface WorkflowNodeDto {
   id: string;
   type: string;
@@ -17,9 +15,7 @@ export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
-  data_set_id: string | null;
   workflow: EvaluationWorkflowGraphJson;
-  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -33,7 +29,7 @@ export interface NodeTypeSocketPublic {
   default?: unknown;
   render_type?: string | null;
   options?: Array<string | number> | null;
-  type?: NodeParamType;
+  type?: string;
   minimum?: number | null;
   maximum?: number | null;
 }

@@ -31,41 +31,25 @@ function parseAsNewWorkflowNode(
   return {
     id,
     type,
+    label: type,
+    inputs: [],
+    outputs: [],
     pos: readPos(node.pos),
     params: normalizeParams(node.params),
-  };
-}
-
-function parseAsLiteGraphNode(
-  node: Record<string, unknown>,
-): WorkflowGraphNode | null {
-  const props = node.properties;
-  if (!props || typeof props !== "object") return null;
-  const p = props as Record<string, unknown>;
-  const wid = p.workflowNodeId;
-  const bt = p.backendType;
-  if (typeof wid !== "string" || typeof bt !== "string") return null;
-  return {
-    id: wid,
-    type: bt,
-    pos: readPos(node.pos),
-    params: normalizeParams(p.params),
   };
 }
 
 /**
  * 从工作流图 JSON 中提取节点为 `WorkflowGraphNode[]`。
  *
- * 兼容两种历史形态：
- * - 新 schema：`{ nodes: [{id,type,pos,params?}], links: [...] }`
- * - 旧 LiteGraph：`graph.serialize()`，节点信息在 `nodes[].properties.workflowNodeId/backendType/params` 中
+ * 仅支持当前 schema：`{ nodes: [{id,type,pos,params?}], links: [...] }`
  */
 function parseOneSerializedStepNode(
   n: unknown,
 ): WorkflowGraphNode | null {
   if (!n || typeof n !== "object") return null;
   const node = n as Record<string, unknown>;
-  return parseAsNewWorkflowNode(node) ?? parseAsLiteGraphNode(node);
+  return parseAsNewWorkflowNode(node);
 }
 
 export function parseWorkflowGraphNodesFromSerializedJson(
@@ -99,8 +83,8 @@ export function buildNodeDisplayData(
     backendType: n.type,
     label: def?.label ?? n.type,
     category: def?.category,
-    inputs: def?.inputs ?? [],
-    outputs: def?.outputs ?? [],
+    inputs: def?.inputs ?? n.inputs,
+    outputs: def?.outputs ?? n.outputs,
     params: { ...(n.params ?? {}) },
   };
 }

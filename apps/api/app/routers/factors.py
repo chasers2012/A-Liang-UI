@@ -5,7 +5,6 @@ import contextlib
 from fastapi import APIRouter, Body, HTTPException
 
 from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
-from app.evaluation_run.history_store import delete_history_for_factor
 from app.evaluation_run.schemas import (
     FactorEvaluationRowPublic,
     FactorEvaluationRunBody,
@@ -71,9 +70,6 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
         success = err is None
         if success:
             evaluated_ok += 1
-            v = ev_rec.mean_ic.get(PRIMARY_IC_PERIOD)
-            if v is not None:
-                ic_for_avg.append(float(v))
 
         rows.append(
             FactorEvaluationRowPublic(
@@ -81,13 +77,9 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
                 name=rec.name,
                 has_evaluation=True,
                 evaluated_at=ev_rec.evaluated_at,
-                window=ev_rec.window,
-                stock_count=ev_rec.stock_count,
-                mean_ic=dict(ev_rec.mean_ic),
-                mean_return_spread=dict(ev_rec.mean_return_spread),
                 error=err,
                 evaluation_profile_id=ev_rec.evaluation_profile_id,
-                metric_results=dict(ev_rec.metric_results),
+                results=dict(ev_rec.results),
             )
         )
 
@@ -118,21 +110,19 @@ def post_factor_evaluation_run(
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     b = body or FactorEvaluationRunBody()
-    run_data_set_id = b.data_set_id
-    prof = None
     pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
-    if pid:
-        from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
+    if not pid:
+        raise HTTPException(status_code=400, detail="未指定评价方案")
+    from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 
-        prof = EvaluationProfilesRegistry.get_by_id(pid)
-        if prof is None:
-            raise HTTPException(status_code=400, detail="评价方案不存在")
+    prof = EvaluationProfilesRegistry.get_by_id(pid)
+    if prof is None:
+        raise HTTPException(status_code=400, detail="评价方案不存在")
+
     try:
         eval_rec = execute_and_persist_factor_evaluation_run(
             factor_id,
-            data_set_id=run_data_set_id,
             evaluation_profile=prof,
-            with_history=False,
         )
     except ValueError as e:
         http_bad_request(e)
@@ -143,13 +133,9 @@ def post_factor_evaluation_run(
         name=rec.name,
         has_evaluation=True,
         evaluated_at=eval_rec.evaluated_at,
-        window=eval_rec.window,
-        stock_count=eval_rec.stock_count,
-        mean_ic=dict(eval_rec.mean_ic),
-        mean_return_spread=dict(eval_rec.mean_return_spread),
         error=err,
         evaluation_profile_id=eval_rec.evaluation_profile_id,
-        metric_results=dict(eval_rec.metric_results),
+        results=dict(eval_rec.results),
     )
 
 
@@ -193,7 +179,5 @@ def delete_factor(factor_id: str) -> None:
         raise HTTPException(status_code=404, detail="因子不存在")
     delete_source_file(rec)
     FactorItemsRegistry.delete_item(factor_id)
-    with contextlib.suppress(ValueError):
-        delete_history_for_factor(factor_id)
     with contextlib.suppress(ValueError):
         delete_evaluation_for_factor(factor_id)

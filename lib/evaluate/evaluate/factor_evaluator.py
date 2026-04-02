@@ -216,6 +216,32 @@ class AlphalensFactorEvaluator:
             self._close_wide = close_prices_wide(self._price_panel, self.close_col)
         return self._close_wide
 
+    def prepare_factor_data(
+        self, quantiles: int = 5, periods: tuple[int, ...] = (1, 5, 10, 20), max_loss: float = 0.5
+    ) -> pd.DataFrame:
+        factor_data = self.factor.calculate(
+            self._start_date,
+            self._end_date,
+            self._stock_codes,
+        )
+        if not isinstance(factor_data.index, pd.MultiIndex):
+            raise ValueError("factor.calculate must return MultiIndex (date, asset)")
+        if factor_data.shape[1] < 1:
+            raise ValueError("factor.calculate must return at least one column")
+
+        factor_series = factor_data.iloc[:, 0].dropna()
+        close_df = self.get_close_wide()
+        align_idx = self.alignment_index()
+        factor_series = factor_series[factor_series.index.isin(align_idx)]
+
+        return al.utils.get_clean_factor_and_forward_returns(
+            factor=factor_series,
+            prices=close_df,
+            quantiles=quantiles,
+            periods=periods,
+            max_loss=max_loss,
+        )
+
     def evaluate_factor(
         self,
         *,

@@ -66,14 +66,3 @@ class EvaluationProfilesRegistry:
             return False
         path.unlink()
         return True
-
-    @classmethod
-    def apply_default_uniqueness(cls, keep_id: str) -> None:
-        """Ensure only ``keep_id`` has ``is_default=True``; clear others."""
-        d = cls._profiles_dir()
-        for p in d.glob("*.json"):
-            rec = cls._read_record(p)
-            if rec is None or rec.id == keep_id or not rec.is_default:
-                continue
-            rec.is_default = False
-            cls._write_record(rec)

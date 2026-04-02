@@ -5,16 +5,7 @@ export type {
   WorkflowNodeDisplayData,
   WorkflowNodeTypeDefinition,
   WorkflowSocketDefinition,
-  WorkflowStepProperties,
 } from "./types";
-
-export {
-  readWorkflowGridDotColor,
-  readWorkflowLinkColor,
-  readWorkflowLinkHighlightColor,
-  readWorkflowNodeAccent,
-  readWorkflowNodeShadowColor,
-} from "./workflow-graph-theme";
 
 export {
   buildNodeDisplayData,

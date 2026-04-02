@@ -72,8 +72,7 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
         const runProfileId = (() => {
           const p = prev.runProfileId;
           if (p && pr.some((x) => x.id === p)) return p;
-          const defp = pr.find((p0) => p0.is_default);
-          return defp ? defp.id : null;
+          return pr[0]?.id ?? null;
         })();
         return {
           ...prev,

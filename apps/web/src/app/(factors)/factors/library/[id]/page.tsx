@@ -110,7 +110,7 @@ function FactorEvaluationRunControls(props: {
             <SelectItem value="__none__">无（默认参数）</SelectItem>
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
-                {p.is_default ? `${p.name}（默认）` : p.name}
+                {p.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -442,7 +442,7 @@ export default function FactorDetailPage() {
       __none__: "无（默认参数）",
     };
     for (const p of profiles) {
-      o[p.id] = p.is_default ? `${p.name}（默认）` : p.name;
+      o[p.id] = p.name;
     }
     return o;
   }, [profiles]);

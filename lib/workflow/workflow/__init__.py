@@ -4,13 +4,7 @@ Public API is grouped roughly as: graph models, execution, node type metadata
 (:mod:`workflow.node_types`), discovery (:mod:`workflow.node_registry`), validation.
 """
 
-from .executor import (
-    NodeHandler,
-    WorkflowExecutor,
-    WorkflowUnknownNodeTypeError,
-    gather_node_inputs,
-    handler_from_node_class,
-)
+from .executor import WorkflowExecutor, WorkflowUnknownNodeTypeError, gather_node_inputs
 from .graph import WorkflowGraph, WorkflowLink, WorkflowViewport
 from .graph_algo import assert_acyclic, topological_order
 from .node_decorator import (
@@ -27,13 +21,13 @@ from .node_types import (
     OptionsNodeParam,
     Socket,
     StringNodeParam,
+    register_workflow_node_type_resolver,
     validate_node_param_list,
 )
 
 __all__ = [
     "BooleanNodeParam",
     "Node",
-    "NodeHandler",
     "NodeParam",
     "NodeParamModel",
     "NumberNodeParam",
@@ -48,7 +42,7 @@ __all__ = [
     "assert_acyclic",
     "collect_node_classes",
     "gather_node_inputs",
-    "handler_from_node_class",
+    "register_workflow_node_type_resolver",
     "topological_order",
     "validate_node_param_list",
     "workflow_node",

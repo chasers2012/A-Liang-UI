@@ -5,20 +5,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-class FactorEvaluationWindow(BaseModel):
-    start: str | None = None
-    end: str | None = None
-
-
 class FactorEvaluationRecord(BaseModel):
     evaluated_at: str
-    window: FactorEvaluationWindow | None = None
-    stock_count: int | None = None
-    mean_ic: dict[str, float] = Field(default_factory=dict)
-    mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: str | None = None
     evaluation_profile_id: str | None = None
-    metric_results: dict[str, Any] = Field(default_factory=dict)
+    results: dict[str, Any] = Field(default_factory=dict)
 
 
 class FactorEvaluationsFile(BaseModel):
@@ -31,19 +22,12 @@ class FactorEvaluationRowPublic(BaseModel):
     name: str
     has_evaluation: bool
     evaluated_at: str | None = None
-    window: FactorEvaluationWindow | None = None
-    stock_count: int | None = None
-    mean_ic: dict[str, float] = Field(default_factory=dict)
-    mean_return_spread: dict[str, float] = Field(default_factory=dict)
     error: str | None = None
     evaluation_profile_id: str | None = Field(
         default=None,
         description="Evaluation profile id when this run used a named profile.",
     )
-    metric_results: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Per workflow node id: output socket name to JSON-serializable payload.",
-    )
+    results: dict[str, Any] = Field(default_factory=dict)
 
 
 class FactorEvaluationsAggregatePublic(BaseModel):
@@ -60,5 +44,4 @@ class FactorEvaluationsSummaryPublic(BaseModel):
 
 
 class FactorEvaluationRunBody(BaseModel):
-    data_set_id: str | None = None
     evaluation_profile_id: str | None = None

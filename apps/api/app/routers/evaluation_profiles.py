@@ -21,9 +21,7 @@ def _to_public(rec: EvaluationProfileRecord) -> EvaluationProfilePublic:
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        data_set_id=rec.data_set_id,
         workflow=rec.workflow,
-        is_default=rec.is_default,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
@@ -40,13 +38,8 @@ def _merge_evaluation_profile_patch(
         rec.name = str(body.name).strip()
     if "description" in data:
         rec.description = (body.description or "").strip()
-    if "data_set_id" in data:
-        tid = (body.data_set_id or "").strip() if body.data_set_id is not None else ""
-        rec.data_set_id = tid or None
     if "workflow" in data and body.workflow is not None:
         rec.workflow = body.workflow
-    if "is_default" in data and body.is_default is not None:
-        rec.is_default = body.is_default
     rec.updated_at = utc_now_iso()
 
 
@@ -72,8 +65,6 @@ def get_evaluation_profile(profile_id: str) -> EvaluationProfilePublic:
 def create_evaluation_profile(body: EvaluationProfileCreate) -> EvaluationProfilePublic:
     rec = body.to_record()
     EvaluationProfilesRegistry.save(rec)
-    if rec.is_default:
-        EvaluationProfilesRegistry.apply_default_uniqueness(rec.id)
     return _to_public(rec)
 
 
@@ -88,8 +79,6 @@ def patch_evaluation_profile(
     data = body.model_dump(exclude_unset=True)
     _merge_evaluation_profile_patch(rec, body, data)
     EvaluationProfilesRegistry.save(rec)
-    if rec.is_default:
-        EvaluationProfilesRegistry.apply_default_uniqueness(rec.id)
     return _to_public(rec)
 
 

@@ -38,7 +38,6 @@ export function EvaluationProfileFormPage(props: Props) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [isDefault, setIsDefault] = useState(false);
   const [workflowJson, setWorkflowJson] = useState(isEdit ? "{}" : DEFAULT_WORKFLOW_JSON);
   const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">("canvas");
   const [canvasKey, setCanvasKey] = useState(0);
@@ -59,7 +58,6 @@ export function EvaluationProfileFormPage(props: Props) {
       const d = await getEvaluationProfile(id);
       setName(d.name);
       setDescription(d.description);
-      setIsDefault(d.is_default);
       try {
         const w = d.workflow;
         setWorkflowJson(
@@ -138,7 +136,6 @@ export function EvaluationProfileFormPage(props: Props) {
         await patchEvaluationProfile(id, {
           name: name.trim(),
           description: description.trim(),
-          is_default: isDefault,
           workflow,
         });
         router.push(`/factors/profiles/${encodeURIComponent(id)}`);
@@ -146,7 +143,6 @@ export function EvaluationProfileFormPage(props: Props) {
         const created = await createEvaluationProfile({
           name: name.trim(),
           description: description.trim(),
-          is_default: isDefault,
           workflow,
         });
         router.push(`/factors/profiles/${encodeURIComponent(created.id)}`);

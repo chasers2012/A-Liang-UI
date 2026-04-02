@@ -58,7 +58,6 @@ import {
 import type { WorkflowNodeInputSpec } from "./types";
 import { isWireInputSpec } from "./workflow-node-input-spec";
 
-import "./workflow-graph-canvas.css";
 
 export type {
   WorkflowGraphCanvasHandle,

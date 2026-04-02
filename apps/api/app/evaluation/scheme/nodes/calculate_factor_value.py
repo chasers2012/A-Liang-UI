@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
-import re
 from typing import Any
 
 from evaluate import AlphalensFactorEvaluator
@@ -16,48 +14,6 @@ from workflow import (
     workflow_node,
 )
 from workflow.node_types import DateNodeParam
-
-
-def forward_periods_tuple(raw: Any) -> tuple[int, ...]:
-    if isinstance(raw, list):
-        out = tuple(int(float(x)) for x in raw)
-        if not out:
-            return 1, 5, 10, 20
-        return out
-    s = str(raw).strip() if raw is not None and raw != "" else "1,5,10,20"
-    parts = [p.strip() for p in re.split(r"[,，\s]+", s) if p.strip()]
-    if not parts:
-        return 1, 5, 10, 20
-    return tuple(int(float(x)) for x in parts)
-
-
-def clean_factor_from_alphalens_evaluator(
-    ev: AlphalensFactorEvaluator,
-    kwargs: dict[str, Any],
-) -> Any:
-    last_quantiles: int = int(kwargs["last_quantiles"])
-    periods = forward_periods_tuple(kwargs.get("forward_return_periods"))
-
-    q_raw = kwargs.get("alphalens_quantiles", kwargs.get("quantiles"))
-    if isinstance(q_raw, (int, float)) and not isinstance(q_raw, bool):
-        last_quantiles = max(2, int(q_raw))
-    elif q_raw is not None and str(q_raw).strip() != "":
-        with contextlib.suppress(TypeError, ValueError):
-            last_quantiles = max(2, int(float(str(q_raw).strip())))
-
-    ls = bool(kwargs.get("long_short", True))
-    try:
-        ml = float(kwargs.get("max_loss", 0.5))
-    except (TypeError, ValueError):
-        ml = 0.5
-    ev.long_short = ls
-
-    out = ev.evaluate_factor(
-        quantiles=last_quantiles,
-        periods=periods,
-        max_loss=ml,
-    )
-    return out.factor_data_clean
 
 
 @workflow_node(
@@ -91,4 +47,7 @@ class CalculateFactorValueNode:
             stock_codes=kwargs.get("stock_codes"),
             long_short=bool(kwargs.get("long_short", True)),
         )
-        return clean_factor_from_alphalens_evaluator(ev, dict(kwargs))
+        quantiles = kwargs.get("quantiles", 5)
+        periods = kwargs.get("periods", (1, 5, 10, 20))
+        max_loss = kwargs.get("max_loss", 0.5)
+        return ev.prepare_factor_data(quantiles=quantiles, periods=periods, max_loss=max_loss)

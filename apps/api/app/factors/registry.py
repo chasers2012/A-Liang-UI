@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import importlib.util
+import re
+import sys
+
 from custom_code import SourceFiles, validate_identifier_name, validate_source_syntax
+from factor import Factor
 
 from app.datetime_utils import utc_now_iso
 from app.factors.schemas import (
@@ -84,6 +89,56 @@ class FactorItemsRegistry(WorkspaceItemsRegistry[FactorRecord, FactorRegistryFil
             rec.updated_at = utc_now_iso()
 
         return FactorItemsRegistry.update_item(factor_id, _apply)
+
+    @classmethod
+    def get_factor(cls, factor_id: str) -> type[Factor] | None:
+        rec = cls.get_item(factor_id)
+        if rec is None:
+            return None
+        # Load user-written Factor source from ``source_path`` and return the
+        # Factor subclass (not an instance).
+        #
+        # Note: evaluation workflow passes this class into nodes which then
+        # instantiate it with a DependencyResolver.
+        try:
+            source_file = resolve_source_path(rec.source_path)
+            if not source_file.is_file():
+                return None
+
+            safe_id = re.sub(r"\W+", "_", factor_id)
+            module_name = f"_quant_agent_user_factor_{safe_id}"
+            spec = importlib.util.spec_from_file_location(
+                module_name,
+                str(source_file),
+            )
+            if spec is None or spec.loader is None:
+                return None
+
+            module = importlib.util.module_from_spec(spec)
+            # Ensure reload on updates: replace the module object under same key.
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+
+            candidates: list[type[Factor]] = []
+            for obj in module.__dict__.values():
+                if isinstance(obj, type) and issubclass(obj, Factor) and obj is not Factor:
+                    candidates.append(obj)
+
+            if not candidates:
+                return None
+
+            # Prefer a class whose declared ``name`` matches the registry record.
+            for c in candidates:
+                n = getattr(c, "name", None)
+                if isinstance(n, str) and n.strip() == rec.name:
+                    return c
+
+            # Fall back to the first subclass found.
+            return candidates[0]
+        except Exception:
+            # Keep get_factor non-throwing so callers (e.g. evaluation) can
+            # surface failures as evaluation errors.
+            return None
 
 
 def read_source(rec: FactorRecord) -> str:

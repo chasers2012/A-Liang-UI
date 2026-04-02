@@ -27,21 +27,11 @@ export type WorkflowNodeTypeDefinition = {
   outputs: WorkflowSocketDefinition[];
 };
 
-export type WorkflowGraphNode = {
+export interface WorkflowGraphNode extends WorkflowNodeTypeDefinition {
   id: string;
-  type: string;
   pos: [number, number];
   params?: Record<string, unknown>;
-};
-
-/** LiteGraph `workflow_graph/step` 节点 `properties` 形状。 */
-export type WorkflowStepProperties = {
-  workflowNodeId: string;
-  backendType: string;
-  params: Record<string, unknown>;
-  /** Catalog input slot count; extra slots are for multi-link. */
-  _catalogInputCount?: number;
-};
+}
 
 /** 选中节点在侧栏展示用的聚合数据。 */
 export type WorkflowNodeDisplayData = {

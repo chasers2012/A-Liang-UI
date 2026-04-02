@@ -12,9 +12,9 @@ def test_duplicate_node_types_allowed(workspace_tmp):
     EvaluationMetricsRegistry.load()
     EvaluationWorkflow(
         nodes=[
-            Node(id="a", type=_CALC, pos=[0, 0], params={}),
-            Node(id="m1", type=_MIC, pos=[1, 0], params={}),
-            Node(id="m2", type=_MIC, pos=[2, 0], params={}),
+            Node(id="a", type=_CALC, pos=[0, 0]),
+            Node(id="m1", type=_MIC, pos=[1, 0]),
+            Node(id="m2", type=_MIC, pos=[2, 0]),
         ],
         links=[
             WorkflowLink(

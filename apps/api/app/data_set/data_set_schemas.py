@@ -12,6 +12,7 @@ class DataSetDatasourceBindingStored(BaseModel):
 
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)
+    alias: dict[str, str] | None = None
 
 
 class DataSetRecord(BaseModel):

@@ -1,10 +1,8 @@
 import ast
 import functools
-import inspect
-from dataclasses import dataclass
 
 import workflow as workflow_lib
-from workflow import NodeParam, NodeParamModel, Socket
+from workflow import Socket
 
 
 def _safe_literal(node: ast.AST | None) -> object | None:
@@ -23,97 +21,6 @@ def _call_name(call: ast.Call) -> str:
     if isinstance(func, ast.Attribute):
         return func.attr
     return ""
-
-
-@dataclass(frozen=True)
-class _ParamCtorSpec:
-    fields: list[str]
-    inferred_type: str | None
-
-
-@functools.lru_cache(maxsize=1)
-def _param_ctor_specs() -> dict[str, _ParamCtorSpec]:
-    specs: dict[str, _ParamCtorSpec] = {}
-
-    for obj in vars(workflow_lib).values():
-        if isinstance(obj, type) and issubclass(obj, NodeParam) and obj is not NodeParam:
-            sig = inspect.signature(obj)
-            fields = [
-                name
-                for name, p in sig.parameters.items()
-                if p.kind
-                in (
-                    inspect.Parameter.POSITIONAL_ONLY,
-                    inspect.Parameter.POSITIONAL_OR_KEYWORD,
-                    inspect.Parameter.KEYWORD_ONLY,
-                )
-            ]
-            inferred_type: str | None
-            try:
-                inferred_type = str(obj("tmp_key").type)
-            except Exception:
-                inferred_type = None
-            specs[obj.__name__] = _ParamCtorSpec(fields=fields, inferred_type=inferred_type)
-
-    model_sig = inspect.signature(NodeParamModel)
-    model_fields = [
-        name
-        for name, p in model_sig.parameters.items()
-        if p.kind
-        in (
-            inspect.Parameter.POSITIONAL_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            inspect.Parameter.KEYWORD_ONLY,
-        )
-    ]
-    specs[NodeParamModel.__name__] = _ParamCtorSpec(fields=model_fields, inferred_type=None)
-    return specs
-
-
-def _parse_param_call(call: ast.Call) -> NodeParamModel | None:
-    spec = _param_ctor_specs().get(_call_name(call))
-    if spec is None:
-        return None
-    fields = spec.fields
-    inferred_type = spec.inferred_type
-
-    data: dict[str, object] = {}
-
-    # 位置参数按签名顺序映射到字段
-    for idx, arg in enumerate(call.args[: len(fields)]):
-        val = _safe_literal(arg)
-        if val is not None:
-            data[fields[idx]] = val
-
-    # 关键字参数按名称覆盖/补充
-    for kw in call.keywords:
-        if kw.arg is None:
-            continue
-        val = _safe_literal(kw.value)
-        if val is not None:
-            data[kw.arg] = val
-
-    if inferred_type is not None:
-        data.setdefault("type", inferred_type)
-    if "key" not in data:
-        return None
-    allowed = {"key", "label", "type", "default", "minimum", "maximum"}
-    kwargs = {k: v for k, v in data.items() if k in allowed}
-    return NodeParamModel(**kwargs)
-
-
-def _parse_workflow_parameters(node: ast.AST | None) -> list[NodeParamModel]:
-    if not isinstance(node, (ast.List, ast.Tuple)):
-        return []
-
-    out: list[NodeParamModel] = []
-    for elem in node.elts:
-        if not isinstance(elem, ast.Call):
-            continue
-        item = _parse_param_call(elem)
-        if item is not None:
-            out.append(item)
-    return out
 
 
 def _literal_str(node: ast.AST | None) -> str | None:
@@ -222,20 +129,6 @@ def _parse_socket_call(call: ast.Call) -> Socket | None:
             return ctor(base_name, base_required, base_value_type)
 
 
-def _parse_sockets(node: ast.AST | None) -> list[Socket]:
-    if not isinstance(node, (ast.List, ast.Tuple)):
-        return []
-
-    out: list[Socket] = []
-    for elem in node.elts:
-        if not isinstance(elem, ast.Call):
-            continue
-        item = _parse_socket_call(elem)
-        if item is not None:
-            out.append(item)
-    return out
-
-
 def parse_workflow_node_source(
     source: str,
 ) -> tuple[str, str, list[Socket], list[Socket]]:
@@ -244,6 +137,26 @@ def parse_workflow_node_source(
     Note: this executes *source* to recover runtime metadata produced by the
     ``@workflow_node(...)`` decorator (including Socket subclasses and custom kwargs).
     """
+    node_cls = load_workflow_node_class_from_source(source)
+    try:
+        node_obj = node_cls()  # type: ignore[call-arg]
+    except Exception:
+        # Some node classes define a required __init__; we only need class-level metadata.
+        node_obj = node_cls.__new__(node_cls)  # type: ignore[misc]
+
+    label = str(getattr(node_obj, "label", "") or "").strip()
+    description = str(getattr(node_obj, "description", "") or "").strip()
+    inputs = list(getattr(node_obj, "inputs", ()) or ())
+    outputs = list(getattr(node_obj, "outputs", ()) or ())
+    return label, description, inputs, outputs
+
+
+def load_workflow_node_class_from_source(source: str) -> type[workflow_lib.Node]:
+    """Load the first ``@workflow_node``-decorated Node class from python source.
+
+    This function executes *source* in an isolated module namespace to recover
+    the runtime metadata carried by the decorator.
+    """
     tree = ast.parse(source)
 
     # Keep original class definition order so we can deterministically pick the first
@@ -251,11 +164,13 @@ def parse_workflow_node_source(
     class_names_in_order: list[str] = [n.name for n in tree.body if isinstance(n, ast.ClassDef)]
 
     module_name = "__workflow_node_source__"
-    glb: dict[str, object] = {"__name__": module_name}
-    loc: dict[str, object] = {}
-    exec(compile(tree, filename=module_name, mode="exec"), glb, loc)
-
-    env: dict[str, object] = {**glb, **loc}
+    # IMPORTANT:
+    # Execute with a *single* namespace dict so that module-level imports
+    # (e.g. `import pandas as pd`) become available in the function globals.
+    # Otherwise `exec(code, glb, loc)` may place imports into `loc`, while
+    # functions resolve globals via `glb`, causing `NameError` at runtime.
+    env: dict[str, object] = {"__name__": module_name}
+    exec(compile(tree, filename=module_name, mode="exec"), env, env)
 
     def _is_workflow_node_class(obj: object) -> bool:
         if not isinstance(obj, type):
@@ -287,14 +202,4 @@ def parse_workflow_node_source(
     if picked is None:
         raise ValueError("source 中未找到 @workflow_node(...) 装饰的类")
 
-    try:
-        node_obj = picked()  # type: ignore[call-arg]
-    except Exception:
-        # Some node classes define a required __init__; we only need class-level metadata.
-        node_obj = picked.__new__(picked)  # type: ignore[misc]
-
-    label = str(getattr(node_obj, "label", "") or "").strip()
-    description = str(getattr(node_obj, "description", "") or "").strip()
-    inputs = list(getattr(node_obj, "inputs", ()) or ())
-    outputs = list(getattr(node_obj, "outputs", ()) or ())
-    return label, description, inputs, outputs
+    return picked

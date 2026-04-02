@@ -1,3 +1,5 @@
+import { WorkflowGraphNode } from "..";
+
 export type WorkflowGraphViewport = {
   x: number;
   y: number;
@@ -13,13 +15,7 @@ export type WorkflowGraphLink = {
 };
 
 export type WorkflowGraphPersisted = {
-  nodes: Array<{
-    id: string;
-    type: string;
-    pos: [number, number] | number[];
-    params?: Record<string, unknown>;
-  }>;
+  nodes: WorkflowGraphNode[];
   links: WorkflowGraphLink[];
   viewport?: WorkflowGraphViewport | null;
 };
-

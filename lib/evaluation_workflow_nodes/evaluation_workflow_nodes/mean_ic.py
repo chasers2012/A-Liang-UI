@@ -25,8 +25,8 @@ from workflow import OptionsNodeParam, Socket, workflow_node
     entry="evaluate",
 )
 class MeanIC(EvaluationMetric):
-    def evaluate(self, **kwargs: Any) -> tuple[Any, dict[str, float]]:
-        fdc = kwargs["clean_factor"]
+    def evaluate(self, clean_factor: Any, **kwargs: Any) -> tuple[Any, dict[str, float]]:
+        fdc = clean_factor
         if not isinstance(fdc, pd.DataFrame):
             raise TypeError("clean_factor 须为 DataFrame")
         raw = MeanInformationCoefficientMetric().evaluate(fdc)

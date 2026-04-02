@@ -1,1 +1,1 @@
-"""Factor evaluation execution, persisted results, and evaluation history."""
+"""Factor evaluation execution and persisted results."""

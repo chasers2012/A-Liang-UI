@@ -1,6 +1,10 @@
 import type { Edge, Node, Viewport } from "reactflow";
 
-import type { WorkflowNodeTypeDefinition } from "../types";
+import type {
+  WorkflowNodeInputSpec,
+  WorkflowNodeTypeDefinition,
+  WorkflowSocketDefinition,
+} from "../types";
 import type {
   WorkflowGraphLink,
   WorkflowGraphPersisted,
@@ -17,6 +21,18 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 function num(x: unknown, fallback = 0): number {
   const n = typeof x === "number" ? x : Number(x);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function safeString(x: unknown): string | undefined {
+  return typeof x === "string" ? x : undefined;
+}
+
+function safeInputs(x: unknown): WorkflowNodeInputSpec[] {
+  return Array.isArray(x) ? (x as WorkflowNodeInputSpec[]) : [];
+}
+
+function safeOutputs(x: unknown): WorkflowSocketDefinition[] {
+  return Array.isArray(x) ? (x as WorkflowSocketDefinition[]) : [];
 }
 
 export function parsePersistedWorkflowGraphJson(
@@ -49,9 +65,17 @@ export function parsePersistedWorkflowGraphJson(
           const px = Array.isArray(pos) ? num(pos[0]) : 0;
           const py = Array.isArray(pos) ? num(pos[1]) : 0;
           const params = n.params;
+          const label = safeString(n.label) ?? type;
+          const category = safeString(n.category);
+          const inputs = safeInputs(n.inputs);
+          const outputs = safeOutputs(n.outputs);
           return {
             id,
             type,
+            label,
+            category,
+            inputs,
+            outputs,
             pos: [px, py] as [number, number],
             params: isRecord(params) ? params : {},
           };
@@ -124,12 +148,12 @@ export function toReactFlowNodes(
     return {
       id: n.id,
       type: "workflowStep",
-      position: { x: num(n.pos?.[0]), y: num(n.pos?.[1]) },
+      position: { x: num(n.pos[0]), y: num(n.pos[1]) },
       data: {
         backendType: n.type,
-        label: def?.label ?? n.type,
-        inputs: def?.inputs ?? [],
-        outputs: def?.outputs ?? [],
+        label: def?.label ?? n.label ?? n.type,
+        inputs: def?.inputs ?? n.inputs,
+        outputs: def?.outputs ?? n.outputs,
         params: { ...(n.params ?? {}) },
       },
     } satisfies Node;
@@ -165,9 +189,17 @@ export function toPersistedWorkflowGraph(
     const backendType =
       typeof data.backendType === "string" ? data.backendType : "node";
     const params = isRecord(data.params) ? data.params : {};
+    const label = safeString(data.label) ?? backendType;
+    const category = safeString(data.category);
+    const inputs = safeInputs(data.inputs);
+    const outputs = safeOutputs(data.outputs);
     return {
       id: n.id,
       type: backendType,
+      label,
+      category,
+      inputs,
+      outputs,
       pos: [n.position.x, n.position.y],
       params,
     };
