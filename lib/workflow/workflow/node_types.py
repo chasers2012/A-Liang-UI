@@ -8,11 +8,11 @@
 
 from __future__ import annotations
 
-import importlib
 import re
 from collections.abc import Callable
-from functools import lru_cache
 from typing import Any, Literal
+
+from .node_loader import WorkflowNodeLoader
 
 # --- Dataclasses (compile-time node metadata) ---------------------------------
 
@@ -267,14 +267,11 @@ class Node:
         optional UI fields like ``description`` that may be omitted).
         """
 
-        if not isinstance(json_dict, dict):
-            raise TypeError("node payload must be an object")
-
         type_key = json_dict.get("type", "")
         if not isinstance(type_key, str) or not type_key.strip():
             raise ValueError("node payload missing string field 'type'")
 
-        node_cls = _resolve_workflow_node_class(type_key)
+        node_cls = WorkflowNodeLoader.instance().resolve(type_key)
 
         # Try to build the node instance. Many built-in nodes have no required
         # __init__ args; still, we mirror parse_workflow_node_source's behavior
@@ -321,77 +318,6 @@ class Node:
             )
 
         return node_obj
-
-
-_NODE_TYPE_RESOLVERS: list[Callable[[str], type[Node] | None]] = []
-
-
-def register_workflow_node_type_resolver(
-    resolver: Callable[[str], type[Node] | None],
-    *,
-    prepend: bool = False,
-) -> None:
-    """Register a callback that resolves workflow-node classes from ``type``.
-
-    This makes ``Node.parse()`` extensible: applications can map domain-specific
-    identifiers (e.g. metric ids stored in workflow JSON) to concrete
-    ``Node`` subclasses without workflow lib hardcoding storage paths.
-    """
-    if prepend:
-        _NODE_TYPE_RESOLVERS.insert(0, resolver)
-    else:
-        _NODE_TYPE_RESOLVERS.append(resolver)
-    _resolve_workflow_node_class.cache_clear()
-
-
-@lru_cache(maxsize=1024)
-def _resolve_workflow_node_class(type_key: str) -> type[Node]:
-    """Resolve a workflow node ``type`` into a Node subclass."""
-
-    # 1) Domain resolvers registered by the application.
-    for resolver in _NODE_TYPE_RESOLVERS:
-        cls = resolver(type_key)
-        if cls is not None:
-            return cls
-
-    # 2) Default: importable ``module.qualname.Class`` string.
-    if "." not in type_key:
-        raise ValueError(f"unknown workflow node type {type_key!r}")
-
-    parts = [p for p in type_key.split(".") if p]
-    if len(parts) < 2:
-        raise ValueError(f"invalid workflow node type: {type_key!r}")
-
-    last_err: Exception | None = None
-    # Split from the right: module candidates first, then qualname attributes.
-    for i in range(len(parts) - 1, 0, -1):
-        module_name = ".".join(parts[:i])
-        qual_parts = parts[i:]
-        try:
-            module = importlib.import_module(module_name)
-        except Exception as e:
-            last_err = e
-            continue
-
-        obj = _walk_qual_parts(module, qual_parts)
-        if obj is None:
-            continue
-        if isinstance(obj, type) and issubclass(obj, Node):
-            return obj
-
-    raise ValueError(
-        f"unknown workflow node type {type_key!r}"
-        + (f" (last error: {last_err!r})" if last_err else "")
-    )
-
-
-def _walk_qual_parts(obj: object, qual_parts: list[str]) -> object | None:
-    """Walk a dotted attribute chain, returning ``None`` if any part is missing."""
-    for qp in qual_parts:
-        if not hasattr(obj, qp):
-            return None
-        obj = getattr(obj, qp)
-    return obj
 
 
 # --- Pydantic (JSON interchange) ------------------------------------------------

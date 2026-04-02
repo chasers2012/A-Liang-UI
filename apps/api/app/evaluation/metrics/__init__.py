@@ -19,7 +19,7 @@ def _register_evaluation_workflow_node_segment() -> None:
     # (UUID-like) as `node.type`. Resolve them by consulting the
     # EvaluationMetricsRegistry for the actual python source, so the workflow
     # lib doesn't need to assume any on-disk directory layout.
-    from workflow import Node, register_workflow_node_type_resolver
+    from workflow import Node, WorkflowNodeLoader
     from workflow.parse import load_workflow_node_class_from_source
 
     from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
@@ -41,4 +41,4 @@ def _register_evaluation_workflow_node_segment() -> None:
         except Exception:
             return None
 
-    register_workflow_node_type_resolver(_resolve_type, prepend=True)
+    WorkflowNodeLoader.instance().register_resolver(_resolve_type, prepend=True)
