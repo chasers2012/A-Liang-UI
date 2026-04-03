@@ -22,4 +22,29 @@ export type AgentChatMessagePublic = {
 
 export type AgentChatRequestPublic = {
   messages: AgentChatMessagePublic[];
+  session_id?: string | null;
+};
+
+export type AgentChatSessionSummaryPublic = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+};
+
+export type AgentChatSessionDetailPublic = {
+  id: string;
+  title: string;
+  messages: AgentChatMessagePublic[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type AgentChatSessionCreateBody = {
+  title: string;
+};
+
+export type AgentChatSessionRenameBody = {
+  title: string;
 };

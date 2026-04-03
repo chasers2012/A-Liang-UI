@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 LlmProvider = Literal["ollama", "openai"]
 ChatRole = Literal["user", "assistant", "system"]
@@ -22,6 +22,75 @@ class ChatRequest(BaseModel):
         max_length=100,
         description="Conversation turns in order (system / user / assistant).",
     )
+    session_id: str | None = Field(
+        default=None,
+        description="Optional chat session id for persistence.",
+    )
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def empty_session_id_to_none(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
+
+
+class ChatSessionRecord(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    message_file: str = Field(
+        ...,
+        description="Workspace-relative JSON file that stores this session's messages.",
+    )
+    message_count: int = Field(default=0, ge=0)
+    created_at: str
+    updated_at: str
+
+
+class ChatSessionsFile(BaseModel):
+    version: int = 1
+    items: list[ChatSessionRecord] = Field(default_factory=list)
+
+
+class ChatSessionSummaryPublic(BaseModel):
+    id: str
+    title: str
+    created_at: str
+    updated_at: str
+    message_count: int
+
+
+class ChatSessionDetailPublic(BaseModel):
+    id: str
+    title: str
+    messages: list[ChatMessageIn]
+    created_at: str
+    updated_at: str
+
+
+class ChatSessionCreateBody(BaseModel):
+    title: str = Field(default="新会话", min_length=1, max_length=120)
+
+    @field_validator("title")
+    @classmethod
+    def strip_title(cls, v: str) -> str:
+        s = v.strip()
+        return s or "新会话"
+
+
+class ChatSessionRenameBody(BaseModel):
+    title: str = Field(..., min_length=1, max_length=120)
+
+    @field_validator("title")
+    @classmethod
+    def strip_rename_title(cls, v: str) -> str:
+        s = v.strip()
+        if not s:
+            raise ValueError("title 不能为空")
+        return s
 
 
 class LlmSettings(BaseModel):

@@ -1,7 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { ArrowUp, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import {
+  ArrowUp,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -9,64 +18,28 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AiChatMarkdown } from "@/components/ai-chat-markdown";
-import { ApiError, postAgentChatStream } from "@/lib/quant-agent-api";
 import { cn } from "@/lib/utils";
-import type { AgentChatMessagePublic } from "@/models";
-
-interface ChatTurn extends AgentChatMessagePublic {
-  id: string;
-}
-
-function createId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-/** 仅用于界面展示的示例轮次，不会随真实对话发给接口 */
-const EXAMPLE_CHAT_TURNS: ChatTurn[] = [
-  {
-    id: "example-user-welcome",
-    role: "user",
-    content: "欢迎使用 quant-agent",
-  },
-  {
-    id: "example-assistant-welcome",
-    role: "assistant",
-    content:
-      "你好，欢迎使用 quant-agent 。你可以问我量化、因子或一般技术问题；需要改模型或 API 时请打开「Agent → 配置」。",
-  },
-  {
-    id: "example-user-1",
-    role: "user",
-    content: "什么是动量因子？",
-  },
-  {
-    id: "example-assistant-1",
-    role: "assistant",
-    content:
-      "动量因子通常用过去一段窗口内的累计收益或相对强度衡量，假设「强者恒强」会在中短期延续。实务上要注意回看期、调仓频率与交易成本，并检验在不同市场阶段的稳定性。",
-  },
-  {
-    id: "example-user-2",
-    role: "user",
-    content: "因子怎么做行业中性化？",
-  },
-  {
-    id: "example-assistant-2",
-    role: "assistant",
-    content:
-      "常见做法是在每个截面上对因子暴露按行业虚拟变量或行业均值做回归/分组减均值，用残差或相对行业的偏离作为中性化后的因子值；也可结合市值、风格因子一并回归，视研究设定而定。",
-  },
-];
-
-function isUiOnlyChatMessage(m: ChatTurn): boolean {
-  return m.id.startsWith("example-");
-}
+import {
+  activeChatMessagesAtom,
+  activeChatSessionIdAtom,
+  chatErrorAtom,
+  chatHydratedAtom,
+  chatInputAtom,
+  chatIsSendingAtom,
+  chatSessionsAtom,
+  createChatSessionAtom,
+  deleteChatSessionAtom,
+  hydrateChatStateAtom,
+  renameChatSessionAtom,
+  selectChatSessionAtom,
+  sendChatMessageAtom,
+  type ChatTurn,
+} from "@/models/chat/session.atom";
 
 type ChatSegment =
   | { kind: "solo-assistant"; message: ChatTurn }
@@ -95,115 +68,105 @@ function buildChatSegments(messages: ChatTurn[]): ChatSegment[] {
 }
 
 interface AiChatMessageListProps {
-  scrollRef: React.RefObject<HTMLDivElement | null>;
   messages: ChatTurn[];
   isSending: boolean;
 }
 
-function AiChatMessageList({
-  scrollRef,
+function AiChatMessages({
   messages,
   isSending,
 }: AiChatMessageListProps) {
   const segments = buildChatSegments(messages);
 
   return (
-    <ScrollArea
-      viewportRef={scrollRef}
-      className="min-h-0 flex-1  pt-6"
-      role="log"
-      aria-live="polite"
-      aria-relevant="additions"
-    >
-      <div className="flex w-full min-w-0 flex-col gap-3 p-6 pl-9">
-        {segments.map((seg, index) => {
-          if (seg.kind === "solo-assistant") {
-            return (
-              <div
-                key={seg.message.id}
-                className="mr-auto max-w-[min(100%,36rem)] rounded-lg border border-border/70 bg-card py-3 pl-6 pr-4 text-sm leading-relaxed text-card-foreground"
-              >
-                <span className="sr-only">助手：</span>
-                <AiChatMarkdown content={seg.message.content} />
-              </div>
-            );
-          }
-
-          const isLastSegment = index === segments.length - 1;
-          const showPending =
-            isSending && isLastSegment && seg.assistant === undefined;
-
+    <>
+      {segments.map((seg, index) => {
+        if (seg.kind === "solo-assistant") {
           return (
-            <Collapsible
-              key={seg.user.id}
-              defaultOpen
-              className="w-full min-w-0"
+            <div
+              key={seg.message.id}
+              className="mr-auto max-w-[min(100%,36rem)] rounded-lg border border-border/70 bg-card py-3 pl-6 pr-4 text-sm leading-relaxed text-card-foreground"
             >
-              <CollapsibleTrigger
-                style={{ zIndex: 10 + index }}
+              <span className="sr-only">助手：</span>
+              <AiChatMarkdown content={seg.message.content} />
+            </div>
+          );
+        }
+
+        const isLastSegment = index === segments.length - 1;
+        const showPending =
+          isSending && isLastSegment && seg.assistant === undefined;
+
+        return (
+          <Collapsible
+            key={seg.user.id}
+            defaultOpen
+            className="w-full min-w-0"
+          >
+            <CollapsibleTrigger
+              style={{ zIndex: 10 + index }}
+              className={cn(
+                "sticky top-0 flex w-full min-w-0 items-start gap-2 bg-background pb-2 text-left outline-none",
+                "group/trigger rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "[&[data-panel-open]_svg]:rotate-90",
+              )}
+            >
+              <span className="inline-flex shrink-0 pt-2">
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
+                  aria-hidden
+                />
+              </span>
+              <div
                 className={cn(
-                  "sticky top-0 flex w-full min-w-0 items-start gap-2 bg-background pb-2 text-left outline-none",
-                  "group/trigger rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  "[&[data-panel-open]_svg]:rotate-90",
+                  "flex min-w-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-muted/50 text-sm leading-relaxed text-foreground transition-colors",
+                  "group-hover/trigger:bg-muted/70",
                 )}
               >
-                <span className="inline-flex shrink-0 pt-2">
-                  <ChevronRight
-                    className="size-4 shrink-0 text-muted-foreground transition-transform duration-200"
-                    aria-hidden
-                  />
-                </span>
-                <div
-                  className={cn(
-                    "flex min-w-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-muted/50 text-sm leading-relaxed text-foreground transition-colors",
-                    "group-hover/trigger:bg-muted/70",
-                  )}
-                >
-                  <span
-                    className="w-1 shrink-0 bg-primary"
-                    aria-hidden
-                  />
-                  <div className="min-w-0 flex-1 px-3 py-2">
-                    <span className="sr-only">你：</span>
-                    <p className="whitespace-pre-wrap wrap-break-word">
-                      {seg.user.content}
-                    </p>
+                <span
+                  className="w-1 shrink-0 bg-primary"
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1 px-3 py-2">
+                  <span className="sr-only">你：</span>
+                  <p className="whitespace-pre-wrap wrap-break-word">
+                    {seg.user.content}
+                  </p>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2">
+              <div className="border-border/40 border-l py-2 pl-7 pr-2 text-sm leading-relaxed text-foreground">
+                {seg.assistant ? (
+                  <>
+                    <span className="sr-only">助手：</span>
+                    {seg.assistant.content === "" &&
+                      isSending &&
+                      isLastSegment ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2
+                          className="size-4 shrink-0 animate-spin"
+                          aria-hidden
+                        />
+                        正在生成…
+                      </div>
+                    ) : null}
+                    {seg.assistant.content !== "" ? (
+                      <AiChatMarkdown content={seg.assistant.content} />
+                    ) : null}
+                  </>
+                ) : showPending ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                    正在生成…
                   </div>
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="border-border/40 border-l py-2 pl-7 pr-2 text-sm leading-relaxed text-foreground">
-                  {seg.assistant ? (
-                    <>
-                      <span className="sr-only">助手：</span>
-                      {seg.assistant.content === "" &&
-                        isSending &&
-                        isLastSegment ? (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Loader2
-                            className="size-4 shrink-0 animate-spin"
-                            aria-hidden
-                          />
-                          正在生成…
-                        </div>
-                      ) : null}
-                      {seg.assistant.content !== "" ? (
-                        <AiChatMarkdown content={seg.assistant.content} />
-                      ) : null}
-                    </>
-                  ) : showPending ? (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                      正在生成…
-                    </div>
-                  ) : null}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
-      </div>
-    </ScrollArea>
+                ) : null}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </>
   );
 }
 
@@ -212,6 +175,194 @@ interface AiChatComposerProps {
   isSending: boolean;
   onInputChange: (value: string) => void;
   onSend: () => void;
+}
+
+interface ChatSessionTabsProps {
+  isBusy: boolean;
+}
+
+function ChatSessionTabs({ isBusy }: ChatSessionTabsProps) {
+  const sessions = useAtomValue(chatSessionsAtom);
+  const activeId = useAtomValue(activeChatSessionIdAtom);
+  const createSession = useSetAtom(createChatSessionAtom);
+  const selectSession = useSetAtom(selectChatSessionAtom);
+  const renameSession = useSetAtom(renameChatSessionAtom);
+  const deleteSession = useSetAtom(deleteChatSessionAtom);
+  const active = sessions.find((s) => s.id === activeId) ?? null;
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollButtons = () => {
+    const el = scrollerRef.current;
+    if (!el) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
+    const left = el.scrollLeft;
+    const maxLeft = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(left > 0);
+    setCanScrollRight(maxLeft > 0 && left < maxLeft - 1);
+  };
+
+  useEffect(() => {
+    queueMicrotask(() => updateScrollButtons());
+    const el = scrollerRef.current;
+    if (!el) return;
+    const onScroll = () => updateScrollButtons();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(() => updateScrollButtons());
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+    };
+  }, [sessions.length]);
+
+  const scrollByTabs = (dir: "left" | "right") => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const amount = Math.max(180, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  };
+
+  return (
+    <div className="flex items-center gap-2 border-b border-border/60 px-3 pt-1">
+      <Tabs
+        value={activeId ?? ""}
+        onValueChange={(v) => {
+          if (!v) return;
+          void selectSession(v);
+        }}
+        className="min-w-0 flex-1"
+      >
+        <div className="min-w-0 flex items-stretch gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={() => scrollByTabs("left")}
+            disabled={!canScrollLeft}
+            aria-label="向左滚动会话"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+          </Button>
+
+          <div
+            ref={scrollerRef}
+            className={cn(
+              "min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
+              "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-end justify-end",
+            )}
+          >
+            <TabsList className="flex min-w-max items-end gap-1 pr-1 h-full">
+              {sessions.map((s) => (
+                <TabsTrigger
+                  key={s.id}
+                  value={s.id}
+                  disabled={isBusy}
+                  className={cn(
+                    "inline-flex max-w-64 items-center gap-2 truncate rounded-t-md border border-b-0 px-2.5 py-1 text-[0.82rem] transition-colors outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                    // Base UI Tabs uses aria-selected / data-selected (not data-state).
+                    "aria-selected:border-primary/70 aria-selected:bg-background aria-selected:text-foreground aria-selected:shadow-sm",
+                    "data-selected:border-primary/70 data-selected:bg-background data-selected:text-foreground data-selected:shadow-sm",
+                  )}
+                >
+                  <span className="truncate">{s.title}</span>
+                {s.message_count > 0 ? (
+                  <span className="text-xs opacity-70">{s.message_count}</span>
+                ) : null}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            onClick={() => scrollByTabs("right")}
+            disabled={!canScrollRight}
+            aria-label="向右滚动会话"
+          >
+            <ChevronRight className="size-4" aria-hidden />
+          </Button>
+        </div>
+      </Tabs>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-2 px-2"
+          onClick={() => void createSession()}
+          disabled={isBusy}
+        >
+          <Plus className="size-4" aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          onClick={() => {
+            if (!active) return;
+            const title = window.prompt("重命名会话", active.title);
+            if (!title || !title.trim()) return;
+            void renameSession({ sessionId: active.id, title: title.trim() });
+          }}
+          disabled={isBusy || !active}
+          aria-label="重命名当前会话"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon"
+          className="size-8"
+          onClick={() => {
+            if (!active) return;
+            setDeleteOpen(true);
+          }}
+          disabled={isBusy || !active}
+          aria-label="删除当前会话"
+        >
+          <Trash2 className="size-4" aria-hidden />
+        </Button>
+      </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="删除会话"
+        description={
+          <div className="space-y-2">
+            <p className="text-sm text-foreground">
+              确认删除会话「{active?.title ?? ""}」？
+            </p>
+            <p className="text-sm text-muted-foreground">
+              删除后将无法恢复，会话内消息会一并移除。
+            </p>
+          </div>
+        }
+        confirmLabel="删除"
+        confirmVariant="destructive"
+        onConfirm={() => {
+          if (!active) return;
+          void deleteSession(active.id);
+          setDeleteOpen(false);
+        }}
+      />
+    </div>
+  );
 }
 
 function AiChatComposer({
@@ -262,12 +413,13 @@ function AiChatComposer({
 
 export function HomeAiChat() {
   const listRef = useRef<HTMLDivElement>(null);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatTurn[]>(() => [
-    ...EXAMPLE_CHAT_TURNS,
-  ]);
-  const [isSending, setIsSending] = useState(false);
-  const [errorText, setErrorText] = useState<string | null>(null);
+  const [input, setInput] = useAtom(chatInputAtom);
+  const messages = useAtomValue(activeChatMessagesAtom);
+  const isSending = useAtomValue(chatIsSendingAtom);
+  const errorText = useAtomValue(chatErrorAtom);
+  const hydrated = useAtomValue(chatHydratedAtom);
+  const hydrate = useSetAtom(hydrateChatStateAtom);
+  const send = useSetAtom(sendChatMessageAtom);
 
   useEffect(() => {
     const el = listRef.current;
@@ -275,77 +427,42 @@ export function HomeAiChat() {
     el.scrollTop = el.scrollHeight;
   }, [messages, isSending]);
 
-  const send = useCallback(async () => {
-    const trimmed = input.trim();
-    if (!trimmed || isSending) return;
-
-    setErrorText(null);
-    const userTurn: ChatTurn = {
-      id: createId(),
-      role: "user",
-      content: trimmed,
-    };
-    const historyForApi = [...messages, userTurn].filter(
-      (m) => !isUiOnlyChatMessage(m),
-    );
-    const payload: AgentChatMessagePublic[] =
-      historyForApi.length > 0
-        ? historyForApi.map(({ role, content }) => ({ role, content }))
-        : [{ role: "user", content: trimmed }];
-
-    const assistantId = createId();
-    setMessages((prev) => [
-      ...prev,
-      userTurn,
-      { id: assistantId, role: "assistant", content: "" },
-    ]);
-    setInput("");
-    setIsSending(true);
-
-    try {
-      await postAgentChatStream({ messages: payload }, {
-        onDelta: (delta) => {
-          setMessages((prev) =>
-            prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: m.content + delta }
-                : m,
-            ),
-          );
-        },
-      });
-    } catch (e) {
-      const msg =
-        e instanceof ApiError ? e.message : "请求失败，请检查 API 与网络。";
-      setErrorText(msg);
-      setMessages((prev) =>
-        prev.filter((m) => m.id !== userTurn.id && m.id !== assistantId),
-      );
-      setInput(trimmed);
-    } finally {
-      setIsSending(false);
-    }
-  }, [input, isSending, messages]);
+  useEffect(() => {
+    if (hydrated) return;
+    void hydrate();
+  }, [hydrate, hydrated]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
-      <AiChatMessageList
-        scrollRef={listRef}
-        messages={messages}
-        isSending={isSending}
-      />
-      {errorText ? (
-        <p className="shrink-0 text-sm text-destructive" role="alert">
-          {errorText}
-        </p>
-      ) : null}
-      <div className="shrink-0 px-6 pb-6">
-        <AiChatComposer
-          input={input}
-          isSending={isSending}
-          onInputChange={setInput}
-          onSend={send}
-        />
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <ChatSessionTabs isBusy={isSending} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
+        <ScrollArea
+          viewportRef={listRef}
+          className="min-h-0 flex-1 pt-2"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+        >
+          <div className="flex w-full min-w-0 flex-col gap-3 p-6 pl-9">
+            <AiChatMessages
+              messages={messages}
+              isSending={isSending}
+            />
+          </div>
+        </ScrollArea>
+        {errorText ? (
+          <p className="shrink-0 px-6 text-sm text-destructive" role="alert">
+            {errorText}
+          </p>
+        ) : null}
+        <div className="shrink-0 px-6 pb-6">
+          <AiChatComposer
+            input={input}
+            isSending={isSending}
+            onInputChange={setInput}
+            onSend={() => void send()}
+          />
+        </div>
       </div>
     </div>
   );

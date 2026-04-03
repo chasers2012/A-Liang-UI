@@ -1,5 +1,9 @@
 import type {
   AgentChatRequestPublic,
+  AgentChatSessionCreateBody,
+  AgentChatSessionDetailPublic,
+  AgentChatSessionRenameBody,
+  AgentChatSessionSummaryPublic,
   AgentLlmSettingsPublic,
   AgentNodeTypePublic,
   AgentWorkflowDetailPublic,
@@ -163,6 +167,46 @@ export async function postAgentChatStream(
       options.onDelta(ev.text);
     }
   }
+}
+
+export function listAgentChatSessions(): Promise<AgentChatSessionSummaryPublic[]> {
+  return apiFetchJson<AgentChatSessionSummaryPublic[]>("/agent/chat/sessions");
+}
+
+export function createAgentChatSession(
+  body: AgentChatSessionCreateBody,
+): Promise<AgentChatSessionDetailPublic> {
+  return apiFetchJson<AgentChatSessionDetailPublic>("/agent/chat/sessions", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function getAgentChatSession(
+  id: string,
+): Promise<AgentChatSessionDetailPublic> {
+  return apiFetchJson<AgentChatSessionDetailPublic>(
+    `/agent/chat/sessions/${encodeURIComponent(id)}`,
+  );
+}
+
+export function renameAgentChatSession(
+  id: string,
+  body: AgentChatSessionRenameBody,
+): Promise<AgentChatSessionDetailPublic> {
+  return apiFetchJson<AgentChatSessionDetailPublic>(
+    `/agent/chat/sessions/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export function deleteAgentChatSession(id: string): Promise<void> {
+  return apiFetchJson<void>(`/agent/chat/sessions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 export function listAgentWorkflows(): Promise<AgentWorkflowSummaryPublic[]> {
