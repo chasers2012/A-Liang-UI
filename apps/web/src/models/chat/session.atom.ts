@@ -2,8 +2,8 @@ import { atom } from "jotai";
 
 import {
   ApiError,
+  archiveAgentChatSession,
   createAgentChatSession,
-  deleteAgentChatSession,
   getAgentChatSession,
   listAgentChatSessions,
   postAgentChatStream,
@@ -102,7 +102,9 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
         message_count: created.messages.length,
       },
     ];
-    set(chatMessagesBySessionAtom, { [created.id]: toChatTurns(created.messages) });
+    set(chatMessagesBySessionAtom, {
+      [created.id]: toChatTurns(created.messages),
+    });
     activeId = created.id;
   } else if (!activeId || !list.some((i) => i.id === activeId)) {
     activeId = list[0].id;
@@ -121,17 +123,20 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
   set(chatHydratedAtom, true);
 });
 
-export const selectChatSessionAtom = atom(null, async (get, set, sessionId: string) => {
-  set(activeChatSessionIdAtom, sessionId);
-  setLastActiveSessionId(sessionId);
-  if (get(chatMessagesBySessionAtom)[sessionId]) return;
-  const detail = await getAgentChatSession(sessionId);
-  set(chatMessagesBySessionAtom, (prev) => ({
-    ...prev,
-    [sessionId]: toChatTurns(detail.messages),
-  }));
-  set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-});
+export const selectChatSessionAtom = atom(
+  null,
+  async (get, set, sessionId: string) => {
+    set(activeChatSessionIdAtom, sessionId);
+    setLastActiveSessionId(sessionId);
+    if (get(chatMessagesBySessionAtom)[sessionId]) return;
+    const detail = await getAgentChatSession(sessionId);
+    set(chatMessagesBySessionAtom, (prev) => ({
+      ...prev,
+      [sessionId]: toChatTurns(detail.messages),
+    }));
+    set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+  },
+);
 
 export const createChatSessionAtom = atom(null, async (_get, set) => {
   const detail = await createAgentChatSession({ title: "新会话" });
@@ -158,11 +163,11 @@ export const renameChatSessionAtom = atom(
   },
 );
 
-export const deleteChatSessionAtom = atom(
+export const archiveChatSessionAtom = atom(
   null,
   async (get, set, sessionId: string) => {
     const sessions = get(chatSessionsAtom);
-    await deleteAgentChatSession(sessionId);
+    await archiveAgentChatSession(sessionId);
     const nextSessions = sessions.filter((s) => s.id !== sessionId);
     set(chatSessionsAtom, nextSessions);
     set(chatMessagesBySessionAtom, (prev) => {
@@ -186,12 +191,27 @@ export const deleteChatSessionAtom = atom(
 );
 
 export const sendChatMessageAtom = atom(null, async (get, set) => {
-  const sessionId = get(activeChatSessionIdAtom);
   const input = get(chatInputAtom);
   const trimmed = input.trim();
-  if (!sessionId || !trimmed || get(chatIsSendingAtom)) return;
+  if (!trimmed || get(chatIsSendingAtom)) return;
 
-  const sessionSummary = get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
+  let sessionId = get(activeChatSessionIdAtom);
+  if (!sessionId) {
+    const created = await createAgentChatSession({ title: "新会话" });
+    set(chatSessionsAtom, (prev) => upsertSummary(prev, created));
+    set(chatMessagesBySessionAtom, (prev) => ({
+      ...prev,
+      [created.id]: toChatTurns(created.messages),
+    }));
+    set(activeChatSessionIdAtom, created.id);
+    setLastActiveSessionId(created.id);
+    sessionId = created.id;
+  }
+  if (!sessionId) return;
+  const targetSessionId = sessionId;
+
+  const sessionSummary =
+    get(chatSessionsAtom).find((s) => s.id === targetSessionId) ?? null;
   const shouldAutoTitle =
     !!sessionSummary &&
     (sessionSummary.title || "").trim() === "新会话" &&
@@ -202,8 +222,8 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   const assistantId = createId();
   set(chatMessagesBySessionAtom, (prev) => ({
     ...prev,
-    [sessionId]: [
-      ...(prev[sessionId] ?? []),
+    [targetSessionId]: [
+      ...(prev[targetSessionId] ?? []),
       userTurn,
       { id: assistantId, role: "assistant", content: "" },
     ],
@@ -212,17 +232,17 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(chatIsSendingAtom, true);
 
   try {
-    const turns = get(chatMessagesBySessionAtom)[sessionId] ?? [];
+    const turns = get(chatMessagesBySessionAtom)[targetSessionId] ?? [];
     const payloadMessages = turns
       .filter((m) => m.id !== assistantId)
       .map(({ role, content }) => ({ role, content }));
     await postAgentChatStream(
-      { session_id: sessionId, messages: payloadMessages },
+      { session_id: targetSessionId, messages: payloadMessages },
       {
         onDelta: (delta) => {
           set(chatMessagesBySessionAtom, (prev) => ({
             ...prev,
-            [sessionId]: (prev[sessionId] ?? []).map((m) =>
+            [targetSessionId]: (prev[targetSessionId] ?? []).map((m) =>
               m.id === assistantId ? { ...m, content: m.content + delta } : m,
             ),
           }));
@@ -232,15 +252,15 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     if (shouldAutoTitle) {
       try {
         const title = summarizeFirstUserMessage(trimmed);
-        await renameAgentChatSession(sessionId, { title });
+        await renameAgentChatSession(targetSessionId, { title });
       } catch {
         // ignore title failures; chat content is already persisted.
       }
     }
-    const detail = await getAgentChatSession(sessionId);
+    const detail = await getAgentChatSession(targetSessionId);
     set(chatMessagesBySessionAtom, (prev) => ({
       ...prev,
-      [sessionId]: toChatTurns(detail.messages),
+      [targetSessionId]: toChatTurns(detail.messages),
     }));
     set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
   } catch (e) {
@@ -250,7 +270,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     );
     set(chatMessagesBySessionAtom, (prev) => ({
       ...prev,
-      [sessionId]: (prev[sessionId] ?? []).filter(
+      [targetSessionId]: (prev[targetSessionId] ?? []).filter(
         (m) => m.id !== userTurn.id && m.id !== assistantId,
       ),
     }));

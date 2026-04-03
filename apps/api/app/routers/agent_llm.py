@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -60,7 +62,7 @@ def _persist_chat_session_if_needed(
 ) -> None:
     if saw_error or not body.session_id:
         return
-    session = ChatSessionRegistry.get_item(body.session_id)
+    session = ChatSessionRegistry.get_active_item(body.session_id)
     if session is None:
         return
 
@@ -68,7 +70,24 @@ def _persist_chat_session_if_needed(
     assistant_text = "".join(assistant_text_parts).strip()
     if assistant_text:
         final_messages.append(ChatMessageIn(role="assistant", content=assistant_text))
-    ChatSessionRegistry.replace_messages(body.session_id, final_messages)
+    try:
+        ChatSessionRegistry.replace_messages(body.session_id, final_messages)
+    except ValueError:
+        # Session may be archived while a generation is in progress.
+        return
+
+
+def _persist_user_messages_on_receive(body: ChatRequest) -> None:
+    """Persist current client messages immediately after request is accepted."""
+    if not body.session_id:
+        return
+    if ChatSessionRegistry.get_active_item(body.session_id) is None:
+        return
+    try:
+        ChatSessionRegistry.replace_messages(body.session_id, list(body.messages))
+    except ValueError:
+        # Session may become archived between checks; ignore and continue streaming.
+        return
 
 
 @router.get("/llm-settings", response_model=LlmSettings)
@@ -89,24 +108,40 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
 @router.post("/chat/stream")
 def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
-    lc_messages = lc_messages_from_chat_request(body)
+    _persist_user_messages_on_receive(body)
 
     def event_iter():
-        assistant_text_parts: list[str] = []
-        saw_error = False
-        try:
-            llm = _build_llm_from_workspace()
-        except ValueError as e:
-            err = f"{e}"
-            saw_error = True
-            yield f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n"
-            return
+        out: queue.Queue[str | None] = queue.Queue()
 
-        for event in sse_event_iter_for_chat(llm, lc_messages=lc_messages):
-            saw_error = _consume_sse_event(event, assistant_text_parts, saw_error)
-            yield event
+        def _producer() -> None:
+            assistant_text_parts: list[str] = []
+            saw_error = False
+            try:
+                try:
+                    llm = _build_llm_from_workspace()
+                except ValueError as e:
+                    err = f"{e}"
+                    saw_error = True
+                    out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
+                    return
 
-        _persist_chat_session_if_needed(body, assistant_text_parts, saw_error)
+                lc_messages = lc_messages_from_chat_request(body)
+                for event in sse_event_iter_for_chat(llm, lc_messages=lc_messages):
+                    saw_error = _consume_sse_event(event, assistant_text_parts, saw_error)
+                    out.put(event)
+            finally:
+                try:
+                    _persist_chat_session_if_needed(body, assistant_text_parts, saw_error)
+                finally:
+                    out.put(None)
+
+        threading.Thread(target=_producer, daemon=True).start()
+
+        while True:
+            ev = out.get()
+            if ev is None:
+                return
+            yield ev
 
     return StreamingResponse(
         event_iter(),
@@ -121,7 +156,7 @@ def chat_stream(body: ChatRequest) -> StreamingResponse:
 
 @router.get("/chat/sessions", response_model=list[ChatSessionSummaryPublic])
 def list_chat_sessions() -> list[ChatSessionSummaryPublic]:
-    items = ChatSessionRegistry.list_items()
+    items = ChatSessionRegistry.list_active_items()
     items.sort(key=lambda i: i.updated_at, reverse=True)
     return [record_to_summary(i) for i in items]
 
@@ -134,7 +169,7 @@ def create_chat_session(body: ChatSessionCreateBody) -> ChatSessionDetailPublic:
 
 @router.get("/chat/sessions/{session_id}", response_model=ChatSessionDetailPublic)
 def get_chat_session(session_id: str) -> ChatSessionDetailPublic:
-    rec = ChatSessionRegistry.get_item(session_id)
+    rec = ChatSessionRegistry.get_active_item(session_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     return record_to_detail(rec)
@@ -142,6 +177,8 @@ def get_chat_session(session_id: str) -> ChatSessionDetailPublic:
 
 @router.patch("/chat/sessions/{session_id}", response_model=ChatSessionDetailPublic)
 def rename_chat_session(session_id: str, body: ChatSessionRenameBody) -> ChatSessionDetailPublic:
+    if ChatSessionRegistry.get_active_item(session_id) is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
     try:
         rec = ChatSessionRegistry.rename_session(session_id, body.title)
     except ValueError as e:
@@ -153,6 +190,6 @@ def rename_chat_session(session_id: str, body: ChatSessionRenameBody) -> ChatSes
 
 @router.delete("/chat/sessions/{session_id}", status_code=204)
 def delete_chat_session(session_id: str) -> None:
-    rec = ChatSessionRegistry.delete_session(session_id)
+    rec = ChatSessionRegistry.archive_session(session_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在")

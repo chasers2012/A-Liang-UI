@@ -25,7 +25,7 @@ const TOP_LEVEL = new Set([
 
 /** Exact pathname → single crumb (list/home pages). */
 const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
-  "/": [{ label: "首页" }],
+  "/": [{ label: "对话" }],
   [FACTOR_ROOT_HREF]: [{ label: "因子" }],
   [FACTOR_LIBRARY_LIST]: [{ label: "因子库" }],
   [FACTOR_PROFILES_LIST]: [{ label: "评价方案" }],

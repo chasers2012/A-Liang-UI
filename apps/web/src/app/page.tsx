@@ -1,4 +1,4 @@
-import { HomeAiChat } from "@/components/home-ai-chat";
+import { HomeAiChat } from "@/components/chat/index";
 import { Page } from "@/components/page";
 
 export default function HomePage() {

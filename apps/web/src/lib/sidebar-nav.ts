@@ -3,13 +3,13 @@ import {
   Bot,
   Database,
   GitBranch,
-  LayoutDashboard,
   Layers,
   Library,
   LineChart,
   Settings,
   Table2,
   TableProperties,
+  MessageCircle,
 } from "lucide-react";
 
 export type SidebarNavLeaf = {
@@ -28,7 +28,7 @@ export type SidebarNavMainItem = {
 
 export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
   navMain: [
-    { title: "首页", url: "/", icon: LayoutDashboard },
+    { title: "对话", url: "/", icon: MessageCircle },
     {
       title: "因子",
       url: "/factors",

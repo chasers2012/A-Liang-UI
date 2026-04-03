@@ -22,8 +22,12 @@ def test_chat_sessions_crud(client):
     assert renamed.status_code == 200
     assert renamed.json()["title"] == "研究会话"
 
-    deleted = client.delete(f"/agent/chat/sessions/{sid}")
-    assert deleted.status_code == 204
+    archived = client.delete(f"/agent/chat/sessions/{sid}")
+    assert archived.status_code == 204
+
+    listed_after_archive = client.get("/agent/chat/sessions")
+    assert listed_after_archive.status_code == 200
+    assert all(i["id"] != sid for i in listed_after_archive.json())
 
     missing = client.get(f"/agent/chat/sessions/{sid}")
     assert missing.status_code == 404

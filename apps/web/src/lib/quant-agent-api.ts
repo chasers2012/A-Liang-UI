@@ -203,7 +203,7 @@ export function renameAgentChatSession(
   );
 }
 
-export function deleteAgentChatSession(id: string): Promise<void> {
+export function archiveAgentChatSession(id: string): Promise<void> {
   return apiFetchJson<void>(`/agent/chat/sessions/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });

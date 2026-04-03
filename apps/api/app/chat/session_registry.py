@@ -147,12 +147,25 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         return rec
 
     @classmethod
+    def list_active_items(cls) -> list[ChatSessionRecord]:
+        return [item for item in cls.list_items() if item.archived_at is None]
+
+    @classmethod
+    def get_active_item(cls, session_id: str) -> ChatSessionRecord | None:
+        rec = cls.get_item(session_id)
+        if rec is None or rec.archived_at is not None:
+            return None
+        return rec
+
+    @classmethod
     def rename_session(cls, session_id: str, title: str) -> ChatSessionRecord | None:
         name = title.strip()
         if not name:
             raise ValueError("title 不能为空")
 
         def _apply(rec: ChatSessionRecord) -> None:
+            if rec.archived_at is not None:
+                raise ValueError("会话已归档")
             rec.title = name
             rec.updated_at = utc_now_iso()
 
@@ -165,6 +178,8 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         trimmed = list(messages)[-MAX_SESSION_MESSAGES:]
 
         def _apply(rec: ChatSessionRecord) -> None:
+            if rec.archived_at is not None:
+                raise ValueError("会话已归档")
             cls._write_messages_file(rec.message_file, trimmed)
             rec.message_count = len(trimmed)
             rec.updated_at = utc_now_iso()
@@ -172,22 +187,28 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         return cls.update_item(session_id, _apply)
 
     @classmethod
-    def delete_session(cls, session_id: str) -> ChatSessionRecord | None:
+    def archive_session(cls, session_id: str) -> ChatSessionRecord | None:
         rec = cls.get_item(session_id)
         if rec is None:
             return None
-        # Best-effort: remove message file first.
-        path = workspace_config_path(rec.message_file)
-        try:
-            if path.exists():
-                path.unlink()
-        except Exception:
-            pass
-        return cls.delete_item(session_id)
+        if rec.archived_at is not None:
+            return rec
+
+        def _apply(item: ChatSessionRecord) -> None:
+            now = utc_now_iso()
+            item.archived_at = now
+            item.updated_at = now
+
+        return cls.update_item(session_id, _apply)
+
+    @classmethod
+    def delete_session(cls, session_id: str) -> ChatSessionRecord | None:
+        # Backward-compatible alias: deletion now means archiving.
+        return cls.archive_session(session_id)
 
     @classmethod
     def get_messages(cls, session_id: str) -> list[ChatMessageIn] | None:
-        rec = cls.get_item(session_id)
+        rec = cls.get_active_item(session_id)
         if rec is None:
             return None
         return cls._read_messages_file(rec.message_file)
