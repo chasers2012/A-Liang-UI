@@ -388,20 +388,23 @@ export function deleteDataSet(id: string): Promise<void> {
 
 export function runFactorEvaluation(
   factorId: string,
-  options?: {
+  options: {
     dataSetId?: string | null;
-    evaluationProfileId?: string | null;
+    evaluationProfileId: string;
   },
 ): Promise<FactorEvaluationRowPublic> {
+  const profileId = options.evaluationProfileId.trim();
+  if (!profileId) {
+    return Promise.reject(new Error("evaluationProfileId is required"));
+  }
   const init: RequestInit = { method: "POST" };
-  if (options !== undefined) {
+  if (options.dataSetId != null) {
     init.body = JSON.stringify({
-      data_set_id: options.dataSetId ?? null,
-      evaluation_profile_id: options.evaluationProfileId ?? null,
+      data_set_id: options.dataSetId,
     });
   }
   return apiFetchJson<FactorEvaluationRowPublic>(
-    `/factors/${encodeURIComponent(factorId)}/evaluations/run`,
+    `/evaluation-profiles/${encodeURIComponent(profileId)}/factors/${encodeURIComponent(factorId)}/evaluations/run`,
     init,
   );
 }

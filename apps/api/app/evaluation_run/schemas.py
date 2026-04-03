@@ -41,7 +41,3 @@ class FactorEvaluationsAggregatePublic(BaseModel):
 class FactorEvaluationsSummaryPublic(BaseModel):
     aggregate: FactorEvaluationsAggregatePublic
     rows: list[FactorEvaluationRowPublic]
-
-
-class FactorEvaluationRunBody(BaseModel):
-    evaluation_profile_id: str | None = None

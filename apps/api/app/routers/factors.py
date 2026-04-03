@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import contextlib
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
 from app.evaluation_run.schemas import (
     FactorEvaluationRowPublic,
-    FactorEvaluationRunBody,
     FactorEvaluationsAggregatePublic,
     FactorEvaluationsSummaryPublic,
 )
-from app.evaluation_run.service import execute_and_persist_factor_evaluation_run
 from app.factors.constants import NEW_FACTOR_TEMPLATE
 from app.factors.registry import (
     FactorItemsRegistry,
@@ -94,47 +92,6 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
         mean_ic_primary_avg=mean_ic_primary,
     )
     return FactorEvaluationsSummaryPublic(aggregate=aggregate, rows=rows)
-
-
-@router.post(
-    "/{factor_id}/evaluations/run",
-    response_model=FactorEvaluationRowPublic,
-)
-def post_factor_evaluation_run(
-    factor_id: str,
-    body: FactorEvaluationRunBody | None = Body(default=None),
-) -> FactorEvaluationRowPublic:
-    rec = FactorItemsRegistry.get_item(factor_id)
-    if rec is None:
-        raise HTTPException(status_code=404, detail="因子不存在")
-    b = body or FactorEvaluationRunBody()
-    pid = (b.evaluation_profile_id or "").strip() if b.evaluation_profile_id else ""
-    if not pid:
-        raise HTTPException(status_code=400, detail="未指定评价方案")
-    from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
-
-    prof = EvaluationProfilesRegistry.get_by_id(pid)
-    if prof is None:
-        raise HTTPException(status_code=400, detail="评价方案不存在")
-
-    try:
-        eval_rec = execute_and_persist_factor_evaluation_run(
-            factor_id,
-            evaluation_profile=prof,
-        )
-    except ValueError as e:
-        http_bad_request(e)
-    err_raw = (eval_rec.error or "").strip()
-    err: str | None = err_raw or None
-    return FactorEvaluationRowPublic(
-        factor_id=factor_id,
-        name=rec.name,
-        has_evaluation=True,
-        evaluated_at=eval_rec.evaluated_at,
-        error=err,
-        evaluation_profile_id=eval_rec.evaluation_profile_id,
-        results=eval_rec.results,
-    )
 
 
 @router.get("/template", response_model=str)

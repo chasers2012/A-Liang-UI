@@ -4,6 +4,75 @@ import json
 
 MIN_SOURCE = "x = 1\n"
 
+_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
+_LOAD = "evaluation_workflow_nodes.load_data_set.LoadDataSet"
+_COLLECT = "evaluation_workflow_nodes.collect_result.CollectResult"
+
+
+def _profile_workflow_missing_data_set() -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "calc",
+                "type": _CALC,
+                "pos": [0, 0],
+                "params": {
+                    "start_date": "2023-01-01",
+                    "end_date": "2024-12-31",
+                    "quantiles": 5,
+                    "stock_codes": "",
+                },
+            }
+        ],
+        "links": [],
+        "viewport": None,
+    }
+
+
+def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "load",
+                "type": _LOAD,
+                "pos": [0, 0],
+                "params": {"data_set": ds_row_id},
+            },
+            {
+                "id": "calc",
+                "type": _CALC,
+                "pos": [200, 0],
+                "params": {
+                    "start_date": "2023-01-01",
+                    "end_date": "2023-12-31",
+                    "quantiles": 5,
+                    "stock_codes": "",
+                },
+            },
+            {
+                "id": "collect",
+                "type": _COLLECT,
+                "pos": [400, 0],
+                "params": {"result": [{"from_node": "calc", "from_socket": "clean_factor"}]},
+            },
+        ],
+        "links": [
+            {
+                "from_node": "load",
+                "from_socket": "data_set",
+                "to_node": "calc",
+                "to_socket": "data_set",
+            },
+            {
+                "from_node": "calc",
+                "from_socket": "clean_factor",
+                "to_node": "collect",
+                "to_socket": "result",
+            },
+        ],
+        "viewport": None,
+    }
+
 
 def _csv_datasource_body(name: str = "ds_csv") -> dict:
     return {
@@ -101,13 +170,20 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
         json={
             "name": "ts_run",
             "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
-            "start": "2099-01-01",
-            "end": "2099-12-31",
+            "start": "2023-01-01",
+            "end": "2023-12-31",
             "stock_codes": [],
         },
     )
     assert r_ts.status_code == 200
     ds_row_id = r_ts.json()["id"]
+
+    r_prof = client.post(
+        "/evaluation-profiles",
+        json={"name": "prof_ts", "workflow": _profile_workflow_with_data_set(ds_row_id)},
+    )
+    assert r_prof.status_code == 200
+    prof_id = r_prof.json()["id"]
 
     r_f = client.post(
         "/factors",
@@ -122,13 +198,13 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     fid = r_f.json()["id"]
 
     r_run = client.post(
-        f"/factors/{fid}/evaluations/run",
-        json={"data_set_id": ds_row_id},
+        f"/evaluation-profiles/{prof_id}/factors/{fid}/evaluations/run",
     )
     assert r_run.status_code == 200
     body = r_run.json()
     assert body["factor_id"] == fid
-    assert body["window"] == {"start": "2099-01-01", "end": "2099-12-31"}
+    assert (body.get("error") or "").strip() == ""
+    assert body.get("results") is not None
 
 
 def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monkeypatch):
@@ -167,6 +243,13 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
     assert r_f.status_code == 200
     fid = r_f.json()["id"]
 
-    r_run = client.post(f"/factors/{fid}/evaluations/run")
+    r_prof = client.post(
+        "/evaluation-profiles",
+        json={"name": "prof_no_ds", "workflow": _profile_workflow_missing_data_set()},
+    )
+    assert r_prof.status_code == 200
+    prof_id = r_prof.json()["id"]
+
+    r_run = client.post(f"/evaluation-profiles/{prof_id}/factors/{fid}/evaluations/run")
     assert r_run.status_code == 400
     assert "数据集" in r_run.json()["detail"]
