@@ -1,6 +1,6 @@
 "use client";
 
-import { Maximize2, Minus, Plus } from "lucide-react";
+import { Maximize2, Minus, Plus, Trash2 } from "lucide-react";
 import {
   forwardRef,
   useCallback,
@@ -20,6 +20,7 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
+  useStore,
   type Connection,
   type IsValidConnection,
   type Edge,
@@ -39,7 +40,10 @@ import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
 } from "./reactflow/workflow-graph-reactflow-defaults";
-import { WorkflowGraphContextProvider } from "./workflow-graph-context";
+import {
+  WorkflowGraphContextProvider,
+  useWorkflowGraphContext,
+} from "./workflow-graph-context";
 import {
   toPersistedWorkflowGraph,
   toReactFlowEdges,
@@ -58,13 +62,46 @@ export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
 
 
 export function WorkflowGraphZoomToolbar() {
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } =
+    useReactFlow();
+  const { readOnly } = useWorkflowGraphContext();
+  const hasSelection = useStore(
+    useCallback(
+      (s) =>
+        s.getNodes().some((n) => n.selected) ||
+        s.edges.some((e) => e.selected),
+      [],
+    ),
+  );
+
+  const onDeleteSelected = useCallback(() => {
+    if (readOnly) return;
+    deleteElements({
+      nodes: getNodes().filter((n) => n.selected),
+      edges: getEdges().filter((e) => e.selected),
+    });
+  }, [readOnly, deleteElements, getNodes, getEdges]);
+
   return (
     <Panel position="bottom-left" className="m-3!">
       <div
         data-slot="workflow-graph-zoom"
         className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
       >
+        {!readOnly ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-none border-b border-border text-destructive hover:text-destructive"
+            onClick={onDeleteSelected}
+            disabled={!hasSelection}
+            aria-label="删除选中的节点或连线"
+            title="删除选中（Delete / Backspace）"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
@@ -157,16 +194,21 @@ function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, 
   }, []);
 
   const onConnect: OnConnect = useCallback((c: Connection) => {
-    setEdges((eds) =>
-      addEdge(
+    if (!c.target || !c.targetHandle) return;
+    setEdges((eds) => {
+      const withoutSameInputHandle = eds.filter(
+        (e) =>
+          !(e.target === c.target && e.targetHandle === c.targetHandle),
+      );
+      return addEdge(
         {
           ...c,
           id: crypto.randomUUID(),
           type: "default",
         },
-        eds,
-      ),
-    );
+        withoutSameInputHandle,
+      );
+    });
   }, []);
 
   return useMemo(() => ({
@@ -339,6 +381,7 @@ export const WorkflowGraphCanvas = forwardRef<
                 onMoveEnd={onMoveEnd}
                 defaultViewport={initialViewport}
                 fitView={!initialViewport}
+                deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
                 nodesDraggable={!readOnly}
                 nodesConnectable={!readOnly}
                 elementsSelectable={!readOnly}

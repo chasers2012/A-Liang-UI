@@ -166,60 +166,53 @@ export function FactorEvaluationsOverview() {
               </TableRow>
             </TableHeader>
             <TableBody>
-            {rows.map((r) => {
-              const ic = r.mean_ic[pp];
-              const spread = r.mean_return_spread?.[pp];
-              let status: string;
-              if (!r.has_evaluation) {
-                status = "未评价";
-              } else if (r.error) {
-                status = "失败";
-              } else {
-                status = "成功";
-              }
-              return (
-                <TableRow key={r.factor_id}>
-                  <TableCell className="max-w-40 truncate font-mono text-xs font-medium">
-                    <Link
-                      href={`/factors/library/${encodeURIComponent(r.factor_id)}`}
-                      className="text-foreground underline-offset-4 hover:underline"
-                    >
-                      {r.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs tabular-nums">
-                    {r.error ? "—" : formatIc(ic)}
-                  </TableCell>
-                  <TableCell className="hidden text-right font-mono text-xs tabular-nums md:table-cell">
-                    {r.error ? "—" : formatIc(spread)}
-                  </TableCell>
-                  <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
-                    {formatIsoShort(r.evaluated_at ?? null)}
-                  </TableCell>
-                  <TableCell className="whitespace-normal text-right text-xs">
-                    <span
-                      className={
-                        status === "成功"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : status === "失败"
-                            ? "text-destructive"
-                            : "text-muted-foreground"
-                      }
-                    >
-                      {status}
-                    </span>
-                    {r.error ? (
-                      <span
-                        className="mt-0.5 block max-w-32 truncate text-[0.65rem] text-muted-foreground sm:max-w-none"
-                        title={r.error}
+              {rows.map((r) => {
+                let status: string;
+                if (!r.has_evaluation) {
+                  status = "未评价";
+                } else if (r.error) {
+                  status = "失败";
+                } else {
+                  status = "成功";
+                }
+                return (
+                  <TableRow key={r.factor_id}>
+                    <TableCell className="max-w-40 truncate font-mono text-xs font-medium">
+                      <Link
+                        href={`/factors/library/${encodeURIComponent(r.factor_id)}`}
+                        className="text-foreground underline-offset-4 hover:underline"
                       >
-                        {r.error}
+                        {r.name}
+                      </Link>
+                    </TableCell>
+
+                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
+                      {formatIsoShort(r.evaluated_at ?? null)}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-right text-xs">
+                      <span
+                        className={
+                          status === "成功"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : status === "失败"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                        }
+                      >
+                        {status}
                       </span>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                      {r.error ? (
+                        <span
+                          className="mt-0.5 block max-w-32 truncate text-[0.65rem] text-muted-foreground sm:max-w-none"
+                          title={r.error}
+                        >
+                          {r.error}
+                        </span>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

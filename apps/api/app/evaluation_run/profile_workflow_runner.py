@@ -81,5 +81,5 @@ def run_evaluation_profile_workflow(
     return FactorEvaluationRecord(
         evaluated_at=utc_now_iso(),
         evaluation_profile_id=profile.id,
-        result=final_result,
+        results=final_result,
     )
