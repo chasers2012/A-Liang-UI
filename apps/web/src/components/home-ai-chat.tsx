@@ -110,12 +110,12 @@ function AiChatMessageList({
   return (
     <ScrollArea
       viewportRef={scrollRef}
-      className="min-h-0 flex-1 "
+      className="min-h-0 flex-1  pt-6"
       role="log"
       aria-live="polite"
       aria-relevant="additions"
     >
-      <div className="flex w-full min-w-0 flex-col gap-3 p-4">
+      <div className="flex w-full min-w-0 flex-col gap-3 p-6 pl-9">
         {segments.map((seg, index) => {
           if (seg.kind === "solo-assistant") {
             return (
@@ -177,8 +177,8 @@ function AiChatMessageList({
                     <>
                       <span className="sr-only">助手：</span>
                       {seg.assistant.content === "" &&
-                      isSending &&
-                      isLastSegment ? (
+                        isSending &&
+                        isLastSegment ? (
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Loader2
                             className="size-4 shrink-0 animate-spin"
@@ -329,19 +329,17 @@ export function HomeAiChat() {
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-        <AiChatMessageList
-          scrollRef={listRef}
-          messages={messages}
-          isSending={isSending}
-        />
-        {errorText ? (
-          <p className="shrink-0 text-sm text-destructive" role="alert">
-            {errorText}
-          </p>
-        ) : null}
-      </div>
-      <div className="shrink-0 pt-4">
+      <AiChatMessageList
+        scrollRef={listRef}
+        messages={messages}
+        isSending={isSending}
+      />
+      {errorText ? (
+        <p className="shrink-0 text-sm text-destructive" role="alert">
+          {errorText}
+        </p>
+      ) : null}
+      <div className="shrink-0 px-6 pb-6">
         <AiChatComposer
           input={input}
           isSending={isSending}
