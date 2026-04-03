@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
@@ -10,6 +12,7 @@ from app.evaluation.scheme.profile_schemas import (
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
+    workflow_public_dict,
 )
 from app.evaluation.scheme.profiles_store import EvaluationProfilesRegistry
 
@@ -21,7 +24,7 @@ def _to_public(rec: EvaluationProfileRecord) -> EvaluationProfilePublic:
         id=rec.id,
         name=rec.name,
         description=rec.description,
-        workflow=rec.workflow,
+        workflow=workflow_public_dict(rec.workflow),
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
@@ -39,7 +42,7 @@ def _merge_evaluation_profile_patch(
     if "description" in data:
         rec.description = (body.description or "").strip()
     if "workflow" in data and body.workflow is not None:
-        rec.workflow = body.workflow
+        rec.workflow = json.dumps(body.workflow, ensure_ascii=False)
     rec.updated_at = utc_now_iso()
 
 

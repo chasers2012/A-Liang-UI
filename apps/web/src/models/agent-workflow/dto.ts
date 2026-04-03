@@ -1,7 +1,5 @@
 import type { WorkflowNodeTypeDefinition } from "@/components/workflow-graph";
-
-/** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
-export type AgentWorkflowGraphJson = string;
+import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 
 export type AgentWorkflowSummaryPublic = {
   id: string;
@@ -15,7 +13,7 @@ export type AgentWorkflowDetailPublic = {
   id: string;
   name: string;
   description: string;
-  graph: AgentWorkflowGraphJson | null;
+  graph: WorkflowGraphPersisted | null;
   created_at: string;
   updated_at: string;
 };

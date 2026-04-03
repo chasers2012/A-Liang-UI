@@ -43,7 +43,6 @@ import {
 import { DeleteFactorDialog } from "@/features/factors/ui/delete-factor-dialog";
 import {
   EvaluationProfileMetricResultsPanel,
-  type MetricMetaEntry,
 } from "@/features/factors/ui/evaluation-profile-metric-results";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 
@@ -140,9 +139,8 @@ function FactorEvaluationRunControls(props: {
 function FactorEvaluationDetails(props: {
   evalRow: FactorEvaluationRowPublic;
   evalProfile: EvaluationProfilePublic | null;
-  metricMetaById: Record<string, MetricMetaEntry>;
 }) {
-  const { evalRow, evalProfile, metricMetaById } = props;
+  const { evalRow, evalProfile } = props;
 
   return (
     <>
@@ -185,16 +183,13 @@ function FactorEvaluationDetails(props: {
         </p>
       )}
       {!evalRow.error &&
-      evalRow.evaluation_profile_id &&
-      !hasWorkflowMetricResults(evalRow) ? (
+        evalRow.evaluation_profile_id &&
+        !hasWorkflowMetricResults(evalRow) ? (
         <p className="text-sm text-muted-foreground">
           当前评价没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
         </p>
       ) : null}
       <EvaluationProfileMetricResultsPanel
-        metricResults={evalRow.metric_results ?? {}}
-        profile={evalProfile}
-        metricMetaById={metricMetaById}
       />
     </>
   );
@@ -286,7 +281,6 @@ function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
 function FactorEvaluationCard(props: {
   evalRow: FactorEvaluationRowPublic | null;
   evalProfile: EvaluationProfilePublic | null;
-  metricMetaById: Record<string, MetricMetaEntry>;
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
@@ -299,7 +293,6 @@ function FactorEvaluationCard(props: {
   const {
     evalRow,
     evalProfile,
-    metricMetaById,
     profiles,
     profileSelectItems,
     runProfileId,
@@ -341,7 +334,6 @@ function FactorEvaluationCard(props: {
           <FactorEvaluationDetails
             evalRow={evalRow}
             evalProfile={evalProfile}
-            metricMetaById={metricMetaById}
           />
         )}
       </CardContent>
@@ -354,7 +346,6 @@ function FactorDetailLoadedView(props: {
   loadError: string | null;
   evalRow: FactorEvaluationRowPublic | null;
   evalProfile: EvaluationProfilePublic | null;
-  metricMetaById: Record<string, MetricMetaEntry>;
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
@@ -369,7 +360,6 @@ function FactorDetailLoadedView(props: {
     loadError,
     evalRow,
     evalProfile,
-    metricMetaById,
     profiles,
     profileSelectItems,
     runProfileId,
@@ -394,7 +384,6 @@ function FactorDetailLoadedView(props: {
         <FactorEvaluationCard
           evalRow={evalRow}
           evalProfile={evalProfile}
-          metricMetaById={metricMetaById}
           profiles={profiles}
           profileSelectItems={profileSelectItems}
           runProfileId={runProfileId}
@@ -431,7 +420,6 @@ export default function FactorDetailPage() {
     loadError,
     loading,
     profiles,
-    evaluationMetrics,
     runProfileId,
     deleteTarget,
     deleting,
@@ -452,14 +440,6 @@ export default function FactorDetailPage() {
     if (!pid) return null;
     return profiles.find((p) => p.id === pid) ?? null;
   }, [evalRow?.evaluation_profile_id, profiles]);
-
-  const metricMetaById = useMemo(() => {
-    const o: Record<string, MetricMetaEntry> = {};
-    for (const m of evaluationMetrics) {
-      o[m.id] = { name: m.name };
-    }
-    return o;
-  }, [evaluationMetrics]);
 
   const evaluatingThis =
     evaluationRunning != null && evaluationRunning.factorId === id;
@@ -579,7 +559,6 @@ export default function FactorDetailPage() {
         loadError={loadError}
         evalRow={evalRow}
         evalProfile={evalProfile}
-        metricMetaById={metricMetaById}
         profiles={profiles}
         profileSelectItems={profileSelectItems}
         runProfileId={runProfileId}

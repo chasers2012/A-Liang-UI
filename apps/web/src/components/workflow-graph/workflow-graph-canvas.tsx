@@ -2,7 +2,6 @@
 
 import { Maximize2, Minus, Plus } from "lucide-react";
 import {
-  ReactNode,
   forwardRef,
   useCallback,
   useEffect,
@@ -35,7 +34,6 @@ import "reactflow/dist/style.css";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { catalogToMap } from "./graph-model";
 
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
@@ -43,9 +41,6 @@ import {
 } from "./reactflow/workflow-graph-reactflow-defaults";
 import { WorkflowGraphContextProvider } from "./workflow-graph-context";
 import {
-  parsePersistedWorkflowGraphJson,
-  persistedViewportToReactFlowViewport,
-  stringifyPersistedWorkflowGraph,
   toPersistedWorkflowGraph,
   toReactFlowEdges,
   toReactFlowNodes,
@@ -54,6 +49,7 @@ import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { isWireInputSpec } from "./workflow-node-input-spec";
+import { WorkflowGraphPersisted } from "./reactflow/types";
 
 
 /** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
@@ -61,7 +57,6 @@ export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
   "application/x-workflow-graph-node-type";
 
 
-/** 须作为 `WorkflowGraphCanvas` 的 children 渲染（位于 React Flow 树内），以便使用 `useReactFlow`。 */
 export function WorkflowGraphZoomToolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   return (
@@ -108,8 +103,7 @@ export function WorkflowGraphZoomToolbar() {
 }
 
 export type WorkflowGraphCanvasHandle = {
-  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
-  getGraphJson: () => string;
+  getGraph: () => WorkflowGraphPersisted;
   /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
   addNode: (
     typeKey: string,
@@ -119,13 +113,74 @@ export type WorkflowGraphCanvasHandle = {
 
 export type WorkflowGraphCanvasProps = {
   nodeTypes: WorkflowNodeTypeDefinition[];
-  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
-  initialGraphJson: string;
+  /** 初始图：工作流图对象（`{nodes,links,viewport}`）。 */
+  initialGraph: WorkflowGraphPersisted;
   className?: string;
   readOnly?: boolean;
-
-  children?: ReactNode;
 };
+
+
+function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, WorkflowNodeTypeDefinition>) {
+  const initialNodes = useMemo(
+    () => toReactFlowNodes(initialGraph, catalog),
+    [initialGraph, catalog],
+  );
+  const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
+  const initialViewport = useMemo(
+    () => initialGraph.viewport,
+    [initialGraph.viewport],
+  );
+
+  const [nodes, setNodes] = useState<Node[]>(initialNodes);
+  const [edges, setEdges] = useState<Edge[]>(initialEdges);
+  const [viewport, setViewport] = useState<Viewport | undefined>(
+    initialViewport,
+  );
+
+
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes]);
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges]);
+  useEffect(() => {
+    setViewport(initialViewport);
+  }, [initialViewport]);
+
+  const onNodesChange = useCallback((changes: NodeChange[]) => {
+    setNodes((nds) => applyNodeChanges(changes, nds));
+  }, []);
+
+  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
+
+  const onConnect: OnConnect = useCallback((c: Connection) => {
+    setEdges((eds) =>
+      addEdge(
+        {
+          ...c,
+          id: crypto.randomUUID(),
+          type: "default",
+        },
+        eds,
+      ),
+    );
+  }, []);
+
+  return useMemo(() => ({
+    nodes,
+    edges,
+    viewport,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    setViewport,
+    setNodes,
+    initialViewport
+  }), [nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport]);
+}
 
 
 
@@ -134,62 +189,15 @@ export const WorkflowGraphCanvas = forwardRef<
   WorkflowGraphCanvasProps
 >(
   function WorkflowGraphCanvas(
-    { className, nodeTypes, initialGraphJson, readOnly = false, children },
+    { className, nodeTypes, initialGraph, readOnly = false },
     ref,
   ) {
-    const catalog = useMemo(() => catalogToMap(nodeTypes), [nodeTypes]);
-    const parsed = useMemo(
-      () => parsePersistedWorkflowGraphJson(initialGraphJson),
-      [initialGraphJson],
-    );
-    const initialNodes = useMemo(
-      () => toReactFlowNodes(parsed, catalog),
-      [parsed, catalog],
-    );
-    const initialEdges = useMemo(() => toReactFlowEdges(parsed), [parsed]);
-    const initialViewport = useMemo(
-      () => persistedViewportToReactFlowViewport(parsed.viewport),
-      [parsed.viewport],
-    );
-
-    const [nodes, setNodes] = useState<Node[]>(initialNodes);
-    const [edges, setEdges] = useState<Edge[]>(initialEdges);
-    const [viewport, setViewport] = useState<Viewport | null>(
-      initialViewport ?? null,
-    );
-
+    const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
-    useEffect(() => {
-      setNodes(initialNodes);
-    }, [initialNodes]);
-    useEffect(() => {
-      setEdges(initialEdges);
-    }, [initialEdges]);
-    useEffect(() => {
-      setViewport(initialViewport ?? null);
-    }, [initialViewport]);
+    const { nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport } = useGraph(initialGraph, catalog);
 
-    const onNodesChange = (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
-    };
 
-    const onEdgesChange = (changes: EdgeChange[]) => {
-      setEdges((eds) => applyEdgeChanges(changes, eds));
-    };
-
-    const onConnect: OnConnect = (c: Connection) => {
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...c,
-            id: crypto.randomUUID(),
-            type: "default",
-          },
-          eds,
-        ),
-      );
-    };
 
     const isValidConnection: IsValidConnection = useCallback(
       (c) => {
@@ -224,7 +232,7 @@ export const WorkflowGraphCanvas = forwardRef<
     const addNode = useCallback(
       (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
         if (readOnly) return;
-        const def = catalog.get(typeKey);
+        const def = catalog[typeKey];
         setNodes((prev) => {
           const idx = prev.length;
           const fallbackPos = {
@@ -249,18 +257,17 @@ export const WorkflowGraphCanvas = forwardRef<
           ];
         });
       },
-      [catalog, readOnly],
+      [catalog, readOnly, setNodes],
     );
 
-    const getGraphJson = useCallback(() => {
-      const ser = toPersistedWorkflowGraph(nodes, edges, viewport);
-      return stringifyPersistedWorkflowGraph(ser);
+    const getGraph = useCallback(() => {
+      return toPersistedWorkflowGraph(nodes, edges, viewport);
     }, [nodes, edges, viewport]);
 
 
 
-    useImperativeHandle(ref, () => ({ getGraphJson, addNode }), [
-      getGraphJson,
+    useImperativeHandle(ref, () => ({ getGraph, addNode }), [
+      getGraph,
       addNode,
     ]);
 
@@ -349,8 +356,9 @@ export const WorkflowGraphCanvas = forwardRef<
                   className="opacity-60"
                 />
                 <Controls showInteractive={false} />
-                {children}
+                <WorkflowGraphZoomToolbar />
               </ReactFlow>
+
             </div>
           </WorkflowGraphContextProvider>
         </div>

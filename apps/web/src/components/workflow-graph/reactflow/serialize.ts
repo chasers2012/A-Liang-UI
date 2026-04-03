@@ -15,9 +15,6 @@ import {
   normalizeAppendableHandle,
 } from "./appendable-handle";
 
-export const EMPTY_WORKFLOW_GRAPH_JSON =
-  '{"nodes":[],"links":[],"viewport":null}';
-
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
 }
@@ -35,9 +32,11 @@ function arrayOrEmpty<T>(x: unknown): T[] {
   return Array.isArray(x) ? (x as T[]) : [];
 }
 
-function emptyPersisted(): WorkflowGraphPersisted {
-  return { nodes: [], links: [], viewport: null };
-}
+export const EMPTY_WORKFLOW: WorkflowGraphPersisted = {
+  nodes: [],
+  links: [],
+  viewport: undefined,
+};
 
 function parsePersistedNode(
   n: unknown,
@@ -82,8 +81,10 @@ function parsePersistedLink(l: unknown): WorkflowGraphLink | null {
   };
 }
 
-function parsePersistedViewport(raw: unknown): WorkflowGraphViewport | null {
-  if (raw == null || !isRecord(raw)) return null;
+function parsePersistedViewport(
+  raw: unknown,
+): WorkflowGraphViewport | undefined {
+  if (raw == null || !isRecord(raw)) return undefined;
   return {
     x: num(raw.x),
     y: num(raw.y),
@@ -91,18 +92,10 @@ function parsePersistedViewport(raw: unknown): WorkflowGraphViewport | null {
   };
 }
 
-export function parsePersistedWorkflowGraphJson(
-  json: string,
+export function parsePersistedWorkflowGraphPayload(
+  raw: unknown,
 ): WorkflowGraphPersisted {
-  const trimmed = json.trim();
-  if (!trimmed) return emptyPersisted();
-  let raw: unknown;
-  try {
-    raw = JSON.parse(trimmed);
-  } catch {
-    return emptyPersisted();
-  }
-  if (!isRecord(raw)) return emptyPersisted();
+  if (!isRecord(raw)) return EMPTY_WORKFLOW;
 
   const nodes = arrayOrEmpty(raw.nodes)
     .map(parsePersistedNode)
@@ -118,28 +111,12 @@ export function parsePersistedWorkflowGraphJson(
   };
 }
 
-function xyZoom(vp: { x: number; y: number; zoom: number }) {
-  return { x: vp.x, y: vp.y, zoom: vp.zoom };
-}
-
-export function persistedViewportToReactFlowViewport(
-  vp: WorkflowGraphViewport | null | undefined,
-): Viewport | undefined {
-  return vp ? xyZoom(vp) : undefined;
-}
-
-export function reactFlowViewportToPersistedViewport(
-  vp: Viewport | null | undefined,
-): WorkflowGraphViewport | null {
-  return vp ? xyZoom(vp) : null;
-}
-
 export function toReactFlowNodes(
   persisted: WorkflowGraphPersisted,
-  catalog: Map<string, WorkflowNodeTypeDefinition>,
+  catalog: Record<string, WorkflowNodeTypeDefinition>,
 ): Node[] {
   return persisted.nodes.map((n) => {
-    const def = catalog.get(n.type);
+    const def = catalog[n.type];
     return {
       id: n.id,
       type: "workflowStep",
@@ -188,7 +165,7 @@ export function toReactFlowEdges(persisted: WorkflowGraphPersisted): Edge[] {
 export function toPersistedWorkflowGraph(
   nodes: Node[],
   edges: Edge[],
-  viewport: Viewport | null | undefined,
+  viewport: Viewport | undefined,
 ): WorkflowGraphPersisted {
   const outNodes: WorkflowGraphPersisted["nodes"] = nodes.map((n) => {
     const data = (n.data ?? {}) as Record<string, unknown>;
@@ -223,16 +200,6 @@ export function toPersistedWorkflowGraph(
   return {
     nodes: outNodes,
     links: outLinks,
-    viewport: reactFlowViewportToPersistedViewport(viewport),
+    viewport: viewport,
   };
-}
-
-export function stringifyPersistedWorkflowGraph(
-  g: WorkflowGraphPersisted,
-): string {
-  return JSON.stringify({
-    nodes: g.nodes ?? [],
-    links: g.links ?? [],
-    viewport: g.viewport ?? null,
-  } satisfies WorkflowGraphPersisted);
 }

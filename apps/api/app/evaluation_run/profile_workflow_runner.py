@@ -18,8 +18,7 @@ from .schemas import FactorEvaluationRecord
 def _extract_collected_result(workflow: str, node_results: dict[str, dict[str, Any]]) -> Any | None:
     payload = json.loads(workflow)
     if not isinstance(payload, dict):
-        return None
-
+        raise TypeError("workflow must decode to an object")
     graph = WorkflowGraph.parse(payload)
     order = topological_order(graph.nodes, graph.links)
     by_id = {n.id: n for n in graph.nodes}

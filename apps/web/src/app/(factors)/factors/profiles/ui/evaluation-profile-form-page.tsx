@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
@@ -12,13 +12,10 @@ import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { createEvaluationProfile, getEvaluationProfile, patchEvaluationProfile } from "@/lib/quant-agent-api";
 
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
-import type { EvaluationWorkflowCanvasHandle } from "./evaluation-workflow-canvas";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
-import {
-  DEFAULT_WORKFLOW_JSON,
-  EMPTY_EVALUATION_WORKFLOW,
-  parseEvaluationWorkflowJson,
-} from "./profile-form-shared";
+import { EMPTY_EVALUATION_WORKFLOW } from "./profile-form-shared";
+import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 
 type Props = {
   id?: string;
@@ -38,10 +35,9 @@ export function EvaluationProfileFormPage(props: Props) {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [workflowJson, setWorkflowJson] = useState(isEdit ? "{}" : DEFAULT_WORKFLOW_JSON);
-  const [workflowEditMode, setWorkflowEditMode] = useState<"canvas" | "json">("canvas");
+  const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>(EMPTY_EVALUATION_WORKFLOW);
   const [canvasKey, setCanvasKey] = useState(0);
-  const canvasRef = useRef<EvaluationWorkflowCanvasHandle>(null);
+  const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(isEdit);
@@ -58,16 +54,7 @@ export function EvaluationProfileFormPage(props: Props) {
       const d = await getEvaluationProfile(id);
       setName(d.name);
       setDescription(d.description);
-      try {
-        const w = d.workflow;
-        setWorkflowJson(
-          typeof w === "string"
-            ? JSON.stringify(JSON.parse(w), null, 2)
-            : JSON.stringify(w, null, 2),
-        );
-      } catch {
-        setWorkflowJson(typeof d.workflow === "string" ? d.workflow : "{}");
-      }
+      setWorkflow(d.workflow);
       setCanvasKey((k) => k + 1);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : String(e));
@@ -78,56 +65,11 @@ export function EvaluationProfileFormPage(props: Props) {
 
   useEffectMicrotask(() => void load(), [load]);
 
-  const initialWorkflowForCanvas = useMemo(() => {
-    try {
-      return parseEvaluationWorkflowJson(workflowJson);
-    } catch {
-      return EMPTY_EVALUATION_WORKFLOW;
-    }
-  }, [workflowJson]);
-
-  const setWorkflowMode = (next: "canvas" | "json") => {
-    if (next === workflowEditMode) return;
-
-    if (workflowEditMode === "canvas" && next === "json") {
-      const w = canvasRef.current?.getWorkflow();
-      if (w) {
-        try {
-          setWorkflowJson(JSON.stringify(JSON.parse(w), null, 2));
-        } catch {
-          setWorkflowJson(w);
-        }
-      }
-    }
-
-    if (workflowEditMode === "json" && next === "canvas") {
-      try {
-        parseEvaluationWorkflowJson(workflowJson);
-      } catch (e) {
-        setFormError(e instanceof Error ? e.message : String(e));
-        return;
-      }
-      setFormError(null);
-      setCanvasKey((k) => k + 1);
-    }
-
-    setWorkflowEditMode(next);
-  };
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
-    let workflow: string;
-    try {
-      workflow =
-        workflowEditMode === "canvas"
-          ? canvasRef.current?.getWorkflow() ?? EMPTY_EVALUATION_WORKFLOW
-          : parseEvaluationWorkflowJson(workflowJson);
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err));
-      return;
-    }
+    const wf = canvasRef.current?.getGraph() ?? workflow;
 
     setSubmitting(true);
     try {
@@ -136,14 +78,14 @@ export function EvaluationProfileFormPage(props: Props) {
         await patchEvaluationProfile(id, {
           name: name.trim(),
           description: description.trim(),
-          workflow,
+          workflow: wf,
         });
         router.push(`/factors/profiles/${encodeURIComponent(id)}`);
       } else {
         const created = await createEvaluationProfile({
           name: name.trim(),
           description: description.trim(),
-          workflow,
+          workflow: wf,
         });
         router.push(`/factors/profiles/${encodeURIComponent(created.id)}`);
       }
@@ -219,17 +161,11 @@ export function EvaluationProfileFormPage(props: Props) {
 
 
         <ProfileWorkflowEditorBlock
-          workflowJson={workflowJson}
-          onWorkflowJson={setWorkflowJson}
-          workflowJsonFieldId={isEdit ? "ep-e-wf" : "ep-wf"}
-          workflowEditMode={workflowEditMode}
-          onWorkflowMode={setWorkflowMode}
+          workflow={workflow}
           canvasKey={canvasKey}
           canvasRef={canvasRef}
-          initialWorkflow={initialWorkflowForCanvas}
         />
       </form>
     </FactorFormPageContainer>
   );
 }
-

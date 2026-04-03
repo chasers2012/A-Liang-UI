@@ -2,41 +2,38 @@
 
 import { useEffect, useMemo, useState, type RefObject } from "react";
 
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "@/components/workflow-graph";
 import {
   listEvaluationNodeTypes,
   type EvaluationNodeTypeCatalogItemPublic,
 } from "@/lib/quant-agent-api";
-import type { EvaluationWorkflowGraphJson } from "@/models/evaluation-profile/dto";
 
 import {
-  EvaluationWorkflowCanvas,
-  type EvaluationWorkflowCanvasHandle,
-} from "./evaluation-workflow-canvas";
+  WorkflowGraphCanvas,
+  WORKFLOW_GRAPH_NODE_DRAG_MIME,
+  type WorkflowGraphCanvasHandle,
+  type WorkflowNodeTypeDefinition,
+} from "@/components/workflow-graph";
+import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+
+function toWorkflowNodeTypes(
+  catalog: EvaluationNodeTypeCatalogItemPublic[],
+): WorkflowNodeTypeDefinition[] {
+  return catalog.map((c) => ({
+    type: c.type,
+    label: c.label,
+    category: c.category ?? undefined,
+    inputs: c.inputs,
+    outputs: c.outputs,
+  }));
+}
 
 export function ProfileWorkflowEditorBlock(props: {
-  workflowJson: string;
-  onWorkflowJson: (v: string) => void;
-  workflowJsonFieldId: string;
-  workflowEditMode: "canvas" | "json";
-  onWorkflowMode: (next: "canvas" | "json") => void;
+  workflow: WorkflowGraphPersisted;
   canvasKey: number;
-  canvasRef: RefObject<EvaluationWorkflowCanvasHandle | null>;
-  initialWorkflow: EvaluationWorkflowGraphJson;
+  canvasRef: RefObject<WorkflowGraphCanvasHandle | null>;
 }) {
-  const {
-    workflowJson,
-    onWorkflowJson,
-    workflowJsonFieldId,
-    workflowEditMode,
-    onWorkflowMode,
-    canvasKey,
-    canvasRef,
-    initialWorkflow,
-  } = props;
+  const { workflow, canvasKey, canvasRef } = props;
 
   const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
@@ -44,7 +41,7 @@ export function ProfileWorkflowEditorBlock(props: {
   useEffect(() => {
     void listEvaluationNodeTypes()
       .then(setCatalog)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setWfMetaLoading(false));
   }, []);
 
@@ -64,35 +61,14 @@ export function ProfileWorkflowEditorBlock(props: {
       .sort((a, b) => a.category.localeCompare(b.category, "zh-Hans-CN"));
   }, [catalog]);
 
+  const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Label className="shrink-0">工作流</Label>
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant={workflowEditMode === "canvas" ? "default" : "outline"}
-            size="sm"
-            disabled={wfMetaLoading}
-            onClick={() => onWorkflowMode("canvas")}
-          >
-            画布
-          </Button>
-          <Button
-            type="button"
-            variant={workflowEditMode === "json" ? "default" : "outline"}
-            size="sm"
-            onClick={() => onWorkflowMode("json")}
-          >
-            JSON
-          </Button>
-        </div>
-      </div>
+      <Label className="shrink-0">工作流</Label>
       {wfMetaLoading ? (
-        <p className="text-sm text-muted-foreground">
-          加载节点类型…
-        </p>
-      ) : workflowEditMode === "canvas" ? (
+        <p className="text-sm text-muted-foreground">加载节点类型…</p>
+      ) : (
         <div className="flex gap-3">
           <aside className="hidden w-[220px] shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/10 md:block">
             <div className="border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -144,27 +120,14 @@ export function ProfileWorkflowEditorBlock(props: {
               )}
             </div>
           </aside>
-          <EvaluationWorkflowCanvas
+          <WorkflowGraphCanvas
             key={canvasKey}
             ref={canvasRef}
-            catalog={catalog}
-            initialWorkflow={initialWorkflow}
-            className="flex-1"
+            nodeTypes={nodeTypes}
+            initialGraph={workflow}
+            className="h-[min(560px,72vh)] min-h-[320px] flex-1"
           />
         </div>
-      ) : (
-        <>
-          <Label htmlFor={workflowJsonFieldId} className="sr-only">
-            工作流 JSON
-          </Label>
-          <Textarea
-            id={workflowJsonFieldId}
-            className="min-h-48 font-mono text-xs"
-            value={workflowJson}
-            onChange={(e) => onWorkflowJson(e.target.value)}
-            spellCheck={false}
-          />
-        </>
       )}
     </div>
   );

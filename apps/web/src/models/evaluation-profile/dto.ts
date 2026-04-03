@@ -1,7 +1,6 @@
 /** 评价方案（工作流图）与节点类型目录 DTO。 */
 
-/** 工作流图 JSON 字符串（持久化字段）。 */
-export type EvaluationWorkflowGraphJson = string;
+import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 
 /** 从工作流图序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
 export interface WorkflowNodeDto {
@@ -15,7 +14,7 @@ export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
-  workflow: EvaluationWorkflowGraphJson;
+  workflow: WorkflowGraphPersisted;
   created_at: string;
   updated_at: string;
 }
