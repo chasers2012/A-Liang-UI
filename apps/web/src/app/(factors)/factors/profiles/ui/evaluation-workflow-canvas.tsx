@@ -21,7 +21,6 @@ import type { EvaluationNodeTypeCatalogItemPublic } from "@/lib/quant-agent-api"
 export type EvaluationWorkflowCanvasHandle = {
   /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getWorkflow: () => string;
-  importWorkflow: (json: string) => void;
   addNode: (typeKey: string) => void;
 };
 
@@ -63,17 +62,12 @@ export const EvaluationWorkflowCanvas = forwardRef<
     return innerRef.current?.getGraphJson() ?? EMPTY_WORKFLOW_GRAPH_JSON;
   }, []);
 
-  const importWorkflow = useCallback((json: string) => {
-    innerRef.current?.importGraphJson(json);
-  }, []);
-
   const addNode = useCallback((typeKey: string) => {
     innerRef.current?.addNode(typeKey);
   }, []);
 
-  useImperativeHandle(ref, () => ({ getWorkflow, importWorkflow, addNode }), [
+  useImperativeHandle(ref, () => ({ getWorkflow, addNode }), [
     getWorkflow,
-    importWorkflow,
     addNode,
   ]);
 

@@ -5,9 +5,11 @@ import type { WorkflowNodeAccent, WorkflowNodeTypeDefinition } from "./types";
 export type WorkflowGraphCanvasHandle = {
   /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
   getGraphJson: () => string;
-  importGraphJson: (json: string) => void;
   /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
-  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => void;
+  addNode: (
+    typeKey: string,
+    opts?: { position?: { x: number; y: number } },
+  ) => void;
 };
 
 export type WorkflowGraphCanvasProps = {
@@ -30,8 +32,8 @@ export type WorkflowGraphCanvasProps = {
     cssRoot: HTMLElement | null,
   ) => WorkflowNodeAccent;
   /**
-   * 画布区域内的额外覆盖层（例如缩放按钮、工具栏）。
-   * 它会在内部 `WorkflowGraphZoomContext.Provider` 中渲染。
+   * 画布区域内的额外覆盖层（例如 `WorkflowGraphZoomToolbar`）。
+   * 会作为 React Flow 的子节点渲染，可使用 `useReactFlow` 等 API。
    */
   children?: ReactNode;
 };

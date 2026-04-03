@@ -2,10 +2,8 @@
 
 import { Maximize2, Minus, Plus } from "lucide-react";
 import {
-  createContext,
   forwardRef,
   useCallback,
-  useContext,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -16,6 +14,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  Panel,
   ReactFlow,
   addEdge,
   applyEdgeChanges,
@@ -28,6 +27,7 @@ import {
   type Node,
   type NodeChange,
   type OnConnect,
+  type ReactFlowInstance,
   type Viewport,
 } from "reactflow";
 import "reactflow/dist/style.css";
@@ -46,7 +46,6 @@ import {
 } from "./reactflow/workflow-graph-reactflow-defaults";
 import { WorkflowGraphReadOnlyProvider } from "./workflow-graph-readonly-context";
 import {
-  EMPTY_WORKFLOW_GRAPH_JSON,
   parsePersistedWorkflowGraphJson,
   persistedViewportToReactFlowViewport,
   stringifyPersistedWorkflowGraph,
@@ -67,38 +66,21 @@ export type {
 
 export { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas-constants";
 
-type WorkflowGraphZoomContextValue = {
-  zoomBy: (factor: number) => void;
-  zoomFit: () => void;
-};
-
-const WorkflowGraphZoomContext =
-  createContext<WorkflowGraphZoomContextValue | null>(null);
-
-function useWorkflowGraphZoom(): WorkflowGraphZoomContextValue {
-  const ctx = useContext(WorkflowGraphZoomContext);
-  if (!ctx) {
-    throw new Error(
-      "WorkflowGraphZoomToolbar must be used inside WorkflowGraphZoomContext provider",
-    );
-  }
-  return ctx;
-}
-
+/** 须作为 `WorkflowGraphCanvas` 的 children 渲染（位于 React Flow 树内），以便使用 `useReactFlow`。 */
 export function WorkflowGraphZoomToolbar() {
-  const { zoomBy, zoomFit } = useWorkflowGraphZoom();
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-10 flex gap-1">
+    <Panel position="bottom-left" className="m-3!">
       <div
         data-slot="workflow-graph-zoom"
-        className="pointer-events-auto flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
+        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
       >
         <Button
           type="button"
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-none border-b border-border"
-          onClick={() => zoomBy(1.15)}
+          onClick={() => zoomIn({ duration: 120 })}
           aria-label="放大"
         >
           <Plus className="size-4" />
@@ -108,7 +90,7 @@ export function WorkflowGraphZoomToolbar() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-none border-b border-border"
-          onClick={() => zoomBy(1 / 1.15)}
+          onClick={() => zoomOut({ duration: 120 })}
           aria-label="缩小"
         >
           <Minus className="size-4" />
@@ -118,49 +100,16 @@ export function WorkflowGraphZoomToolbar() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded-none"
-          onClick={zoomFit}
+          onClick={() => {
+            fitView({ padding: 0.18, duration: 200 });
+          }}
           aria-label="适应画布"
         >
           <Maximize2 className="size-4" />
         </Button>
       </div>
-    </div>
+    </Panel>
   );
-}
-
-type ZoomApi = {
-  zoomBy: (factor: number) => void;
-  fitView: () => void;
-};
-
-type ReactFlowApi = {
-  screenToFlowPosition: (pt: { x: number; y: number }) => { x: number; y: number };
-};
-
-function ReactFlowZoomBridge({
-  zoomApiRef,
-}: {
-  zoomApiRef: React.MutableRefObject<ZoomApi | null>;
-}) {
-  const rf = useReactFlow();
-
-  useEffect(() => {
-    zoomApiRef.current = {
-      zoomBy: (factor: number) => {
-        const vp = rf.getViewport();
-        const next = Math.max(0.05, Math.min(8, vp.zoom * factor));
-        rf.setViewport({ ...vp, zoom: next }, { duration: 120 });
-      },
-      fitView: () => {
-        rf.fitView({ padding: 0.18, duration: 200 });
-      },
-    };
-    return () => {
-      zoomApiRef.current = null;
-    };
-  }, [rf, zoomApiRef]);
-
-  return null;
 }
 
 export const WorkflowGraphCanvas = forwardRef<
@@ -192,9 +141,7 @@ export const WorkflowGraphCanvas = forwardRef<
       initialViewport ?? null,
     );
 
-    const zoomApiRef = useRef<ZoomApi | null>(null);
-    const rfApiRef = useRef<ReactFlowApi | null>(null);
-    const dropAreaRef = useRef<HTMLDivElement | null>(null);
+    const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
     useEffect(() => {
       setNodes(initialNodes);
@@ -257,9 +204,6 @@ export const WorkflowGraphCanvas = forwardRef<
       setViewport(vp);
     };
 
-    const zoomBy = (factor: number) => zoomApiRef.current?.zoomBy(factor);
-    const zoomFit = () => zoomApiRef.current?.fitView();
-
     const addNode = useCallback(
       (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
         if (readOnly) return;
@@ -296,21 +240,10 @@ export const WorkflowGraphCanvas = forwardRef<
       return stringifyPersistedWorkflowGraph(ser);
     }, [nodes, edges, viewport]);
 
-    const importGraphJson = useCallback(
-      (json: string) => {
-        const g = parsePersistedWorkflowGraphJson(
-          json.trim() ? json : EMPTY_WORKFLOW_GRAPH_JSON,
-        );
-        setNodes(toReactFlowNodes(g, catalog));
-        setEdges(toReactFlowEdges(g));
-        setViewport(persistedViewportToReactFlowViewport(g.viewport) ?? null);
-      },
-      [catalog],
-    );
 
-    useImperativeHandle(ref, () => ({ getGraphJson, importGraphJson, addNode }), [
+
+    useImperativeHandle(ref, () => ({ getGraphJson, addNode }), [
       getGraphJson,
-      importGraphJson,
       addNode,
     ]);
 
@@ -322,21 +255,21 @@ export const WorkflowGraphCanvas = forwardRef<
       e.dataTransfer.dropEffect = "copy";
     };
 
-    const onDrop = (e: React.DragEvent) => {
+    const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
       if (readOnly) return;
       const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
       if (!typeKey) return;
       e.preventDefault();
 
-      const el = dropAreaRef.current;
-      const rfApi = rfApiRef.current;
-      if (!el || !rfApi) {
+      const rf = reactFlowRef.current;
+      const el = e.currentTarget;
+      if (!rf) {
         addNode(typeKey);
         return;
       }
       const rect = el.getBoundingClientRect();
       const clientPoint = { x: e.clientX, y: e.clientY };
-      const flowPos = rfApi.screenToFlowPosition(clientPoint);
+      const flowPos = rf.screenToFlowPosition(clientPoint);
       if (
         clientPoint.x < rect.left ||
         clientPoint.x > rect.right ||
@@ -364,76 +297,48 @@ export const WorkflowGraphCanvas = forwardRef<
             canvasAreaClassName,
           )}
         >
-          <WorkflowGraphZoomContext.Provider value={{ zoomBy, zoomFit }}>
-            <WorkflowGraphReadOnlyProvider readOnly={readOnly}>
-              <div
-                ref={dropAreaRef}
-                className="relative min-h-[280px] flex-1"
-                onDragOver={onDragOver}
-                onDrop={onDrop}
+          <WorkflowGraphReadOnlyProvider readOnly={readOnly}>
+            <div
+              className="relative min-h-[280px] flex-1"
+              onDragOver={onDragOver}
+              onDrop={onDrop}
+            >
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
+                onInit={(inst) => {
+                  reactFlowRef.current = inst;
+                }}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={readOnly ? undefined : onConnect}
+                isValidConnection={readOnly ? undefined : isValidConnection}
+                onMoveEnd={onMoveEnd}
+                defaultViewport={initialViewport}
+                fitView={!initialViewport}
+                nodesDraggable={!readOnly}
+                nodesConnectable={!readOnly}
+                elementsSelectable={!readOnly}
+                zoomOnScroll
+                zoomOnPinch
+                panOnScroll={false}
+                proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
+                className="min-h-[280px] flex-1"
               >
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onConnect={readOnly ? undefined : onConnect}
-                  isValidConnection={readOnly ? undefined : isValidConnection}
-                  onMoveEnd={onMoveEnd}
-                  defaultViewport={initialViewport}
-                  fitView={!initialViewport}
-                  nodesDraggable={!readOnly}
-                  nodesConnectable={!readOnly}
-                  elementsSelectable={!readOnly}
-                  zoomOnScroll
-                  zoomOnPinch
-                  panOnScroll={false}
-                  proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
-                >
-                  <ReactFlowZoomBridge zoomApiRef={zoomApiRef} />
-                  <ReactFlowApiBridge rfApiRef={rfApiRef} />
-                  <Background
-                    id="workflow-graph-bg"
-                    gap={22}
-                    size={1}
-                    variant={BackgroundVariant.Dots}
-                    className="opacity-60"
-                  />
-                  <Controls showInteractive={false} />
-                </ReactFlow>
+                <Background
+                  id="workflow-graph-bg"
+                  gap={22}
+                  size={1}
+                  variant={BackgroundVariant.Dots}
+                  className="opacity-60"
+                />
+                <Controls showInteractive={false} />
                 {children}
-              </div>
-            </WorkflowGraphReadOnlyProvider>
-          </WorkflowGraphZoomContext.Provider>
+              </ReactFlow>
+            </div>
+          </WorkflowGraphReadOnlyProvider>
         </div>
       </div>
     );
   });
-
-function ReactFlowApiBridge({
-  rfApiRef,
-}: {
-  rfApiRef: React.MutableRefObject<ReactFlowApi | null>;
-}) {
-  const rf = useReactFlow();
-
-  useEffect(() => {
-    rfApiRef.current = {
-      screenToFlowPosition: (pt: { x: number; y: number }) => {
-        const anyRf = rf as unknown as {
-          screenToFlowPosition?: (p: { x: number; y: number }) => { x: number; y: number };
-          project?: (p: { x: number; y: number }) => { x: number; y: number };
-        };
-        if (typeof anyRf.screenToFlowPosition === "function") return anyRf.screenToFlowPosition(pt);
-        if (typeof anyRf.project === "function") return anyRf.project(pt);
-        return pt;
-      },
-    };
-    return () => {
-      rfApiRef.current = null;
-    };
-  }, [rf, rfApiRef]);
-
-  return null;
-}

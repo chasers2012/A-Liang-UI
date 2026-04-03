@@ -27,120 +27,111 @@ function num(x: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function safeString(x: unknown): string | undefined {
+function str(x: unknown): string | undefined {
   return typeof x === "string" ? x : undefined;
 }
 
-function safeInputs(x: unknown): WorkflowNodeInputSpec[] {
-  return Array.isArray(x) ? (x as WorkflowNodeInputSpec[]) : [];
+function arrayOrEmpty<T>(x: unknown): T[] {
+  return Array.isArray(x) ? (x as T[]) : [];
 }
 
-function safeOutputs(x: unknown): WorkflowSocketDefinition[] {
-  return Array.isArray(x) ? (x as WorkflowSocketDefinition[]) : [];
+function emptyPersisted(): WorkflowGraphPersisted {
+  return { nodes: [], links: [], viewport: null };
+}
+
+function parsePersistedNode(
+  n: unknown,
+): WorkflowGraphPersisted["nodes"][number] | null {
+  if (!isRecord(n)) return null;
+  const id = n.id;
+  const type = n.type;
+  if (typeof id !== "string" || typeof type !== "string") return null;
+  const pos = n.pos;
+  const px = Array.isArray(pos) ? num(pos[0]) : 0;
+  const py = Array.isArray(pos) ? num(pos[1]) : 0;
+  const params = n.params;
+  return {
+    id,
+    type,
+    label: str(n.label) ?? type,
+    category: str(n.category),
+    inputs: arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
+    outputs: arrayOrEmpty<WorkflowSocketDefinition>(n.outputs),
+    pos: [px, py],
+    params: isRecord(params) ? params : {},
+  };
+}
+
+function parsePersistedLink(l: unknown): WorkflowGraphLink | null {
+  if (!isRecord(l)) return null;
+  const { from_node, from_socket, to_node, to_socket, id } = l;
+  if (
+    typeof from_node !== "string" ||
+    typeof from_socket !== "string" ||
+    typeof to_node !== "string" ||
+    typeof to_socket !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: typeof id === "string" || id === null ? id : undefined,
+    from_node,
+    from_socket,
+    to_node,
+    to_socket,
+  };
+}
+
+function parsePersistedViewport(raw: unknown): WorkflowGraphViewport | null {
+  if (raw == null || !isRecord(raw)) return null;
+  return {
+    x: num(raw.x),
+    y: num(raw.y),
+    zoom: num(raw.zoom, 1),
+  };
 }
 
 export function parsePersistedWorkflowGraphJson(
   json: string,
 ): WorkflowGraphPersisted {
   const trimmed = json.trim();
-  if (!trimmed) {
-    return { nodes: [], links: [], viewport: null };
-  }
+  if (!trimmed) return emptyPersisted();
   let raw: unknown;
   try {
     raw = JSON.parse(trimmed);
   } catch {
-    return { nodes: [], links: [], viewport: null };
+    return emptyPersisted();
   }
-  if (!isRecord(raw)) return { nodes: [], links: [], viewport: null };
+  if (!isRecord(raw)) return emptyPersisted();
 
-  const nodesRaw = raw.nodes;
-  const linksRaw = raw.links;
-  const viewportRaw = raw.viewport;
+  const nodes = arrayOrEmpty(raw.nodes)
+    .map(parsePersistedNode)
+    .filter((x): x is NonNullable<typeof x> => Boolean(x));
+  const links = arrayOrEmpty(raw.links)
+    .map(parsePersistedLink)
+    .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
-  const nodes: WorkflowGraphPersisted["nodes"] = Array.isArray(nodesRaw)
-    ? nodesRaw
-        .map((n) => {
-          if (!isRecord(n)) return null;
-          const id = n.id;
-          const type = n.type;
-          const pos = n.pos;
-          if (typeof id !== "string" || typeof type !== "string") return null;
-          const px = Array.isArray(pos) ? num(pos[0]) : 0;
-          const py = Array.isArray(pos) ? num(pos[1]) : 0;
-          const params = n.params;
-          const label = safeString(n.label) ?? type;
-          const category = safeString(n.category);
-          const inputs = safeInputs(n.inputs);
-          const outputs = safeOutputs(n.outputs);
-          return {
-            id,
-            type,
-            label,
-            category,
-            inputs,
-            outputs,
-            pos: [px, py] as [number, number],
-            params: isRecord(params) ? params : {},
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x))
-    : [];
+  return {
+    nodes,
+    links,
+    viewport: parsePersistedViewport(raw.viewport),
+  };
+}
 
-  const links: WorkflowGraphLink[] = Array.isArray(linksRaw)
-    ? linksRaw
-        .map((l) => {
-          if (!isRecord(l)) return null;
-          const from_node = l.from_node;
-          const from_socket = l.from_socket;
-          const to_node = l.to_node;
-          const to_socket = l.to_socket;
-          if (
-            typeof from_node !== "string" ||
-            typeof from_socket !== "string" ||
-            typeof to_node !== "string" ||
-            typeof to_socket !== "string"
-          ) {
-            return null;
-          }
-          const id = l.id;
-          return {
-            id: typeof id === "string" || id === null ? id : undefined,
-            from_node,
-            from_socket,
-            to_node,
-            to_socket,
-          } satisfies WorkflowGraphLink;
-        })
-        .filter((x): x is NonNullable<typeof x> => Boolean(x))
-    : [];
-
-  const viewport: WorkflowGraphViewport | null =
-    viewportRaw == null
-      ? null
-      : isRecord(viewportRaw)
-        ? {
-            x: num(viewportRaw.x),
-            y: num(viewportRaw.y),
-            zoom: num(viewportRaw.zoom, 1),
-          }
-        : null;
-
-  return { nodes, links, viewport };
+function xyZoom(vp: { x: number; y: number; zoom: number }) {
+  return { x: vp.x, y: vp.y, zoom: vp.zoom };
 }
 
 export function persistedViewportToReactFlowViewport(
   vp: WorkflowGraphViewport | null | undefined,
 ): Viewport | undefined {
-  if (!vp) return undefined;
-  return { x: vp.x, y: vp.y, zoom: vp.zoom };
+  return vp ? xyZoom(vp) : undefined;
 }
 
 export function reactFlowViewportToPersistedViewport(
   vp: Viewport | null | undefined,
 ): WorkflowGraphViewport | null {
-  if (!vp) return null;
-  return { x: vp.x, y: vp.y, zoom: vp.zoom };
+  return vp ? xyZoom(vp) : null;
 }
 
 export function toReactFlowNodes(
@@ -164,17 +155,10 @@ export function toReactFlowNodes(
   });
 }
 
-function edgeIdFromLink(l: WorkflowGraphLink): string {
-  const stable =
-    l.id ?? `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`;
-  return stable;
-}
-
 export function toReactFlowEdges(persisted: WorkflowGraphPersisted): Edge[] {
   const appendableTargets = new Set<string>();
   for (const n of persisted.nodes) {
-    const inputs = Array.isArray(n.inputs) ? n.inputs : [];
-    for (const s of inputs) {
+    for (const s of arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs)) {
       if (s?.render_type === "appendable") {
         appendableTargets.add(`${n.id}:${s.name}`);
       }
@@ -190,7 +174,8 @@ export function toReactFlowEdges(persisted: WorkflowGraphPersisted): Edge[] {
       targetHandle = appendableHandleId(l.to_socket, nth);
     }
     return {
-      id: edgeIdFromLink(l),
+      id:
+        l.id ?? `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`,
       source: l.from_node,
       sourceHandle: l.from_socket,
       target: l.to_node,
@@ -209,36 +194,28 @@ export function toPersistedWorkflowGraph(
     const data = (n.data ?? {}) as Record<string, unknown>;
     const backendType =
       typeof data.backendType === "string" ? data.backendType : "node";
-    const params = isRecord(data.params) ? data.params : {};
-    const label = safeString(data.label) ?? backendType;
-    const category = safeString(data.category);
-    const inputs = safeInputs(data.inputs);
-    const outputs = safeOutputs(data.outputs);
     return {
       id: n.id,
       type: backendType,
-      label,
-      category,
-      inputs,
-      outputs,
+      label: str(data.label) ?? backendType,
+      category: str(data.category),
+      inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
+      outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
       pos: [n.position.x, n.position.y],
-      params,
+      params: isRecord(data.params) ? data.params : {},
     };
   });
 
   const outLinks: WorkflowGraphLink[] = edges.flatMap((e) => {
-    const from_node = e.source;
-    const to_node = e.target;
-    const from_socket = normalizeAppendableHandle(e.sourceHandle ?? "");
-    const to_socket = normalizeAppendableHandle(e.targetHandle ?? "");
+    const { source: from_node, target: to_node } = e;
     if (!from_node || !to_node) return [];
     return [
       {
         id: e.id,
         from_node,
-        from_socket,
+        from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
         to_node,
-        to_socket,
+        to_socket: normalizeAppendableHandle(e.targetHandle ?? ""),
       } satisfies WorkflowGraphLink,
     ];
   });
