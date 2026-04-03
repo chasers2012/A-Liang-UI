@@ -18,31 +18,37 @@ def source_relative_path(factor_id: str) -> str:
 class FactorRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    id: str
-    name: str
-    group: str = "factor"
-    description: str = ""
-    max_window: int = 1
-    dependencies: list[str] = Field(default_factory=lambda: ["close"])
-    source_path: str
-    created_at: str
-    updated_at: str
+    id: str = Field(description="因子的id, 格式是UUID")
+    name: str = Field(description="因子名称")
+    group: str = Field(description="因子组")
+    description: str = Field(description="因子描述")
+    max_window: int = Field(description="因子最大窗口", default=1)
+    dependencies: list[str] = Field(
+        description="因子依赖的列这些列会在data中传给因子calc方法",
+        default_factory=lambda: ["close"],
+    )
+    source_path: str = Field(description="因子源码路径")
+    created_at: str = Field(description="因子创建时间")
+    updated_at: str = Field(description="因子更新时间")
 
 
 class FactorRegistryFile(BaseModel):
-    version: int = 1
-    items: list[FactorRecord] = Field(default_factory=list)
+    version: int = Field(description="因子注册文件版本", default=1)
+    items: list[FactorRecord] = Field(description="因子注册文件中的因子列表", default_factory=list)
 
 
 class FactorCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    name: str
-    group: str = "factor"
-    description: str = ""
-    max_window: int = 1
-    dependencies: list[str] = Field(default_factory=lambda: ["close"])
-    source: str | None = None
+    name: str = Field(description="因子名称")
+    group: str = Field(description="因子组", default="factor")
+    description: str = Field(description="因子描述", default="")
+    max_window: int = Field(description="因子最大窗口", default=1)
+    dependencies: list[str] = Field(
+        description="因子依赖的列这些列会在data中传给因子calc方法",
+        default_factory=lambda: ["close"],
+    )
+    source: str | None = Field(description="因子源码", default=None)
 
     @field_validator("name")
     @classmethod

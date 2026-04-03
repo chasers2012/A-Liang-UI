@@ -13,14 +13,17 @@ from app.evaluation_run.schemas import (
 )
 from app.evaluation_run.service import execute_and_persist_factor_evaluation_run
 from app.factors.constants import NEW_FACTOR_TEMPLATE
-from app.factors.registry import FactorItemsRegistry, delete_source_file, read_source
+from app.factors.registry import (
+    FactorItemsRegistry,
+    delete_source_file,
+    factor_detail,
+    list_factors,
+)
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
     FactorPatch,
-    FactorRecord,
     FactorSummaryPublic,
-    record_to_summary,
 )
 from app.http_errors import http_bad_request, http_internal_server_error
 
@@ -29,14 +32,9 @@ router = APIRouter(prefix="/factors", tags=["factors"])
 PRIMARY_IC_PERIOD = "5"
 
 
-def _detail(rec: FactorRecord) -> FactorDetailPublic:
-    summary = record_to_summary(rec)
-    return FactorDetailPublic(**summary.model_dump(), source=read_source(rec))
-
-
 @router.get("", response_model=list[FactorSummaryPublic])
-def list_factors() -> list[FactorSummaryPublic]:
-    return [record_to_summary(i) for i in FactorItemsRegistry.list_items()]
+def get_factor_list() -> list[FactorSummaryPublic]:
+    return list_factors()
 
 
 @router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
@@ -149,7 +147,7 @@ def get_factor(factor_id: str) -> FactorDetailPublic:
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-    return _detail(rec)
+    return factor_detail(rec)
 
 
 @router.post("", response_model=FactorDetailPublic)
@@ -158,7 +156,7 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
         rec = FactorItemsRegistry.create_factor(body)
     except ValueError as e:
         http_bad_request(e)
-    return _detail(rec)
+    return factor_detail(rec)
 
 
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
@@ -169,7 +167,7 @@ def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
         http_bad_request(e)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-    return _detail(rec)
+    return factor_detail(rec)
 
 
 @router.delete("/{factor_id}", status_code=204)

@@ -6,9 +6,9 @@ import json
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from app.chat.chat_llm import build_chat_model_from_workspace_settings, stream_chunk_text
+from app.chat.agent_chat import lc_messages_from_chat_request, sse_event_iter_for_chat
+from app.chat.chat_llm import build_chat_model_from_workspace_settings
 from app.chat.llm_schemas import ChatRequest, LlmSettings
 from app.workspace_config import load_workspace_config, save_workspace_config
 
@@ -36,23 +36,10 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
     return body
 
 
-def _lc_messages_from_chat_request(body: ChatRequest):
-
-    lc_messages: list[BaseMessage] = []
-    for m in body.messages:
-        if m.role == "system":
-            lc_messages.append(SystemMessage(content=m.content))
-        elif m.role == "user":
-            lc_messages.append(HumanMessage(content=m.content))
-        else:
-            lc_messages.append(AIMessage(content=m.content))
-    return lc_messages
-
-
 @router.post("/chat/stream")
 def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
-    lc_messages = _lc_messages_from_chat_request(body)
+    lc_messages = lc_messages_from_chat_request(body)
 
     def event_iter():
         try:
@@ -63,17 +50,11 @@ def chat_stream(body: ChatRequest) -> StreamingResponse:
             )
             llm = build_chat_model_from_workspace_settings(settings)
         except ValueError as e:
-            yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            err = f"{e}"
+            yield f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n"
             return
-        try:
-            for chunk in llm.stream(lc_messages):
-                piece = stream_chunk_text(chunk)
-                if piece:
-                    yield f"data: {json.dumps({'delta': piece}, ensure_ascii=False)}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'error': f'LLM 调用失败：{e}'}, ensure_ascii=False)}\n\n"
-            return
-        yield f"data: {json.dumps({'done': True}, ensure_ascii=False)}\n\n"
+
+        yield from sse_event_iter_for_chat(llm, lc_messages=lc_messages)
 
     return StreamingResponse(
         event_iter(),

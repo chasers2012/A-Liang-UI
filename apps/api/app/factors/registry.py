@@ -10,9 +10,12 @@ from factor import Factor
 from app.datetime_utils import utc_now_iso
 from app.factors.schemas import (
     FactorCreate,
+    FactorDetailPublic,
     FactorPatch,
     FactorRecord,
     FactorRegistryFile,
+    FactorSummaryPublic,
+    record_to_summary,
 )
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
@@ -141,9 +144,18 @@ class FactorItemsRegistry(WorkspaceItemsRegistry[FactorRecord, FactorRegistryFil
             return None
 
 
+def factor_detail(rec: FactorRecord) -> FactorDetailPublic:
+    summary = record_to_summary(rec)
+    return FactorDetailPublic(**summary.model_dump(), source=read_source(rec))
+
+
 def read_source(rec: FactorRecord) -> str:
     return SourceFiles.read_source_text(rec.source_path)
 
 
 def delete_source_file(rec: FactorRecord) -> None:
     SourceFiles.delete_source_text_file(rec.source_path)
+
+
+def list_factors() -> list[FactorSummaryPublic]:
+    return [record_to_summary(i) for i in FactorItemsRegistry.list_items()]
