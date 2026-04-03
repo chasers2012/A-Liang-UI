@@ -69,6 +69,8 @@ export function EvaluationProfileFormPage(props: Props) {
     e.preventDefault();
     setFormError(null);
 
+    // 保存前先调整 viewport，使所有节点可见，并把调整后的 viewport 一起持久化。
+    await canvasRef.current?.fitViewAll();
     const wf = canvasRef.current?.getGraph() ?? workflow;
 
     setSubmitting(true);

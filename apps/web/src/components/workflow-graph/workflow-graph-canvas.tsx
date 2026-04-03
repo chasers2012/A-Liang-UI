@@ -146,6 +146,8 @@ export type WorkflowGraphCanvasHandle = {
     typeKey: string,
     opts?: { position?: { x: number; y: number } },
   ) => void;
+  /** 调整视图以包含所有节点。 */
+  fitViewAll: () => Promise<void>;
 };
 
 export type WorkflowGraphCanvasProps = {
@@ -303,15 +305,31 @@ export const WorkflowGraphCanvas = forwardRef<
     );
 
     const getGraph = useCallback(() => {
-      return toPersistedWorkflowGraph(nodes, edges, viewport);
+      const rfViewport = reactFlowRef.current?.getViewport?.();
+      return toPersistedWorkflowGraph(nodes, edges, rfViewport ?? viewport);
     }, [nodes, edges, viewport]);
 
+    const fitViewAll = useCallback((): Promise<void> => {
+      const rf = reactFlowRef.current;
+      if (!rf) return Promise.resolve();
 
+      return new Promise<void>((resolve) => {
+        // 保存时会触发重渲染；延迟一帧，确保 React Flow 已完成节点尺寸测量。
+        requestAnimationFrame(() => {
+          const padding = 0.18;
+          const duration = 200;
+          rf.fitView({ padding, duration });
+          // 等待 fitView 动画/布局结束后再 resolve，保证 getViewport() 已更新。
+          setTimeout(resolve, duration + 50);
+        });
+      });
+    }, []);
 
-    useImperativeHandle(ref, () => ({ getGraph, addNode }), [
-      getGraph,
-      addNode,
-    ]);
+    useImperativeHandle(
+      ref,
+      () => ({ getGraph, addNode, fitViewAll }),
+      [getGraph, addNode, fitViewAll],
+    );
 
     const onDragOver = (e: React.DragEvent) => {
       if (readOnly) return;
