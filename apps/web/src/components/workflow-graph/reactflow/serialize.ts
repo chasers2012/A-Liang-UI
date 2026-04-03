@@ -12,8 +12,21 @@ import type {
 } from "./types";
 import {
   appendableHandleId,
+  appendableSlotSortKey,
   normalizeAppendableHandle,
 } from "./appendable-handle";
+
+function appendableSocketNamesFromInputs(
+  inputs: WorkflowNodeInputSpec[],
+): Set<string> {
+  const names = new Set<string>();
+  for (const s of inputs) {
+    if (s?.render_type === "appendable" && s.name) {
+      names.add(s.name);
+    }
+  }
+  return names;
+}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -132,45 +145,168 @@ export function toReactFlowNodes(
   });
 }
 
+/**
+ * 持久化 JSON 中不含 `__appendable__`：appendable 边仅从各节点 `params[socketName]`
+ * 的连线列表按序还原 `targetHandle`；普通端口仍来自 `links`。
+ */
 export function toReactFlowEdges(persisted: WorkflowGraphPersisted): Edge[] {
-  const appendableTargets = new Set<string>();
+  const appendableBasesByTargetNode = new Map<string, Set<string>>();
   for (const n of persisted.nodes) {
-    for (const s of arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs)) {
-      if (s?.render_type === "appendable") {
-        appendableTargets.add(`${n.id}:${s.name}`);
-      }
+    const names = appendableSocketNamesFromInputs(
+      arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
+    );
+    if (names.size > 0) {
+      appendableBasesByTargetNode.set(n.id, names);
     }
   }
-  const perSocketCounter = new Map<string, number>();
-  return persisted.links.map((l) => {
-    const targetKey = `${l.to_node}:${l.to_socket}`;
-    let targetHandle = l.to_socket;
-    if (appendableTargets.has(targetKey)) {
-      const nth = (perSocketCounter.get(targetKey) ?? 0) + 1;
-      perSocketCounter.set(targetKey, nth);
-      targetHandle = appendableHandleId(l.to_socket, nth);
+
+  const edges: Edge[] = [];
+
+  for (const l of persisted.links) {
+    const bases = appendableBasesByTargetNode.get(l.to_node);
+    if (bases?.has(l.to_socket)) {
+      continue;
     }
-    return {
+    edges.push({
       id:
         l.id ?? `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`,
       source: l.from_node,
       sourceHandle: l.from_socket,
       target: l.to_node,
-      targetHandle,
+      targetHandle: l.to_socket,
       type: "default",
-    } satisfies Edge;
-  });
+    });
+  }
+
+  for (const n of persisted.nodes) {
+    const names = appendableSocketNamesFromInputs(
+      arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
+    );
+    if (names.size === 0) continue;
+    const params = isRecord(n.params) ? n.params : {};
+    for (const socketName of names) {
+      const raw = params[socketName];
+      if (!Array.isArray(raw)) continue;
+      raw.forEach((item, index) => {
+        if (!isRecord(item)) return;
+        const fn = item.from_node;
+        const fs = item.from_socket;
+        if (typeof fn !== "string" || typeof fs !== "string") return;
+        edges.push({
+          id: `${fn}:${fs}->${n.id}:${socketName}:${index}`,
+          source: fn,
+          sourceHandle: fs,
+          target: n.id,
+          targetHandle: appendableHandleId(socketName, index + 1),
+          type: "default",
+        });
+      });
+    }
+  }
+
+  return edges;
 }
 
-export function toPersistedWorkflowGraph(
+/** 画布边上的内部 handle（可含 `__appendable__`），仅用于排序写入 params */
+type EdgeWireAcc = {
+  internalTargetHandle: string;
+  from_node: string;
+  from_socket: string;
+};
+
+function sortAppendableWireAccum(
+  appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>,
+) {
+  for (const bySocket of appendableWiresByNode.values()) {
+    for (const acc of bySocket.values()) {
+      acc.sort(
+        (a, b) =>
+          appendableSlotSortKey(a.internalTargetHandle) -
+          appendableSlotSortKey(b.internalTargetHandle),
+      );
+    }
+  }
+}
+
+function linksAndAppendableWireAccumFromEdges(
   nodes: Node[],
   edges: Edge[],
-  viewport: Viewport | undefined,
-): WorkflowGraphPersisted {
-  const outNodes: WorkflowGraphPersisted["nodes"] = nodes.map((n) => {
+): {
+  outLinks: WorkflowGraphLink[];
+  appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>;
+} {
+  const appendableWiresByNode = new Map<string, Map<string, EdgeWireAcc[]>>();
+  const outLinks: WorkflowGraphLink[] = [];
+
+  for (const e of edges) {
+    const from_node = e.source;
+    const to_node = e.target;
+    if (!from_node || !to_node) continue;
+
+    const targetNode = nodes.find((n) => n.id === to_node);
+    const tdata = (targetNode?.data ?? {}) as Record<string, unknown>;
+    const targetInputs = arrayOrEmpty<WorkflowNodeInputSpec>(tdata.inputs);
+    const appendableNames = appendableSocketNamesFromInputs(targetInputs);
+
+    const tgtRaw = e.targetHandle ?? "";
+    const base = normalizeAppendableHandle(tgtRaw);
+
+    const to_socket = appendableNames.has(base)
+      ? base
+      : normalizeAppendableHandle(tgtRaw);
+
+    outLinks.push({
+      id: e.id,
+      from_node,
+      from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
+      to_node,
+      to_socket,
+    });
+
+    if (!appendableNames.has(base)) continue;
+
+    let bySocket = appendableWiresByNode.get(to_node);
+    if (!bySocket) {
+      bySocket = new Map();
+      appendableWiresByNode.set(to_node, bySocket);
+    }
+    const acc = bySocket.get(base) ?? [];
+    acc.push({
+      internalTargetHandle: tgtRaw || appendableHandleId(base, 1),
+      from_node,
+      from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
+    });
+    bySocket.set(base, acc);
+  }
+
+  return { outLinks, appendableWiresByNode };
+}
+
+function persistedNodesWithAppendableParams(
+  nodes: Node[],
+  appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>,
+): WorkflowGraphPersisted["nodes"] {
+  return nodes.map((n) => {
     const data = (n.data ?? {}) as Record<string, unknown>;
     const backendType =
       typeof data.backendType === "string" ? data.backendType : "node";
+    const rawParams = isRecord(data.params) ? { ...data.params } : {};
+    const inputs = arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs);
+    const appendableNames = appendableSocketNamesFromInputs(inputs);
+    for (const name of appendableNames) {
+      delete rawParams[name];
+    }
+
+    const bySocket = appendableWiresByNode.get(n.id);
+    if (bySocket && bySocket.size > 0) {
+      for (const [socketBase, acc] of bySocket) {
+        rawParams[socketBase] = acc.map(({ from_node, from_socket }) => ({
+          from_node,
+          from_socket,
+        }));
+      }
+    }
+
     return {
       id: n.id,
       type: backendType,
@@ -179,23 +315,23 @@ export function toPersistedWorkflowGraph(
       inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
       outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
       pos: [n.position.x, n.position.y],
-      params: isRecord(data.params) ? data.params : {},
+      params: rawParams,
     };
   });
+}
 
-  const outLinks: WorkflowGraphLink[] = edges.flatMap((e) => {
-    const { source: from_node, target: to_node } = e;
-    if (!from_node || !to_node) return [];
-    return [
-      {
-        id: e.id,
-        from_node,
-        from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
-        to_node,
-        to_socket: normalizeAppendableHandle(e.targetHandle ?? ""),
-      } satisfies WorkflowGraphLink,
-    ];
-  });
+export function toPersistedWorkflowGraph(
+  nodes: Node[],
+  edges: Edge[],
+  viewport: Viewport | undefined,
+): WorkflowGraphPersisted {
+  const { outLinks, appendableWiresByNode } =
+    linksAndAppendableWireAccumFromEdges(nodes, edges);
+  sortAppendableWireAccum(appendableWiresByNode);
+  const outNodes = persistedNodesWithAppendableParams(
+    nodes,
+    appendableWiresByNode,
+  );
 
   return {
     nodes: outNodes,

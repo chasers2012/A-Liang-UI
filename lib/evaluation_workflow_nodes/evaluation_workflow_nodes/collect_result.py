@@ -13,17 +13,22 @@ from workflow import AppendableSocket, workflow_node
     category="factor_evaluation",
     input_sockets=[
         AppendableSocket(
-            "in",
+            "result",
             required=False,
             value_type="scalar_json",
-            label="输入",
+            label="结果",
         ),
     ],
     output_sockets=[],
     entry="evaluate",
 )
 class CollectResult:
-    def evaluate(self, **kwargs: Any) -> tuple[()]:
-        _ = kwargs
-        # 该节点不直接产出值；最终结果由 runner 根据指向该节点的 links 动态汇总。
-        return ()
+    def evaluate(self, result=None, **kwargs: Any) -> tuple[()]:
+        if not result:
+            return ()
+        # 根据param对结果排序
+        from_key = [
+            f"{link.get('from_node')}:{link.get('from_socket')}"
+            for link in self.params.get("result")
+        ]
+        return [result[key] for key in from_key]

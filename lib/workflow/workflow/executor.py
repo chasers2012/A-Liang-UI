@@ -27,7 +27,7 @@ def gather_node_inputs(
     links = graph.links
     to_node_id = node.id
     """Build input socket values for ``to_node_id`` from upstream ``outputs``."""
-    inputs: dict[str, Any] = {}
+    inputs: dict[str, dict[str, Any]] = {}
     for link in links:
         if link.to_node != to_node_id:
             continue
@@ -36,13 +36,26 @@ def gather_node_inputs(
             raise KeyError(link.from_node)
         if link.from_socket not in bucket:
             raise KeyError(link.from_socket)
-        inputs[link.to_socket] = bucket[link.from_socket]
+        if not inputs.get(link.to_socket):
+            inputs[link.to_socket] = {}
 
-    return inputs
+        inputs[link.to_socket][f"{link.from_node}:{link.from_socket}"] = bucket[link.from_socket]
+    ret = {}
+    for key in inputs:
+        input = inputs[key]
+        # 对于只有一个from_socket的，直接返回
+        if len(input.keys()) == 1:
+            ret[key] = input[next(iter(input.keys()))]
+        else:
+            ret[key] = input
+
+    return ret
 
 
 def format_output(node: Node, output: tuple[Any, ...]) -> dict[str, Any]:
     out: dict[str, Any] = {}
+    if output and len(node.outputs) == 0:
+        out = output
     for i, socket in enumerate(node.outputs):
         out[socket.name] = output[i]
     return out
@@ -82,7 +95,7 @@ class WorkflowExecutor:
             node = by_id[nid]
 
             inputs = gather_node_inputs(graph, node, out)
-            node_inputs = {**ctx, **inputs, **node.params}
+            node_inputs = {**ctx, **node.params, **inputs}
 
             # 调用节点类的entry方法
             node_out = getattr(node, node.entry or "execute")(**node_inputs)

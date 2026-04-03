@@ -79,7 +79,7 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
                 evaluated_at=ev_rec.evaluated_at,
                 error=err,
                 evaluation_profile_id=ev_rec.evaluation_profile_id,
-                results=dict(ev_rec.results),
+                results=ev_rec.results,
             )
         )
 
@@ -135,7 +135,7 @@ def post_factor_evaluation_run(
         evaluated_at=eval_rec.evaluated_at,
         error=err,
         evaluation_profile_id=eval_rec.evaluation_profile_id,
-        results=dict(eval_rec.results),
+        results=eval_rec.results,
     )
 
 

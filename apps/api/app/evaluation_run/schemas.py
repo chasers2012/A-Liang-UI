@@ -9,7 +9,7 @@ class FactorEvaluationRecord(BaseModel):
     evaluated_at: str
     error: str | None = None
     evaluation_profile_id: str | None = None
-    results: dict[str, Any] = Field(default_factory=dict)
+    results: Any = None
 
 
 class FactorEvaluationsFile(BaseModel):
@@ -27,7 +27,7 @@ class FactorEvaluationRowPublic(BaseModel):
         default=None,
         description="Evaluation profile id when this run used a named profile.",
     )
-    results: dict[str, Any] = Field(default_factory=dict)
+    results: Any = None
 
 
 class FactorEvaluationsAggregatePublic(BaseModel):
