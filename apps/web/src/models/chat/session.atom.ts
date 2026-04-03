@@ -13,12 +13,61 @@ import type {
   AgentChatMessagePublic,
   AgentChatSessionDetailPublic,
   AgentChatSessionSummaryPublic,
+  AgentChatToolCallPublic,
 } from "@/models";
+import type { AssistantBlock } from "@/models/chat/types";
 
 const LAST_ACTIVE_KEY = "quant-agent-chat-last-active-session-id";
 
 export interface ChatTurn extends AgentChatMessagePublic {
   id: string;
+}
+
+function appendAssistantDelta(prev: ChatTurn, delta: string): ChatTurn {
+  const content = prev.content + delta;
+  if (!prev.blocks?.length) {
+    return { ...prev, content };
+  }
+  const blocks = [...prev.blocks];
+  const last = blocks[blocks.length - 1];
+  if (last.kind === "text") {
+    blocks[blocks.length - 1] = {
+      kind: "text",
+      content: last.content + delta,
+    };
+  } else {
+    blocks.push({ kind: "text", content: delta });
+  }
+  return { ...prev, content, blocks };
+}
+
+function applyToolStart(
+  prev: ChatTurn,
+  payload: { name: string; id: string; args?: unknown },
+): ChatTurn {
+  const call: AgentChatToolCallPublic = {
+    id: payload.id,
+    name: payload.name,
+    args: payload.args,
+    status: "running",
+  };
+  const blocks: AssistantBlock[] = prev.blocks?.length
+    ? [...prev.blocks, { kind: "tool", call }]
+    : [{ kind: "text", content: prev.content }, { kind: "tool", call }];
+  return { ...prev, blocks };
+}
+
+function patchToolInBlocks(
+  prev: ChatTurn,
+  id: string,
+  patch: Partial<AgentChatToolCallPublic>,
+): ChatTurn {
+  if (!prev.blocks?.length) return prev;
+  const blocks = prev.blocks.map((b): AssistantBlock => {
+    if (b.kind !== "tool" || b.call.id !== id) return b;
+    return { kind: "tool", call: { ...b.call, ...patch } };
+  });
+  return { ...prev, blocks };
 }
 
 function createId(): string {
@@ -235,7 +284,11 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     const turns = get(chatMessagesBySessionAtom)[targetSessionId] ?? [];
     const payloadMessages = turns
       .filter((m) => m.id !== assistantId)
-      .map(({ role, content }) => ({ role, content }));
+      .map(({ role, content, blocks }) => ({
+        role,
+        content,
+        ...(blocks?.length ? { blocks } : {}),
+      }));
     await postAgentChatStream(
       { session_id: targetSessionId, messages: payloadMessages },
       {
@@ -243,7 +296,41 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           set(chatMessagesBySessionAtom, (prev) => ({
             ...prev,
             [targetSessionId]: (prev[targetSessionId] ?? []).map((m) =>
-              m.id === assistantId ? { ...m, content: m.content + delta } : m,
+              m.id === assistantId ? appendAssistantDelta(m, delta) : m,
+            ),
+          }));
+        },
+        onToolStart: (payload) => {
+          set(chatMessagesBySessionAtom, (prev) => ({
+            ...prev,
+            [targetSessionId]: (prev[targetSessionId] ?? []).map((m) =>
+              m.id === assistantId ? applyToolStart(m, payload) : m,
+            ),
+          }));
+        },
+        onToolResult: (payload) => {
+          set(chatMessagesBySessionAtom, (prev) => ({
+            ...prev,
+            [targetSessionId]: (prev[targetSessionId] ?? []).map((m) =>
+              m.id === assistantId
+                ? patchToolInBlocks(m, payload.id, {
+                    status: "ok",
+                    result: payload.result,
+                  })
+                : m,
+            ),
+          }));
+        },
+        onToolError: (payload) => {
+          set(chatMessagesBySessionAtom, (prev) => ({
+            ...prev,
+            [targetSessionId]: (prev[targetSessionId] ?? []).map((m) =>
+              m.id === assistantId
+                ? patchToolInBlocks(m, payload.id, {
+                    status: "error",
+                    error: payload.error,
+                  })
+                : m,
             ),
           }));
         },

@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronRight, Loader2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-import { AiChatMarkdown } from "@/components/ai-chat-markdown";
+import { ChatAssistantBody } from "@/components/chat/chat-assistant-body";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,6 +12,18 @@ import { cn } from "@/lib/utils";
 import { type ChatTurn } from "@/models/chat/session.atom";
 
 import { buildChatSegments } from "./chat-segments";
+
+function shouldShowAssistantPendingSpinner(
+  m: ChatTurn,
+  isSending: boolean,
+  isLastSegment: boolean,
+): boolean {
+  if (!isSending || !isLastSegment) return false;
+  if (!m.blocks?.length) return m.content === "";
+  const last = m.blocks[m.blocks.length - 1];
+  if (last.kind === "tool") return true;
+  return last.kind === "text" && last.content === "";
+}
 
 interface AiChatMessageListProps {
   messages: ChatTurn[];
@@ -25,19 +37,32 @@ export function AiChatMessages({ messages, isSending }: AiChatMessageListProps) 
     <>
       {segments.map((seg, index) => {
         if (seg.kind === "solo-assistant") {
+          const isLastSegment = index === segments.length - 1;
+          const showPendingSpinner = shouldShowAssistantPendingSpinner(
+            seg.message,
+            isSending,
+            isLastSegment,
+          );
           return (
             <div
               key={seg.message.id}
               className="mr-auto max-w-[min(100%,36rem)] rounded-lg border border-border/70 bg-card py-3 pl-6 pr-4 text-sm leading-relaxed text-card-foreground"
             >
               <span className="sr-only">助手：</span>
-              <AiChatMarkdown content={seg.message.content} />
+              <ChatAssistantBody
+                message={seg.message}
+                showPendingSpinner={showPendingSpinner}
+              />
             </div>
           );
         }
 
         const isLastSegment = index === segments.length - 1;
         const showPending = isSending && isLastSegment && seg.assistant === undefined;
+        const assistantPendingSpinner =
+          seg.assistant !== undefined
+            ? shouldShowAssistantPendingSpinner(seg.assistant, isSending, isLastSegment)
+            : false;
 
         return (
           <Collapsible key={seg.user.id} defaultOpen className="w-full min-w-0">
@@ -73,21 +98,16 @@ export function AiChatMessages({ messages, isSending }: AiChatMessageListProps) 
                 {seg.assistant ? (
                   <>
                     <span className="sr-only">助手：</span>
-                    {seg.assistant.content === "" && isSending && isLastSegment ? (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                        正在生成…
-                      </div>
-                    ) : null}
-                    {seg.assistant.content !== "" ? (
-                      <AiChatMarkdown content={seg.assistant.content} />
-                    ) : null}
+                    <ChatAssistantBody
+                      message={seg.assistant}
+                      showPendingSpinner={assistantPendingSpinner}
+                    />
                   </>
                 ) : showPending ? (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-                    正在生成…
-                  </div>
+                  <ChatAssistantBody
+                    message={{ id: "pending", role: "assistant", content: "" }}
+                    showPendingSpinner
+                  />
                 ) : null}
               </div>
             </CollapsibleContent>

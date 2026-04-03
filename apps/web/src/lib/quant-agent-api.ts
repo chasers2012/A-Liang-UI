@@ -99,7 +99,71 @@ type AgentChatSseParsed =
   | { kind: "delta"; text: string }
   | { kind: "done" }
   | { kind: "error"; message: string }
+  | {
+      kind: "tool_start";
+      payload: { name: string; id: string; args?: unknown };
+    }
+  | {
+      kind: "tool_result";
+      payload: { name: string; id: string; result: unknown };
+    }
+  | {
+      kind: "tool_error";
+      payload: { name: string; id: string; error: string };
+    }
   | { kind: "skip" };
+
+function sseStringField(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function parseAgentChatSsePayloadObject(
+  o: Record<string, unknown>,
+): AgentChatSseParsed {
+  if (typeof o.error === "string") return { kind: "error", message: o.error };
+  if (o.done === true) return { kind: "done" };
+  if (typeof o.delta === "string" && o.delta.length > 0) {
+    return { kind: "delta", text: o.delta };
+  }
+  const ts = o.tool_start;
+  if (ts && typeof ts === "object") {
+    const p = ts as Record<string, unknown>;
+    return {
+      kind: "tool_start",
+      payload: {
+        name: sseStringField(p.name),
+        id: sseStringField(p.id),
+        args: p.args,
+      },
+    };
+  }
+  const tr = o.tool_result;
+  if (tr && typeof tr === "object") {
+    const p = tr as Record<string, unknown>;
+    return {
+      kind: "tool_result",
+      payload: {
+        name: sseStringField(p.name),
+        id: sseStringField(p.id),
+        result: p.result,
+      },
+    };
+  }
+  const te = o.tool_error;
+  if (te && typeof te === "object") {
+    const p = te as Record<string, unknown>;
+    return {
+      kind: "tool_error",
+      payload: {
+        name: sseStringField(p.name),
+        id: sseStringField(p.id),
+        error:
+          typeof p.error === "string" ? p.error : String(p.error ?? ""),
+      },
+    };
+  }
+  return { kind: "skip" };
+}
 
 function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
   const dataLines = block
@@ -116,21 +180,57 @@ function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
     return { kind: "skip" };
   }
   if (typeof parsed !== "object" || parsed === null) return { kind: "skip" };
-  const o = parsed as Record<string, unknown>;
-  if (typeof o.error === "string") return { kind: "error", message: o.error };
-  if (o.done === true) return { kind: "done" };
-  if (typeof o.delta === "string" && o.delta.length > 0) {
-    return { kind: "delta", text: o.delta };
-  }
-  return { kind: "skip" };
+  return parseAgentChatSsePayloadObject(parsed as Record<string, unknown>);
 }
 
+export type AgentChatStreamOptions = {
+  onDelta: (text: string) => void;
+  onToolStart?: (payload: {
+    name: string;
+    id: string;
+    args?: unknown;
+  }) => void;
+  onToolResult?: (payload: {
+    name: string;
+    id: string;
+    result: unknown;
+  }) => void;
+  onToolError?: (payload: {
+    name: string;
+    id: string;
+    error: string;
+  }) => void;
+};
+
 /**
- * POST ``/agent/chat/stream`` (SSE). Invokes ``onDelta`` for each text chunk; throws ``ApiError`` on HTTP or stream ``error`` events.
+ * POST ``/agent/chat/stream`` (SSE). Invokes ``onDelta`` for each text chunk; optional tool callbacks; throws ``ApiError`` on HTTP or stream ``error`` events.
  */
+function handleParsedAgentChatSseEvent(
+  ev: AgentChatSseParsed,
+  options: AgentChatStreamOptions,
+): "continue" | "done" | "throw" {
+  if (ev.kind === "skip") return "continue";
+  if (ev.kind === "error") throw new ApiError(ev.message, 502);
+  if (ev.kind === "done") return "done";
+  if (ev.kind === "delta") {
+    options.onDelta(ev.text);
+    return "continue";
+  }
+  if (ev.kind === "tool_start") {
+    options.onToolStart?.(ev.payload);
+    return "continue";
+  }
+  if (ev.kind === "tool_result") {
+    options.onToolResult?.(ev.payload);
+    return "continue";
+  }
+  options.onToolError?.(ev.payload);
+  return "continue";
+}
+
 export async function postAgentChatStream(
   body: AgentChatRequestPublic,
-  options: { onDelta: (text: string) => void },
+  options: AgentChatStreamOptions,
 ): Promise<void> {
   const url = `${getQuantAgentApiBase()}/agent/chat/stream`;
   const res = await fetch(url, {
@@ -161,10 +261,8 @@ export async function postAgentChatStream(
       const block = buffer.slice(0, sep);
       buffer = buffer.slice(sep + 2);
       const ev = parseAgentChatSseBlock(block);
-      if (ev.kind === "skip") continue;
-      if (ev.kind === "error") throw new ApiError(ev.message, 502);
-      if (ev.kind === "done") return;
-      options.onDelta(ev.text);
+      const action = handleParsedAgentChatSseEvent(ev, options);
+      if (action === "done") return;
     }
   }
 }

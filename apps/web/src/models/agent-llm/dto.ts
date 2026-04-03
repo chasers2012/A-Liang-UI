@@ -15,9 +15,26 @@ export type AgentLlmSettingsPublic = {
 
 export type AgentChatRolePublic = "user" | "assistant" | "system";
 
+/** 与后端 ``ChatToolCallPublic`` 一致（会话持久化 + SSE）。 */
+export type AgentChatToolCallPublic = {
+  id: string;
+  name: string;
+  args?: unknown;
+  status: "running" | "ok" | "error";
+  result?: unknown;
+  error?: string;
+};
+
+/** 与后端 ``AssistantBlockPublic`` 一致。 */
+export type AgentAssistantBlockPublic =
+  | { kind: "text"; content: string }
+  | { kind: "tool"; call: AgentChatToolCallPublic };
+
 export type AgentChatMessagePublic = {
   role: AgentChatRolePublic;
   content: string;
+  /** 助手消息可选：与正文交错存储的工具调用（含刷新后会话恢复）。 */
+  blocks?: AgentAssistantBlockPublic[];
 };
 
 export type AgentChatRequestPublic = {

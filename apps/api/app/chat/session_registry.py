@@ -47,8 +47,11 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
     @classmethod
     def _write_messages_file(cls, message_file: str, messages: list[ChatMessageIn]) -> None:
         path = workspace_config_path(message_file)
-        payload = [m.model_dump() for m in messages]
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        payload = [m.model_dump(mode="json", exclude_none=True) for m in messages]
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
 
     @classmethod
     def _load_raw_items(cls) -> list[Any]:

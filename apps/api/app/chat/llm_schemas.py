@@ -2,17 +2,72 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 LlmProvider = Literal["ollama", "openai"]
 ChatRole = Literal["user", "assistant", "system"]
+ToolCallStatus = Literal["running", "ok", "error"]
+
+
+class ChatToolCallPublic(BaseModel):
+    """Persisted tool invocation (aligned with SSE tool_* payloads)."""
+
+    id: str
+    name: str
+    args: Any | None = None
+    status: ToolCallStatus = "ok"
+    result: Any | None = None
+    error: str | None = None
+
+
+class AssistantBlockPublic(BaseModel):
+    kind: Literal["text", "tool"]
+    content: str | None = None
+    call: ChatToolCallPublic | None = None
+
+    @model_validator(mode="after")
+    def check_shape(self) -> AssistantBlockPublic:
+        if self.kind == "text":
+            if self.content is None:
+                self.content = ""
+            self.call = None
+        else:
+            if self.call is None:
+                raise ValueError("tool 块需要 call")
+            self.content = None
+        return self
 
 
 class ChatMessageIn(BaseModel):
     role: ChatRole
-    content: str = Field(..., min_length=1, max_length=32000)
+    content: str = Field(default="", max_length=32000)
+    blocks: list[AssistantBlockPublic] | None = None
+
+    @model_validator(mode="after")
+    def validate_user_assistant_content(self) -> ChatMessageIn:
+        if self.role in ("user", "system"):
+            if not (self.content or "").strip():
+                raise ValueError("user/system 消息 content 不能为空")
+            self.blocks = None
+        elif self.role == "assistant":
+            has_text = bool((self.content or "").strip())
+            has_blocks = bool(self.blocks)
+            if not has_text and not has_blocks:
+                raise ValueError("assistant 消息需有 content 或 blocks")
+        return self
+
+
+def assistant_message_text_for_model(m: ChatMessageIn) -> str:
+    """Plain text for LangChain when ``content`` is empty but ``blocks`` has text segments."""
+    if m.role != "assistant":
+        return m.content
+    if (m.content or "").strip():
+        return m.content
+    if not m.blocks:
+        return m.content
+    return "".join((b.content or "") for b in m.blocks if b.kind == "text")
 
 
 class ChatRequest(BaseModel):

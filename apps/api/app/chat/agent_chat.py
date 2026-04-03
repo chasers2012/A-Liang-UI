@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.chat.chat_llm import stream_chunk_text
-from app.chat.llm_schemas import ChatRequest
+from app.chat.llm_schemas import ChatRequest, assistant_message_text_for_model
 from app.chat.tool_registry import ChatToolRegistry
 from langchain_core.messages import (
     AIMessage,
@@ -15,7 +15,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 
-_MAX_TOOL_ROUNDS = 5
+_MAX_TOOL_ROUNDS = 10
 
 
 def lc_messages_from_chat_request(body: ChatRequest) -> list[BaseMessage]:
@@ -26,7 +26,9 @@ def lc_messages_from_chat_request(body: ChatRequest) -> list[BaseMessage]:
         elif m.role == "user":
             lc_messages.append(HumanMessage(content=m.content))
         else:
-            lc_messages.append(AIMessage(content=m.content))
+            lc_messages.append(
+                AIMessage(content=assistant_message_text_for_model(m)),
+            )
     return lc_messages
 
 

@@ -70,24 +70,25 @@ def test_agent_chat_stream_sse_tool_calls(client, monkeypatch):
                 )
             return AIMessage(content="created")
 
-        def stream(self, messages):
-            # Should not be used in this path (we have invoke), but keep for compatibility.
-            yield AIMessage(content="created")
-
     def fake_build(_settings):
         return _FakeLlmWithTools()
 
-    def fake_tool_invoke(args):
-        # Return minimal object; SSE tool_result should include it.
-        return {"ok": True, "name": args.get("name")}
+    class _FakeCreateFactorTool:
+        name = "create_factor"
+
+        def invoke(self, args):
+            return {"ok": True, "name": args.get("name")}
+
+    def fake_get_tools(_self):
+        return {"create_factor": _FakeCreateFactorTool()}
 
     monkeypatch.setattr(
         "app.routers.agent_llm.build_chat_model_from_workspace_settings",
         fake_build,
     )
     monkeypatch.setattr(
-        "app.factors.tools.create_factor.invoke",
-        fake_tool_invoke,
+        "app.chat.tool_registry.ChatToolRegistry.get_tools",
+        fake_get_tools,
     )
 
     r = client.post(
