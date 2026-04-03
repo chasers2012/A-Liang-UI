@@ -1,8 +1,4 @@
-import type {
-  WorkflowGraphNode,
-  WorkflowNodeDisplayData,
-  WorkflowNodeTypeDefinition,
-} from "./types";
+import type { WorkflowGraphNode, WorkflowNodeTypeDefinition } from "./types";
 
 export function catalogToMap(
   defs: WorkflowNodeTypeDefinition[],
@@ -44,9 +40,7 @@ function parseAsNewWorkflowNode(
  *
  * 仅支持当前 schema：`{ nodes: [{id,type,pos,params?}], links: [...] }`
  */
-function parseOneSerializedStepNode(
-  n: unknown,
-): WorkflowGraphNode | null {
+function parseOneSerializedStepNode(n: unknown): WorkflowGraphNode | null {
   if (!n || typeof n !== "object") return null;
   const node = n as Record<string, unknown>;
   return parseAsNewWorkflowNode(node);
@@ -72,19 +66,4 @@ export function parseWorkflowGraphNodesFromSerializedJson(
     if (one) out.push(one);
   }
   return out;
-}
-
-export function buildNodeDisplayData(
-  n: WorkflowGraphNode,
-  catalog: Map<string, WorkflowNodeTypeDefinition>,
-): WorkflowNodeDisplayData {
-  const def = catalog.get(n.type);
-  return {
-    backendType: n.type,
-    label: def?.label ?? n.type,
-    category: def?.category,
-    inputs: def?.inputs ?? n.inputs,
-    outputs: def?.outputs ?? n.outputs,
-    params: { ...(n.params ?? {}) },
-  };
 }

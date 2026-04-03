@@ -33,25 +33,3 @@ export interface WorkflowGraphNode extends WorkflowNodeTypeDefinition {
   pos: [number, number];
   params?: Record<string, unknown>;
 }
-
-/** 选中节点在侧栏展示用的聚合数据。 */
-export type WorkflowNodeDisplayData = {
-  backendType: string;
-  label: string;
-  category?: string;
-  inputs: WorkflowNodeInputSpec[];
-  outputs: WorkflowSocketDefinition[];
-  params: Record<string, unknown>;
-};
-
-export type WorkflowGraphSelectedNode = {
-  id: string;
-  position: { x: number; y: number };
-  data: WorkflowNodeDisplayData;
-};
-
-export type WorkflowNodeAccent = {
-  color: string;
-  bgcolor: string;
-  boxcolor: string;
-};

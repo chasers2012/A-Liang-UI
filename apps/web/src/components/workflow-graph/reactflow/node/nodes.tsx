@@ -7,10 +7,10 @@ import {
 
 import { cn } from "@/lib/utils";
 import {
-  WorkflowNodeParamFieldRow,
+  ParamRow,
   nodeParamEffectiveValue,
-} from "../../workflow-graph-param-row";
-import { useWorkflowGraphReadOnly } from "../../workflow-graph-readonly-context";
+} from "./param-row";
+import { useWorkflowGraphContext } from "../../workflow-graph-context";
 import type { WorkflowNodeInputSpec, WorkflowSocketDefinition } from "../../types";
 import {
   inputSpecToNodeParamModel,
@@ -37,7 +37,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
   const outputs = data.outputs ?? [];
   const wireInputs = inputs.filter(isWireInputSpec);
   const inlineInputSpecs = inputs.filter((s) => !isWireInputSpec(s));
-  const readOnly = useWorkflowGraphReadOnly();
+  const { readOnly } = useWorkflowGraphContext();
   const { setNodes } = useReactFlow();
 
   const onParamChange = useCallback(
@@ -109,7 +109,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
             {inlineInputSpecs.map((raw) => {
               const spec = inputSpecToNodeParamModel(raw);
               return (
-                <WorkflowNodeParamFieldRow
+                <ParamRow
                   key={spec.key}
                   spec={spec}
                   readOnly={readOnly}

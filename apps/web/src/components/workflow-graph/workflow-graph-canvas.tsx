@@ -2,6 +2,7 @@
 
 import { Maximize2, Minus, Plus } from "lucide-react";
 import {
+  ReactNode,
   forwardRef,
   useCallback,
   useEffect,
@@ -35,16 +36,12 @@ import "reactflow/dist/style.css";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { catalogToMap } from "./graph-model";
-import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas-constants";
-import type {
-  WorkflowGraphCanvasHandle,
-  WorkflowGraphCanvasProps,
-} from "./workflow-graph-canvas-types";
+
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
 } from "./reactflow/workflow-graph-reactflow-defaults";
-import { WorkflowGraphReadOnlyProvider } from "./workflow-graph-readonly-context";
+import { WorkflowGraphContextProvider } from "./workflow-graph-context";
 import {
   parsePersistedWorkflowGraphJson,
   persistedViewportToReactFlowViewport,
@@ -55,16 +52,14 @@ import {
 } from "./reactflow/serialize";
 import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
 
-import type { WorkflowNodeInputSpec } from "./types";
+import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { isWireInputSpec } from "./workflow-node-input-spec";
 
 
-export type {
-  WorkflowGraphCanvasHandle,
-  WorkflowGraphCanvasProps,
-} from "./workflow-graph-canvas-types";
+/** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
+export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
+  "application/x-workflow-graph-node-type";
 
-export { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas-constants";
 
 /** 须作为 `WorkflowGraphCanvas` 的 children 渲染（位于 React Flow 树内），以便使用 `useReactFlow`。 */
 export function WorkflowGraphZoomToolbar() {
@@ -112,12 +107,34 @@ export function WorkflowGraphZoomToolbar() {
   );
 }
 
+export type WorkflowGraphCanvasHandle = {
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
+  getGraphJson: () => string;
+  /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
+  addNode: (
+    typeKey: string,
+    opts?: { position?: { x: number; y: number } },
+  ) => void;
+};
+
+export type WorkflowGraphCanvasProps = {
+  nodeTypes: WorkflowNodeTypeDefinition[];
+  /** 工作流图 JSON 字符串（schema: `{nodes,links,viewport}`）。 */
+  initialGraphJson: string;
+  className?: string;
+  readOnly?: boolean;
+
+  children?: ReactNode;
+};
+
+
+
 export const WorkflowGraphCanvas = forwardRef<
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps
 >(
   function WorkflowGraphCanvas(
-    { className, canvasAreaClassName, nodeTypes, initialGraphJson, readOnly = false, children },
+    { className, nodeTypes, initialGraphJson, readOnly = false, children },
     ref,
   ) {
     const catalog = useMemo(() => catalogToMap(nodeTypes), [nodeTypes]);
@@ -286,18 +303,16 @@ export const WorkflowGraphCanvas = forwardRef<
       <div
         data-slot="workflow-graph-layout"
         className={cn(
-          "flex min-h-[320px] flex-col gap-3",
-          className,
+          "flex min-h-[320px] flex-col gap-3", className
         )}
       >
         <div
           className={cn(
             "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
             readOnly && "workflow-graph-canvas-root--readonly",
-            canvasAreaClassName,
           )}
         >
-          <WorkflowGraphReadOnlyProvider readOnly={readOnly}>
+          <WorkflowGraphContextProvider readOnly={readOnly}>
             <div
               className="relative min-h-[280px] flex-1"
               onDragOver={onDragOver}
@@ -337,7 +352,7 @@ export const WorkflowGraphCanvas = forwardRef<
                 {children}
               </ReactFlow>
             </div>
-          </WorkflowGraphReadOnlyProvider>
+          </WorkflowGraphContextProvider>
         </div>
       </div>
     );

@@ -1,14 +1,10 @@
 export type {
   WorkflowGraphNode,
-  WorkflowGraphSelectedNode,
-  WorkflowNodeAccent,
-  WorkflowNodeDisplayData,
   WorkflowNodeTypeDefinition,
   WorkflowSocketDefinition,
 } from "./types";
 
 export {
-  buildNodeDisplayData,
   catalogToMap,
   parseWorkflowGraphNodesFromSerializedJson,
 } from "./graph-model";
@@ -26,8 +22,3 @@ export {
   type WorkflowGraphCanvasHandle,
   type WorkflowGraphCanvasProps,
 } from "./workflow-graph-canvas";
-
-export {
-  WorkflowNodeParamFieldRow,
-  nodeParamEffectiveValue as workflowNodeParamEffectiveValue,
-} from "./workflow-graph-param-row";

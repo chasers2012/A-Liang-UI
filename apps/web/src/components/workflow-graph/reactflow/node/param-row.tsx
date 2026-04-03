@@ -1,6 +1,6 @@
 
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
-import { BooleanParamRow, DateParamRow, DateTimeParamRow, NumberParamRow, SelectParamRow, StringParamRow } from "./reactflow/node/params";
+import { BooleanParamRow, DateParamRow, DateTimeParamRow, NumberParamRow, SelectParamRow, StringParamRow } from "./params";
 
 
 export function nodeParamEffectiveValue(
@@ -23,14 +23,15 @@ const paramTypeMap = {
 } as const;
 
 
-export function WorkflowNodeParamFieldRow(props: {
+export function ParamRow(props: {
   spec: NodeParamModel;
   value: unknown;
   readOnly: boolean;
   onChange: (v: unknown) => void;
 }) {
   const { spec, value, readOnly, onChange } = props;
-  const { key, label, type: valType, render_type: rt, ...rest } = spec
+  const { key, label, type, render_type: rt, ...rest } = spec;
+  void type;
   const renderLabel = label?.trim() || key;
   if (!rt) {
     return null;
