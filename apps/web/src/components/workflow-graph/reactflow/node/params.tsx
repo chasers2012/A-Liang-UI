@@ -76,12 +76,13 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
       <Select
         value={current}
         onValueChange={(v) => {
+          if (v === null || v === undefined) return;
           const hit = options.find((o) => String(o) === v);
           if (hit === undefined) {
             onChange(v);
             return;
           }
-          else onChange(hit);
+          onChange(hit);
         }}
         disabled={readOnly}
       >

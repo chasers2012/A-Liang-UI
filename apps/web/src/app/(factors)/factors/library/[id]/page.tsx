@@ -457,13 +457,21 @@ export default function FactorDetailPage() {
       return;
     }
     if (evaluatingThis) return;
+    const profileId = runProfileId?.trim();
+    if (!profileId) {
+      setS((prev) => ({
+        ...prev,
+        loadError: "请先选择评价方案后再运行。",
+      }));
+      return;
+    }
 
     setEvaluationRunning({ factorId: id, factorName: detail.name });
     setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
         dataSetId: null,
-        evaluationProfileId: runProfileId,
+        evaluationProfileId: profileId,
       });
       await refreshEvalRow();
     } catch (e) {
