@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 export interface IParamRowProps<TValType = unknown> {
   label: string;
@@ -24,9 +25,10 @@ export interface IParamRowProps<TValType = unknown> {
 export function BooleanParamRow(props: IParamRowProps<boolean>) {
   const { label, readOnly, value, onChange } = props;
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-2 overflow-hidden">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <Switch
+        className={cn({ "cursor-pointer": !readOnly })}
         size="sm"
         disabled={readOnly}
         checked={Boolean(value)}

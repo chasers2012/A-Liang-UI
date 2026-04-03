@@ -104,7 +104,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
       </div>
 
       {inlineInputSpecs.length > 0 ? (
-        <ScrollArea className="nodrag nopan space-y-2 overflow-y-auto border-t border-border/80 px-2.5 py-2 max-h-[min(240px,40vh)]">
+        <ScrollArea className="nodrag nopan border-t border-border/80 px-2.5 py-2.5 max-h-[min(240px,40vh)]">
           <div className="flex flex-col gap-2">
             {inlineInputSpecs.map((raw) => {
               const spec = inputSpecToNodeParamModel(raw);

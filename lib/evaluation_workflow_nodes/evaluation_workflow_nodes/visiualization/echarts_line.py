@@ -10,7 +10,7 @@ from workflow import Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="ECharts 线图",
-    description="返回静态 ECharts 折线图 option（演示）；不处理上游输入",
+    description="返回静态 ECharts 折线图",
     input_sockets=[
         Socket("data", required=False, value_type="dataframe", label="数据(Dataframe)"),
         StringNodeParam("series_name", required=False, default="value", label="系列名称"),

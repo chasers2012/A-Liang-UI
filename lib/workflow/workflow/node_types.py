@@ -21,6 +21,7 @@ class Socket:
     name: str
     required: bool = False
     label: str = ""
+    description: str = ""
     value_type: str = ""
     render_type: str = "socket"
 
@@ -29,6 +30,7 @@ class Socket:
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         render_type: str = "socket",
         **_ignored: Any,
@@ -36,6 +38,7 @@ class Socket:
         self.name = name
         self.required = required
         self.label = label if label else name
+        self.description = description
         self.value_type = value_type
         self.render_type = render_type
 
@@ -45,6 +48,7 @@ class Socket:
             name=config_dict.get("name", ""),
             required=config_dict.get("required", False),
             label=config_dict.get("label", ""),
+            description=config_dict.get("description", ""),
             value_type=config_dict.get("value_type", ""),
             render_type=config_dict.get("render_type", ""),
         )
@@ -55,6 +59,7 @@ class Socket:
             "name": self.name,
             "required": self.required,
             "label": self.label,
+            "description": self.description,
             "value_type": self.value_type,
             "render_type": self.render_type,
         }
@@ -68,6 +73,7 @@ class AppendableSocket(Socket):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         **_ignored: Any,
     ):
@@ -75,7 +81,9 @@ class AppendableSocket(Socket):
             name=name,
             required=required,
             label=label,
+            description=description,
             value_type=value_type,
+            **_ignored,
             render_type="appendable",
         )
 
@@ -89,11 +97,20 @@ class NodeParam(Socket):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         default: Any | None = None,
         **_ignored: Any,
     ):
-        super().__init__(name, required, label, value_type, render_type="input")
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type,
+            **_ignored,
+            render_type="input",
+        )
         self.default = default
         self.render_type = getattr(type(self), "render_type", None)
 
@@ -115,12 +132,21 @@ class OptionsNodeParam(NodeParam):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         options: list[str | float | int] | Callable | None = None,
         default: Any | None = None,
         **_ignored: Any,
     ):
-        super().__init__(name, required, label, value_type, default)
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type,
+            default=default,
+            **_ignored,
+        )
         self.options = options
 
     def serialize(self) -> dict[str, Any]:
@@ -144,13 +170,22 @@ class NumberNodeParam(NodeParam):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         default: float | int | None = None,
         minimum: float | int | None = None,
         maximum: float | int | None = None,
         **_ignored: Any,
     ):
-        super().__init__(name, required, label, value_type, default)
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type,
+            default=default,
+            **_ignored,
+        )
         self.minimum = minimum
         self.maximum = maximum
 
@@ -168,16 +203,19 @@ class StringNodeParam(NodeParam):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         default: str = "",
         **_ignored: Any,
     ) -> None:
         super().__init__(
-            name,
-            required,
-            label,
-            value_type or self.value_type,
-            default,
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type or self.value_type,
+            default=default,
+            **_ignored,
         )
 
 
@@ -197,12 +235,19 @@ class DateTimeNodeParam(NodeParam):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         default: str = "",
         **_ignored: Any,
     ):
         super().__init__(
-            name, required, label, value_type or self.value_type, default or self.default
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type or self.value_type,
+            default=default or self.default,
+            **_ignored,
         )
 
 
@@ -216,12 +261,19 @@ class DateNodeParam(NodeParam):
         name: str,
         required: bool = False,
         label: str = "",
+        description: str = "",
         value_type: str = "",
         default: str = "",
         **_ignored: Any,
     ):
         super().__init__(
-            name, required, label, value_type or self.value_type, default or self.default
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type or self.value_type,
+            default=default or self.default,
+            **_ignored,
         )
 
 

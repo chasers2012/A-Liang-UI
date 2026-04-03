@@ -1,9 +1,9 @@
+from evaluation_workflow_nodes.calculate_factor_value import CalculateFactorValueNode
 from evaluation_workflow_nodes.collect_result import CollectResult
+from evaluation_workflow_nodes.load_data_set import LoadDataSet
 from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
 from workflow import Node
 
-from app.evaluation.scheme.nodes.calculate_factor_value import CalculateFactorValueNode
-from app.evaluation.scheme.nodes.data_set_node import LoadDataSet
 from app.evaluation.scheme.profile_schemas import EvaluationNodeTypePublic
 
 INTERNAL_NODES = [LoadDataSet, CalculateFactorValueNode, CollectResult, EchartsLineNode]

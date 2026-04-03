@@ -3,6 +3,8 @@ export type WorkflowSocketDefinition = {
   required: boolean;
   value_type: string;
   render_type?: string | null;
+  label?: string;
+  description?: string;
 };
 
 /**
@@ -10,7 +12,6 @@ export type WorkflowSocketDefinition = {
  * 无 ``default`` 字段的为连线端口；含 ``default`` / ``render_type`` 等为节点内联字段。
  */
 export type WorkflowNodeInputSpec = WorkflowSocketDefinition & {
-  label?: string;
   default?: unknown;
   render_type?: string | null;
   options?: Array<string | number> | null;
