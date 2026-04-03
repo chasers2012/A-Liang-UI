@@ -51,9 +51,11 @@ function formatIso(iso: string): string {
 }
 
 function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
-  const m = row.metric_results;
-  if (!m || typeof m !== "object") return false;
-  return Object.keys(m).length > 0;
+  const r = row.results ?? row.metric_results;
+  if (r === null || r === undefined) return false;
+  if (Array.isArray(r)) return r.length > 0;
+  if (typeof r === "object") return Object.keys(r as Record<string, unknown>).length > 0;
+  return true;
 }
 
 function FactorEvaluationRunControls(props: {
@@ -189,8 +191,7 @@ function FactorEvaluationDetails(props: {
           当前评价没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
         </p>
       ) : null}
-      <EvaluationProfileMetricResultsPanel
-      />
+      <EvaluationProfileMetricResultsPanel evalRow={evalRow} />
     </>
   );
 }

@@ -19,6 +19,8 @@ const paramTypeMap = {
   select: SelectParamRow,
   toggle: BooleanParamRow,
   number: NumberParamRow,
+  // 后端 `StringNodeParam.render_type` 使用 `input`
+  input: StringParamRow,
   string: StringParamRow,
 } as const;
 
