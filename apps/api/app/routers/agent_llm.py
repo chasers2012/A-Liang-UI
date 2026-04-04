@@ -16,6 +16,7 @@ from app.chat.llm_schemas import (
     AssistantBlockPublic,
     ChatMessageIn,
     ChatRequest,
+    ChatSessionArchivedSummaryPublic,
     ChatSessionCreateBody,
     ChatSessionDetailPublic,
     ChatSessionRenameBody,
@@ -23,7 +24,12 @@ from app.chat.llm_schemas import (
     ChatToolCallPublic,
     LlmSettings,
 )
-from app.chat.session_registry import ChatSessionRegistry, record_to_detail, record_to_summary
+from app.chat.session_registry import (
+    ChatSessionRegistry,
+    record_to_archived_summary,
+    record_to_detail,
+    record_to_summary,
+)
 from app.workspace_config import load_workspace_config, save_workspace_config
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -253,6 +259,16 @@ def list_chat_sessions() -> list[ChatSessionSummaryPublic]:
     return [record_to_summary(i) for i in items]
 
 
+@router.get(
+    "/chat/sessions/archived",
+    response_model=list[ChatSessionArchivedSummaryPublic],
+)
+def list_archived_chat_sessions() -> list[ChatSessionArchivedSummaryPublic]:
+    items = ChatSessionRegistry.list_archived_items()
+    items.sort(key=lambda i: i.archived_at or "", reverse=True)
+    return [record_to_archived_summary(i) for i in items]
+
+
 @router.post(
     "/chat/sessions",
     response_model=ChatSessionDetailPublic,
@@ -297,3 +313,15 @@ def delete_chat_session(session_id: str) -> None:
     rec = ChatSessionRegistry.archive_session(session_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在")
+
+
+@router.post(
+    "/chat/sessions/{session_id}/restore",
+    response_model=ChatSessionDetailPublic,
+    response_model_exclude_none=True,
+)
+def restore_chat_session(session_id: str) -> ChatSessionDetailPublic:
+    rec = ChatSessionRegistry.restore_session(session_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="会话不存在或未被归档")
+    return record_to_detail(rec)

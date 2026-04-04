@@ -238,6 +238,13 @@ export function buildAppHeaderBreadcrumbs(
     ]);
   }
 
+  if (pathname === "/chat/archived") {
+    return withMenuSection(pathname, [
+      { href: "/", label: "对话" },
+      { label: "已归档会话" },
+    ]);
+  }
+
   const agent = prefixSectionBreadcrumbs(pathname, "/agent", "Agent");
   if (agent) return withMenuSection(pathname, agent);
 
@@ -270,6 +277,8 @@ export function headerBackHref(pathname: string): string | null {
 
   const backtest = prefixSectionBackHref(pathname, "/backtest");
   if (backtest !== null) return backtest;
+
+  if (pathname === "/chat/archived") return "/";
 
   const agent = prefixSectionBackHref(pathname, "/agent");
   if (agent !== null) return agent;

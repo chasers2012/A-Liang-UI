@@ -172,6 +172,33 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
   set(chatHydratedAtom, true);
 });
 
+/** 从服务端重新拉取当前会话列表（例如归档恢复后同步首页侧栏）。 */
+export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
+  set(chatErrorAtom, null);
+  try {
+    const list = await listAgentChatSessions();
+    set(chatSessionsAtom, list);
+    const activeId = get(activeChatSessionIdAtom);
+    if (activeId && !list.some((s) => s.id === activeId)) {
+      const fallback = list[0]?.id ?? null;
+      set(activeChatSessionIdAtom, fallback);
+      setLastActiveSessionId(fallback);
+      if (fallback && !get(chatMessagesBySessionAtom)[fallback]) {
+        const detail = await getAgentChatSession(fallback);
+        set(chatMessagesBySessionAtom, (prev) => ({
+          ...prev,
+          [fallback]: toChatTurns(detail.messages),
+        }));
+      }
+    }
+  } catch (e) {
+    set(
+      chatErrorAtom,
+      e instanceof ApiError ? e.message : "刷新会话列表失败",
+    );
+  }
+});
+
 export const selectChatSessionAtom = atom(
   null,
   async (get, set, sessionId: string) => {

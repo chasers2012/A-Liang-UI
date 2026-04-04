@@ -5,6 +5,7 @@ from typing import Any
 
 from app.chat.llm_schemas import (
     ChatMessageIn,
+    ChatSessionArchivedSummaryPublic,
     ChatSessionDetailPublic,
     ChatSessionRecord,
     ChatSessionsFile,
@@ -154,6 +155,10 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         return [item for item in cls.list_items() if item.archived_at is None]
 
     @classmethod
+    def list_archived_items(cls) -> list[ChatSessionRecord]:
+        return [item for item in cls.list_items() if item.archived_at is not None]
+
+    @classmethod
     def get_active_item(cls, session_id: str) -> ChatSessionRecord | None:
         rec = cls.get_item(session_id)
         if rec is None or rec.archived_at is not None:
@@ -210,6 +215,18 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         return cls.archive_session(session_id)
 
     @classmethod
+    def restore_session(cls, session_id: str) -> ChatSessionRecord | None:
+        rec = cls.get_item(session_id)
+        if rec is None or rec.archived_at is None:
+            return None
+
+        def _apply(item: ChatSessionRecord) -> None:
+            item.archived_at = None
+            item.updated_at = utc_now_iso()
+
+        return cls.update_item(session_id, _apply)
+
+    @classmethod
     def get_messages(cls, session_id: str) -> list[ChatMessageIn] | None:
         rec = cls.get_active_item(session_id)
         if rec is None:
@@ -224,6 +241,15 @@ def record_to_summary(rec: ChatSessionRecord) -> ChatSessionSummaryPublic:
         created_at=rec.created_at,
         updated_at=rec.updated_at,
         message_count=rec.message_count,
+    )
+
+
+def record_to_archived_summary(rec: ChatSessionRecord) -> ChatSessionArchivedSummaryPublic:
+    if not rec.archived_at:
+        raise ValueError("session is not archived")
+    return ChatSessionArchivedSummaryPublic(
+        **record_to_summary(rec).model_dump(),
+        archived_at=rec.archived_at,
     )
 
 

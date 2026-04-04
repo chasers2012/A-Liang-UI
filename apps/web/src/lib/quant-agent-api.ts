@@ -1,6 +1,7 @@
 import type {
   AgentChatRequestPublic,
   AgentChatSessionCreateBody,
+  AgentChatSessionArchivedSummaryPublic,
   AgentChatSessionDetailPublic,
   AgentChatSessionRenameBody,
   AgentChatSessionSummaryPublic,
@@ -269,6 +270,23 @@ export async function postAgentChatStream(
 
 export function listAgentChatSessions(): Promise<AgentChatSessionSummaryPublic[]> {
   return apiFetchJson<AgentChatSessionSummaryPublic[]>("/agent/chat/sessions");
+}
+
+export function listArchivedAgentChatSessions(): Promise<
+  AgentChatSessionArchivedSummaryPublic[]
+> {
+  return apiFetchJson<AgentChatSessionArchivedSummaryPublic[]>(
+    "/agent/chat/sessions/archived",
+  );
+}
+
+export function restoreAgentChatSession(
+  id: string,
+): Promise<AgentChatSessionDetailPublic> {
+  return apiFetchJson<AgentChatSessionDetailPublic>(
+    `/agent/chat/sessions/${encodeURIComponent(id)}/restore`,
+    { method: "POST" },
+  );
 }
 
 export function createAgentChatSession(

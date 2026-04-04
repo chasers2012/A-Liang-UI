@@ -50,6 +50,12 @@ export type AgentChatSessionSummaryPublic = {
   message_count: number;
 };
 
+/** 与后端 ``ChatSessionArchivedSummaryPublic`` 一致。 */
+export type AgentChatSessionArchivedSummaryPublic =
+  AgentChatSessionSummaryPublic & {
+    archived_at: string;
+  };
+
 export type AgentChatSessionDetailPublic = {
   id: string;
   title: string;

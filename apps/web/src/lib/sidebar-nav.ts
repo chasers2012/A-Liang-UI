@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Archive,
   Bot,
   Database,
   GitBranch,
@@ -28,7 +29,12 @@ export type SidebarNavMainItem = {
 
 export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
   navMain: [
-    { title: "对话", url: "/", icon: MessageCircle },
+    {
+      title: "对话",
+      url: "/",
+      icon: MessageCircle,
+      items: [{ title: "已归档会话", url: "/chat/archived", icon: Archive }],
+    },
     {
       title: "因子",
       url: "/factors",

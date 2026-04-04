@@ -119,6 +119,10 @@ class ChatSessionSummaryPublic(BaseModel):
     message_count: int
 
 
+class ChatSessionArchivedSummaryPublic(ChatSessionSummaryPublic):
+    archived_at: str
+
+
 class ChatSessionDetailPublic(BaseModel):
     id: str
     title: str

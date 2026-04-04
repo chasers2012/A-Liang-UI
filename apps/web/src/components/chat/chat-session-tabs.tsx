@@ -242,7 +242,7 @@ export function ChatSessionTabs({ isBusy }: ChatSessionTabsProps) {
           <div className="space-y-2">
             <p className="text-sm text-foreground">确认归档会话「{active?.title ?? ""}」？</p>
             <p className="text-sm text-muted-foreground">
-              归档后会从当前列表隐藏，但消息会被保留。
+              归档后会从当前列表隐藏，消息会保留；可在「已归档」页面恢复。
             </p>
           </div>
         }
