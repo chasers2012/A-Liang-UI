@@ -2,9 +2,9 @@
 
 import { Loader2 } from "lucide-react";
 
-import { AiChatMarkdown } from "@/components/ai-chat-markdown";
 import { ChatToolCallCard } from "@/components/chat/chat-tool-call-card";
 import type { ChatTurn } from "@/models/chat/session.atom";
+import { AiChatMarkdown } from "./ai-chat-markdown";
 
 interface ChatAssistantBodyProps {
   message: ChatTurn;
