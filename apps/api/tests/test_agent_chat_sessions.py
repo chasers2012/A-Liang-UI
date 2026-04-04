@@ -209,7 +209,9 @@ def test_chat_stream_error_does_not_persist(client, monkeypatch):
     detail = client.get(f"/agent/chat/sessions/{sid}").json()
     # 用户消息在流开始前已落盘；助手因错误不落盘
     assert len(detail["messages"]) == 1
-    assert detail["messages"][0] == {
-        "role": "user",
-        "blocks": [{"kind": "text", "content": "ping"}],
-    }
+    user0 = detail["messages"][0]
+    assert user0["role"] == "user"
+    assert user0["blocks"] == [{"kind": "text", "content": "ping"}]
+    uid = user0.get("id")
+    assert isinstance(uid, str)
+    assert uid

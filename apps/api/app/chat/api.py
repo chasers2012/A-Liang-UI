@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import uuid
+from collections.abc import Iterator
 from typing import Any
 
 from app.chat.agent_chat import lc_messages_from_chat_request, sse_event_iter_for_chat
@@ -20,6 +22,7 @@ from app.chat.llm_schemas import (
     ChatSessionSummaryPublic,
     ChatToolCallPublic,
     LlmSettings,
+    ensure_chat_message_ids,
 )
 from app.chat.session_registry import (
     ChatSessionRegistry,
@@ -108,6 +111,8 @@ class _AssistantStreamAccumulator:
             return False
         if isinstance(payload.get("error"), str):
             return True
+        if payload.get("message_ids") is not None:
+            return False
         delta = payload.get("delta")
         if isinstance(delta, str) and delta:
             self.append_delta(delta)
@@ -134,6 +139,7 @@ def _persist_chat_session_if_needed(
     body: ChatRequest,
     acc: _AssistantStreamAccumulator | None,
     saw_error: bool,
+    assistant_message_id: str,
 ) -> None:
     if saw_error or not body.session_id:
         return
@@ -146,6 +152,7 @@ def _persist_chat_session_if_needed(
     if blocks:
         final_messages.append(
             ChatMessageIn(
+                id=assistant_message_id,
                 role="assistant",
                 blocks=blocks,
             )
@@ -185,47 +192,69 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
     return body
 
 
+def _prepare_chat_stream_body(body: ChatRequest) -> tuple[ChatRequest, str, str]:
+    messages = ensure_chat_message_ids(list(body.messages))
+    last_user_id: str | None = None
+    for m in reversed(messages):
+        if m.role == "user":
+            last_user_id = m.id
+            break
+    if last_user_id is None:
+        raise HTTPException(status_code=400, detail="至少需要一条 user 消息")
+    assistant_message_id = str(uuid.uuid4())
+    body_filled = ChatRequest(messages=messages, session_id=body.session_id)
+    return body_filled, last_user_id, assistant_message_id
+
+
+def _iter_chat_stream_sse(
+    body_filled: ChatRequest,
+    last_user_id: str,
+    assistant_message_id: str,
+) -> Iterator[str]:
+    out: queue.Queue[str | None] = queue.Queue()
+
+    def _producer() -> None:
+        acc = _AssistantStreamAccumulator()
+        saw_error = False
+        try:
+            out.put(
+                f"data: {json.dumps({'message_ids': {'user': last_user_id, 'assistant': assistant_message_id}}, ensure_ascii=False)}\n\n"
+            )
+            try:
+                llm = _build_llm_from_workspace()
+            except ValueError as e:
+                err = f"{e}"
+                saw_error = True
+                out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
+                return
+
+            lc_messages = lc_messages_from_chat_request(body_filled)
+            for event in sse_event_iter_for_chat(llm, lc_messages=lc_messages):
+                if acc.process_event(event):
+                    saw_error = True
+                out.put(event)
+        finally:
+            try:
+                _persist_chat_session_if_needed(body_filled, acc, saw_error, assistant_message_id)
+            finally:
+                out.put(None)
+
+    threading.Thread(target=_producer, daemon=True).start()
+
+    while True:
+        ev = out.get()
+        if ev is None:
+            return
+        yield ev
+
+
 @router.post("/chat/stream")
 def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
-    _persist_user_messages_on_receive(body)
-
-    def event_iter():
-        out: queue.Queue[str | None] = queue.Queue()
-
-        def _producer() -> None:
-            acc = _AssistantStreamAccumulator()
-            saw_error = False
-            try:
-                try:
-                    llm = _build_llm_from_workspace()
-                except ValueError as e:
-                    err = f"{e}"
-                    saw_error = True
-                    out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
-                    return
-
-                lc_messages = lc_messages_from_chat_request(body)
-                for event in sse_event_iter_for_chat(llm, lc_messages=lc_messages):
-                    if acc.process_event(event):
-                        saw_error = True
-                    out.put(event)
-            finally:
-                try:
-                    _persist_chat_session_if_needed(body, acc, saw_error)
-                finally:
-                    out.put(None)
-
-        threading.Thread(target=_producer, daemon=True).start()
-
-        while True:
-            ev = out.get()
-            if ev is None:
-                return
-            yield ev
-
+    body_filled, last_user_id, assistant_message_id = _prepare_chat_stream_body(body)
+    _persist_user_messages_on_receive(body_filled)
     return StreamingResponse(
-        event_iter(),
+        _iter_chat_stream_sse(body_filled, last_user_id, assistant_message_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

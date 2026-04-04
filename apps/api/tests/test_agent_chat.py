@@ -35,6 +35,7 @@ def test_agent_chat_stream_sse(client, monkeypatch):
     assert r.status_code == 200
     assert r.headers.get("content-type", "").startswith("text/event-stream")
     body = r.text
+    assert '"message_ids"' in body
     assert "hi" in body
     assert "there" in body
     assert '"done": true' in body

@@ -11,6 +11,7 @@ from app.chat.llm_schemas import (
     ChatSessionRecord,
     ChatSessionsFile,
     ChatSessionSummaryPublic,
+    ensure_chat_message_ids,
 )
 from app.datetime_utils import utc_now_iso
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
@@ -44,6 +45,9 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         for m in data:
             if isinstance(m, dict):
                 out.append(ChatMessageIn.model_validate(m))
+        if any(not (m.id or "").strip() for m in out):
+            out = ensure_chat_message_ids(out)
+            cls._write_messages_file(message_file, out)
         return out
 
     @classmethod
@@ -91,7 +95,7 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
             for m in legacy_messages:
                 if isinstance(m, dict):
                     msgs.append(ChatMessageIn.model_validate(m))
-            msgs = msgs[-MAX_SESSION_MESSAGES:]
+            msgs = ensure_chat_message_ids(msgs[-MAX_SESSION_MESSAGES:])
             cls._write_messages_file(it["message_file"], msgs)
             it["message_count"] = len(msgs)
             it.pop("messages", None)
@@ -184,7 +188,7 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
     def replace_messages(
         cls, session_id: str, messages: list[ChatMessageIn]
     ) -> ChatSessionRecord | None:
-        trimmed = list(messages)[-MAX_SESSION_MESSAGES:]
+        trimmed = ensure_chat_message_ids(list(messages)[-MAX_SESSION_MESSAGES:])
 
         def _apply(rec: ChatSessionRecord) -> None:
             if rec.archived_at is not None:

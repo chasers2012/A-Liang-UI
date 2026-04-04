@@ -30,14 +30,23 @@ export type AgentAssistantBlockPublic =
   | { kind: "text"; content: string }
   | { kind: "tool"; call: AgentChatToolCallPublic };
 
+/** 会话详情 / 持久化中的消息：始终带服务端 ``id``。 */
 export type AgentChatMessagePublic = {
+  id: string;
   role: AgentChatRolePublic;
   /** 消息内容（文本/工具调用）统一存储在 blocks 中。 */
   blocks: AgentAssistantBlockPublic[];
 };
 
+/** ``POST /agent/chat/stream`` 请求体中的单条消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
+export type AgentChatRequestMessage = {
+  id?: string | null;
+  role: AgentChatRolePublic;
+  blocks: AgentAssistantBlockPublic[];
+};
+
 export type AgentChatRequestPublic = {
-  messages: AgentChatMessagePublic[];
+  messages: AgentChatRequestMessage[];
   session_id?: string | null;
 };
 

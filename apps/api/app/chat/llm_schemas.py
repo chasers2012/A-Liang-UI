@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -41,8 +42,20 @@ class AssistantBlockPublic(BaseModel):
 
 
 class ChatMessageIn(BaseModel):
+    id: str | None = Field(
+        default=None,
+        description="Stable message id (UUID); assigned by server when omitted.",
+    )
     role: ChatRole
     blocks: list[AssistantBlockPublic] = Field(default_factory=list)
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def empty_message_id_to_none(cls, v: object) -> str | None:
+        if v is None:
+            return None
+        s = str(v).strip()
+        return s or None
 
     @model_validator(mode="after")
     def normalize_and_validate_blocks(self) -> ChatMessageIn:
@@ -52,6 +65,13 @@ class ChatMessageIn(BaseModel):
         if self.role == "assistant" and not self.blocks:
             raise ValueError("assistant 消息 blocks 不能为空")
         return self
+
+
+def ensure_chat_message_ids(messages: list[ChatMessageIn]) -> list[ChatMessageIn]:
+    """Fill missing ``id`` on each message with a new UUID (preserves non-empty client ids)."""
+    return [
+        m.model_copy(update={"id": (m.id or "").strip() or str(uuid.uuid4())}) for m in messages
+    ]
 
 
 def message_text_for_model(m: ChatMessageIn) -> str:

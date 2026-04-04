@@ -101,6 +101,10 @@ type AgentChatSseParsed =
   | { kind: "done" }
   | { kind: "error"; message: string }
   | {
+      kind: "message_ids";
+      payload: { user: string; assistant: string };
+    }
+  | {
       kind: "tool_start";
       payload: { name: string; id: string; args?: unknown };
     }
@@ -125,6 +129,17 @@ function parseAgentChatSsePayloadObject(
   if (o.done === true) return { kind: "done" };
   if (typeof o.delta === "string" && o.delta.length > 0) {
     return { kind: "delta", text: o.delta };
+  }
+  const mid = o.message_ids;
+  if (mid && typeof mid === "object") {
+    const p = mid as Record<string, unknown>;
+    return {
+      kind: "message_ids",
+      payload: {
+        user: sseStringField(p.user),
+        assistant: sseStringField(p.assistant),
+      },
+    };
   }
   const ts = o.tool_start;
   if (ts && typeof ts === "object") {
@@ -185,6 +200,8 @@ function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
 }
 
 export type AgentChatStreamOptions = {
+  /** 首包：本轮 user / assistant 消息在服务端持久化所用的 id（用于替换乐观 key）。 */
+  onMessageIds?: (payload: { user: string; assistant: string }) => void;
   onDelta: (text: string) => void;
   onToolStart?: (payload: {
     name: string;
@@ -215,6 +232,10 @@ function handleParsedAgentChatSseEvent(
   if (ev.kind === "done") return "done";
   if (ev.kind === "delta") {
     options.onDelta(ev.text);
+    return "continue";
+  }
+  if (ev.kind === "message_ids") {
+    options.onMessageIds?.(ev.payload);
     return "continue";
   }
   if (ev.kind === "tool_start") {

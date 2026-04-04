@@ -11,6 +11,7 @@ import {
 } from "@/lib/quant-agent-api";
 import type {
   AgentChatMessagePublic,
+  AgentChatRequestMessage,
   AgentChatSessionDetailPublic,
   AgentChatSessionSummaryPublic,
   AgentChatToolCallPublic,
@@ -20,11 +21,10 @@ import { atomFamily } from "jotai-family";
 
 const LAST_ACTIVE_KEY = "quant-agent-chat-last-active-session-id";
 
-export interface ChatTurn extends AgentChatMessagePublic {
-  id: string;
-}
-
-function appendAssistantDelta(prev: ChatTurn, delta: string): ChatTurn {
+function appendAssistantDelta(
+  prev: AgentChatMessagePublic,
+  delta: string,
+): AgentChatMessagePublic {
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
   if (last?.kind === "text") {
@@ -39,9 +39,9 @@ function appendAssistantDelta(prev: ChatTurn, delta: string): ChatTurn {
 }
 
 function applyToolStart(
-  prev: ChatTurn,
+  prev: AgentChatMessagePublic,
   payload: { name: string; id: string; args?: unknown },
-): ChatTurn {
+): AgentChatMessagePublic {
   const call: AgentChatToolCallPublic = {
     id: payload.id,
     name: payload.name,
@@ -56,26 +56,15 @@ function applyToolStart(
 }
 
 function patchToolInBlocks(
-  prev: ChatTurn,
+  prev: AgentChatMessagePublic,
   id: string,
   patch: Partial<AgentChatToolCallPublic>,
-): ChatTurn {
+): AgentChatMessagePublic {
   const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== "tool" || b.call.id !== id) return b;
     return { kind: "tool", call: { ...b.call, ...patch } };
   });
   return { ...prev, blocks };
-}
-
-function createId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function toChatTurns(messages: AgentChatMessagePublic[]): ChatTurn[] {
-  return messages.map((m) => ({ ...m, id: createId() }));
 }
 
 export const chatSessionsAtom = atom<AgentChatSessionSummaryPublic[]>([]);
@@ -92,8 +81,8 @@ export const sessionMessageIdsAtomFamily = atomFamily((sessionId: string) =>
   atom((get) => get(sessionMessageIdsAtom)[sessionId] ?? []),
 );
 
-// message id -> ChatTurn
-export const messagesAtom = atom<Record<string, ChatTurn>>({});
+// message id -> AgentChatMessagePublic
+export const messagesAtom = atom<Record<string, AgentChatMessagePublic>>({});
 
 // user message id → assistant message ids
 export const messageReplieIdsAtom = atom<Record<string, string[]>>({});
@@ -153,7 +142,7 @@ function replaceSessionTurns(
   get: Getter,
   set: Setter,
   sessionId: string,
-  turns: ChatTurn[],
+  turns: AgentChatMessagePublic[],
 ): void {
   const userIds: string[] = [];
   const sessionMessageIds = get(sessionMessageIdsAtom);
@@ -294,28 +283,34 @@ async function ensureSessionTurnsLoaded(
 ): Promise<AgentChatSessionDetailPublic | null> {
   if (sessionMessagesLoaded(get, sessionId)) return null;
   const detail = await getAgentChatSession(sessionId);
-  replaceSessionTurns(get, set, sessionId, toChatTurns(detail.messages));
+  replaceSessionTurns(get, set, sessionId, detail.messages);
   return detail;
 }
 
-function toApiMessage(turn: ChatTurn) {
-  return {
+function toApiMessage(
+  turn: AgentChatMessagePublic,
+  omitId?: boolean,
+): AgentChatRequestMessage {
+  const base: AgentChatRequestMessage = {
     role: turn.role,
     blocks: turn.blocks ?? [],
   };
+  if (omitId) return base;
+  return { ...base, id: turn.id };
 }
 
 function buildPayloadMessages(
   userIds: string[],
-  messages: Record<string, ChatTurn>,
+  messages: Record<string, AgentChatMessagePublic>,
   replies: Record<string, string[]>,
   optimisticAssistantId: string,
+  pendingLocalUserId: string,
 ) {
   return userIds.flatMap((uid) => {
     const user = messages[uid];
     if (!user) return [];
 
-    const userPart = toApiMessage(user);
+    const userPart = toApiMessage(user, uid === pendingLocalUserId);
     const firstReplyId = (replies[uid] ?? [])[0];
     if (!firstReplyId || firstReplyId === optimisticAssistantId)
       return [userPart];
@@ -324,6 +319,45 @@ function buildPayloadMessages(
     if (!assistant) return [userPart];
 
     return [userPart, toApiMessage(assistant)];
+  });
+}
+
+function remapPendingChatMessageIds(
+  set: Setter,
+  sessionId: string,
+  fromUser: string,
+  toUser: string,
+  fromAssistant: string,
+  toAssistant: string,
+): void {
+  set(sessionMessageIdsAtom, (prev) => ({
+    ...prev,
+    [sessionId]: (prev[sessionId] ?? []).map((id) =>
+      id === fromUser ? toUser : id,
+    ),
+  }));
+  set(messagesAtom, (prev) => {
+    const u = prev[fromUser];
+    const a = prev[fromAssistant];
+    if (!u || !a) return prev;
+    const next = { ...prev };
+    delete next[fromUser];
+    delete next[fromAssistant];
+    next[toUser] = { ...u, id: toUser };
+    next[toAssistant] = { ...a, id: toAssistant };
+    return next;
+  });
+  set(messageReplieIdsAtom, (prev) => {
+    const r = prev[fromUser];
+    const next = { ...prev };
+    delete next[fromUser];
+    next[toUser] = r ? [toAssistant] : [];
+    return next;
+  });
+  set(openSegmentsAtom, (prev) => {
+    if (!(fromUser in prev)) return prev;
+    const { [fromUser]: wasOpen, ...rest } = prev;
+    return { ...rest, [toUser]: wasOpen };
   });
 }
 
@@ -354,7 +388,7 @@ function rollbackOptimisticSend(
 function patchAssistantMessage(
   set: Setter,
   assistantId: string,
-  patch: (assistant: ChatTurn) => ChatTurn,
+  patch: (assistant: AgentChatMessagePublic) => AgentChatMessagePublic,
 ): void {
   set(messagesAtom, (prev) => {
     const assistant = prev[assistantId];
@@ -382,7 +416,7 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
         message_count: created.messages.length,
       },
     ];
-    replaceSessionTurns(get, set, created.id, toChatTurns(created.messages));
+    replaceSessionTurns(get, set, created.id, created.messages);
     activeId = created.id;
   } else if (!activeId || !list.some((i) => i.id === activeId)) {
     activeId = list[0].id;
@@ -393,7 +427,7 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
   setLastActiveSessionId(activeId);
   if (activeId && !sessionMessagesLoaded(get, activeId)) {
     const detail = await getAgentChatSession(activeId);
-    replaceSessionTurns(get, set, activeId, toChatTurns(detail.messages));
+    replaceSessionTurns(get, set, activeId, detail.messages);
   }
   set(chatHydratedAtom, true);
 });
@@ -430,7 +464,7 @@ export const selectChatSessionAtom = atom(
 export const createChatSessionAtom = atom(null, async (get, set) => {
   const detail = await createAgentChatSession({ title: "新会话" });
   set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-  replaceSessionTurns(get, set, detail.id, toChatTurns(detail.messages));
+  replaceSessionTurns(get, set, detail.id, detail.messages);
   setActiveSession(set, detail.id);
 });
 
@@ -474,66 +508,88 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   if (!targetSessionId) {
     const created = await createAgentChatSession({ title: "新会话" });
     set(chatSessionsAtom, (prev) => upsertSummary(prev, created));
-    replaceSessionTurns(get, set, created.id, toChatTurns(created.messages));
+    replaceSessionTurns(get, set, created.id, created.messages);
     setActiveSession(set, created.id);
     targetSessionId = created.id;
   }
   if (!targetSessionId) return;
+  const sessionId = targetSessionId;
 
   const sessionSummary =
-    get(chatSessionsAtom).find((s) => s.id === targetSessionId) ?? null;
+    get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
   const shouldAutoTitle =
     !!sessionSummary &&
     (sessionSummary.title || "").trim() === "新会话" &&
     (sessionSummary.message_count ?? 0) === 0;
 
-  const userTurn: ChatTurn = {
-    id: createId(),
+  const provisionalUserId = crypto.randomUUID();
+  const provisionalAssistantId = crypto.randomUUID();
+  const userTurn: AgentChatMessagePublic = {
+    id: provisionalUserId,
     role: "user",
     blocks: [{ kind: "text", content: trimmed }],
   };
-  const assistantId = createId();
+  let streamUserId = provisionalUserId;
+  let streamAssistantId = provisionalAssistantId;
 
   set(chatErrorAtom, null);
   set(chatInputAtom, "");
   set(chatIsSendingAtom, true);
   set(sessionMessageIdsAtom, (prev) => ({
     ...prev,
-    [targetSessionId!]: [...(prev[targetSessionId!] ?? []), userTurn.id],
+    [sessionId]: [...(prev[sessionId] ?? []), userTurn.id],
   }));
   set(messagesAtom, (prev) => ({
     ...prev,
     [userTurn.id]: userTurn,
-    [assistantId]: { id: assistantId, role: "assistant", blocks: [] },
+    [provisionalAssistantId]: {
+      id: provisionalAssistantId,
+      role: "assistant",
+      blocks: [],
+    },
   }));
   set(messageReplieIdsAtom, (prev) => ({
     ...prev,
-    [userTurn.id]: [assistantId],
+    [userTurn.id]: [provisionalAssistantId],
   }));
 
   try {
     const payloadMessages = buildPayloadMessages(
-      get(sessionMessageIdsAtom)[targetSessionId] ?? [],
+      get(sessionMessageIdsAtom)[sessionId] ?? [],
       get(messagesAtom),
       get(messageReplieIdsAtom),
-      assistantId,
+      provisionalAssistantId,
+      provisionalUserId,
     );
 
     await postAgentChatStream(
-      { session_id: targetSessionId, messages: payloadMessages },
+      { session_id: sessionId, messages: payloadMessages },
       {
+        onMessageIds: (ids) => {
+          if (!ids.user || !ids.assistant) return;
+          remapPendingChatMessageIds(
+            set,
+            sessionId,
+            streamUserId,
+            ids.user,
+            streamAssistantId,
+            ids.assistant,
+          );
+          streamUserId = ids.user;
+          streamAssistantId = ids.assistant;
+        },
         onDelta: (delta) => {
-          patchAssistantMessage(set, assistantId, (assistant) =>
+          patchAssistantMessage(set, streamAssistantId, (assistant) =>
             appendAssistantDelta(assistant, delta),
           );
         },
         onToolStart: (payload) => {
-          patchAssistantMessage(set, assistantId, (assistant) =>
+          patchAssistantMessage(set, streamAssistantId, (assistant) =>
             applyToolStart(assistant, payload),
           );
         },
         onToolResult: (payload) => {
-          patchAssistantMessage(set, assistantId, (assistant) =>
+          patchAssistantMessage(set, streamAssistantId, (assistant) =>
             patchToolInBlocks(assistant, payload.id, {
               status: "ok",
               result: payload.result,
@@ -541,7 +597,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           );
         },
         onToolError: (payload) => {
-          patchAssistantMessage(set, assistantId, (assistant) =>
+          patchAssistantMessage(set, streamAssistantId, (assistant) =>
             patchToolInBlocks(assistant, payload.id, {
               status: "error",
               error: payload.error,
@@ -553,7 +609,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
 
     if (shouldAutoTitle) {
       try {
-        await renameAgentChatSession(targetSessionId, {
+        await renameAgentChatSession(sessionId, {
           title: summarizeFirstUserMessage(
             extractTextFromBlocks(userTurn.blocks),
           ),
@@ -567,7 +623,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
       chatErrorAtom,
       e instanceof ApiError ? e.message : "请求失败，请检查 API 与网络。",
     );
-    rollbackOptimisticSend(set, targetSessionId, userTurn.id, assistantId);
+    rollbackOptimisticSend(set, sessionId, streamUserId, streamAssistantId);
     set(chatInputAtom, trimmed);
   } finally {
     set(chatIsSendingAtom, false);
