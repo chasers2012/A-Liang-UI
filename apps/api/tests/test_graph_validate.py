@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.evaluation.scheme.profile_schemas import EvaluationWorkflow
+from app.evaluation.profile.profile_schemas import EvaluationWorkflow
 from workflow import Node, WorkflowLink
 
 _CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"

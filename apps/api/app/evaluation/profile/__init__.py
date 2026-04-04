@@ -10,7 +10,7 @@ from app.startup_jobs import register_startup_job
 @register_startup_job
 def register_evaluation_scheme_chat_tools() -> None:
     from app.chat.tool_registry import ChatToolRegistry
-    from app.evaluation.scheme.tools import EVALUATION_SCHEME_CHAT_TOOLS
+    from app.evaluation.profile.tools import EVALUATION_SCHEME_CHAT_TOOLS
 
     for tool in EVALUATION_SCHEME_CHAT_TOOLS:
         ChatToolRegistry.instance().register_tool(tool)
@@ -24,7 +24,7 @@ def _register_evaluation_scheme_workflow_node_segment() -> None:
 
     from workflow import WorkflowNodeLoader, workflow_node_type_key
 
-    from app.evaluation.scheme.internal_nodes import INTERNAL_NODES
+    from app.evaluation.profile.internal_nodes import INTERNAL_NODES
 
     loader = WorkflowNodeLoader.instance()
     for node_cls in INTERNAL_NODES:

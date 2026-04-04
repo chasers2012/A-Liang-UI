@@ -9,7 +9,7 @@ from typing import Any
 from evaluation_workflow_nodes.collect_result import CollectResult
 from workflow import WorkflowExecutor, WorkflowGraph
 
-from app.evaluation.scheme.profile_schemas import EvaluationProfileRecord
+from app.evaluation.profile.profile_schemas import EvaluationProfileRecord
 from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import utc_now_iso
 

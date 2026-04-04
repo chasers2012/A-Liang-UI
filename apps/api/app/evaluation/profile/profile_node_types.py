@@ -9,7 +9,7 @@ from __future__ import annotations
 from workflow.parse import parse_workflow_node_source
 
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
-from app.evaluation.scheme.internal_nodes import get_internal_nodes
+from app.evaluation.profile.internal_nodes import get_internal_nodes
 
 from .profile_schemas import EvaluationNodeTypePublic
 

@@ -8,15 +8,15 @@ import workflow.node_types as _workflow_node_types
 from langchain_core.tools import tool
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.scheme.profile_node_types import list_evaluation_profile_node_types_public
-from app.evaluation.scheme.profile_schemas import (
+from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
+from app.evaluation.profile.profile_schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
     workflow_public_dict,
 )
-from app.evaluation.scheme.profiles_store import (
+from app.evaluation.profile.profiles_store import (
     EvaluationProfilesRegistry,
     FactorNotFoundError,
     ProfileNotFoundError,
