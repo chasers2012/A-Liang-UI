@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from app.chat.llm_schemas import (
@@ -225,6 +226,21 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
             item.updated_at = utc_now_iso()
 
         return cls.update_item(session_id, _apply)
+
+    @classmethod
+    def purge_archived_session(cls, session_id: str) -> ChatSessionRecord | None:
+        rec = cls.get_item(session_id)
+        if rec is None or rec.archived_at is None:
+            return None
+
+        deleted = cls.delete_item(session_id)
+        if deleted is None:
+            return None
+
+        path = workspace_config_path(deleted.message_file)
+        if isinstance(path, Path) and path.is_file():
+            path.unlink(missing_ok=True)
+        return deleted
 
     @classmethod
     def get_messages(cls, session_id: str) -> list[ChatMessageIn] | None:

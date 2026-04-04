@@ -289,6 +289,13 @@ export function restoreAgentChatSession(
   );
 }
 
+export function purgeArchivedAgentChatSession(id: string): Promise<void> {
+  return apiFetchJson<void>(
+    `/agent/chat/sessions/${encodeURIComponent(id)}/archived`,
+    { method: "DELETE" },
+  );
+}
+
 export function createAgentChatSession(
   body: AgentChatSessionCreateBody,
 ): Promise<AgentChatSessionDetailPublic> {

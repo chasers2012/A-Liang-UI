@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useSetAtom } from "jotai";
-import { ArchiveRestore } from "lucide-react";
+import { ArchiveRestore, Trash2 } from "lucide-react";
 
 import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Card,
   CardContent,
@@ -27,6 +28,7 @@ import {
 import {
   ApiError,
   listArchivedAgentChatSessions,
+  purgeArchivedAgentChatSession,
   restoreAgentChatSession,
 } from "@/lib/quant-agent-api";
 import type { AgentChatSessionArchivedSummaryPublic } from "@/models";
@@ -50,6 +52,10 @@ export default function ArchivedChatSessionsPage() {
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<
+    AgentChatSessionArchivedSummaryPublic | null
+  >(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -83,6 +89,22 @@ export default function ArchivedChatSessionsPage() {
       );
     } finally {
       setRestoringId(null);
+    }
+  };
+
+  const onDelete = async (id: string) => {
+    setDeletingId(id);
+    setError(null);
+    try {
+      await purgeArchivedAgentChatSession(id);
+      setItems((prev) => (prev ? prev.filter((s) => s.id !== id) : prev));
+      setConfirmDelete(null);
+    } catch (e) {
+      setError(
+        e instanceof ApiError ? e.message : "删除会话失败，请稍后重试。",
+      );
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -143,17 +165,30 @@ export default function ArchivedChatSessionsPage() {
                       {formatWhen(s.archived_at)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        disabled={restoringId !== null}
-                        onClick={() => void onRestore(s.id)}
-                      >
-                        <ArchiveRestore className="size-3.5" aria-hidden />
-                        {restoringId === s.id ? "恢复中…" : "恢复"}
-                      </Button>
+                      <div className="inline-flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={restoringId !== null || deletingId !== null}
+                          onClick={() => void onRestore(s.id)}
+                        >
+                          <ArchiveRestore className="size-3.5" aria-hidden />
+                          {restoringId === s.id ? "恢复中…" : "恢复"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={restoringId !== null || deletingId !== null}
+                          onClick={() => setConfirmDelete(s)}
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                          {deletingId === s.id ? "删除中…" : "删除"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -162,6 +197,29 @@ export default function ArchivedChatSessionsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDelete(null);
+        }}
+        title="删除已归档会话"
+        description={
+          <div className="space-y-2">
+            <p className="text-sm text-foreground">
+              确认永久删除会话「{confirmDelete?.title ?? ""}」？
+            </p>
+            <p className="text-sm text-muted-foreground">
+              删除后将无法恢复，历史消息会一并移除。
+            </p>
+          </div>
+        }
+        confirmLabel={deletingId ? "删除中…" : "删除"}
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          void onDelete(confirmDelete.id);
+        }}
+      />
     </Page>
   );
 }

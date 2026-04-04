@@ -325,3 +325,10 @@ def restore_chat_session(session_id: str) -> ChatSessionDetailPublic:
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在或未被归档")
     return record_to_detail(rec)
+
+
+@router.delete("/chat/sessions/{session_id}/archived", status_code=204)
+def purge_archived_chat_session(session_id: str) -> None:
+    rec = ChatSessionRegistry.purge_archived_session(session_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail="会话不存在或未被归档")

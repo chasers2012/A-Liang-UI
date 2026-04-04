@@ -61,6 +61,25 @@ def test_chat_sessions_archived_list_and_restore(client):
     assert all(i["id"] != sid for i in listed_after.json())
 
 
+def test_chat_sessions_archived_purge(client):
+    created = client.post("/agent/chat/sessions", json={"title": "归档删除测"})
+    assert created.status_code == 200
+    sid = created.json()["id"]
+
+    archived = client.delete(f"/agent/chat/sessions/{sid}")
+    assert archived.status_code == 204
+
+    purged = client.delete(f"/agent/chat/sessions/{sid}/archived")
+    assert purged.status_code == 204
+
+    listed_archived = client.get("/agent/chat/sessions/archived")
+    assert listed_archived.status_code == 200
+    assert all(i["id"] != sid for i in listed_archived.json())
+
+    restore_missing = client.post(f"/agent/chat/sessions/{sid}/restore")
+    assert restore_missing.status_code == 404
+
+
 def test_chat_stream_persists_on_done(client, monkeypatch):
     class _Chunk:
         def __init__(self, content: str) -> None:
