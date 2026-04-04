@@ -12,7 +12,7 @@ import {
   openSegmentsAtom,
 } from "@/models/chat/session.atom";
 import { AiChatComposer } from "@/components/chat/chat-composer";
-import { AiChatMessages } from "@/components/chat/chat-messages";
+import { AiChatMessages } from "@/components/chat/messages";
 import { ChatSessionTabs } from "./tabs";
 
 

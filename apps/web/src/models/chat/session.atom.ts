@@ -21,6 +21,9 @@ import { atomFamily } from "jotai-family";
 
 const LAST_ACTIVE_KEY = "quant-agent-chat-last-active-session-id";
 
+/** 稳定空引用：`?? []` / `return []` 每次新数组会让 Jotai 认为 derived 值变化并唤醒订阅者 */
+const EMPTY_SESSION_MESSAGE_IDS: string[] = [];
+
 function appendAssistantDelta(
   prev: AgentChatMessagePublic,
   delta: string,
@@ -70,6 +73,14 @@ function patchToolInBlocks(
 export const chatSessionsAtom = atom<AgentChatSessionSummaryPublic[]>([]);
 export const activeChatSessionIdAtom = atom<string | null>(null);
 
+/**
+ * 仅当该会话是否在「当前激活」之间切换时通知订阅者。
+ * 用于 tab 项：避免整表订阅 `activeChatSessionIdAtom` 导致切换时 O(n) 重渲染。
+ */
+export const isActiveChatSessionAtomFamily = atomFamily((sessionId: string) =>
+  atom((get) => get(activeChatSessionIdAtom) === sessionId),
+);
+
 /** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeChatSessionIdAtom 组合使用） */
 export const chatSessionSummaryAtomFamily = atomFamily((sessionId: string) =>
   atom((get): AgentChatSessionSummaryPublic | null => {
@@ -93,8 +104,13 @@ export const chatHydratedAtom = atom(false);
 // session id → user message ids
 export const sessionMessageIdsAtom = atom<Record<string, string[]>>({});
 
-export const sessionMessageIdsAtomFamily = atomFamily((sessionId: string) =>
-  atom((get) => get(sessionMessageIdsAtom)[sessionId] ?? []),
+export const sessionMessageIdsAtomFamily = atomFamily(
+  (sessionId: string | undefined | null) =>
+    atom(
+      (get) =>
+        (sessionId && get(sessionMessageIdsAtom)[sessionId]) ??
+        EMPTY_SESSION_MESSAGE_IDS,
+    ),
 );
 
 // message id -> AgentChatMessagePublic
@@ -113,9 +129,7 @@ export const messageReplieIdAtomFamily = atomFamily((id: string) =>
 
 /** 当前激活会话下的 segment id 顺序（与每条 user 消息的 id 一致） */
 export const activeUserMessageIdsAtom = atom((get) => {
-  const sessionId = get(activeChatSessionIdAtom);
-  if (!sessionId) return [] as string[];
-  return get(sessionMessageIdsAtomFamily(sessionId));
+  return get(sessionMessageIdsAtomFamily(get(activeChatSessionIdAtom)));
 });
 
 /**

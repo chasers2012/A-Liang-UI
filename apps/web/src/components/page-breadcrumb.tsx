@@ -19,7 +19,7 @@ export type PageBreadcrumbItem = {
 };
 
 /** 通用面包屑；末项无 href 表示当前页 */
-export function PageBreadcrumb({
+export const PageBreadcrumb = React.memo(function PageBreadcrumb({
   items,
   variant = "default",
 }: {
@@ -86,4 +86,4 @@ export function PageBreadcrumb({
       </BreadcrumbList>
     </Breadcrumb>
   );
-}
+})

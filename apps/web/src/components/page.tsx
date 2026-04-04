@@ -1,7 +1,13 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { memo, useCallback, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { ArrowLeft } from "lucide-react";
 
 import {
@@ -105,7 +111,55 @@ function PagePrimaryColumn({
   );
 }
 
-/** `key={pathname}` 挂载时重置「返回」抑制状态，避免 effect 内 setState。 */
+/**
+ * 顶栏单独 memo：`PageChrome` 会因 `children`（如对话流）引用变化而重渲染，
+ * 但顶栏只依赖 pathname / 返回按钮 / action，与正文解耦后可避免面包屑整栏无效更新。
+ */
+const PageChromeAppHeader = memo(function PageChromeAppHeader({
+  pathname,
+  showBackLink,
+  action,
+}: {
+  pathname: string;
+  showBackLink: boolean;
+  action?: ReactNode;
+}) {
+  const router = useRouter();
+  const headerCrumbs = useMemo(
+    () => buildAppHeaderBreadcrumbs(pathname),
+    [pathname],
+  );
+
+  return (
+    <header
+      className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-sidebar px-3 py-2"
+      role="banner"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <SidebarTrigger className="shrink-0" />
+        <PageBreadcrumb items={headerCrumbs} variant="header" />
+      </div>
+      {showBackLink ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          返回
+        </Button>
+      ) : null}
+      {action != null ? (
+        <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
+          {action}
+        </div>
+      ) : null}
+    </header>
+  );
+});
+
 const PageChrome = memo(function PageChrome({
   pathname,
   children,
@@ -119,8 +173,6 @@ const PageChrome = memo(function PageChrome({
   showAppHeaderBack,
   action,
 }: PageChromeProps) {
-  const router = useRouter();
-  const headerCrumbs = buildAppHeaderBreadcrumbs(pathname);
   const canHeaderBack = headerBackHref(pathname) != null;
   const showPageHeading = title != null || description != null;
 
@@ -130,41 +182,25 @@ const PageChrome = memo(function PageChrome({
     setBackLinkSuppressedByAction(suppress);
   }, []);
 
+  const headerContextValue = useMemo(
+    () => ({ suppressBackLink }),
+    [suppressBackLink],
+  );
+
   const showBackLink =
     canHeaderBack &&
     (showAppHeaderBack === true ||
       (showAppHeaderBack !== false && !backLinkSuppressedByAction));
 
   return (
-    <PageAppHeaderContext.Provider value={{ suppressBackLink }}>
+    <PageAppHeaderContext.Provider value={headerContextValue}>
       <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
         {showAppHeader ? (
-          <header
-            className="flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-sidebar px-3 py-2"
-            role="banner"
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <SidebarTrigger className="shrink-0" />
-              <PageBreadcrumb items={headerCrumbs} variant="header" />
-            </div>
-            {showBackLink ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5"
-                onClick={() => router.back()}
-              >
-                <ArrowLeft className="size-4" aria-hidden />
-                返回
-              </Button>
-            ) : null}
-            {action != null ? (
-              <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-                {action}
-              </div>
-            ) : null}
-          </header>
+          <PageChromeAppHeader
+            pathname={pathname}
+            showBackLink={showBackLink}
+            action={action}
+          />
         ) : null}
 
         <PagePrimaryColumn

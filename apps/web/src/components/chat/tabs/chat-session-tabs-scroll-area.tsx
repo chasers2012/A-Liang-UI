@@ -1,16 +1,13 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useStore } from "jotai";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgentChatSessionSummaryPublic } from "@/models";
-import {
-  activeChatSessionIdAtom,
-  chatIsSendingAtom,
-} from "@/models/chat/session.atom";
+import { activeChatSessionIdAtom, chatIsSendingAtom } from "@/models/chat/session.atom";
 
 import { ChatSessionTabItem } from "./chat-session-tab-item";
 
@@ -50,13 +47,14 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
   disabled: boolean;
   onSelectSession: (id: string) => void;
 }) {
-  const activeId = useAtomValue(activeChatSessionIdAtom);
+  const store = useStore();
 
   const onTabListKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (disabled || sessions.length === 0) return;
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
+      const activeId = store.get(activeChatSessionIdAtom);
       const cur =
         activeId != null ? sessions.findIndex((s) => s.id === activeId) : -1;
       const i = cur >= 0 ? cur : 0;
@@ -64,7 +62,7 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
       const next = sessions[(i + delta + sessions.length) % sessions.length];
       if (next) onSelectSession(next.id);
     },
-    [activeId, disabled, onSelectSession, sessions],
+    [disabled, onSelectSession, sessions, store],
   );
 
   return (
@@ -80,7 +78,6 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
           title={s.title}
           messageCount={s.message_count}
           disabled={disabled}
-          isSelected={activeId === s.id}
           onSelect={onSelectSession}
         />
       ))}

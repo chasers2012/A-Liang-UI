@@ -1,11 +1,12 @@
 "use client";
 
+import { memo } from "react";
 import { Loader2 } from "lucide-react";
+import { useAtomValue } from "jotai";
 
 import { ChatToolCallCard } from "@/components/chat/chat-tool-call-card";
 import { messageAtomFamily, chatIsSendingAtom } from "@/models/chat/session.atom";
 import { AiChatMarkdown } from "./ai-chat-markdown";
-import { useAtomValue } from "jotai";
 
 interface ChatAssistantBodyProps {
   mid: string;
@@ -13,7 +14,7 @@ interface ChatAssistantBodyProps {
 }
 
 
-export const ChatAssistantBody = function ChatAssistantBody({
+export const ChatAssistantBody = memo(function ChatAssistantBody({
   mid,
   isLastSegment,
 }: ChatAssistantBodyProps) {
@@ -41,5 +42,4 @@ export const ChatAssistantBody = function ChatAssistantBody({
       ) : null}
     </div>
   );
-
-};
+});
