@@ -31,7 +31,10 @@ export const ChatAssistantBody = function ChatAssistantBody({
         return <ChatToolCallCard key={b.call.id} call={b.call} />;
       })}
       {pending ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div
+          data-chat-pending-indicator="true"
+          className="flex items-center gap-2 text-muted-foreground"
+        >
           <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
           正在生成…
         </div>

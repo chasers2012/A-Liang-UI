@@ -13,9 +13,10 @@ import {
   activeUserMessageIdsAtom,
   messageAtomFamily,
   messageReplieIdAtomFamily,
+  segmentOpenAtomFamily,
 } from "@/models/chat/session.atom";
 import type { AssistantBlock } from "@/models/chat/types";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { memo } from "react";
 
 function getTextContent(blocks: AssistantBlock[] | undefined): string {
@@ -30,12 +31,12 @@ const ChatMessageItem = memo(function ChatMessageItem({ mid, isLastSegment }: { 
   const user = useAtomValue(messageAtomFamily(mid));
   const replyId = useAtomValue(messageReplieIdAtomFamily(mid));
 
-  // const [isOpen, setIsOpen] = useAtom(segmentOpenAtomFamily(mid));
+  const [isOpen, setIsOpen] = useAtom(segmentOpenAtomFamily(mid));
   if (!user) return null;
 
   return <Collapsible
-    open={true}
-    // onOpenChange={setIsOpen}
+    open={isOpen}
+    onOpenChange={setIsOpen}
     className="w-full min-w-0"
   >
     <CollapsibleTrigger
@@ -84,6 +85,7 @@ const ChatMessageItem = memo(function ChatMessageItem({ mid, isLastSegment }: { 
 
 export const AiChatMessages = memo(function AiChatMessages() {
   const userMessageIds = useAtomValue(activeUserMessageIdsAtom);
+
   return (
     <>
       {userMessageIds.map((mid, index) => {

@@ -113,6 +113,31 @@ export const activeUserMessageIdsAtom = atom((get) => {
   return get(sessionMessageIdsAtomFamily(sessionId));
 });
 
+/**
+ * 当前会话「最后一条助手回复」内容签名；流式 delta / 工具块更新时变化，
+ * 供聊天区在 isSending 期间仍能随内容增高触发跟随滚动。
+ */
+export const activeLastAssistantLayoutSignatureAtom = atom((get) => {
+  const ids = get(activeUserMessageIdsAtom);
+  const lastUserId = ids[ids.length - 1];
+  if (!lastUserId) return 0;
+  const replyId = get(messageReplieIdAtomFamily(lastUserId));
+  if (!replyId) return 0;
+  const msg = get(messageAtomFamily(replyId));
+  const blocks = msg?.blocks;
+  if (!blocks?.length) return 0;
+  let sig = 0;
+  for (const b of blocks) {
+    if (b.kind === "text") {
+      sig = (sig * 33 + b.content.length) | 0;
+    } else {
+      const st = b.call.status === "running" ? 1 : 0;
+      sig = (sig * 33 + b.call.id.length + st) | 0;
+    }
+  }
+  return sig;
+});
+
 export const openSegmentsAtom = atom<Record<string, boolean>>({});
 
 export const segmentOpenAtomFamily = atomFamily((id: string) =>
