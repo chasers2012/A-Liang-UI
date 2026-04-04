@@ -99,7 +99,7 @@ def test_chat_stream_persists_on_done(client, monkeypatch):
     sid = session["id"]
     body = {
         "session_id": sid,
-        "messages": [{"role": "user", "content": "ping"}],
+        "messages": [{"role": "user", "blocks": [{"kind": "text", "content": "ping"}]}],
     }
     res = client.post("/agent/chat/stream", json=body)
     assert res.status_code == 200
@@ -107,10 +107,10 @@ def test_chat_stream_persists_on_done(client, monkeypatch):
 
     detail = client.get(f"/agent/chat/sessions/{sid}").json()
     assert len(detail["messages"]) == 2
-    assert detail["messages"][0] == {"role": "user", "content": "ping"}
+    assert detail["messages"][0]["role"] == "user"
+    assert detail["messages"][0]["blocks"] == [{"kind": "text", "content": "ping"}]
     assert detail["messages"][1]["role"] == "assistant"
-    assert detail["messages"][1]["content"] == "hello world"
-    assert "blocks" not in detail["messages"][1]
+    assert detail["messages"][1]["blocks"] == [{"kind": "text", "content": "hello world"}]
 
 
 def test_chat_stream_persists_tool_blocks(client, monkeypatch):
@@ -162,7 +162,12 @@ def test_chat_stream_persists_tool_blocks(client, monkeypatch):
         "/agent/chat/stream",
         json={
             "session_id": sid,
-            "messages": [{"role": "user", "content": "run tool"}],
+            "messages": [
+                {
+                    "role": "user",
+                    "blocks": [{"kind": "text", "content": "run tool"}],
+                }
+            ],
         },
     )
     assert res.status_code == 200
@@ -172,9 +177,10 @@ def test_chat_stream_persists_tool_blocks(client, monkeypatch):
     assert len(detail["messages"]) == 2
     assistant = detail["messages"][1]
     assert assistant["role"] == "assistant"
-    assert assistant["content"] == "done"
     assert isinstance(assistant.get("blocks"), list)
     assert len(assistant["blocks"]) >= 2
+    assert assistant["blocks"][0]["kind"] == "text"
+    assert assistant["blocks"][0]["content"] == "done"
     assert assistant["blocks"][1]["kind"] == "tool"
     assert assistant["blocks"][1]["call"]["name"] == "create_factor"
     assert assistant["blocks"][1]["call"]["status"] == "ok"
@@ -194,7 +200,7 @@ def test_chat_stream_error_does_not_persist(client, monkeypatch):
     sid = session["id"]
     body = {
         "session_id": sid,
-        "messages": [{"role": "user", "content": "ping"}],
+        "messages": [{"role": "user", "blocks": [{"kind": "text", "content": "ping"}]}],
     }
     res = client.post("/agent/chat/stream", json=body)
     assert res.status_code == 200
@@ -203,4 +209,7 @@ def test_chat_stream_error_does_not_persist(client, monkeypatch):
     detail = client.get(f"/agent/chat/sessions/{sid}").json()
     # 用户消息在流开始前已落盘；助手因错误不落盘
     assert len(detail["messages"]) == 1
-    assert detail["messages"][0] == {"role": "user", "content": "ping"}
+    assert detail["messages"][0] == {
+        "role": "user",
+        "blocks": [{"kind": "text", "content": "ping"}],
+    }

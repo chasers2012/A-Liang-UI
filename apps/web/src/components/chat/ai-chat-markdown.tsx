@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 import "@incremark/theme/styles.css";
 
+
 const SHADCN_THEME_LIGHT = mergeTheme(incremarkDefaultTheme, {
   color: {
     neutral: incremarkDefaultTheme.color.neutral,
@@ -136,18 +137,18 @@ const SHADCN_THEME_DARK = mergeTheme(incremarkDarkTheme, {
 
 export const AiChatMarkdown = memo(function AiChatMarkdown({
   content,
-  className,
+  className, isFinished
 }: {
   content: string;
   className?: string;
+  isFinished: boolean;
 }) {
   const { resolvedTheme } = useTheme();
   const shadcnTheme = resolvedTheme === "dark" ? SHADCN_THEME_DARK : SHADCN_THEME_LIGHT;
-
   return (
     <IncremarkThemeProvider theme={shadcnTheme}>
       <div className={cn("ai-chat-md wrap-break-word text-sm leading-relaxed", className)}>
-        <IncremarkContent content={content} isFinished />
+        <IncremarkContent content={content} isFinished={isFinished} />
       </div>
     </IncremarkThemeProvider>
   );

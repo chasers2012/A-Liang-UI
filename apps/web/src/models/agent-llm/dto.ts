@@ -32,9 +32,8 @@ export type AgentAssistantBlockPublic =
 
 export type AgentChatMessagePublic = {
   role: AgentChatRolePublic;
-  content: string;
-  /** 助手消息可选：与正文交错存储的工具调用（含刷新后会话恢复）。 */
-  blocks?: AgentAssistantBlockPublic[];
+  /** 消息内容（文本/工具调用）统一存储在 blocks 中。 */
+  blocks: AgentAssistantBlockPublic[];
 };
 
 export type AgentChatRequestPublic = {

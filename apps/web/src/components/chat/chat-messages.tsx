@@ -14,9 +14,17 @@ import {
   messageAtomFamily,
   messageReplieIdAtomFamily,
 } from "@/models/chat/session.atom";
+import type { AssistantBlock } from "@/models/chat/types";
 import { useAtomValue } from "jotai";
 import { memo } from "react";
 
+function getTextContent(blocks: AssistantBlock[] | undefined): string {
+  if (!blocks?.length) return "";
+  return blocks
+    .filter((b): b is { kind: "text"; content: string } => b.kind === "text")
+    .map((b) => b.content)
+    .join("");
+}
 
 const ChatMessageItem = memo(function ChatMessageItem({ mid, isLastSegment }: { mid: string; isLastSegment: boolean }) {
   const user = useAtomValue(messageAtomFamily(mid));
@@ -52,7 +60,7 @@ const ChatMessageItem = memo(function ChatMessageItem({ mid, isLastSegment }: { 
         <span className="w-1 shrink-0 bg-primary" aria-hidden />
         <div className="min-w-0 flex-1 px-3 py-2">
           <span className="sr-only">你：</span>
-          <p className="whitespace-pre-wrap wrap-break-word">{user.content}</p>
+          <p className="whitespace-pre-wrap wrap-break-word">{getTextContent(user.blocks)}</p>
         </div>
       </div>
     </CollapsibleTrigger>

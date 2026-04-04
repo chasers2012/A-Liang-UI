@@ -25,7 +25,10 @@ def test_agent_chat_stream_sse(client, monkeypatch):
         "/agent/chat/stream",
         json={
             "messages": [
-                {"role": "user", "content": "hello"},
+                {
+                    "role": "user",
+                    "blocks": [{"kind": "text", "content": "hello"}],
+                },
             ],
         },
     )
@@ -95,7 +98,10 @@ def test_agent_chat_stream_sse_tool_calls(client, monkeypatch):
         "/agent/chat/stream",
         json={
             "messages": [
-                {"role": "user", "content": "create factor"},
+                {
+                    "role": "user",
+                    "blocks": [{"kind": "text", "content": "create factor"}],
+                },
             ],
         },
     )

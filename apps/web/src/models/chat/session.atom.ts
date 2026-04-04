@@ -25,13 +25,9 @@ export interface ChatTurn extends AgentChatMessagePublic {
 }
 
 function appendAssistantDelta(prev: ChatTurn, delta: string): ChatTurn {
-  const content = prev.content + delta;
-  if (!prev.blocks?.length) {
-    return { ...prev, content };
-  }
-  const blocks = [...prev.blocks];
+  const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
-  if (last.kind === "text") {
+  if (last?.kind === "text") {
     blocks[blocks.length - 1] = {
       kind: "text",
       content: last.content + delta,
@@ -39,7 +35,7 @@ function appendAssistantDelta(prev: ChatTurn, delta: string): ChatTurn {
   } else {
     blocks.push({ kind: "text", content: delta });
   }
-  return { ...prev, content, blocks };
+  return { ...prev, blocks };
 }
 
 function applyToolStart(
@@ -52,12 +48,10 @@ function applyToolStart(
     args: payload.args,
     status: "running",
   };
-  const blocks: AssistantBlock[] = prev.blocks?.length
-    ? [...prev.blocks, { kind: "tool", call }]
-    : [
-        { kind: "text", content: prev.content },
-        { kind: "tool", call },
-      ];
+  const blocks: AssistantBlock[] = [
+    ...(prev.blocks ?? []),
+    { kind: "tool", call },
+  ];
   return { ...prev, blocks };
 }
 
@@ -66,8 +60,7 @@ function patchToolInBlocks(
   id: string,
   patch: Partial<AgentChatToolCallPublic>,
 ): ChatTurn {
-  if (!prev.blocks?.length) return prev;
-  const blocks = prev.blocks.map((b): AssistantBlock => {
+  const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== "tool" || b.call.id !== id) return b;
     return { kind: "tool", call: { ...b.call, ...patch } };
   });
@@ -247,6 +240,16 @@ function upsertSummary(
   );
 }
 
+function extractTextFromBlocks(blocks: AssistantBlock[] | undefined): string {
+  if (!blocks?.length) return "";
+  return blocks
+    .filter(
+      (b): b is Extract<AssistantBlock, { kind: "text" }> => b.kind === "text",
+    )
+    .map((b) => b.content)
+    .join("");
+}
+
 function summarizeFirstUserMessage(text: string): string {
   const s = text.replace(/\s+/g, " ").trim();
   if (!s) return "新会话";
@@ -273,8 +276,7 @@ async function ensureSessionTurnsLoaded(
 function toApiMessage(turn: ChatTurn) {
   return {
     role: turn.role,
-    content: turn.content,
-    ...(turn.blocks?.length ? { blocks: turn.blocks } : {}),
+    blocks: turn.blocks ?? [],
   };
 }
 
@@ -332,7 +334,8 @@ function patchAssistantMessage(
   set(messagesAtom, (prev) => {
     const assistant = prev[assistantId];
     if (!assistant) return prev;
-    return { ...prev, [assistantId]: patch(assistant) };
+    const newAssistant = patch(assistant);
+    return { ...prev, [assistantId]: newAssistant };
   });
 }
 
@@ -459,7 +462,11 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     (sessionSummary.title || "").trim() === "新会话" &&
     (sessionSummary.message_count ?? 0) === 0;
 
-  const userTurn: ChatTurn = { id: createId(), role: "user", content: trimmed };
+  const userTurn: ChatTurn = {
+    id: createId(),
+    role: "user",
+    blocks: [{ kind: "text", content: trimmed }],
+  };
   const assistantId = createId();
 
   set(chatErrorAtom, null);
@@ -472,7 +479,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(messagesAtom, (prev) => ({
     ...prev,
     [userTurn.id]: userTurn,
-    [assistantId]: { id: assistantId, role: "assistant", content: "" },
+    [assistantId]: { id: assistantId, role: "assistant", blocks: [] },
   }));
   set(messageReplieIdsAtom, (prev) => ({
     ...prev,
@@ -522,21 +529,14 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     if (shouldAutoTitle) {
       try {
         await renameAgentChatSession(targetSessionId, {
-          title: summarizeFirstUserMessage(trimmed),
+          title: summarizeFirstUserMessage(
+            extractTextFromBlocks(userTurn.blocks),
+          ),
         });
       } catch {
         // ignore title failures; chat content is already persisted.
       }
     }
-
-    // const detail = await getAgentChatSession(targetSessionId);
-    // replaceSessionTurns(
-    //   get,
-    //   set,
-    //   targetSessionId,
-    //   toChatTurns(detail.messages),
-    // );
-    // set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
   } catch (e) {
     set(
       chatErrorAtom,

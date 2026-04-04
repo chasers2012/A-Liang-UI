@@ -7,9 +7,6 @@ import queue
 import threading
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
-
 from app.chat.agent_chat import lc_messages_from_chat_request, sse_event_iter_for_chat
 from app.chat.chat_llm import build_chat_model_from_workspace_settings
 from app.chat.llm_schemas import (
@@ -31,6 +28,8 @@ from app.chat.session_registry import (
     record_to_summary,
 )
 from app.workspace_config import load_workspace_config, save_workspace_config
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -51,20 +50,12 @@ def _build_llm_from_workspace():
 
 
 class _AssistantStreamAccumulator:
-    """Rebuild assistant ``blocks`` + full text from the same SSE stream the client sees."""
+    """Rebuild assistant ``blocks`` from the same SSE stream the client sees."""
 
     def __init__(self) -> None:
-        self._text_parts: list[str] = []
-        self.blocks: list[AssistantBlockPublic] | None = None
-
-    @property
-    def full_text(self) -> str:
-        return "".join(self._text_parts)
+        self.blocks: list[AssistantBlockPublic] = []
 
     def append_delta(self, delta: str) -> None:
-        self._text_parts.append(delta)
-        if self.blocks is None:
-            return
         if not self.blocks:
             self.blocks.append(AssistantBlockPublic(kind="text", content=delta))
             return
@@ -81,13 +72,7 @@ class _AssistantStreamAccumulator:
             args=args,
             status="running",
         )
-        if self.blocks is None:
-            self.blocks = [
-                AssistantBlockPublic(kind="text", content=self.full_text),
-                AssistantBlockPublic(kind="tool", call=call),
-            ]
-        else:
-            self.blocks.append(AssistantBlockPublic(kind="tool", call=call))
+        self.blocks.append(AssistantBlockPublic(kind="tool", call=call))
 
     def _patch_tool_call(self, tc_id: str, *, ok: bool, result: Any, error: str | None) -> None:
         if not self.blocks:
@@ -157,13 +142,11 @@ def _persist_chat_session_if_needed(
         return
 
     final_messages = list(body.messages)
-    assistant_text = (acc.full_text if acc else "").strip()
-    blocks = acc.blocks if acc and acc.blocks else None
-    if assistant_text or blocks:
+    blocks = acc.blocks if acc else []
+    if blocks:
         final_messages.append(
             ChatMessageIn(
                 role="assistant",
-                content=assistant_text if assistant_text else "",
                 blocks=blocks,
             )
         )

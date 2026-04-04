@@ -42,31 +42,34 @@ class AssistantBlockPublic(BaseModel):
 
 class ChatMessageIn(BaseModel):
     role: ChatRole
-    content: str = Field(default="", max_length=32000)
-    blocks: list[AssistantBlockPublic] | None = None
+    # 兼容旧数据：content 已并入 blocks，仍接受并迁移。
+    content: str | None = Field(default=None, max_length=32000)
+    blocks: list[AssistantBlockPublic] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_user_assistant_content(self) -> ChatMessageIn:
-        if self.role in ("user", "system"):
-            if not (self.content or "").strip():
-                raise ValueError("user/system 消息 content 不能为空")
-            self.blocks = None
-        elif self.role == "assistant":
-            has_text = bool((self.content or "").strip())
-            has_blocks = bool(self.blocks)
-            if not has_text and not has_blocks:
-                raise ValueError("assistant 消息需有 content 或 blocks")
+    def normalize_and_validate_blocks(self) -> ChatMessageIn:
+        legacy_text = self.content or ""
+        has_legacy_text = bool(legacy_text.strip())
+
+        if has_legacy_text:
+            if self.blocks and self.blocks[0].kind == "text":
+                self.blocks[0].content = legacy_text + (self.blocks[0].content or "")
+            else:
+                self.blocks = [AssistantBlockPublic(kind="text", content=legacy_text), *self.blocks]
+
+        # content 不再持久化，仅用于兼容输入。
+        self.content = None
+
+        text = "".join((b.content or "") for b in self.blocks if b.kind == "text").strip()
+        if self.role in ("user", "system") and not text:
+            raise ValueError("user/system 消息需在 blocks 中提供非空文本")
+        if self.role == "assistant" and not self.blocks:
+            raise ValueError("assistant 消息 blocks 不能为空")
         return self
 
 
-def assistant_message_text_for_model(m: ChatMessageIn) -> str:
-    """Plain text for LangChain when ``content`` is empty but ``blocks`` has text segments."""
-    if m.role != "assistant":
-        return m.content
-    if (m.content or "").strip():
-        return m.content
-    if not m.blocks:
-        return m.content
+def message_text_for_model(m: ChatMessageIn) -> str:
+    """Plain text for LangChain from text blocks."""
     return "".join((b.content or "") for b in m.blocks if b.kind == "text")
 
 
