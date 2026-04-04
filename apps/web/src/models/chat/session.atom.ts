@@ -69,6 +69,15 @@ function patchToolInBlocks(
 
 export const chatSessionsAtom = atom<AgentChatSessionSummaryPublic[]>([]);
 export const activeChatSessionIdAtom = atom<string | null>(null);
+
+/** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeChatSessionIdAtom 组合使用） */
+export const chatSessionSummaryAtomFamily = atomFamily((sessionId: string) =>
+  atom((get): AgentChatSessionSummaryPublic | null => {
+    if (!sessionId) return null;
+    const sessions = get(chatSessionsAtom);
+    return sessions.find((s) => s.id === sessionId) ?? null;
+  }),
+);
 export const chatInputAtom = atom("");
 export const chatIsSendingAtom = atom(false);
 export const chatErrorAtom = atom<string | null>(null);
