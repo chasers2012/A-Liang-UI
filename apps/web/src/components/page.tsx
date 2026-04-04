@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useState, type ReactNode } from "react";
+import { memo, useCallback, useState, type ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import {
@@ -106,7 +106,7 @@ function PagePrimaryColumn({
 }
 
 /** `key={pathname}` 挂载时重置「返回」抑制状态，避免 effect 内 setState。 */
-function PageChrome({
+const PageChrome = memo(function PageChrome({
   pathname,
   children,
   className,
@@ -181,7 +181,7 @@ function PageChrome({
       </div>
     </PageAppHeaderContext.Provider>
   );
-}
+});
 
 /** 全站主内容区：固定顶栏 + 下方主内容区内部纵向滚动（`max-w-7xl` + `p-6 md:p-8`）。 */
 export function Page(props: PageProps) {

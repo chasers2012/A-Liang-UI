@@ -1,22 +1,101 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useAtomValue } from "jotai";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { TabsList } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { AgentChatSessionSummaryPublic } from "@/models";
+import {
+  activeChatSessionIdAtom,
+  chatIsSendingAtom,
+} from "@/models/chat/session.atom";
 
 import { ChatSessionTabItem } from "./chat-session-tab-item";
 
-export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea({
+const TabScrollChevronButton = memo(function TabScrollChevronButton({
+  direction,
+  disabled,
+  onPress,
+  ariaLabel,
+}: {
+  direction: "left" | "right";
+  disabled: boolean;
+  onPress: () => void;
+  ariaLabel: string;
+}) {
+  const Icon = direction === "left" ? ChevronLeft : ChevronRight;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 shrink-0"
+      onClick={onPress}
+      disabled={disabled}
+      aria-label={ariaLabel}
+    >
+      <Icon className="size-4" aria-hidden />
+    </Button>
+  );
+});
+
+const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
   sessions,
-  isBusy,
+  disabled,
+  onSelectSession,
 }: {
   sessions: AgentChatSessionSummaryPublic[];
-  isBusy: boolean;
+  disabled: boolean;
+  onSelectSession: (id: string) => void;
 }) {
+  const activeId = useAtomValue(activeChatSessionIdAtom);
+
+  const onTabListKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      if (disabled || sessions.length === 0) return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const cur =
+        activeId != null ? sessions.findIndex((s) => s.id === activeId) : -1;
+      const i = cur >= 0 ? cur : 0;
+      const delta = e.key === "ArrowRight" ? 1 : -1;
+      const next = sessions[(i + delta + sessions.length) % sessions.length];
+      if (next) onSelectSession(next.id);
+    },
+    [activeId, disabled, onSelectSession, sessions],
+  );
+
+  return (
+    <div
+      role="tablist"
+      className="flex min-w-max items-end gap-1 pr-1 h-full"
+      onKeyDown={onTabListKeyDown}
+    >
+      {sessions.map((s) => (
+        <ChatSessionTabItem
+          key={s.id}
+          id={s.id}
+          title={s.title}
+          messageCount={s.message_count}
+          disabled={disabled}
+          isSelected={activeId === s.id}
+          onSelect={onSelectSession}
+        />
+      ))}
+    </div>
+  );
+});
+
+export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea({
+  sessions,
+  onSelectSession,
+}: {
+  sessions: AgentChatSessionSummaryPublic[];
+  onSelectSession: (id: string) => void;
+}) {
+  const isBusy = useAtomValue(chatIsSendingAtom);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -24,14 +103,16 @@ export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea
   const updateScrollButtons = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) {
-      setCanScrollLeft(false);
-      setCanScrollRight(false);
+      setCanScrollLeft((p) => (p ? false : p));
+      setCanScrollRight((p) => (p ? false : p));
       return;
     }
     const left = el.scrollLeft;
     const maxLeft = el.scrollWidth - el.clientWidth;
-    setCanScrollLeft(left > 0);
-    setCanScrollRight(maxLeft > 0 && left < maxLeft - 1);
+    const nextLeft = left > 0;
+    const nextRight = maxLeft > 0 && left < maxLeft - 1;
+    setCanScrollLeft((p) => (p === nextLeft ? p : nextLeft));
+    setCanScrollRight((p) => (p === nextRight ? p : nextRight));
   }, []);
 
   useEffect(() => {
@@ -48,29 +129,24 @@ export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea
     };
   }, [sessions.length, updateScrollButtons]);
 
-  const scrollByTabs = useCallback(
-    (dir: "left" | "right") => {
-      const el = scrollerRef.current;
-      if (!el) return;
-      const amount = Math.max(180, Math.floor(el.clientWidth * 0.7));
-      el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
-    },
-    [],
-  );
+  const scrollByTabs = useCallback((dir: "left" | "right") => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const amount = Math.max(180, Math.floor(el.clientWidth * 0.7));
+    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+  }, []);
+
+  const onScrollLeft = useCallback(() => scrollByTabs("left"), [scrollByTabs]);
+  const onScrollRight = useCallback(() => scrollByTabs("right"), [scrollByTabs]);
 
   return (
     <div className="min-w-0 flex items-stretch gap-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0"
-        onClick={() => scrollByTabs("left")}
+      <TabScrollChevronButton
+        direction="left"
         disabled={!canScrollLeft}
-        aria-label="向左滚动会话"
-      >
-        <ChevronLeft className="size-4" aria-hidden />
-      </Button>
+        onPress={onScrollLeft}
+        ariaLabel="向左滚动会话"
+      />
 
       <div
         ref={scrollerRef}
@@ -79,30 +155,19 @@ export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-end justify-end",
         )}
       >
-        <TabsList className="flex min-w-max items-end gap-1 pr-1 h-full">
-          {sessions.map((s) => (
-            <ChatSessionTabItem
-              key={s.id}
-              id={s.id}
-              title={s.title}
-              messageCount={s.message_count}
-              disabled={isBusy}
-            />
-          ))}
-        </TabsList>
+        <ChatSessionTabsTabList
+          sessions={sessions}
+          disabled={isBusy}
+          onSelectSession={onSelectSession}
+        />
       </div>
 
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8 shrink-0"
-        onClick={() => scrollByTabs("right")}
+      <TabScrollChevronButton
+        direction="right"
         disabled={!canScrollRight}
-        aria-label="向右滚动会话"
-      >
-        <ChevronRight className="size-4" aria-hidden />
-      </Button>
+        onPress={onScrollRight}
+        ariaLabel="向右滚动会话"
+      />
     </div>
   );
 });

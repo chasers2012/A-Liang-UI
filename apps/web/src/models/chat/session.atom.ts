@@ -78,6 +78,13 @@ export const chatSessionSummaryAtomFamily = atomFamily((sessionId: string) =>
     return sessions.find((s) => s.id === sessionId) ?? null;
   }),
 );
+
+/** 当前激活 id 是否对应列表中的会话；仅在有无有效激活之间变化，切换 tab 时通常保持 true 不触发订阅者更新 */
+export const hasValidActiveChatSessionAtom = atom((get) => {
+  const id = get(activeChatSessionIdAtom);
+  if (!id) return false;
+  return get(chatSessionSummaryAtomFamily(id)) != null;
+});
 export const chatInputAtom = atom("");
 export const chatIsSendingAtom = atom(false);
 export const chatErrorAtom = atom<string | null>(null);

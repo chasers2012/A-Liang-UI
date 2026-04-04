@@ -13,7 +13,7 @@ import {
 } from "@/models/chat/session.atom";
 import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/chat-messages";
-import { ChatSessionTabs } from "@/components/chat/chat-session-tabs";
+import { ChatSessionTabs } from "./tabs";
 
 
 

@@ -1,47 +1,48 @@
 "use client";
 
 import { memo } from "react";
-import { Archive, Plus } from "lucide-react";
+import { useAtomValue } from "jotai";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { chatIsSendingAtom } from "@/models/chat/session.atom";
 
+import { ArchiveButton } from "./archive-session";
 import { RenameButton } from "./rename-session";
 
-export const ChatSessionTabsActions = memo(function ChatSessionTabsActions({
-  isBusy,
-  hasActive,
+const NewChatSessionButton = memo(function NewChatSessionButton({
+  disabled,
   onCreate,
-  onArchive,
 }: {
-  isBusy: boolean;
-  hasActive: boolean;
+  disabled: boolean;
   onCreate: () => void;
-  onArchive: () => void;
 }) {
   return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 gap-2 px-2"
+      onClick={onCreate}
+      disabled={disabled}
+    >
+      <Plus className="size-4" aria-hidden />
+    </Button>
+  );
+});
+
+export const ChatSessionTabsActions = memo(function ChatSessionTabsActions({
+  onCreate,
+}: {
+  onCreate: () => void;
+}) {
+  const isBusy = useAtomValue(chatIsSendingAtom);
+
+  return (
     <div className="flex shrink-0 items-center gap-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-7 gap-2 px-2"
-        onClick={onCreate}
-        disabled={isBusy}
-      >
-        <Plus className="size-4" aria-hidden />
-      </Button>
+      <NewChatSessionButton disabled={isBusy} onCreate={onCreate} />
       <RenameButton disabled={isBusy} />
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="size-8"
-        onClick={onArchive}
-        disabled={isBusy || !hasActive}
-        aria-label="归档当前会话"
-      >
-        <Archive className="size-4" aria-hidden />
-      </Button>
+      <ArchiveButton disabled={isBusy} />
     </div>
   );
 });

@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useState } from "react";
 import { Pencil } from "lucide-react";
-import { useAtomValue, useSetAtom, useStore } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,44 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  activeChatSessionIdAtom,
   chatSessionSummaryAtomFamily,
   renameChatSessionAtom,
 } from "@/models/chat/session.atom";
 
-const RenameChatSessionTrigger = memo(function RenameChatSessionTrigger({
-  disabled,
-  onRequestOpen,
-}: {
-  disabled: boolean;
-  onRequestOpen: (sessionId: string, title: string) => void;
-}) {
-  const store = useStore();
-  const activeId = useAtomValue(activeChatSessionIdAtom);
-  const active = useAtomValue(chatSessionSummaryAtomFamily(activeId ?? ""));
-
-  const onClick = useCallback(() => {
-    const id = store.get(activeChatSessionIdAtom);
-    if (!id) return;
-    const a = store.get(chatSessionSummaryAtomFamily(id));
-    if (!a) return;
-    onRequestOpen(a.id, a.title);
-  }, [store, onRequestOpen]);
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="size-8"
-      onClick={onClick}
-      disabled={disabled || !active}
-      aria-label="重命名当前会话"
-    >
-      <Pencil className="size-4" aria-hidden />
-    </Button>
-  );
-});
+import { ActiveSessionSnapshotTrigger } from "./active-session-snapshot-trigger";
 
 const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
   sessionId,
@@ -139,10 +106,13 @@ export const RenameButton = memo(function RenameButton({
 
   return (
     <>
-      <RenameChatSessionTrigger
+      <ActiveSessionSnapshotTrigger
         disabled={disabled}
         onRequestOpen={onRequestOpen}
-      />
+        ariaLabel="重命名当前会话"
+      >
+        <Pencil className="size-4" aria-hidden />
+      </ActiveSessionSnapshotTrigger>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent size="md">
           {payload ? (
