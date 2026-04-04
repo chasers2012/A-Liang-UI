@@ -1,25 +1,19 @@
 "use client";
 
-import { useId } from "react";
+import { memo, useId } from "react";
 import { ArrowUp, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom } from "@/models/chat/session.atom";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
-interface AiChatComposerProps {
-  input: string;
-  isSending: boolean;
-  onInputChange: (value: string) => void;
-  onSend: () => void;
-}
 
-export function AiChatComposer({
-  input,
-  isSending,
-  onInputChange,
-  onSend,
-}: AiChatComposerProps) {
+export const AiChatComposer = memo(function AiChatComposer() {
   const formId = useId();
+  const [input, setInput] = useAtom(chatInputAtom);
+  const isSending = useAtomValue(chatIsSendingAtom);
+  const send = useSetAtom(sendChatMessageAtom);
 
   return (
     <div className="flex flex-col gap-2">
@@ -31,7 +25,7 @@ export function AiChatComposer({
           type="button"
           size="icon"
           aria-label="发送"
-          onClick={() => void onSend()}
+          onClick={() => void send()}
           disabled={isSending || !input.trim()}
         >
           {isSending ? (
@@ -46,15 +40,15 @@ export function AiChatComposer({
           placeholder="输入消息，Enter 发送，Shift+Enter 换行"
           value={input}
           disabled={isSending}
-          onChange={(ev) => onInputChange(ev.target.value)}
+          onChange={(ev) => setInput(ev.target.value)}
           onKeyDown={(ev) => {
             if (ev.key !== "Enter" || ev.shiftKey) return;
             ev.preventDefault();
-            void onSend();
+            void send();
           }}
           className="min-h-18 min-w-0 flex-1 resize-y"
         />
       </div>
     </div>
   );
-}
+});

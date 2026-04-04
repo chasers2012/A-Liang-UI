@@ -19,17 +19,15 @@ import { cn } from "@/lib/utils";
 import {
   activeChatSessionIdAtom,
   archiveChatSessionAtom,
+  chatIsSendingAtom,
   chatSessionsAtom,
   createChatSessionAtom,
   renameChatSessionAtom,
   selectChatSessionAtom,
 } from "@/models/chat/session.atom";
 
-interface ChatSessionTabsProps {
-  isBusy: boolean;
-}
 
-export function ChatSessionTabs({ isBusy }: ChatSessionTabsProps) {
+export function ChatSessionTabs() {
   const sessions = useAtomValue(chatSessionsAtom);
   const activeId = useAtomValue(activeChatSessionIdAtom);
   const createSession = useSetAtom(createChatSessionAtom);
@@ -43,6 +41,8 @@ export function ChatSessionTabs({ isBusy }: ChatSessionTabsProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const isSending = useAtomValue(chatIsSendingAtom);
+  const isBusy = isSending;
 
   const updateScrollButtons = () => {
     const el = scrollerRef.current;
