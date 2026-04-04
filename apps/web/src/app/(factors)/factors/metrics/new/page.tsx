@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
@@ -16,16 +16,19 @@ import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page"
 const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
 
 function EvaluationMetricSourceEditor({
-  templatePromise,
+  template,
   sourceRef,
   name,
 }: {
-  templatePromise: Promise<string>;
+  template: string;
   sourceRef: React.MutableRefObject<string>;
   name: string;
 }) {
-  const template = use(templatePromise);
   const [source, setSource] = useState(template);
+
+  useEffect(() => {
+    setSource(template);
+  }, [template]);
 
   const trimmedName = name.trim();
   const applyNameToWorkflowNodeLabel = (src: string, label: string) => {
@@ -76,11 +79,30 @@ export default function NewEvaluationMetricPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const sourceRef = useRef("");
+  const [template, setTemplate] = useState<string | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(true);
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
-  const templatePromise = useMemo(
-    () => getEvaluationMetricTemplate(),
-    [],
-  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const t = await getEvaluationMetricTemplate();
+        if (!cancelled) setTemplate(t);
+      } catch (e) {
+        if (!cancelled) {
+          setTemplateError(
+            e instanceof Error ? e.message : "无法加载评价指标源码模板",
+          );
+        }
+      } finally {
+        if (!cancelled) setTemplateLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,7 +131,7 @@ export default function NewEvaluationMetricPage() {
         <PageFormHeaderActions
           formId={EVALUATION_METRIC_NEW_FORM_ID}
           submitting={submitting}
-          submitDisabled={!name.trim()}
+          submitDisabled={!name.trim() || templateLoading || template == null}
           submitLabel="创建"
           submittingLabel="创建中…"
           cancelHref="/factors/metrics"
@@ -121,6 +143,12 @@ export default function NewEvaluationMetricPage() {
         className="flex flex-col gap-6"
         onSubmit={(e) => void onSubmit(e)}
       >
+        {templateError && (
+          <Alert variant="destructive">
+            <AlertTitle>无法加载模板</AlertTitle>
+            <AlertDescription>{templateError}</AlertDescription>
+          </Alert>
+        )}
         {error && (
           <Alert variant="destructive">
             <AlertTitle>无法保存</AlertTitle>
@@ -151,19 +179,18 @@ export default function NewEvaluationMetricPage() {
         </div>
         <div className="space-y-2">
           <Label>源码</Label>
-          <Suspense
-            fallback={
-              <div className="text-sm text-muted-foreground">
-                正在加载源码模板…
-              </div>
-            }
-          >
+          {templateLoading && (
+            <div className="text-sm text-muted-foreground">
+              正在加载源码模板…
+            </div>
+          )}
+          {template != null && (
             <EvaluationMetricSourceEditor
-              templatePromise={templatePromise}
+              template={template}
               sourceRef={sourceRef}
               name={name}
             />
-          </Suspense>
+          )}
         </div>
       </form>
     </FactorFormPageContainer>
