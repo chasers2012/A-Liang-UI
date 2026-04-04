@@ -42,24 +42,10 @@ class AssistantBlockPublic(BaseModel):
 
 class ChatMessageIn(BaseModel):
     role: ChatRole
-    # 兼容旧数据：content 已并入 blocks，仍接受并迁移。
-    content: str | None = Field(default=None, max_length=32000)
     blocks: list[AssistantBlockPublic] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def normalize_and_validate_blocks(self) -> ChatMessageIn:
-        legacy_text = self.content or ""
-        has_legacy_text = bool(legacy_text.strip())
-
-        if has_legacy_text:
-            if self.blocks and self.blocks[0].kind == "text":
-                self.blocks[0].content = legacy_text + (self.blocks[0].content or "")
-            else:
-                self.blocks = [AssistantBlockPublic(kind="text", content=legacy_text), *self.blocks]
-
-        # content 不再持久化，仅用于兼容输入。
-        self.content = None
-
         text = "".join((b.content or "") for b in self.blocks if b.kind == "text").strip()
         if self.role in ("user", "system") and not text:
             raise ValueError("user/system 消息需在 blocks 中提供非空文本")
