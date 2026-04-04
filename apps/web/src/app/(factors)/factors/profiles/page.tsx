@@ -86,7 +86,6 @@ export default function EvaluationProfilesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>名称</TableHead>
-                  <TableHead className="hidden sm:table-cell">默认</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
@@ -100,9 +99,6 @@ export default function EvaluationProfilesPage() {
                           {p.description}
                         </p>
                       ) : null}
-                    </TableCell>
-                    <TableCell className="hidden text-sm sm:table-cell">
-                      {p.is_default ? "是" : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <Link

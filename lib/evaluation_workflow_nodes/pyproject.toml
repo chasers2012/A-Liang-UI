@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "evaluation-workflow-nodes"
+version = "0.1.0"
+description = "Built-in workflow nodes for evaluation profile graphs"
+requires-python = ">=3.10"
+dependencies = [
+    "evaluate",
+    "factor",
+    "workflow",
+]
+
+[tool.uv.sources]
+evaluate = { workspace = true }
+factor = { workspace = true }
+workflow = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["evaluation_workflow_nodes"]

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-workflow-nodes"
+version = "0.1.0"
+description = "Built-in workflow nodes for agent DAGs"
+requires-python = ">=3.10"
+dependencies = [
+    "workflow",
+]
+
+[tool.uv.sources]
+workflow = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent_workflow_nodes"]

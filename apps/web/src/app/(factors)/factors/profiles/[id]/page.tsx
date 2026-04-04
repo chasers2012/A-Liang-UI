@@ -7,12 +7,7 @@ import { Pencil } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
 import {
@@ -70,25 +65,6 @@ export default function EvaluationProfileDetailPage() {
       }
     >
       <ProfileDetailWorkflowCard profile={row} profileId={id} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>配置摘要</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">默认方案：</span>
-            {row.is_default ? "是" : "否"}
-          </p>
-          <p>
-            <span className="text-muted-foreground">测试集 id：</span>
-            <span className="font-mono">{row.test_set_id ?? "—"}</span>
-          </p>
-          <p className="text-muted-foreground">
-            Alphalens 持有期、分位数等在工作流「计算因子」节点的节点参数中查看与编辑。
-          </p>
-        </CardContent>
-      </Card>
     </FactorFormPageContainer>
   );
 }

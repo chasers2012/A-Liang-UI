@@ -1,583 +1,96 @@
 "use client";
 
-import type {
-  EvaluationProfilePublic,
-  MetricVisualizationSpec,
-  WorkflowNodeDto,
-} from "@/lib/quant-agent-api";
-import type { MetricVisualizationMode } from "@/models/evaluation-metric/dto";
 
-const NODE_TYPE_LABELS: Record<string, string> = {
-  prepare_alphalens: "计算因子",
-  result_visualization: "结果可视化",
-  viz_auto: "可视化·自动",
-  viz_bars: "可视化·条形图",
-  viz_bars_diverging: "可视化·双向条形图",
-  viz_table: "可视化·表格",
-  viz_json: "可视化·JSON",
-  viz_scalar: "可视化·单值",
-  mean_information_coefficient: "平均 IC",
-  mean_return_spread: "多空收益差",
-  user_metric: "自定义指标",
-};
+import { useMemo } from "react";
 
-const METRIC_NODE_PREFIX = "metric:";
-const VIZ_NODE_PREFIX = "viz_";
+import { EchartsOptionChart } from "@/components/echarts/echarts-option-chart";
+import type { FactorEvaluationRowPublic } from "@/models";
 
+type EchartsPayload = { type: "echart"; option: unknown };
 
-const SOCKET_LABELS: Record<string, string> = {
-  mean_ic: "平均 IC",
-  mean_return_spread: "多空收益差",
-  out: "指标输出",
-  clean_factor: "因子数据",
-  in: "可视化输入",
-};
-
-const VIZ_MODES: readonly MetricVisualizationMode[] = [
-  "auto",
-  "bars",
-  "bars_diverging",
-  "table",
-  "json",
-  "scalar",
-] as const;
-
-export type MetricMetaEntry = {
-  name: string;
-};
-
-function metricIdFromNode(node: WorkflowNodeDto | undefined): string | null {
-  if (!node?.type) return null;
-  if (node.type.startsWith(METRIC_NODE_PREFIX)) {
-    const id = node.type.slice(METRIC_NODE_PREFIX.length).trim();
-    return id || null;
-  }
-  if (node.type === "user_metric" && node.params) {
-    const mid = node.params.metric_id;
-    return typeof mid === "string" && mid.trim() ? mid.trim() : null;
-  }
-  return null;
+function isEchartsPayload(v: unknown): v is EchartsPayload {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return o.type === "echart" && "option" in o;
 }
 
-function metricDisplayName(
-  metricId: string | null,
-  metricMetaById: Record<string, MetricMetaEntry> | undefined,
-): string | null {
-  if (!metricId) return null;
-  return metricMetaById?.[metricId]?.name ?? null;
+function optionHasLineSeries(option: unknown): boolean {
+  if (!option || typeof option !== "object") return false;
+  const o = option as Record<string, unknown>;
+  const series = o.series;
+  if (!Array.isArray(series)) return false;
+  return series.some((s) => {
+    if (!s || typeof s !== "object") return false;
+    const ss = s as Record<string, unknown>;
+    return ss.type === "line";
+  });
 }
 
-function isVizWorkflowNodeType(t: string | undefined): boolean {
-  if (!t) return false;
-  return t === "result_visualization" || t.startsWith(VIZ_NODE_PREFIX);
-}
+function collectEchartsLinePayloads(value: unknown): EchartsPayload[] {
+  const out: EchartsPayload[] = [];
+  const visited = new Set<unknown>();
 
-/** 旧版单一可视化节点：mode 在 params 里（迁移后多为 viz_* 类型）。 */
-function vizSpecFromLegacyResultVizParams(
-  params: Record<string, unknown> | undefined,
-): MetricVisualizationSpec {
-  const rawMode = params?.mode;
-  const mode: MetricVisualizationMode =
-    typeof rawMode === "string" &&
-    (VIZ_MODES as readonly string[]).includes(rawMode)
-      ? (rawMode as MetricVisualizationMode)
-      : "auto";
-  const pdk = params?.period_day_keys;
-  return {
-    mode,
-    period_day_keys: typeof pdk === "boolean" ? pdk : false,
-  };
-}
+  const walk = (v: unknown, depth: number) => {
+    if (depth > 50) return;
+    if (v && (typeof v === "object" || typeof v === "function")) {
+      if (visited.has(v)) return;
+      visited.add(v);
 
-function vizSpecFromVizNode(
-  node: WorkflowNodeDto | undefined,
-): MetricVisualizationSpec {
-  const t = node?.type ?? "";
-  const pdk = node?.params?.period_day_keys;
-  const period_day_keys = typeof pdk === "boolean" ? pdk : false;
-  if (t === "result_visualization") {
-    return vizSpecFromLegacyResultVizParams(node?.params);
-  }
-  if (t.startsWith(VIZ_NODE_PREFIX)) {
-    const rest = t.slice(VIZ_NODE_PREFIX.length);
-    const mode: MetricVisualizationMode = (VIZ_MODES as readonly string[]).includes(
-      rest,
-    )
-      ? (rest as MetricVisualizationMode)
-      : "auto";
-    return { mode, period_day_keys };
-  }
-  return { mode: "auto", period_day_keys: false };
-}
+      if (isEchartsPayload(v)) {
+        if (optionHasLineSeries(v.option)) out.push(v);
+        return;
+      }
 
-/** 指标某输出端口若接到可视化（viz_*）节点，则展示配置取自该节点类型与 params。 */
-function vizFromDownstreamResultViz(
-  profile: EvaluationProfilePublic | undefined,
-  metricNodeId: string,
-  fromSocket: string,
-): MetricVisualizationSpec | null {
-  if (!profile?.workflow?.links?.length) return null;
-  const nodesById = new Map(
-    (profile.workflow.nodes ?? []).map((n) => [n.id, n]),
-  );
-  for (const link of profile.workflow.links) {
-    if (link.from_node !== metricNodeId || link.from_socket !== fromSocket) {
-      continue;
+      if (Array.isArray(v)) {
+        for (const item of v) walk(item, depth + 1);
+      } else {
+        for (const item of Object.values(v as Record<string, unknown>)) {
+          walk(item, depth + 1);
+        }
+      }
     }
-    if (link.to_socket !== "in") continue;
-    const to = nodesById.get(link.to_node);
-    if (!to || !isVizWorkflowNodeType(to.type)) continue;
-    return vizSpecFromVizNode(to);
-  }
-  return null;
-}
+  };
 
-function isNumericRecord(v: unknown): v is Record<string, number> {
-  if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
-  const vals = Object.values(v as Record<string, unknown>);
-  if (vals.length === 0) return false;
-  return vals.every(
-    (x) => typeof x === "number" && Number.isFinite(x as number),
-  );
-}
-
-function maxAbs(values: number[]): number {
-  let m = 0;
-  for (const v of values) m = Math.max(m, Math.abs(v));
-  return m > 0 ? m : 1e-9;
-}
-
-function formatSeriesRowKey(key: string, periodDayStyle: boolean): string {
-  if (periodDayStyle && /^\d+$/.test(key)) return `${key} 日`;
-  return key;
-}
-
-function NumericSeriesBarsPositive({
-  data,
-  periodDayStyle,
-}: {
-  data: Record<string, number>;
-  periodDayStyle: boolean;
-}) {
-  const entries = Object.entries(data).sort(
-    (a, b) => Number(a[0]) - Number(b[0]),
-  );
-  const maxV = Math.max(...entries.map(([, v]) => v), 1e-9);
-  return (
-    <div className="space-y-1.5">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center gap-2 text-xs">
-          <span
-            className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
-            title={formatSeriesRowKey(k, periodDayStyle)}
-          >
-            {formatSeriesRowKey(k, periodDayStyle)}
-          </span>
-          <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-muted/60">
-            <div
-              className="h-full rounded-sm bg-primary/80"
-              style={{ width: `${(v / maxV) * 100}%` }}
-            />
-          </div>
-          <span className="w-18 shrink-0 text-right font-mono tabular-nums">
-            {v.toFixed(4)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function NumericSeriesBarsDiverging({
-  data,
-  periodDayStyle,
-}: {
-  data: Record<string, number>;
-  periodDayStyle: boolean;
-}) {
-  const entries = Object.entries(data).sort(
-    (a, b) => Number(a[0]) - Number(b[0]),
-  );
-  const vals = entries.map(([, v]) => v);
-  const scale = maxAbs(vals);
-  return (
-    <div className="space-y-1.5">
-      {entries.map(([k, v]) => {
-        const half = (Math.abs(v) / scale) * 50;
-        return (
-          <div key={k} className="flex items-center gap-2 text-xs">
-            <span
-              className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
-              title={formatSeriesRowKey(k, periodDayStyle)}
-            >
-              {formatSeriesRowKey(k, periodDayStyle)}
-            </span>
-            <div className="relative h-2.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-muted/60">
-              <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
-              {v >= 0 ? (
-                <div
-                  className="absolute top-0 bottom-0 left-1/2 rounded-r-sm bg-emerald-600/80 dark:bg-emerald-500/70"
-                  style={{ width: `${half}%` }}
-                />
-              ) : (
-                <div
-                  className="absolute top-0 bottom-0 right-1/2 rounded-l-sm bg-rose-600/80 dark:bg-rose-500/70"
-                  style={{ width: `${half}%` }}
-                />
-              )}
-            </div>
-            <span className="w-18 shrink-0 text-right font-mono tabular-nums">
-              {v.toFixed(4)}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function NumericSeriesBarsAbsFromLeft({
-  data,
-  periodDayStyle,
-}: {
-  data: Record<string, number>;
-  periodDayStyle: boolean;
-}) {
-  const entries = Object.entries(data).sort(
-    (a, b) => Number(a[0]) - Number(b[0]),
-  );
-  const scale = maxAbs(entries.map(([, v]) => v));
-  return (
-    <div className="space-y-1.5">
-      {entries.map(([k, v]) => (
-        <div key={k} className="flex items-center gap-2 text-xs">
-          <span
-            className="min-w-20 max-w-48 shrink-0 truncate font-mono text-muted-foreground tabular-nums"
-            title={formatSeriesRowKey(k, periodDayStyle)}
-          >
-            {formatSeriesRowKey(k, periodDayStyle)}
-          </span>
-          <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-sm bg-muted/60">
-            <div
-              className={cnBarColor(v)}
-              style={{ width: `${(Math.abs(v) / scale) * 100}%` }}
-            />
-          </div>
-          <span className="w-18 shrink-0 text-right font-mono tabular-nums">
-            {v.toFixed(4)}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function cnBarColor(v: number): string {
-  return v >= 0
-    ? "h-full rounded-sm bg-emerald-600/75 dark:bg-emerald-500/65"
-    : "h-full rounded-sm bg-rose-600/75 dark:bg-rose-500/65";
-}
-
-function NumericRecordTable({
-  data,
-  periodDayStyle,
-}: {
-  data: Record<string, number>;
-  periodDayStyle: boolean;
-}) {
-  const entries = Object.entries(data).sort(
-    (a, b) => Number(a[0]) - Number(b[0]),
-  );
-  return (
-    <div className="overflow-x-auto rounded-md border border-border/60">
-      <table className="w-full text-xs">
-        <tbody>
-          {entries.map(([k, v]) => (
-            <tr
-              key={k}
-              className="border-b border-border/40 last:border-b-0"
-            >
-              <td className="px-2 py-1.5 font-mono text-muted-foreground">
-                {formatSeriesRowKey(k, periodDayStyle)}
-              </td>
-              <td className="px-2 py-1.5 text-right font-mono tabular-nums">
-                {v.toFixed(6)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function effectiveBarMode(
-  mode: MetricVisualizationSpec["mode"],
-  data: Record<string, number>,
-): "positive" | "diverging" | "abs_left" {
-  const vals = Object.values(data);
-  const hasNeg = vals.some((v) => v < 0);
-  if (mode === "bars_diverging") return "diverging";
-  if (mode === "bars") return hasNeg ? "abs_left" : "positive";
-  /* auto */
-  return hasNeg ? "diverging" : "positive";
-}
-
-function renderNumericRecord(
-  data: Record<string, number>,
-  viz: MetricVisualizationSpec | null,
-  periodDayStyle: boolean,
-) {
-  const mode = viz?.mode ?? "auto";
-  const entries = Object.entries(data);
-  if (mode === "json") {
-    return (
-      <pre className="max-h-36 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem] leading-relaxed">
-        {JSON.stringify(data, null, 2)}
-      </pre>
-    );
-  }
-  if (mode === "scalar" && entries.length === 1) {
-    const [k, v] = entries[0]!;
-    return (
-      <div className="rounded-md border border-border/60 bg-muted/10 px-3 py-3">
-        <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-          {formatSeriesRowKey(k, periodDayStyle)}
-        </p>
-        <p className="mt-1 font-mono text-2xl font-semibold tabular-nums tracking-tight">
-          {v.toFixed(6)}
-        </p>
-      </div>
-    );
-  }
-  if (mode === "table") {
-    return <NumericRecordTable data={data} periodDayStyle={periodDayStyle} />;
-  }
-  const bar = effectiveBarMode(mode, data);
-  if (bar === "diverging") {
-    return (
-      <NumericSeriesBarsDiverging
-        data={data}
-        periodDayStyle={periodDayStyle}
-      />
-    );
-  }
-  if (bar === "abs_left") {
-    return (
-      <NumericSeriesBarsAbsFromLeft
-        data={data}
-        periodDayStyle={periodDayStyle}
-      />
-    );
-  }
-  return (
-    <NumericSeriesBarsPositive data={data} periodDayStyle={periodDayStyle} />
-  );
-}
-
-function workflowNodeTitle(
-  profile: EvaluationProfilePublic | undefined,
-  nodeId: string,
-  metricMetaById: Record<string, MetricMetaEntry> | undefined,
-): string {
-  const n = profile?.workflow?.nodes?.find((x) => x.id === nodeId);
-  if (!n) return "工作流节点";
-  const label = NODE_TYPE_LABELS[n.type] ?? n.type;
-  const mid = metricIdFromNode(n);
-  if (mid) {
-    const nm = metricDisplayName(mid, metricMetaById);
-    if (nm) return `${label} · ${nm}`;
-    return `${label} · ${mid.length > 12 ? `${mid.slice(0, 10)}…` : mid}`;
-  }
-  return label;
-}
-
-function outputSectionLabel(
-  socketKey: string,
-  node: WorkflowNodeDto | undefined,
-  metricMetaById: Record<string, MetricMetaEntry> | undefined,
-): string {
-  if (socketKey === "out" && isVizWorkflowNodeType(node?.type)) {
-    return "展示输出";
-  }
-  if (socketKey === "out") {
-    const mid = metricIdFromNode(node);
-    const nm = metricDisplayName(mid, metricMetaById);
-    if (nm) return nm;
-  }
-  return SOCKET_LABELS[socketKey] ?? socketKey;
-}
-
-function asObjectRecord(v: unknown): Record<string, unknown> | null {
-  if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
-  return v as Record<string, unknown>;
-}
-
-function periodDayStyleForSocket(
-  socketKey: string,
-  node: WorkflowNodeDto | undefined,
-  viz: MetricVisualizationSpec | null,
-): boolean {
-  if (socketKey === "mean_ic" || socketKey === "mean_return_spread") {
-    return true;
-  }
-  if (
-    node?.type?.startsWith(METRIC_NODE_PREFIX) &&
-    socketKey === "out" &&
-    viz?.period_day_keys
-  ) {
-    return true;
-  }
-  if (
-    isVizWorkflowNodeType(node?.type) &&
-    socketKey === "out" &&
-    viz?.period_day_keys
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function renderScalarNumber(val: number, viz: MetricVisualizationSpec | null) {
-  const mode = viz?.mode ?? "auto";
-  if (mode === "json") {
-    return (
-      <pre className="max-h-28 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem]">
-        {JSON.stringify(val, null, 2)}
-      </pre>
-    );
-  }
-  if (mode === "scalar" || mode === "auto") {
-    return (
-      <p className="font-mono text-xl font-semibold tabular-nums">
-        {val.toFixed(6)}
-      </p>
-    );
-  }
-  if (mode === "table") {
-    return (
-      <div className="overflow-x-auto rounded-md border border-border/60">
-        <table className="w-full text-xs">
-          <tbody>
-            <tr>
-              <td className="px-2 py-1.5 text-muted-foreground">值</td>
-              <td className="px-2 py-1.5 text-right font-mono tabular-nums">
-                {val.toFixed(6)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-  return (
-    <p className="font-mono text-sm tabular-nums">{val.toFixed(6)}</p>
-  );
+  walk(value, 0);
+  return out;
 }
 
 export function EvaluationProfileMetricResultsPanel(props: {
-  metricResults: Record<string, unknown>;
-  profile?: EvaluationProfilePublic | null;
-  /** Per metric id: display name（用于 `metric:*` 节点标题） */
-  metricMetaById?: Record<string, MetricMetaEntry>;
+  evalRow: FactorEvaluationRowPublic;
 }) {
-  const { metricResults, profile, metricMetaById } = props;
-  const nodeIds = Object.keys(metricResults);
-  if (nodeIds.length === 0) return null;
+  const { evalRow } = props;
 
-  const blocks = nodeIds.map((nid) => {
-    const outs = asObjectRecord(metricResults[nid]);
-    if (!outs) return null;
-    const node = profile?.workflow?.nodes?.find((x) => x.id === nid);
-    const entries = Object.entries(outs).filter(([sk, val]) => {
-      if (sk === "clean_factor" && val === "[DataFrame]") return false;
-      return true;
-    });
-    if (entries.length === 0) return null;
+  const lineCharts = useMemo(
+    () => collectEchartsLinePayloads(evalRow.results ?? evalRow.metric_results),
+    [evalRow.results, evalRow.metric_results],
+  );
+
+  if (!(evalRow.results ?? evalRow.metric_results)) {
     return (
-      <div
-        key={nid}
-        className="rounded-lg border border-border/70 bg-muted/15 p-3"
-      >
-        <p className="mb-2 text-sm font-medium">
-          {workflowNodeTitle(profile ?? undefined, nid, metricMetaById)}
-        </p>
-        <div className="space-y-3">
-          {entries.map(([socketKey, val]) => {
-            const skLabel = outputSectionLabel(
-              socketKey,
-              node,
-              metricMetaById,
-            );
-            const socketViz = isVizWorkflowNodeType(node?.type)
-              ? vizSpecFromVizNode(node)
-              : vizFromDownstreamResultViz(
-                  profile ?? undefined,
-                  nid,
-                  socketKey,
-                );
-            const periodDay = periodDayStyleForSocket(
-              socketKey,
-              node,
-              socketViz,
-            );
-            if (isNumericRecord(val)) {
-              return (
-                <div key={socketKey}>
-                  <p className="mb-1.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-                    {skLabel}
-                  </p>
-                  {renderNumericRecord(val, socketViz, periodDay)}
-                </div>
-              );
-            }
-            if (typeof val === "number" && Number.isFinite(val)) {
-              return (
-                <div
-                  key={socketKey}
-                  className="flex flex-col gap-1 text-xs"
-                >
-                  <span className="text-muted-foreground">{skLabel}</span>
-                  {renderScalarNumber(val, socketViz)}
-                </div>
-              );
-            }
-            if (typeof val === "string") {
-              return (
-                <div key={socketKey} className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground/80">
-                    {skLabel}
-                  </span>
-                  {": "}
-                  {val}
-                </div>
-              );
-            }
-            return (
-              <div key={socketKey} className="text-xs">
-                <span className="font-medium text-muted-foreground">
-                  {skLabel}
-                </span>
-                <pre className="mt-1 max-h-28 overflow-auto rounded border border-border/60 bg-muted/30 p-2 font-mono text-[0.65rem] leading-relaxed">
-                  {JSON.stringify(val, null, 2)}
-                </pre>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        当前评价没有工作流节点输出。
+      </p>
     );
-  });
+  }
 
-  const visible = blocks.filter(Boolean);
-  if (visible.length === 0) return null;
+  if (lineCharts.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        未找到 `EchartsLineNode` 的可视化数据（或不是线图系列）。
+      </p>
+    );
+  }
 
   return (
-    <div className="space-y-4 border-t border-border/60 pt-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        工作流节点输出
-      </p>
-      {visible}
+    <div className="space-y-4">
+      {lineCharts.map((p, idx) => (
+        <div key={idx} className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            ECharts 线图 #{idx + 1}
+          </div>
+          <EchartsOptionChart option={p.option} />
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -91,19 +90,33 @@ export function DatasourceFormSql({
     });
   };
 
+  /** 稳定引用，避免 ColumnMapEditor 在仅 column_map 等更新时误判 inspectContext 变化而循环自动拉列 */
+  const inspectContext = useMemo(
+    () => ({
+      datasourceId: editorMode === "edit" ? editingDatasourceId : null,
+      db_driver: form.db_driver,
+      db_host: form.db_host,
+      db_port: form.db_port,
+      db_username: form.db_username,
+      db_password: form.db_password,
+      db_name: form.db_name,
+      table: form.table,
+    }),
+    [
+      editorMode,
+      editingDatasourceId,
+      form.db_driver,
+      form.db_host,
+      form.db_port,
+      form.db_username,
+      form.db_password,
+      form.db_name,
+      form.table,
+    ],
+  );
+
   return (
     <>
-      {editorMode === "edit" && editingSql?.has_legacy_engine_url && (
-        <Alert className="border-amber-500/40 bg-amber-500/5">
-          <AlertTitle className="text-amber-950 dark:text-amber-100">
-            旧版连接串
-          </AlertTitle>
-          <AlertDescription className="text-amber-900/90 dark:text-amber-50/90">
-            填写下方主机、库名等信息并保存后，将改为分字段存储并清除旧 URL。
-          </AlertDescription>
-        </Alert>
-      )}
-
       <FormSection
         title="数据库连接"
         description="端口留空时使用默认值：PostgreSQL 5432，MySQL 3306。"
@@ -215,16 +228,7 @@ export function DatasourceFormSql({
           onApplyLoadedColumns={applyLoadedSqlColumns}
           onAddRow={addColumnRow}
           onRemoveRow={removeColumnRow}
-          inspectContext={{
-            datasourceId: editorMode === "edit" ? editingDatasourceId : null,
-            db_driver: form.db_driver,
-            db_host: form.db_host,
-            db_port: form.db_port,
-            db_username: form.db_username,
-            db_password: form.db_password,
-            db_name: form.db_name,
-            table: form.table,
-          }}
+          inspectContext={inspectContext}
         />
       </FormSection>
     </>

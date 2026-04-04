@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "quant-agent Python API"
 requires-python = ">=3.10"
 dependencies = [
+  "agent",
+  "agent-workflow-nodes",
   "custom-code",
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
@@ -16,19 +18,27 @@ dependencies = [
   "pymysql>=1.1.0",
   "workspace",
   "evaluate",
+  "evaluation-metric-templates",
+  "evaluation-workflow-nodes",
   "factor",
   "sql-datasource",
   "csv-datasource",
   "numpy>=1.26.0",
+  "workflow",
 ]
 
 [tool.uv.sources]
+agent = { workspace = true }
+agent-workflow-nodes = { workspace = true }
 custom-code = { workspace = true }
 workspace = { workspace = true }
 evaluate = { workspace = true }
+evaluation-metric-templates = { workspace = true }
+evaluation-workflow-nodes = { workspace = true }
 factor = { workspace = true }
 sql-datasource = { workspace = true }
 csv-datasource = { workspace = true }
+workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

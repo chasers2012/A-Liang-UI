@@ -18,6 +18,9 @@ class _StaticPanelSource(FactorDataSource):
     def __init__(self, panel: pd.DataFrame) -> None:
         self._panel = panel
 
+    def list_columns(self) -> list[str]:
+        return sorted(self._panel.columns, key=lambda x: (str(x).lower(), str(x)))
+
     def get_panel(
         self,
         *,

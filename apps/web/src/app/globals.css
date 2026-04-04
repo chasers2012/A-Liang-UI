@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "./factors/ui/factor-code-jar.css";
 
 @custom-variant dark (&:is(.dark *));
 

@@ -1,0 +1,117 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Handle,
+  Position,
+  useEdges,
+  useUpdateNodeInternals,
+} from "reactflow";
+
+import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HelpCircle } from "lucide-react";
+
+import type { WorkflowSocketDefinition } from "../../types";
+import {
+  appendableHandleBase,
+  appendableHandleId,
+} from "../appendable-handle";
+
+
+
+export function SocketRow({
+  nodeId,
+  side,
+  socket,
+  readOnly,
+}: {
+  nodeId: string;
+  side: "input" | "output";
+  socket: WorkflowSocketDefinition;
+  readOnly: boolean;
+}) {
+  const isInput = side === "input";
+  const edges = useEdges();
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  const isAppendable = isInput && socket.render_type === "appendable";
+  const [descTipOpen, setDescTipOpen] = useState(false);
+
+  const connectedCount = useMemo(() => {
+    if (!isAppendable) return 0;
+    let n = 0;
+    for (const e of edges) {
+      if (e.target !== nodeId) continue;
+      if (appendableHandleBase(e.targetHandle ?? "") === socket.name) n += 1;
+    }
+    return n;
+  }, [edges, isAppendable, nodeId, socket.name]);
+
+  const slots = Math.max(1, connectedCount + 1);
+
+  useEffect(() => {
+    if (!isAppendable) return;
+    updateNodeInternals(nodeId);
+  }, [connectedCount, isAppendable, nodeId, updateNodeInternals]);
+
+
+  return (
+    <div className="flex flex-col gap-2">
+      {(isAppendable ? Array.from({ length: slots }, (_, i) => i + 1) : [0]).map(
+        (slotIndex) => {
+          const handleId =
+            slotIndex === 0 ? socket.name : appendableHandleId(socket.name, slotIndex);
+          const displayName =
+            slotIndex === 0 ? socket.label || socket.name : `${socket.label || socket.name}_${slotIndex}`;
+          return (
+            <div
+              key={handleId}
+              className={cn(
+                "relative flex items-center gap-2 text-xs text-muted-foreground",
+                isInput ? "justify-start pr-2 pl-3" : "justify-end pr-3 pl-2",
+              )}
+            >
+              <Handle
+                type={isInput ? "target" : "source"}
+                position={isInput ? Position.Left : Position.Right}
+                id={handleId}
+                className="h-2! w-2!"
+                isConnectable={!readOnly}
+              />
+              <span className={cn("flex min-w-0 items-center gap-1", isInput ? "" : "flex-row-reverse")}>
+                <span className={cn("truncate", isInput ? "" : "text-right")}>{displayName}</span>
+                {socket.description ? (
+                  <Tooltip
+                    open={descTipOpen}
+                    onOpenChange={(open) => setDescTipOpen(open)}
+                  >
+                    <TooltipTrigger
+                      delay={0}
+                      closeOnClick={false}
+                      render={
+                        <button
+                          type="button"
+                          className="pointer-events-auto inline-flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                          aria-label="socket description"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDescTipOpen(true);
+                          }}
+                        >
+                          <HelpCircle className="h-2.5 w-2.5 pointer-events-none" />
+                        </button>
+                      }
+                    />
+                    <TooltipContent side="top">{socket.description}</TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </span>
+            </div>
+          );
+        },
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,113 @@
+/* Scoped markdown output for AI chat (markdown-it, html: false). */
+.ai-chat-md :first-child {
+  margin-top: 0;
+}
+
+.ai-chat-md :last-child {
+  margin-bottom: 0;
+}
+
+.ai-chat-md p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ai-chat-md h1,
+.ai-chat-md h2,
+.ai-chat-md h3,
+.ai-chat-md h4,
+.ai-chat-md h5,
+.ai-chat-md h6 {
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ai-chat-md h1 {
+  font-size: 1.125rem;
+}
+
+.ai-chat-md h2 {
+  font-size: 1.05rem;
+}
+
+.ai-chat-md h3 {
+  font-size: 1rem;
+}
+
+.ai-chat-md ul,
+.ai-chat-md ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.ai-chat-md li {
+  margin: 0.125rem 0;
+}
+
+.ai-chat-md blockquote {
+  margin: 0.5rem 0;
+  border-left: 3px solid var(--border);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.ai-chat-md hr {
+  margin: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.ai-chat-md code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: calc(var(--radius) * 0.5);
+  background: var(--muted);
+  word-break: break-word;
+}
+
+.ai-chat-md pre {
+  margin: 0.5rem 0;
+  padding: 0.65rem 0.75rem;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--muted);
+}
+
+.ai-chat-md pre code {
+  padding: 0;
+  font-size: 0.8125rem;
+  background: transparent;
+}
+
+.ai-chat-md a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ai-chat-md a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.ai-chat-md table {
+  width: 100%;
+  margin: 0.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.ai-chat-md th,
+.ai-chat-md td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+
+.ai-chat-md th {
+  background: var(--muted);
+  font-weight: 600;
+}

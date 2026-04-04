@@ -31,6 +31,11 @@ export type PageProps = {
   description?: ReactNode;
   /** 传给页面主内容区标题块 `<header>` 的 class（例如 `gap="none"` 时用 `mb-8` 与正文拉开间距）。 */
   headerClassName?: string;
+  /**
+   * 主内容区占满侧栏剩余高度，子级可用 `flex-1 min-h-0` 撑满；正文区不再整体滚动，
+   * 由子组件内部滚动（如全屏对话）。
+   */
+  fillHeight?: boolean;
   /** Vertical gap between flex children: `sm` = 1rem, `lg` = 2rem (列表/分区页默认). */
   gap?: PageGap;
   /** 是否显示顶栏面包屑与返回（默认 true）。 */
@@ -47,6 +52,59 @@ export type PageProps = {
 
 type PageChromeProps = PageProps & { pathname: string };
 
+type PagePrimaryColumnProps = {
+  fillHeight: boolean;
+  gap: PageGap;
+  className?: string;
+  showPageHeading: boolean;
+  title?: ReactNode;
+  description?: ReactNode;
+  headerClassName?: string;
+  children?: ReactNode;
+};
+
+function PagePrimaryColumn({
+  fillHeight,
+  gap,
+  className,
+  showPageHeading,
+  title,
+  description,
+  headerClassName,
+  children,
+}: PagePrimaryColumnProps) {
+  return (
+    <div
+      className={cn(
+        "mx-auto flex min-h-0 min-w-0 w-full max-w-7xl flex-1 flex-col p-6 md:p-8",
+        fillHeight ? "overflow-hidden" : "overflow-y-auto",
+        gapClass[gap],
+        className,
+      )}
+    >
+      {showPageHeading ? (
+        <header className={cn("shrink-0 space-y-2", headerClassName)}>
+          {title != null ? (
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              {title}
+            </h1>
+          ) : null}
+          {description != null ? (
+            <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {description}
+            </div>
+          ) : null}
+        </header>
+      ) : null}
+      {fillHeight && children != null ? (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
+
 /** `key={pathname}` 挂载时重置「返回」抑制状态，避免 effect 内 setState。 */
 function PageChrome({
   pathname,
@@ -55,6 +113,7 @@ function PageChrome({
   title,
   description,
   headerClassName,
+  fillHeight = false,
   gap = "lg",
   showAppHeader = true,
   showAppHeaderBack,
@@ -63,7 +122,7 @@ function PageChrome({
   const router = useRouter();
   const headerCrumbs = buildAppHeaderBreadcrumbs(pathname);
   const canHeaderBack = headerBackHref(pathname) != null;
-  const showHeader = title != null || description != null;
+  const showPageHeading = title != null || description != null;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] =
     useState(false);
@@ -108,29 +167,17 @@ function PageChrome({
           </header>
         ) : null}
 
-        <div
-          className={cn(
-            "mx-auto flex min-h-0 min-w-0 w-full max-w-7xl flex-1 flex-col overflow-y-auto p-6 md:p-8",
-            gapClass[gap],
-            className,
-          )}
+        <PagePrimaryColumn
+          fillHeight={fillHeight}
+          gap={gap}
+          className={className}
+          showPageHeading={showPageHeading}
+          title={title}
+          description={description}
+          headerClassName={headerClassName}
         >
-          {showHeader ? (
-            <header className={cn("space-y-2", headerClassName)}>
-              {title != null ? (
-                <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-                  {title}
-                </h1>
-              ) : null}
-              {description != null ? (
-                <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  {description}
-                </div>
-              ) : null}
-            </header>
-          ) : null}
           {children}
-        </div>
+        </PagePrimaryColumn>
       </div>
     </PageAppHeaderContext.Provider>
   );

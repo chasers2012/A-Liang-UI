@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 from typing import Any, Literal
-from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.common.id import create_id_generator
 from app.datetime_utils import utc_now_iso
 
 DataSourceType = Literal["sql", "csv"]
 
+generate_id = create_id_generator("datasources")
+
 
 class SqlConfigStored(BaseModel):
-    """Stored SQL source. Prefer db_* fields; engine_url is legacy-only."""
+    """Stored SQL source (structured db_* fields)."""
 
-    engine_url: str | None = None
     db_driver: str = "postgresql"
     db_host: str = ""
     db_port: int | None = None
@@ -120,11 +121,10 @@ class DataSourceCreate(BaseModel):
 
     def to_record(self) -> DataSourceRecord:
         now = utc_now_iso()
-        rid = str(uuid4())
+        rid = generate_id()
         if self.type == "sql" and self.sql:
             s = self.sql
             sql = SqlConfigStored(
-                engine_url=None,
                 db_driver=s.db_driver,
                 db_host=s.db_host.strip(),
                 db_port=s.db_port,
@@ -166,7 +166,6 @@ class DataSourceCreate(BaseModel):
 
 
 class SqlPatch(BaseModel):
-    engine_url: str | None = None
     db_driver: str | None = None
     db_host: str | None = None
     db_port: int | None = None
@@ -202,7 +201,6 @@ class SqlPublic(BaseModel):
     db_username: str = ""
     db_name: str = ""
     has_password: bool = False
-    has_legacy_engine_url: bool = False
     table: str
     date_column: str
     asset_column: str
@@ -232,15 +230,13 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
     csv_pub: CsvPublic | None = None
     if rec.type == "sql" and rec.sql:
         s = rec.sql
-        legacy = bool((s.engine_url or "").strip())
         sql_pub = SqlPublic(
             db_driver=s.db_driver or "postgresql",
             db_host=s.db_host,
             db_port=s.db_port,
             db_username=s.db_username,
             db_name=s.db_name,
-            has_password=bool(s.db_password) or legacy,
-            has_legacy_engine_url=legacy,
+            has_password=bool(s.db_password),
             table=s.table,
             date_column=s.date_column,
             asset_column=s.asset_column,
@@ -285,3 +281,9 @@ class SqlTableColumnsRequest(BaseModel):
 
 class SqlTableColumnsResponse(BaseModel):
     columns: list[str]
+
+
+class DatasourceDependencyFieldsResponse(BaseModel):
+    """因子依赖字段名：SQL 为 column_map 的键；CSV 为文件表头（不含日期/资产列）。"""
+
+    fields: list[str]

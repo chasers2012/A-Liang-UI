@@ -9,11 +9,13 @@ description = "Compute factor values from panel data or FactorDataSource"
 requires-python = ">=3.10"
 dependencies = [
     "alphalens-reloaded>=0.4.6",
+    "custom-code",
     "factor",
     "pandas>=2.2.0",
 ]
 
 [tool.uv.sources]
+custom-code = { workspace = true }
 factor = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

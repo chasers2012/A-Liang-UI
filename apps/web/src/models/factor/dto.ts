@@ -1,4 +1,4 @@
-/** 因子注册、评价汇总、快照与历史记录 DTO。 */
+/** 因子注册、评价汇总与历史记录 DTO。 */
 
 export interface FactorSummaryPublic {
   id: string;
@@ -13,11 +13,6 @@ export interface FactorSummaryPublic {
 }
 
 export interface FactorDetailPublic extends FactorSummaryPublic {
-  source: string;
-}
-
-/** GET /factors/default-source — bootstrap editor from server template. */
-export interface FactorDefaultSourcePublic {
   source: string;
 }
 
@@ -36,49 +31,23 @@ export interface FactorEvaluationRowPublic {
   evaluated_at?: string | null;
   window?: { start?: string | null; end?: string | null } | null;
   stock_count?: number | null;
-  mean_ic: Record<string, number>;
-  mean_return_spread?: Record<string, number>;
   error?: string | null;
+  /**
+   * Workflow collected results payload (来自后端 FactorEvaluationRowPublic#results).
+   * 具体结构取决于工作流中 CollectResult 节点的输入/连线配置。
+   */
+  results?: unknown;
+
+  // 以下字段目前主要用于展示聚合指标；后端可能不返回时请按需兼容。
+  mean_ic?: Record<string, number>;
+  mean_return_spread?: Record<string, number>;
   /** Present when the run used a named evaluation profile (with or without workflow nodes). */
   evaluation_profile_id?: string | null;
-  /** Workflow node id → output socket → value (e.g. period → scalar for IC/spread). */
+  /** @deprecated 旧字段：工作流节点输出（可能已被 results 替代）。 */
   metric_results?: Record<string, unknown>;
 }
 
 export interface FactorEvaluationsSummaryPublic {
   aggregate: FactorEvaluationsAggregatePublic;
   rows: FactorEvaluationRowPublic[];
-}
-
-export type FactorCodeSnapshotKind = "auto" | "manual";
-
-export interface FactorCodeSnapshotMeta {
-  name: string;
-  group: string;
-  description: string;
-  max_window: number;
-  dependencies: string[];
-}
-
-export interface FactorCodeSnapshotSummaryPublic {
-  id: string;
-  saved_at: string;
-  kind: FactorCodeSnapshotKind;
-  label?: string | null;
-  meta: FactorCodeSnapshotMeta;
-}
-
-export interface FactorCodeSnapshotDetailPublic extends FactorCodeSnapshotSummaryPublic {
-  source: string;
-}
-
-export interface FactorEvaluationHistoryEntry {
-  id: string;
-  linked_snapshot_id?: string | null;
-  evaluated_at: string;
-  window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
-  mean_ic: Record<string, number>;
-  mean_return_spread?: Record<string, number>;
-  error?: string | null;
 }

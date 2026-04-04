@@ -66,7 +66,9 @@ export default function EvaluationMetricsPage() {
         <CardHeader>
           <CardTitle>指标列表</CardTitle>
           <CardDescription>
-            在工作流画布中从「添加节点」选择具体指标（节点类型为 <span className="font-mono">metric:&lt;指标id&gt;</span>）
+            在工作流画布中从「添加节点」选择指标；节点类型由评价方案
+            API（<span className="font-mono">/evaluation-profiles/node-types</span>
+            ）提供。
           </CardDescription>
           <CardAction>
             <Link

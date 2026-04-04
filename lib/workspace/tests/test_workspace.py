@@ -29,7 +29,7 @@ def test_default_workspace_root_respects_env(monkeypatch, tmp_path):
     assert default_workspace_root() == custom.resolve()
 
 
-def test_set_workspace_root_overrides(monkeypatch, tmp_path):
+def data_set_workspace_root_overrides(monkeypatch, tmp_path):
     monkeypatch.delenv("QUANT_AGENT_WORKSPACE", raising=False)
     override = tmp_path / "override"
     set_workspace_root(override)

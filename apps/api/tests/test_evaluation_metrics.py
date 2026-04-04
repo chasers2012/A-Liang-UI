@@ -7,8 +7,9 @@ def test_evaluation_metrics_crud(client):
     data = r.json()
     mid = data["id"]
     assert data["name"] == "em_test"
-    assert "UserEvaluationMetric" in data["source"]
-    assert data.get("visualization") is None
+    assert "workflow_type_id" not in data
+    assert data["source_path"].startswith("workflow_nodes/evaluation/em_")
+    assert "NewEvaluationMetric" in data["source"]
 
     r2 = client.get(f"/evaluation-metrics/{mid}")
     assert r2.status_code == 200
@@ -21,7 +22,6 @@ def test_evaluation_metrics_crud(client):
     assert r3.status_code == 200
     body3 = r3.json()
     assert body3["description"] == "d1"
-    assert body3.get("visualization") is None
 
     r4 = client.delete(f"/evaluation-metrics/{mid}")
     assert r4.status_code == 204
@@ -49,9 +49,8 @@ def test_evaluation_metric_workflow_parameters_patch(client):
                 {
                     "key": "mode",
                     "label": "模式",
-                    "type": "enum",
+                    "type": "string",
                     "default": "a",
-                    "enum_values": ["a", "b"],
                 },
             ],
         },
@@ -73,14 +72,21 @@ def test_evaluation_profiles_node_types(client):
     assert r.status_code == 200
     rows = r.json()
     types = {x["type"] for x in rows}
-    assert "prepare_alphalens" in types
-    assert "viz_auto" in types
-    assert "viz_table" in types
-    assert "metric:builtin.mean_ic" in types
-    viz_types = [x for x in types if x.startswith("viz_")]
-    assert len(viz_types) == 6
-    prep_row = next(x for x in rows if x["type"] == "prepare_alphalens")
-    assert len(prep_row["workflow_parameters"]) >= 4
+    assert any("calculate_factor_value" in t for t in types)
+    assert any(t.endswith(".EchartsLineNode") for t in types)
+    assert any(t.endswith(".EchartsBarNode") for t in types)
+    assert any(t.endswith(".MeanIC") for t in types)
+    assert any(t.endswith(".BuiltinMeanReturnSpreadNode") for t in types)
+    echarts_types = [x for x in types if "echarts_" in x]
+    assert len(echarts_types) == 2
+    prep_row = next(x for x in rows if "CalculateFactorValueNode" in x["type"])
+    assert len(prep_row["inputs"]) >= 4
+    assert "node_category" not in prep_row
+    assert "viz_mode" not in prep_row
     for row in rows:
-        assert "workflow_parameters" in row
-        assert isinstance(row["workflow_parameters"], list)
+        assert "inputs" in row
+        assert isinstance(row["inputs"], list)
+        assert "node_category" not in row
+        assert "viz_mode" not in row
+    line_row = next(x for x in rows if x["type"].endswith(".EchartsLineNode"))
+    assert isinstance(line_row["inputs"], list)

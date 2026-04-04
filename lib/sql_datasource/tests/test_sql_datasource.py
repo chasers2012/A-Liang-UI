@@ -28,3 +28,15 @@ def test_sql_data_source_sqlite_panel():
     assert list(df.columns) == ["close"]
     assert len(df) == 2
     assert float(df.loc[("2025-01-03", "AAA"), "close"]) == 11.0
+
+
+def test_sql_data_source_list_columns():
+    engine = create_engine("sqlite:///:memory:")
+    ds = SqlDataSource(
+        engine,
+        table="bars",
+        date_column="d",
+        asset_column="sym",
+        column_map={"close": "c", "volume": "v"},
+    )
+    assert ds.list_columns() == ["close", "volume"]

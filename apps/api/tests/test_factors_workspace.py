@@ -3,10 +3,30 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.factors.registry import load_registry, read_source, resolve_source_path
-from app.factors.validate import validate_factor_name, validate_source_syntax
+from app.factors.registry import FactorItemsRegistry, read_source, resolve_source_path
+from custom_code import validate_identifier_name as validate_factor_name
+from custom_code import validate_source_syntax
+from factor import Factor
 
 MIN_SOURCE = "x = 1\n"
+
+FACTOR_SOURCE_TEMPLATE = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class NewFactor(Factor):
+    name = "{name}"
+    group = "custom"
+    description = ""
+    dependencies = ["close"]
+    max_window = 2
+
+    def calc(self, data: pd.DataFrame) -> pd.Series:
+        # Minimal implementation; this test only checks loading.
+        return data["close"]
+"""
 
 
 def test_validate_factor_name_ok():
@@ -33,14 +53,14 @@ def test_list_empty(client):
 
 
 def test_default_source(client):
-    r = client.get("/factors/default-source")
+    r = client.get("/factors/template")
     assert r.status_code == 200
     data = r.json()
     assert "source" in data
-    assert "UserFactor" in data["source"]
+    assert "NewFactor" in data["source"]
     assert 'name = "my_factor"' in data["source"]
 
-    r2 = client.get("/factors/default-source?name=alpha_demo")
+    r2 = client.get("/factors/template?name=alpha_demo")
     assert r2.status_code == 200
     assert 'name = "alpha_demo"' in r2.json()["source"]
 
@@ -64,13 +84,13 @@ def test_create_roundtrip_files(workspace_tmp, client):
     assert data["source"] == MIN_SOURCE
     fid = data["id"]
 
-    cfg = workspace_tmp / "config" / "factors.json"
+    cfg = workspace_tmp / "factors" / "registry.json"
     assert cfg.is_file()
     reg = json.loads(cfg.read_text(encoding="utf-8"))
     assert len(reg["items"]) == 1
     assert reg["items"][0]["id"] == fid
 
-    py_path = workspace_tmp / "factors" / f"{fid}.py"
+    py_path = workspace_tmp / "factors" / "source" / f"{fid}.py"
     assert py_path.is_file()
     assert py_path.read_text(encoding="utf-8") == MIN_SOURCE
 
@@ -127,7 +147,7 @@ def test_patch_and_delete(workspace_tmp, client):
     assert r2.json()["description"] == "Patched"
     assert r2.json()["source"] == new_src
 
-    rec = load_registry().items[0]
+    rec = FactorItemsRegistry.list_items()[0]
     assert read_source(rec) == new_src
     assert resolve_source_path(rec.source_path).read_text(encoding="utf-8") == new_src
 
@@ -135,3 +155,26 @@ def test_patch_and_delete(workspace_tmp, client):
     assert r3.status_code == 204
     assert client.get("/factors").json() == []
     assert not resolve_source_path(rec.source_path).is_file()
+
+
+def test_get_factor_loads_from_source(workspace_tmp, client):
+    src = FACTOR_SOURCE_TEMPLATE.format(name="alpha_test")
+    r = client.post(
+        "/factors",
+        json={
+            "name": "alpha_test",
+            "group": "custom",
+            "description": "",
+            "max_window": 2,
+            "dependencies": ["close"],
+            "source": src,
+        },
+    )
+    assert r.status_code == 200, r.text
+    fid = r.json()["id"]
+
+    factor_cls = FactorItemsRegistry.get_factor(fid)
+    assert factor_cls is not None
+    assert isinstance(factor_cls, type)
+    assert issubclass(factor_cls, Factor)
+    assert factor_cls.name == "alpha_test"

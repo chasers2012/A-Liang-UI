@@ -17,6 +17,9 @@ class _FixedSource(FactorDataSource):
     def __init__(self, df: pd.DataFrame) -> None:
         self._df = df
 
+    def list_columns(self) -> list[str]:
+        return sorted(self._df.columns, key=lambda x: (str(x).lower(), str(x)))
+
     def get_panel(
         self,
         *,

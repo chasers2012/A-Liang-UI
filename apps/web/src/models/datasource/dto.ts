@@ -9,7 +9,6 @@ export interface SqlPublic {
   db_username: string;
   db_name: string;
   has_password: boolean;
-  has_legacy_engine_url: boolean;
   table: string;
   date_column: string;
   asset_column: string;

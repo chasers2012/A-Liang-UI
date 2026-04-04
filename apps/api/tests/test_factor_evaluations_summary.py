@@ -41,7 +41,8 @@ def test_evaluations_summary_partial_and_aggregate(workspace_tmp, client):
     assert r.status_code == 200
     id_b = r.json()["id"]
 
-    eval_path = workspace_tmp / "config" / "factor_evaluations.json"
+    eval_path = workspace_tmp / "factors" / "data" / "evaluations.json"
+    eval_path.parent.mkdir(parents=True, exist_ok=True)
     eval_path.write_text(
         json.dumps(
             {
@@ -85,9 +86,9 @@ def test_evaluations_summary_partial_and_aggregate(workspace_tmp, client):
 
 
 def test_evaluations_summary_invalid_json(workspace_tmp, client):
-    cfg = workspace_tmp / "config"
-    cfg.mkdir(parents=True, exist_ok=True)
-    p = cfg / "factor_evaluations.json"
+    data_dir = workspace_tmp / "factors" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    p = data_dir / "evaluations.json"
     p.write_text("{not json", encoding="utf-8")
     r = client.get("/factors/evaluations/summary")
     assert r.status_code == 500

@@ -63,3 +63,13 @@ def test_csv_data_source_stock_codes_filter(tmp_path: Path):
     )
     assert len(df) == 1
     assert float(df.loc[("2025-01-02", "BBB"), "close"]) == 2.0
+
+
+def test_csv_data_source_list_columns(tmp_path: Path) -> None:
+    p = tmp_path / "bars.csv"
+    p.write_text(
+        "date,asset,close,volume\n2025-01-02,AAA,1,10\n",
+        encoding="utf-8",
+    )
+    ds = CsvDataSource(p, date_column="date", asset_column="asset")
+    assert ds.list_columns() == ["close", "volume"]

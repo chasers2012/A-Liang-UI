@@ -9,9 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
-import type { MetricWorkflowParamSpec } from "@/models/evaluation-metric/dto";
-
-import { MetricWorkflowParamsSchemaEditor } from "../../ui/metric-workflow-params-schema-editor";
+import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
@@ -27,13 +25,12 @@ export default function EditEvaluationMetricPage() {
   const [description, setDescription] = useState("");
   const [source, setSource] = useState("");
   const [workflowParams, setWorkflowParams] = useState<
-    MetricWorkflowParamSpec[]
+    NodeParamModel[]
   >([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [builtinReadOnly, setBuiltinReadOnly] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -41,7 +38,6 @@ export default function EditEvaluationMetricPage() {
     setLoading(true);
     try {
       const d = await getEvaluationMetric(id);
-      setBuiltinReadOnly(Boolean(d.builtin));
       setName(d.name);
       setDescription(d.description);
       setSource(d.source);
@@ -61,7 +57,7 @@ export default function EditEvaluationMetricPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || builtinReadOnly) return;
+    if (!id) return;
     setFormError(null);
     setSubmitting(true);
     try {
@@ -71,7 +67,6 @@ export default function EditEvaluationMetricPage() {
           ...p,
           key: p.key.trim(),
           label: (p.label || "").trim() || p.key.trim(),
-          enum_values: p.type === "enum" ? p.enum_values : [],
           minimum: p.type === "number" ? p.minimum : null,
           maximum: p.type === "number" ? p.maximum : null,
         }));
@@ -125,17 +120,11 @@ export default function EditEvaluationMetricPage() {
         <PageFormHeaderActions
           formId={EVALUATION_METRIC_EDIT_FORM_ID}
           submitting={submitting}
-          submitDisabled={!name.trim() || builtinReadOnly}
+          submitDisabled={!name.trim()}
           cancelHref={`/factors/metrics/${encodeURIComponent(id)}`}
         />
       }
     >
-      {builtinReadOnly && (
-        <Alert className="mb-4">
-          <AlertTitle>只读</AlertTitle>
-          <AlertDescription>内置指标不可在此编辑。</AlertDescription>
-        </Alert>
-      )}
       <form
         id={EVALUATION_METRIC_EDIT_FORM_ID}
         className="flex flex-col gap-6"
@@ -167,11 +156,6 @@ export default function EditEvaluationMetricPage() {
             />
           </div>
         </div>
-        <MetricWorkflowParamsSchemaEditor
-          value={workflowParams}
-          onChange={setWorkflowParams}
-          disabled={builtinReadOnly}
-        />
         <div className="space-y-2">
           <Label>源码</Label>
           <FactorCodeJar

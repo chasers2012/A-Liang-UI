@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 
-/** 当前正在执行 POST /evaluations/run 的因子（全应用单例，避免并发重复跑） */
+/** 当前正在执行评价工作流（POST .../evaluation-profiles/.../evaluations/run）的因子（全应用单例） */
 export type FactorEvaluationRunning = {
   factorId: string;
   factorName: string;

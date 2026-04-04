@@ -8,22 +8,21 @@
   uv run python examples/agent-sql-dig/run.py --db path/to/bars.db \\
     --end-date 2025-02-10 --prompt "基于 close 构造简单动量类因子思路"
 
-默认跳过 Alphalens（``FACTOR_AGENT_SKIP_EVAL=1``），仅干跑校验生成的代码；
-要跑完整评价：``--eval`` 或事先 ``set FACTOR_AGENT_SKIP_EVAL=0``。
+默认跳过 Alphalens，仅干跑校验生成的代码；要跑完整评价请加 ``--eval``。
 
-其它环境变量与 ``agent.run`` 一致（``FACTOR_AGENT_START_DATE``、``FACTOR_AGENT_STOCK_CODES`` 等）。
+LLM 与工作区 ``config/agent_llm.json`` 一致；干跑/评价日期等通过
+``run_factor_digging(..., execution={...})`` 传入（见 ``main``）。
 """
+
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
-
-from sqlalchemy import create_engine
 
 from agent.run import run_factor_digging
 from factor import DependencyResolver
 from sql_datasource import SqlDataSource
+from sqlalchemy import create_engine
 
 
 def _engine_url(args: argparse.Namespace) -> str:
@@ -73,14 +72,8 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    if not args.eval:
-        os.environ.setdefault("FACTOR_AGENT_SKIP_EVAL", "1")
-    os.environ.setdefault("FACTOR_AGENT_END_DATE", args.end_date)
-
     engine = create_engine(_engine_url(args))
-    column_map = (
-        {"close": args.close_column} if args.close_column != "close" else None
-    )
+    column_map = {"close": args.close_column} if args.close_column != "close" else None
     ds = SqlDataSource(
         engine,
         table=args.table,
@@ -95,7 +88,15 @@ def main() -> int:
     if not user_prompt:
         user_prompt = "请基于已有 close 字段提一个可实现的截面或时序因子，并生成代码。"
 
-    result = run_factor_digging(user_prompt, dependency_resolver=resolver)
+    result = run_factor_digging(
+        user_prompt,
+        dependency_resolver=resolver,
+        execution={
+            "skip_alphalens_evaluation": not args.eval,
+            "dry_run_end_date": args.end_date,
+            "eval_end_date": args.end_date,
+        },
+    )
     report = result.get("final_report")
     if report:
         print(report)

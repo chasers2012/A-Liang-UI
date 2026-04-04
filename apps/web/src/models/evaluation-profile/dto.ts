@@ -1,7 +1,8 @@
-/** 评价方案（工作流 + Alphalens prepare）与节点类型目录 DTO。 */
+/** 评价方案（工作流图）与节点类型目录 DTO。 */
 
-import type { MetricWorkflowParamSpec } from "../evaluation-metric/dto";
+import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 
+/** 从工作流图序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
 export interface WorkflowNodeDto {
   id: string;
   type: string;
@@ -9,52 +10,39 @@ export interface WorkflowNodeDto {
   params: Record<string, unknown>;
 }
 
-export interface WorkflowLinkDto {
-  id?: string | null;
-  from_node: string;
-  from_socket: string;
-  to_node: string;
-  to_socket: string;
-}
-
-export interface EvaluationWorkflowDto {
-  nodes: WorkflowNodeDto[];
-  links: WorkflowLinkDto[];
-  viewport?: { x: number; y: number; zoom: number } | null;
-}
-
-export interface EvaluationProfilePrepareDto {
-  forward_return_periods: number[];
-  quantiles: number | null;
-  long_short: boolean;
-  max_loss: number;
-}
-
 export interface EvaluationProfilePublic {
   id: string;
   name: string;
   description: string;
-  test_set_id: string | null;
-  prepare: EvaluationProfilePrepareDto;
-  workflow: EvaluationWorkflowDto;
-  is_default: boolean;
+  workflow: WorkflowGraphPersisted;
   created_at: string;
   updated_at: string;
 }
 
+/** 与后端 ``Socket.serialize()`` / ``NodeParam.serialize()`` 对齐的统一输入项。 */
 export interface NodeTypeSocketPublic {
   name: string;
   required: boolean;
   value_type: string;
+  label?: string;
+  default?: unknown;
+  render_type?: string | null;
+  options?: Array<string | number> | null;
+  type?: string;
+  minimum?: number | null;
+  maximum?: number | null;
 }
 
-export interface NodeTypeDefinitionPublic {
+/** /evaluation-profiles/node-types 的目录项（节点定义 + 业务扩展字段）。 */
+export interface EvaluationNodeTypeCatalogItemPublic {
   type: string;
   label: string;
   description: string;
+  /** workflow.Node.category：前端用于分组/展示 */
+  category: string | null;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
-  workflow_parameters: MetricWorkflowParamSpec[];
-  user_defined: boolean;
-  metric_id: string | null;
+  metric_id?: string | null;
+  socket_labels?: Record<string, string>;
+  period_day_style_sockets?: string[];
 }

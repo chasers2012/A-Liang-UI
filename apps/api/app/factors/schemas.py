@@ -1,36 +1,14 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app import datetime_utils
+from app.common.id import create_id_generator
 
-FACTORS_DIR = "factors"
+FACTORS_DIR = "factors/source"
 
 utc_now_iso = datetime_utils.utc_now_iso
-
-
-def default_factor_source(factor_name: str) -> str:
-    """Minimal UserFactor skeleton; ``factor_name`` becomes the ``name`` class attribute."""
-    safe = factor_name.strip() or "my_factor"
-    return f'''from __future__ import annotations
-
-import pandas as pd
-from factor.factor import Factor
-
-
-class UserFactor(Factor):
-    name = "{safe}"
-    group = "custom"
-    description = ""
-    dependencies = ["close"]
-    max_window = 2
-
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        close = data["close"]
-        return close.groupby(level="asset", group_keys=False).pct_change(periods=1)
-'''
+generate_id = create_id_generator("factors")
 
 
 def source_relative_path(factor_id: str) -> str:
@@ -40,31 +18,37 @@ def source_relative_path(factor_id: str) -> str:
 class FactorRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    id: str
-    name: str
-    group: str = "factor"
-    description: str = ""
-    max_window: int = 1
-    dependencies: list[str] = Field(default_factory=lambda: ["close"])
-    source_path: str
-    created_at: str
-    updated_at: str
+    id: str = Field(description="因子的id, 格式是UUID")
+    name: str = Field(description="因子名称")
+    group: str = Field(description="因子组")
+    description: str = Field(description="因子描述")
+    max_window: int = Field(description="因子最大窗口", default=1)
+    dependencies: list[str] = Field(
+        description="因子依赖的列这些列会在data中传给因子calc方法",
+        default_factory=lambda: ["close"],
+    )
+    source_path: str = Field(description="因子源码路径")
+    created_at: str = Field(description="因子创建时间")
+    updated_at: str = Field(description="因子更新时间")
 
 
 class FactorRegistryFile(BaseModel):
-    version: int = 1
-    items: list[FactorRecord] = Field(default_factory=list)
+    version: int = Field(description="因子注册文件版本", default=1)
+    items: list[FactorRecord] = Field(description="因子注册文件中的因子列表", default_factory=list)
 
 
 class FactorCreate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    name: str
-    group: str = "factor"
-    description: str = ""
-    max_window: int = 1
-    dependencies: list[str] = Field(default_factory=lambda: ["close"])
-    source: str | None = None
+    name: str = Field(description="因子名称")
+    group: str = Field(description="因子组", default="factor")
+    description: str = Field(description="因子描述", default="")
+    max_window: int = Field(description="因子最大窗口", default=1)
+    dependencies: list[str] = Field(
+        description="因子依赖的列这些列会在data中传给因子calc方法",
+        default_factory=lambda: ["close"],
+    )
+    source: str | None = Field(description="因子源码", default=None)
 
     @field_validator("name")
     @classmethod
@@ -124,12 +108,6 @@ class FactorDetailPublic(FactorSummaryPublic):
     source: str
 
 
-class FactorDefaultSourcePublic(BaseModel):
-    """Editor bootstrap: Python skeleton from :func:`default_factor_source`."""
-
-    source: str
-
-
 def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
     return FactorSummaryPublic(
         id=rec.id,
@@ -145,4 +123,4 @@ def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
 
 
 def new_factor_id() -> str:
-    return str(uuid4())
+    return generate_id()

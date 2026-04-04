@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.agent_llm_schemas import AgentLlmSettings
+from app.chat.llm_schemas import LlmSettings
 from pydantic import ValidationError
 
 
@@ -16,6 +16,10 @@ def test_get_llm_settings_returns_defaults(client):
     assert data["ollama_base_url"] == "http://127.0.0.1:11434"
     assert data["openai_base_url"] is None
     assert data["api_key"] is None
+    assert data["temperature"] == 1.0
+    assert data["ollama_timeout"] == 600.0
+    assert data["ollama_num_predict"] == -1
+    assert data["ollama_reasoning"] is None
 
 
 def test_put_llm_settings_round_trip(client, workspace_tmp):
@@ -25,12 +29,16 @@ def test_put_llm_settings_round_trip(client, workspace_tmp):
         "ollama_base_url": "http://127.0.0.1:11434",
         "openai_base_url": "https://example.invalid/v1",
         "api_key": "sk-test",
+        "temperature": 0.7,
+        "ollama_timeout": 120.0,
+        "ollama_num_predict": 512,
+        "ollama_reasoning": None,
     }
     r = client.put("/agent/llm-settings", json=body)
     assert r.status_code == 200
     assert r.json() == body
 
-    path = workspace_tmp / "config" / "agent_llm.json"
+    path = workspace_tmp / "agent" / "llm.json"
     assert path.is_file()
     disk = json.loads(path.read_text(encoding="utf-8"))
     assert disk["provider"] == "openai"
@@ -48,6 +56,10 @@ def test_put_strips_empty_api_key(client):
         "ollama_base_url": "http://127.0.0.1:11434",
         "openai_base_url": "",
         "api_key": "   ",
+        "temperature": 1.0,
+        "ollama_timeout": 600.0,
+        "ollama_num_predict": -1,
+        "ollama_reasoning": None,
     }
     r = client.put("/agent/llm-settings", json=body)
     assert r.status_code == 200
@@ -58,4 +70,4 @@ def test_put_strips_empty_api_key(client):
 
 def test_schema_rejects_empty_model():
     with pytest.raises(ValidationError):
-        AgentLlmSettings(model="")
+        LlmSettings(model="")

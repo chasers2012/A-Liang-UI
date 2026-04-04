@@ -3,25 +3,16 @@
 from __future__ import annotations
 
 import ast
-import re
 from collections.abc import Callable
-from typing import Any, TypeVar
+from typing import Generic, TypeVar
 
 TBase = TypeVar("TBase")
 
 InvalidMessage = str | Callable[[str], str]
 
 
-def strip_markdown_fences(src: str) -> str:
-    s = src.strip()
-    if s.startswith("```"):
-        s = re.sub(r"^```[a-zA-Z0-9]*\s*", "", s)
-        s = re.sub(r"\s*```$", "", s)
-    return s.strip()
-
-
 def direct_base_symbol_name(expr: ast.expr) -> str | None:
-    """Symbol used for direct inheritance, unwrapping generics (e.g. ``M[T]`` → ``M``)."""
+    """Symbol used for direct inheritance, unwrapping generics (e.g. ``M[T]`` -> ``M``)."""
     if isinstance(expr, ast.Subscript):
         return direct_base_symbol_name(expr.value)
     if isinstance(expr, ast.Name):
@@ -31,43 +22,43 @@ def direct_base_symbol_name(expr: ast.expr) -> str | None:
     return None
 
 
-def find_subclass_name(module_ast: ast.Module, base_names: frozenset[str]) -> str | None:
+def find_subclass_name(module_ast: ast.Module, base_name: str) -> str | None:
+
     for node in module_ast.body:
         if not isinstance(node, ast.ClassDef):
             continue
+        # for base in node.bases:
+        #     sym = direct_base_symbol_name(base)
+        #     if sym is not None and sym == base_name:
+        #         return node.name
         for base in node.bases:
-            sym = direct_base_symbol_name(base)
-            if sym is not None and sym in base_names:
+            # 处理 class A(BaseClass)
+            if isinstance(base, ast.Name):
+                if base.id == base_name:
+                    return node.name
+
+            # 处理 class A(module.BaseClass)
+            elif isinstance(base, ast.Attribute) and base.attr == base_name:
                 return node.name
     return None
 
 
-def load_subclass_from_source(
-    source: str,
-    *,
-    base: type[TBase],
-    inject_globals: dict[str, Any],
-    exec_filename: str,
-    missing_message: str,
-    invalid_message: InvalidMessage,
-    base_ast_names: frozenset[str] | None = None,
-) -> tuple[type[TBase], str]:
-    """
-    Parse *source*, execute in a copy of *inject_globals*, return ``(cls, name)``.
+class Inheritance(Generic[TBase]):
+    """Pre-configured subclass loader bound to a specific base type.
 
-    *base_ast_names* defaults to ``{base.__name__}`` for matching the inheritance AST.
+    Encapsulates base class, injectable globals, AST matching names, exec
+    filename, and error messages so that callers only need to pass source code.
     """
-    cleaned = strip_markdown_fences(source)
-    tree = ast.parse(cleaned)
-    names = base_ast_names if base_ast_names is not None else frozenset({base.__name__})
-    class_name = find_subclass_name(tree, names)
-    if not class_name:
-        raise ValueError(missing_message)
 
-    ns = dict(inject_globals)
-    exec(compile(tree, filename=exec_filename, mode="exec"), ns, ns)
-    cls = ns.get(class_name)
-    if cls is None or not isinstance(cls, type) or not issubclass(cls, base):
-        msg = invalid_message(class_name) if callable(invalid_message) else invalid_message
-        raise ValueError(msg)
-    return cls, class_name
+    def __init__(
+        self,
+        base: type[TBase],
+    ) -> None:
+        self.base = base
+        self.base_name = base.__name__
+
+    def is_valid_subclass(self, source: str) -> bool:
+        """Parse *source*, exec in sandboxed globals, return ``(cls, class_name)``."""
+        module_ast = ast.parse(source)
+        sub_cls = find_subclass_name(module_ast, self.base.__name__)
+        return sub_cls is not None

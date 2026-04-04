@@ -63,7 +63,7 @@ export function DatasourceForm({
       description={
         editorMode === "create"
           ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
-          : "密码留空表示保留原值。填写主机或库名并保存后，将从旧版整段 URL 迁移为分字段。"
+          : "密码留空表示保留原值。"
       }
       headerClassName="mb-8"
       action={

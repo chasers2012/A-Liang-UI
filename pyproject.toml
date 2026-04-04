@@ -10,10 +10,14 @@ quant-agent-api = { workspace = true }
 csv-datasource = { workspace = true }
 sql-datasource = { workspace = true }
 evaluate = { workspace = true }
+evaluation-metric-templates = { workspace = true }
 factor = { workspace = true }
 agent = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
+workflow = { workspace = true }
+evaluation-workflow-nodes = { workspace = true }
+agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*"]

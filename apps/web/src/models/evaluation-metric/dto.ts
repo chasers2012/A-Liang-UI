@@ -1,29 +1,20 @@
-/** 评价指标（用户自定义 Python 指标）DTO。 */
-
-export type MetricVisualizationMode =
-  | "auto"
-  | "bars"
-  | "bars_diverging"
-  | "table"
-  | "json"
-  | "scalar";
-
-export interface MetricVisualizationSpec {
-  mode: MetricVisualizationMode;
-  period_day_keys: boolean;
-}
-
-export type MetricWorkflowParamType = "number" | "boolean" | "enum" | "string";
-
-/** 与后端 ``MetricWorkflowParamSpec`` 一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
-export interface MetricWorkflowParamSpec {
+/** 与后端 ``workflow.NodeParamModel``（JSON）一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
+export interface NodeParamModel {
   key: string;
   label: string;
-  type: MetricWorkflowParamType;
+  type: string;
   default?: string | number | boolean | null;
   minimum?: number | null;
   maximum?: number | null;
-  enum_values: string[];
+  /**
+   * 后端 workflow.node_types.NodeParam.serialize() 扩展字段（用于前端渲染不同控件）。
+   * - "select" | "number" | "input" | "toggle" | "date" | "datetime" | ...
+   */
+  render_type?: string | null;
+  /** 仅当 render_type=select 时可能存在 */
+  options?: Array<
+    string | number | { label: string | number; value: string | number }
+  > | null;
 }
 
 export interface EvaluationMetricSummaryPublic {
@@ -31,11 +22,10 @@ export interface EvaluationMetricSummaryPublic {
   name: string;
   description: string;
   source_path: string;
+  /** 评价指标节点 id（与后端路由参数 `metric_id` 一致）。 */
   created_at: string;
   updated_at: string;
-  visualization?: MetricVisualizationSpec | null;
-  builtin?: boolean;
-  workflow_parameters?: MetricWorkflowParamSpec[];
+  workflow_parameters?: NodeParamModel[];
 }
 
 export interface EvaluationMetricDetailPublic extends EvaluationMetricSummaryPublic {

@@ -34,6 +34,10 @@ const DEFAULT_LLM: AgentLlmSettingsPublic = {
   ollama_base_url: "http://127.0.0.1:11434",
   openai_base_url: null,
   api_key: null,
+  temperature: 1,
+  ollama_timeout: 600,
+  ollama_num_predict: -1,
+  ollama_reasoning: null,
 };
 
 export interface AgentLlmSettingsCardProps {
@@ -66,6 +70,14 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
               data.ollama_base_url || DEFAULT_LLM.ollama_base_url,
             openai_base_url: data.openai_base_url ?? null,
             api_key: data.api_key ?? null,
+            temperature: data.temperature ?? DEFAULT_LLM.temperature,
+            ollama_timeout: data.ollama_timeout ?? DEFAULT_LLM.ollama_timeout,
+            ollama_num_predict:
+              data.ollama_num_predict ?? DEFAULT_LLM.ollama_num_predict,
+            ollama_reasoning:
+              data.ollama_reasoning === undefined
+                ? DEFAULT_LLM.ollama_reasoning
+                : data.ollama_reasoning,
           });
         }
       })
