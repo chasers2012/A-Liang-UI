@@ -19,6 +19,16 @@ class FactorDataSource(ABC):
     """
 
     @abstractmethod
+    def list_columns(self) -> list[str]:
+        """
+        Logical factor dependency names this source can supply (e.g. for dataset bindings).
+
+        For SQL sources these are typically keys of the column map; for CSV, data column
+        names from the file header (excluding date/asset index columns). Sorted for stable UI.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_panel(
         self,
         *,

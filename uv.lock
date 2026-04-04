@@ -506,12 +506,14 @@ source = { editable = "lib/csv_datasource" }
 dependencies = [
     { name = "factor" },
     { name = "pandas" },
+    { name = "workspace" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "factor", editable = "lib/factor" },
     { name = "pandas", specifier = ">=2.0.0" },
+    { name = "workspace", editable = "lib/workspace" },
 ]
 
 [[package]]

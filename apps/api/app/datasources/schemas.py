@@ -281,3 +281,9 @@ class SqlTableColumnsRequest(BaseModel):
 
 class SqlTableColumnsResponse(BaseModel):
     columns: list[str]
+
+
+class DatasourceDependencyFieldsResponse(BaseModel):
+    """因子依赖字段名：SQL 为 column_map 的键；CSV 为文件表头（不含日期/资产列）。"""
+
+    fields: list[str]

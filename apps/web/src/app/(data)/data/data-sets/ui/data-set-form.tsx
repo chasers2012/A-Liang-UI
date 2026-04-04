@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
@@ -33,6 +33,7 @@ import {
   ApiError,
   createDataSet,
   getDataSet,
+  getDatasourceDependencyFields,
   listDatasources,
   patchDataSet,
   type DataSetPublic,
@@ -76,7 +77,7 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     row.datasource_bindings.length > 0
       ? row.datasource_bindings.map((b) => ({
         datasource_id: b.datasource_id,
-        dependencies: normalizeBindingDependencies(b.dependencies),
+        dependencies: normalizeBindingDependencies(b.dependencies, []),
       }))
       : [{ datasource_id: "", dependencies: [] }];
   return {
@@ -104,31 +105,21 @@ export function parseStockCodesFromText(text: string): string[] {
   return out;
 }
 
-/** 常用行情/量价依赖，与多选框一致；其余名称通过「其它依赖」填写 */
-export const PRESET_DEPENDENCY_FIELDS = [
-  "open",
-  "high",
-  "low",
-  "close",
-  "volume",
-  "amount",
-  "turn",
-  "vwap",
-] as const;
-
-const PRESET_DEPENDENCY_SET = new Set<string>(PRESET_DEPENDENCY_FIELDS);
-
-function normalizeBindingDependencies(deps: string[]): string[] {
+/** 按数据源给出的字段顺序排列已选依赖，并保留不在列表中的历史项（兼容旧数据） */
+function normalizeBindingDependencies(
+  deps: string[],
+  preferredOrder: string[],
+): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const p of PRESET_DEPENDENCY_FIELDS) {
-    if (deps.includes(p) && !seen.has(p)) {
-      seen.add(p);
-      out.push(p);
+  for (const f of preferredOrder) {
+    if (deps.includes(f) && !seen.has(f)) {
+      seen.add(f);
+      out.push(f);
     }
   }
   for (const d of deps) {
-    if (!PRESET_DEPENDENCY_SET.has(d) && !seen.has(d)) {
+    if (!seen.has(d)) {
       seen.add(d);
       out.push(d);
     }
@@ -136,7 +127,219 @@ function normalizeBindingDependencies(deps: string[]): string[] {
   return out;
 }
 
+function preferredFieldOrderForDatasource(
+  ds: DataSourcePublic | undefined,
+  csvDepFieldsById: Record<string, string[]>,
+): string[] {
+  if (!ds) return [];
+  if (ds.type === "sql" && ds.sql) {
+    return Object.keys(ds.sql.column_map)
+      .filter((k) => k.trim())
+      .sort((a, b) => a.localeCompare(b));
+  }
+  if (ds.type === "csv") {
+    return csvDepFieldsById[ds.id] ?? [];
+  }
+  return [];
+}
+
 const DATA_SET_MAIN_FORM_ID = "data-set-main-form";
+
+type BindingDependencyMessagesProps = {
+  csvLoading: boolean;
+  sqlMapEmpty: boolean;
+  csvNoDataColumns: boolean;
+  extras: string[];
+};
+
+function BindingDependencyMessages({
+  csvLoading,
+  sqlMapEmpty,
+  csvNoDataColumns,
+  extras,
+}: BindingDependencyMessagesProps) {
+  return (
+    <>
+      {csvLoading ? (
+        <p className="text-xs text-muted-foreground">
+          正在加载该数据源可用字段…
+        </p>
+      ) : null}
+      {sqlMapEmpty ? (
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          该 SQL 数据源尚未配置字段映射（column_map），请先在「数据源」中保存映射后再勾选依赖。
+        </p>
+      ) : null}
+      {csvNoDataColumns ? (
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          未能从 CSV
+          读取到数据列（或仅剩日期/资产列）。请检查数据源路径与文件可读性。
+        </p>
+      ) : null}
+      {extras.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          已保存且不在当前列表中的依赖：{" "}
+          <span className="font-mono">{extras.join(", ")}</span>
+          （仍会提交；若需调整请修改数据源或取消勾选后保存）
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+type BindingDependencyCheckboxListProps = {
+  row: DataSetBindingFormRow;
+  fields: string[];
+  index: number;
+  updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
+};
+
+function BindingDependencyCheckboxList({
+  row,
+  fields,
+  index,
+  updateBinding,
+}: BindingDependencyCheckboxListProps) {
+  return (
+    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-md border border-border/60 bg-background/50 px-3 py-3">
+      {fields.map((field) => (
+        <Label
+          key={field}
+          className="flex cursor-pointer items-center gap-2 font-normal"
+        >
+          <input
+            type="checkbox"
+            className={cn(
+              "size-4 shrink-0 rounded border border-input accent-primary",
+              "cursor-pointer",
+            )}
+            checked={row.dependencies.includes(field)}
+            onChange={(e) => {
+              const on = e.target.checked;
+              const next = on
+                ? normalizeBindingDependencies(
+                  [...row.dependencies, field],
+                  fields,
+                )
+                : normalizeBindingDependencies(
+                  row.dependencies.filter((d) => d !== field),
+                  fields,
+                );
+              updateBinding(index, { dependencies: next });
+            }}
+          />
+          <span className="font-mono text-sm">{field}</span>
+        </Label>
+      ))}
+    </div>
+  );
+}
+
+type DataSetBindingRowBlockProps = {
+  index: number;
+  row: DataSetBindingFormRow;
+  bindingsLength: number;
+  datasources: DataSourcePublic[];
+  csvDepFields: Record<string, string[]>;
+  dsItems: Record<string, string>;
+  enabledDs: DataSourcePublic[];
+  updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
+  removeBinding: (i: number) => void;
+};
+
+function DataSetBindingRowBlock({
+  index,
+  row,
+  bindingsLength,
+  datasources,
+  csvDepFields,
+  dsItems,
+  enabledDs,
+  updateBinding,
+  removeBinding,
+}: DataSetBindingRowBlockProps) {
+  const ds = datasources.find((d) => d.id === row.datasource_id.trim());
+  const fields = preferredFieldOrderForDatasource(ds, csvDepFields);
+  const trimmedId = row.datasource_id.trim();
+  const csvLoading =
+    !!ds &&
+    ds.type === "csv" &&
+    !!trimmedId &&
+    !Object.prototype.hasOwnProperty.call(csvDepFields, trimmedId);
+  const extras = row.dependencies.filter((d) => !fields.includes(d));
+  const sqlMapEmpty =
+    ds?.type === "sql" &&
+    !!ds.sql &&
+    Object.keys(ds.sql.column_map).length === 0;
+  const csvNoDataColumns =
+    ds?.type === "csv" && !csvLoading && Boolean(trimmedId) && fields.length === 0;
+
+  return (
+    <div
+      className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          绑定 {index + 1}
+        </span>
+        {bindingsLength > 1 ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 text-destructive"
+            onClick={() => removeBinding(index)}
+          >
+            <Minus className="size-4" />
+            移除
+          </Button>
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        <Label>数据源</Label>
+        <Select
+          modal={false}
+          items={dsItems}
+          value={row.datasource_id}
+          onValueChange={(v) => v && updateBinding(index, { datasource_id: v })}
+          disabled={enabledDs.length === 0}
+        >
+          <SelectTrigger className="w-full min-w-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {enabledDs.map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name} ({d.type})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Label>依赖字段</Label>
+          <p className="text-xs text-muted-foreground">
+            选项来自该数据源配置（SQL 为字段映射的键名，CSV
+            为文件表头中的数据列）。单数据源时可全不选，表示使用因子全部依赖；多数据源时须至少选择一项。
+          </p>
+          <BindingDependencyMessages
+            csvLoading={csvLoading}
+            sqlMapEmpty={sqlMapEmpty}
+            csvNoDataColumns={csvNoDataColumns}
+            extras={extras}
+          />
+          <BindingDependencyCheckboxList
+            row={row}
+            fields={fields}
+            index={index}
+            updateBinding={updateBinding}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Props = {
   mode: "create" | "edit";
@@ -151,6 +354,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [loading, setLoading] = useState(mode === "edit");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** CSV 数据源的依赖字段（表头），按数据源 id 缓存 */
+  const [csvDepFields, setCsvDepFields] = useState<Record<string, string[]>>({});
+  const csvDepLoadedRef = useRef(new Set<string>());
 
   const set = useCallback((patch: Partial<DataSetFormState>) => {
     setForm((f) => ({ ...f, ...patch }));
@@ -218,6 +424,32 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     };
   }, [mode, dataSetId]);
 
+  useEffect(() => {
+    const ids = [
+      ...new Set(
+        form.bindings
+          .map((b) => b.datasource_id.trim())
+          .filter(Boolean),
+      ),
+    ];
+    for (const id of ids) {
+      const ds = datasources.find((d) => d.id === id);
+      if (ds?.type !== "csv") continue;
+      if (csvDepLoadedRef.current.has(id)) continue;
+      csvDepLoadedRef.current.add(id);
+      void getDatasourceDependencyFields(id).then(
+        (r) =>
+          setCsvDepFields((prev) => ({
+            ...prev,
+            [id]: r.fields,
+          })),
+        () => {
+          setCsvDepFields((prev) => ({ ...prev, [id]: [] }));
+        },
+      );
+    }
+  }, [form.bindings, datasources]);
+
   const enabledDs = datasources.filter((d) => d.enabled);
   const dsItems: Record<string, string> = {};
   for (const d of enabledDs) {
@@ -245,7 +477,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     if (form.bindings.length > 1) {
       for (const b of form.bindings) {
         if (!b.dependencies.length) {
-          setFormError("多个数据源时，每条绑定须至少勾选一个依赖字段或填写其它依赖");
+          setFormError("多个数据源时，每条绑定须至少勾选一个依赖字段");
           return;
         }
       }
@@ -253,7 +485,13 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     const stock_codes = parseStockCodesFromText(form.stock_codes_text);
     const datasource_bindings = form.bindings.map((b) => ({
       datasource_id: b.datasource_id.trim(),
-      dependencies: normalizeBindingDependencies(b.dependencies),
+      dependencies: normalizeBindingDependencies(
+        b.dependencies,
+        preferredFieldOrderForDatasource(
+          datasources.find((d) => d.id === b.datasource_id.trim()),
+          csvDepFields,
+        ),
+      ),
     }));
     const payload = {
       name,
@@ -393,87 +631,18 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           </CardHeader>
           <CardContent className="space-y-6">
             {form.bindings.map((row, index) => (
-              <div
+              <DataSetBindingRowBlock
                 key={index}
-                className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    绑定 {index + 1}
-                  </span>
-                  {form.bindings.length > 1 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 gap-1 text-destructive"
-                      onClick={() => removeBinding(index)}
-                    >
-                      <Minus className="size-4" />
-                      移除
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <Label>数据源</Label>
-                  <Select
-                    modal={false}
-                    items={dsItems}
-                    value={row.datasource_id}
-                    onValueChange={(v) => v && updateBinding(index, { datasource_id: v })}
-                    disabled={enabledDs.length === 0}
-                  >
-                    <SelectTrigger className="w-full min-w-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {enabledDs.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name} ({d.type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label>依赖字段</Label>
-                    <p className="text-xs text-muted-foreground">
-                      单数据源时可全不选，表示使用因子全部依赖；多数据源时须至少选择或填写一项。
-                    </p>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-md border border-border/60 bg-background/50 px-3 py-3">
-                      {PRESET_DEPENDENCY_FIELDS.map((field) => (
-                        <Label
-                          key={field}
-                          className="flex cursor-pointer items-center gap-2 font-normal"
-                        >
-                          <input
-                            type="checkbox"
-                            className={cn(
-                              "size-4 shrink-0 rounded border border-input accent-primary",
-                              "cursor-pointer",
-                            )}
-                            checked={row.dependencies.includes(field)}
-                            onChange={(e) => {
-                              const on = e.target.checked;
-                              const next = on
-                                ? normalizeBindingDependencies([
-                                  ...row.dependencies,
-                                  field,
-                                ])
-                                : normalizeBindingDependencies(
-                                  row.dependencies.filter((d) => d !== field),
-                                );
-                              updateBinding(index, { dependencies: next });
-                            }}
-                          />
-                          <span className="font-mono text-sm">{field}</span>
-                        </Label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                index={index}
+                row={row}
+                bindingsLength={form.bindings.length}
+                datasources={datasources}
+                csvDepFields={csvDepFields}
+                dsItems={dsItems}
+                enabledDs={enabledDs}
+                updateBinding={updateBinding}
+                removeBinding={removeBinding}
+              />
             ))}
           </CardContent>
         </Card>

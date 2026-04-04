@@ -358,6 +358,15 @@ export function getDatasource(id: string): Promise<DataSourcePublic> {
   );
 }
 
+/** 因子依赖字段名：SQL 为 column_map 键；CSV 为文件表头（不含日期/资产列） */
+export function getDatasourceDependencyFields(
+  id: string,
+): Promise<{ fields: string[] }> {
+  return apiFetchJson<{ fields: string[] }>(
+    `/datasources/${encodeURIComponent(id)}/dependency-fields`,
+  );
+}
+
 export function createDatasource(body: unknown): Promise<DataSourcePublic> {
   return apiFetchJson<DataSourcePublic>("/datasources", {
     method: "POST",

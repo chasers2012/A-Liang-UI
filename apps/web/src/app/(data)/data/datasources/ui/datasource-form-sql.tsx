@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,6 +89,31 @@ export function DatasourceFormSql({
       };
     });
   };
+
+  /** 稳定引用，避免 ColumnMapEditor 在仅 column_map 等更新时误判 inspectContext 变化而循环自动拉列 */
+  const inspectContext = useMemo(
+    () => ({
+      datasourceId: editorMode === "edit" ? editingDatasourceId : null,
+      db_driver: form.db_driver,
+      db_host: form.db_host,
+      db_port: form.db_port,
+      db_username: form.db_username,
+      db_password: form.db_password,
+      db_name: form.db_name,
+      table: form.table,
+    }),
+    [
+      editorMode,
+      editingDatasourceId,
+      form.db_driver,
+      form.db_host,
+      form.db_port,
+      form.db_username,
+      form.db_password,
+      form.db_name,
+      form.table,
+    ],
+  );
 
   return (
     <>
@@ -203,16 +228,7 @@ export function DatasourceFormSql({
           onApplyLoadedColumns={applyLoadedSqlColumns}
           onAddRow={addColumnRow}
           onRemoveRow={removeColumnRow}
-          inspectContext={{
-            datasourceId: editorMode === "edit" ? editingDatasourceId : null,
-            db_driver: form.db_driver,
-            db_host: form.db_host,
-            db_port: form.db_port,
-            db_username: form.db_username,
-            db_password: form.db_password,
-            db_name: form.db_name,
-            table: form.table,
-          }}
+          inspectContext={inspectContext}
         />
       </FormSection>
     </>

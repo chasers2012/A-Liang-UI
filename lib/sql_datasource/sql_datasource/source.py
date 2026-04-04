@@ -49,6 +49,10 @@ class SqlDataSource(FactorDataSource):
         self._asset_sql = _quote_ident(self._engine, asset_column)
         self._column_map = dict(column_map) if column_map else {}
 
+    def list_columns(self) -> list[str]:
+        keys = [k.strip() for k in self._column_map if str(k).strip()]
+        return sorted(set(keys), key=lambda x: (x.lower(), x))
+
     def get_panel(
         self,
         *,

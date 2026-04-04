@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from factor.datasource import FactorDataSource
+from workspace import get_workspace_root
 
 
 class CsvDataSource(FactorDataSource):
@@ -32,10 +33,29 @@ class CsvDataSource(FactorDataSource):
         self._asset_column = asset_column
         self._read_csv_kwargs = dict(read_csv_kwargs) if read_csv_kwargs else {}
 
+    def _resolved_file_path(self) -> Path:
+        """Workspace-relative paths resolve under :func:`get_workspace_root`."""
+        if self._path.is_absolute():
+            return self._path.resolve()
+        return (get_workspace_root() / self._path).resolve()
+
     def _read_csv_kwargs_effective(self) -> dict:
         kw: dict = {"encoding": "utf-8-sig"}
         kw.update(self._read_csv_kwargs)
         return kw
+
+    def list_columns(self) -> list[str]:
+        path = self._resolved_file_path()
+        if not path.is_file():
+            raise ValueError(f"CSV 文件不存在: {path}")
+        read_kw = self._read_csv_kwargs_effective()
+        peek_kw = {k: v for k, v in read_kw.items() if k != "usecols"}
+        header = pd.read_csv(path, nrows=0, **peek_kw)
+        cols = [str(c) for c in header.columns]
+        dc = self._date_column.strip()
+        ac = self._asset_column.strip()
+        data_cols = [c for c in cols if c != dc and c != ac]
+        return sorted(set(data_cols), key=lambda x: (x.lower(), x))
 
     def get_panel(
         self,
@@ -53,7 +73,7 @@ class CsvDataSource(FactorDataSource):
             usecols.add(f)
         read_kw = self._read_csv_kwargs_effective()
         peek_kw = {k: v for k, v in read_kw.items() if k != "usecols"}
-        header = pd.read_csv(self._path, nrows=0, **peek_kw)
+        header = pd.read_csv(self._resolved_file_path(), nrows=0, **peek_kw)
         present = set(header.columns)
         needed = set(usecols)
         missing = sorted(needed - present)
@@ -64,7 +84,7 @@ class CsvDataSource(FactorDataSource):
                 f"Columns present: {sorted(present)}."
             )
         df = pd.read_csv(
-            self._path,
+            self._resolved_file_path(),
             usecols=sorted(usecols),
             **read_kw,
         )

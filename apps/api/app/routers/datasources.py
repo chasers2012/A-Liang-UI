@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import (
     DataSourceCreate,
+    DatasourceDependencyFieldsResponse,
     DataSourcePatch,
     DataSourcePublic,
     DataSourceRecord,
@@ -105,6 +106,25 @@ def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return SqlTableColumnsResponse(columns=cols)
+
+
+@router.get(
+    "/{ds_id}/dependency-fields",
+    response_model=DatasourceDependencyFieldsResponse,
+)
+def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:
+    """供数据集绑定等场景列出该数据源可声明的因子依赖字段名。"""
+    try:
+        inst = DataSourceItemsRegistry.get_datasource(ds_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if inst is None:
+        raise HTTPException(status_code=404, detail="数据源不存在")
+    try:
+        fields = inst.list_columns()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return DatasourceDependencyFieldsResponse(fields=fields)
 
 
 @router.get("/{ds_id}", response_model=DataSourcePublic)
