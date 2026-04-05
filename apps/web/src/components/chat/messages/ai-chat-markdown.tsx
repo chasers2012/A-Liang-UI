@@ -3,16 +3,34 @@
 import {
   darkTheme as incremarkDarkTheme,
   defaultTheme as incremarkDefaultTheme,
-  IncremarkContent,
   mergeTheme,
+  IncremarkContent,
   ThemeProvider as IncremarkThemeProvider,
 } from "@incremark/react";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { useTheme } from "next-themes";
 
 import { cn } from "@/lib/utils";
 
-import "@incremark/theme/styles.css";
+
+
+
+export const AiChatMarkdown = memo(function AiChatMarkdown({
+  content,
+  className, isFinished,
+}: {
+  content: string;
+  className?: string;
+  isFinished: boolean;
+}) {
+
+  return (
+
+    <div className={cn("ai-chat-md wrap-break-word text-sm leading-relaxed", className)}>
+      <IncremarkContent content={content} isFinished={isFinished} />
+    </div>
+  );
+});
 
 
 const SHADCN_THEME_LIGHT = mergeTheme(incremarkDefaultTheme, {
@@ -135,21 +153,9 @@ const SHADCN_THEME_DARK = mergeTheme(incremarkDarkTheme, {
   },
 });
 
-export const AiChatMarkdown = memo(function AiChatMarkdown({
-  content,
-  className, isFinished
-}: {
-  content: string;
-  className?: string;
-  isFinished: boolean;
-}) {
+
+export const AiChartThemeProvider = memo(function AiChartThemeProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme();
-  const shadcnTheme = resolvedTheme === "dark" ? SHADCN_THEME_DARK : SHADCN_THEME_LIGHT;
-  return (
-    <IncremarkThemeProvider theme={shadcnTheme}>
-      <div className={cn("ai-chat-md wrap-break-word text-sm leading-relaxed", className)}>
-        <IncremarkContent content={content} isFinished={isFinished} />
-      </div>
-    </IncremarkThemeProvider>
-  );
+  const shadcnTheme = useMemo(() => resolvedTheme === "dark" ? SHADCN_THEME_DARK : SHADCN_THEME_LIGHT, [resolvedTheme]);
+  return <IncremarkThemeProvider theme={shadcnTheme}>{children}</IncremarkThemeProvider>;
 });

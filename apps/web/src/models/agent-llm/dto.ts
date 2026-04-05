@@ -25,10 +25,11 @@ export type AgentChatToolCallPublic = {
   error?: string;
 };
 
+export type TextBlockPublic = { kind: "text"; content: string };
+export type ToolBlockPublic = { kind: "tool"; call: AgentChatToolCallPublic };
+
 /** 与后端 ``AssistantBlockPublic`` 一致。 */
-export type AgentAssistantBlockPublic =
-  | { kind: "text"; content: string }
-  | { kind: "tool"; call: AgentChatToolCallPublic };
+export type AgentAssistantBlockPublic = TextBlockPublic | ToolBlockPublic;
 
 /** 会话详情 / 持久化中的消息：始终带服务端 ``id``。 */
 export type AgentChatMessagePublic = {

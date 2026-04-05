@@ -1,11 +1,11 @@
 "use client";
 
-import { memo } from "react";
-import { useAtomValue } from "jotai";
+import { memo, useCallback } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { chatIsSendingAtom } from "@/models/chat/session.atom";
+import { chatIsSendingAtom, createChatSessionAtom } from "@/models/chat/session.atom";
 
 import { ArchiveButton } from "./archive-session";
 import { RenameButton } from "./rename-session";
@@ -31,12 +31,13 @@ const NewChatSessionButton = memo(function NewChatSessionButton({
   );
 });
 
-export const ChatSessionTabsActions = memo(function ChatSessionTabsActions({
-  onCreate,
-}: {
-  onCreate: () => void;
-}) {
+export const ChatSessionTabsActions = memo(function ChatSessionTabsActions() {
   const isBusy = useAtomValue(chatIsSendingAtom);
+  const createSession = useSetAtom(createChatSessionAtom);
+
+  const onCreate = useCallback(() => {
+    void createSession();
+  }, [createSession]);
 
   return (
     <div className="flex shrink-0 items-center gap-1">

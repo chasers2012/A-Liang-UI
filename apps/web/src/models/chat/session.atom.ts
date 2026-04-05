@@ -15,9 +15,11 @@ import type {
   AgentChatSessionDetailPublic,
   AgentChatSessionSummaryPublic,
   AgentChatToolCallPublic,
+  TextBlockPublic,
 } from "@/models";
 import type { AssistantBlock } from "@/models/chat/types";
 import { atomFamily } from "jotai-family";
+import { startTransition, type SetStateAction } from "react";
 
 const LAST_ACTIVE_KEY = "quant-agent-chat-last-active-session-id";
 
@@ -71,7 +73,24 @@ function patchToolInBlocks(
 }
 
 export const chatSessionsAtom = atom<AgentChatSessionSummaryPublic[]>([]);
-export const activeChatSessionIdAtom = atom<string | null>(null);
+
+/** 写入时同步 localStorage（last active），读仍走单一来源 */
+export const activeChatSessionIdAtom = (() => {
+  const base = atom<string | null>(null);
+  return atom(
+    (get) => get(base),
+    (_get, set, update: SetStateAction<string | null>) => {
+      set(base, (prev) => {
+        const next = typeof update === "function" ? update(prev) : update;
+        setLastActiveSessionId(next);
+        return next;
+      });
+      Promise.resolve().then(() => {
+        set(openLastFiveSegmentsForNewActiveSessionAtom);
+      });
+    },
+  );
+})();
 
 /**
  * 仅当该会话是否在「当前激活」之间切换时通知订阅者。
@@ -106,9 +125,9 @@ export const sessionMessageIdsAtom = atom<Record<string, string[]>>({});
 
 export const sessionMessageIdsAtomFamily = atomFamily(
   (sessionId: string | undefined | null) =>
-    atom(
+    atom<string[]>(
       (get) =>
-        (sessionId && get(sessionMessageIdsAtom)[sessionId]) ??
+        (sessionId && get(sessionMessageIdsAtom)[sessionId]) ||
         EMPTY_SESSION_MESSAGE_IDS,
     ),
 );
@@ -123,8 +142,19 @@ export const messageAtomFamily = atomFamily((id: string) =>
   atom((get) => get(messagesAtom)[id]),
 );
 
+export const userMessageTextAtomFamily = atomFamily((id: string) =>
+  atom((get) =>
+    (
+      (get(messageAtomFamily(id))?.blocks?.filter((b) => b.kind === "text") ||
+        []) as TextBlockPublic[]
+    )
+      .map((b) => b.content)
+      .join(""),
+  ),
+);
+
 export const messageReplieIdAtomFamily = atomFamily((id: string) =>
-  atom((get) => (get(messageReplieIdsAtom)[id] ?? [])[0]),
+  atom((get) => (get(messageReplieIdsAtom)[id] ?? ([] as string[]))[0]),
 );
 
 /** 当前激活会话下的 segment id 顺序（与每条 user 消息的 id 一致） */
@@ -157,7 +187,20 @@ export const activeLastAssistantLayoutSignatureAtom = atom((get) => {
   return sig;
 });
 
-export const openSegmentsAtom = atom<Record<string, boolean>>({});
+/** 折叠状态更新走 transition，避免与流式内容抢同一帧 */
+export const openSegmentsAtom = (() => {
+  const base = atom<Record<string, boolean>>({});
+  return atom(
+    (get) => get(base),
+    (_get, set, update: SetStateAction<Record<string, boolean>>) => {
+      requestAnimationFrame(() => {
+        startTransition(() => {
+          set(base, update);
+        });
+      });
+    },
+  );
+})();
 
 export const segmentOpenAtomFamily = atomFamily((id: string) =>
   atom(
@@ -167,6 +210,26 @@ export const segmentOpenAtomFamily = atomFamily((id: string) =>
     },
   ),
 );
+
+export const toggleSegmentOpenAtomFamily = atomFamily((id: string) =>
+  atom(null, (get, set) => {
+    set(openSegmentsAtom, (prev) => ({ ...prev, [id]: !prev[id] }));
+  }),
+);
+
+const openLastFiveSegmentsForNewActiveSessionAtom = atom(null, (get, set) => {
+  const activeSession = get(activeChatSessionIdAtom);
+  if (!activeSession) return;
+  const userMessageIds = get(sessionMessageIdsAtomFamily(activeSession));
+  if (!userMessageIds.length) return;
+  const lastFiveMessageIds = userMessageIds.slice(-5);
+
+  for (const messageId of lastFiveMessageIds) {
+    setTimeout(() => {
+      set(segmentOpenAtomFamily(messageId), true);
+    }, 10);
+  }
+});
 
 function replaceSessionTurns(
   get: Getter,
@@ -249,9 +312,9 @@ function removeSessionMessageAtoms(
   );
 }
 
-function sessionMessagesLoaded(get: Getter, sessionId: string): boolean {
-  return sessionId in get(sessionMessageIdsAtom);
-}
+export const sessionMessagesLoadedAtomFamily = atomFamily((sessionId: string) =>
+  atom((get) => sessionId in get(sessionMessageIdsAtom)),
+);
 
 function setLastActiveSessionId(id: string | null): void {
   if (typeof window === "undefined") return;
@@ -301,17 +364,12 @@ function summarizeFirstUserMessage(text: string): string {
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
 
-function setActiveSession(set: Setter, sessionId: string | null): void {
-  set(activeChatSessionIdAtom, sessionId);
-  setLastActiveSessionId(sessionId);
-}
-
 async function ensureSessionTurnsLoaded(
   get: Getter,
   set: Setter,
   sessionId: string,
 ): Promise<AgentChatSessionDetailPublic | null> {
-  if (sessionMessagesLoaded(get, sessionId)) return null;
+  if (get(sessionMessagesLoadedAtomFamily(sessionId))) return null;
   const detail = await getAgentChatSession(sessionId);
   replaceSessionTurns(get, set, sessionId, detail.messages);
   return detail;
@@ -420,11 +478,13 @@ function patchAssistantMessage(
   assistantId: string,
   patch: (assistant: AgentChatMessagePublic) => AgentChatMessagePublic,
 ): void {
-  set(messagesAtom, (prev) => {
-    const assistant = prev[assistantId];
-    if (!assistant) return prev;
-    const newAssistant = patch(assistant);
-    return { ...prev, [assistantId]: newAssistant };
+  startTransition(() => {
+    set(messagesAtom, (prev) => {
+      const assistant = prev[assistantId];
+      if (!assistant) return prev;
+      const newAssistant = patch(assistant);
+      return { ...prev, [assistantId]: newAssistant };
+    });
   });
 }
 
@@ -454,8 +514,7 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
 
   set(chatSessionsAtom, nextList);
   set(activeChatSessionIdAtom, activeId);
-  setLastActiveSessionId(activeId);
-  if (activeId && !sessionMessagesLoaded(get, activeId)) {
+  if (activeId && !get(sessionMessagesLoadedAtomFamily(activeId))) {
     const detail = await getAgentChatSession(activeId);
     replaceSessionTurns(get, set, activeId, detail.messages);
   }
@@ -472,7 +531,7 @@ export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
     const activeId = get(activeChatSessionIdAtom);
     if (activeId && !list.some((s) => s.id === activeId)) {
       const fallback = list[0]?.id ?? null;
-      setActiveSession(set, fallback);
+      set(activeChatSessionIdAtom, fallback);
       if (fallback) await ensureSessionTurnsLoaded(get, set, fallback);
     }
   } catch (e) {
@@ -483,11 +542,13 @@ export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
 export const selectChatSessionAtom = atom(
   null,
   async (get, set, sessionId: string) => {
-    setActiveSession(set, sessionId);
-    const detail = await ensureSessionTurnsLoaded(get, set, sessionId);
-    if (detail) {
-      set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-    }
+    set(activeChatSessionIdAtom, sessionId);
+    startTransition(async () => {
+      const detail = await ensureSessionTurnsLoaded(get, set, sessionId);
+      if (detail) {
+        set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+      }
+    });
   },
 );
 
@@ -495,7 +556,7 @@ export const createChatSessionAtom = atom(null, async (get, set) => {
   const detail = await createAgentChatSession({ title: "新会话" });
   set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
   replaceSessionTurns(get, set, detail.id, detail.messages);
-  setActiveSession(set, detail.id);
+  set(activeChatSessionIdAtom, detail.id);
 });
 
 export const renameChatSessionAtom = atom(
@@ -525,7 +586,7 @@ export const archiveChatSessionAtom = atom(
     if (get(activeChatSessionIdAtom) !== sessionId) return;
 
     const fallback = nextSessions[0]?.id ?? null;
-    setActiveSession(set, fallback);
+    set(activeChatSessionIdAtom, fallback);
     if (fallback) await ensureSessionTurnsLoaded(get, set, fallback);
   },
 );
@@ -539,7 +600,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     const created = await createAgentChatSession({ title: "新会话" });
     set(chatSessionsAtom, (prev) => upsertSummary(prev, created));
     replaceSessionTurns(get, set, created.id, created.messages);
-    setActiveSession(set, created.id);
+    set(activeChatSessionIdAtom, created.id);
     targetSessionId = created.id;
   }
   if (!targetSessionId) return;

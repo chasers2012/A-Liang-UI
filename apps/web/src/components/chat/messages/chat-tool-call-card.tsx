@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { Activity, memo, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from "lucide-react";
 
 import {
@@ -19,19 +19,6 @@ function formatJson(v: unknown): string {
   }
 }
 
-function toolCallDisplayEqual(
-  a: ChatToolCallDisplay,
-  b: ChatToolCallDisplay,
-): boolean {
-  return (
-    a.id === b.id &&
-    a.name === b.name &&
-    a.status === b.status &&
-    a.args === b.args &&
-    a.result === b.result &&
-    a.error === b.error
-  );
-}
 
 const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDisplay['status'] }) {
   return status === "running" ? (
@@ -60,36 +47,49 @@ const ToolCallHeader = memo(function ToolCallHeader({ name, status }: { name: Ch
   )
 });
 
-export const ChatToolCallCard = memo(function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
-  const { name, status, args, result, error } = call;
+const ToolCallArgs = memo(function ToolCallArgs({ args }: { args: unknown }) {
   const argsJson = useMemo(
     () => formatJson(args),
     [args],
   );
+  return (
+    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+      {argsJson}
+    </pre>
+  )
+});
+
+const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknown }) {
   const resultJson = useMemo(
     () => formatJson(result),
     [result],
   );
 
+  return (
+    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+      {resultJson}
+    </pre>
+  )
+});
 
-  const hasDetail = useMemo(() =>
-    args !== undefined ||
-    result !== undefined ||
-    (status === "error" && error)
-    , [args, result, status, error]);
-
-
-  if (!hasDetail) {
-    return (
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs font-medium last:mb-0">
-        <ToolCallHeader name={name} status={status} />
-      </div>
-    );
-  }
+export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
+  const { name, status, args, result, error } = call;
+  const initRef = useRef(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (initRef.current) {
+      return;
+    }
+    initRef.current = true;
+    setTimeout(() => {
+      setOpen(status === "running" || status === "error");
+    }, 0);
+  });
 
   return (
     <Collapsible
-      defaultOpen={status === "running" || status === "error"}
+      open={open}
+      onOpenChange={setOpen}
       className="mb-2 rounded-md border border-border/60 bg-muted/30 text-left last:mb-0"
     >
       <CollapsibleTrigger
@@ -102,26 +102,24 @@ export const ChatToolCallCard = memo(function ChatToolCallCard({ call }: { call:
         <ToolCallHeader name={name} status={status} />
       </CollapsibleTrigger>
       <CollapsibleContent className="border-border/40 border-t px-3 py-2">
-        {args !== undefined ? (
-          <div className="mb-2">
-            <span className="text-[11px] text-muted-foreground">参数</span>
-            <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-              {argsJson}
-            </pre>
-          </div>
-        ) : null}
-        {status === "ok" && result !== undefined ? (
-          <div>
-            <span className="text-[11px] text-muted-foreground">结果</span>
-            <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-              {resultJson}
-            </pre>
-          </div>
-        ) : null}
-        {status === "error" && error ? (
-          <p className="text-[11px] leading-relaxed text-destructive">{error}</p>
-        ) : null}
+        <Activity mode={open ? "visible" : "hidden"}>
+          {args !== undefined ? (
+            <div className="mb-2">
+              <span className="text-[11px] text-muted-foreground">参数</span>
+              <ToolCallArgs args={args} />
+            </div>
+          ) : null}
+          {status === "ok" && result !== undefined ? (
+            <div>
+              <span className="text-[11px] text-muted-foreground">结果</span>
+              <ToolCallResult result={result} />
+            </div>
+          ) : null}
+          {status === "error" && error ? (
+            <p className="text-[11px] leading-relaxed text-destructive">{error}</p>
+          ) : null}
+        </Activity>
       </CollapsibleContent>
     </Collapsible>
   );
-}, (prev, next) => toolCallDisplayEqual(prev.call, next.call));
+}

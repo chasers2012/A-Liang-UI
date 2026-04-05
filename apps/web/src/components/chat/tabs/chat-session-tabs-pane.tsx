@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { useSetAtom } from "jotai";
 
 import type { AgentChatSessionSummaryPublic } from "@/models";
@@ -15,18 +15,12 @@ export const ChatSessionTabsPane = memo(function ChatSessionTabsPane({
 }) {
   const selectSession = useSetAtom(selectChatSessionAtom);
 
-  const onSelectSession = useCallback(
-    (id: string) => {
-      void selectSession(id);
-    },
-    [selectSession],
-  );
 
   return (
     <div className="min-w-0 flex-1">
       <ChatSessionTabsScrollArea
         sessions={sessions}
-        onSelectSession={onSelectSession}
+        onSelectSession={selectSession}
       />
     </div>
   );

@@ -1,65 +1,46 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   activeLastAssistantLayoutSignatureAtom,
   activeUserMessageIdsAtom,
   chatErrorAtom,
   chatHydratedAtom,
-  chatIsSendingAtom,
   hydrateChatStateAtom,
-  openSegmentsAtom,
 } from "@/models/chat/session.atom";
 import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/messages";
 import { ChatSessionTabs } from "./tabs";
 
-
+const scrollToBottom = (bottomTag: HTMLDivElement | null) => {
+  if (!bottomTag) return;
+  bottomTag.scrollIntoView({ behavior: "auto", block: 'nearest' });
+};
 
 export function HomeAiChat() {
   const errorText = useAtomValue(chatErrorAtom);
   const hydrated = useAtomValue(chatHydratedAtom);
   const userMessageIds = useAtomValue(activeUserMessageIdsAtom);
-  const isSending = useAtomValue(chatIsSendingAtom);
   const lastAssistantLayoutSig = useAtomValue(activeLastAssistantLayoutSignatureAtom);
-  const setOpenSegments = useSetAtom(openSegmentsAtom);
   const hydrate = useSetAtom(hydrateChatStateAtom);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-
-  const scrollToBottom = useCallback(() => {
-    if (!bottomRef.current) return;
-    bottomRef.current.scrollIntoView({ behavior: "auto", block: 'nearest' });
-  }, []);
 
   useEffect(() => {
     if (hydrated) return;
     void hydrate();
   }, [hydrate, hydrated]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!hydrated) return;
-    scrollToBottom();
-  }, [hydrated, isSending, userMessageIds, lastAssistantLayoutSig, scrollToBottom]);
-
+    scrollToBottom(bottomRef.current);
+  }, [hydrated]);
 
   useEffect(() => {
-    if (!userMessageIds.length) return;
+    scrollToBottom(bottomRef.current);
+  }, [userMessageIds, lastAssistantLayoutSig]);
 
-    const latestIds = new Set(userMessageIds.slice(-5));
-    setOpenSegments((prev) => {
-      const next = { ...prev };
-      for (const mid of userMessageIds) {
-        next[mid] = latestIds.has(mid);
-      }
-      return next;
-    });
-    setTimeout(() => {
-      scrollToBottom();
-    }, 300);
-
-  }, [scrollToBottom, setOpenSegments, userMessageIds]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
