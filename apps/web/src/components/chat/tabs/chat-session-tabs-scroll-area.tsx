@@ -1,13 +1,13 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useAtomValue, useStore } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgentChatSessionSummaryPublic } from "@/models";
-import { activeChatSessionIdAtom, chatIsSendingAtom } from "@/models/chat/session.atom";
+import { activeChatSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatSessionAtom } from "@/models/chat/session.atom";
 
 import { ChatSessionTabItem } from "./chat-session-tab-item";
 
@@ -85,13 +85,9 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
   );
 });
 
-export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea({
-  sessions,
-  onSelectSession,
-}: {
-  sessions: AgentChatSessionSummaryPublic[];
-  onSelectSession: (id: string) => void;
-}) {
+export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea() {
+  const sessions = useAtomValue(chatSessionsAtom);
+  const selectSession = useSetAtom(selectChatSessionAtom);
   const isBusy = useAtomValue(chatIsSendingAtom);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -155,7 +151,7 @@ export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea
         <ChatSessionTabsTabList
           sessions={sessions}
           disabled={isBusy}
-          onSelectSession={onSelectSession}
+          onSelectSession={selectSession}
         />
       </div>
 

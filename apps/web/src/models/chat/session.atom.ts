@@ -79,15 +79,23 @@ export const activeChatSessionIdAtom = (() => {
   const base = atom<string | null>(null);
   return atom(
     (get) => get(base),
-    (_get, set, update: SetStateAction<string | null>) => {
-      set(base, (prev) => {
-        const next = typeof update === "function" ? update(prev) : update;
-        setLastActiveSessionId(next);
-        return next;
-      });
-      Promise.resolve().then(() => {
-        set(openLastFiveSegmentsForNewActiveSessionAtom);
-      });
+    (get, set, update: SetStateAction<string | null>) => {
+      set(base, update);
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          const next = get(base);
+          setLastActiveSessionId(next);
+        });
+
+        requestAnimationFrame(() => {
+          set(activeUserMessageIdsAtom, () => {
+            return get(sessionMessageIdsAtomFamily(get(base)));
+          });
+        });
+        requestAnimationFrame(() => {
+          set(openLastFiveSegmentsForNewActiveSessionAtom);
+        });
+      }, 0);
     },
   );
 })();
@@ -96,8 +104,10 @@ export const activeChatSessionIdAtom = (() => {
  * 仅当该会话是否在「当前激活」之间切换时通知订阅者。
  * 用于 tab 项：避免整表订阅 `activeChatSessionIdAtom` 导致切换时 O(n) 重渲染。
  */
-export const isActiveChatSessionAtomFamily = atomFamily((sessionId: string) =>
-  atom((get) => get(activeChatSessionIdAtom) === sessionId),
+export const isActiveChatSessionAtomFamily = atomFamily(
+  (sessionId: string) =>
+    atom((get) => get(activeChatSessionIdAtom) === sessionId),
+  (a, b) => a === b,
 );
 
 /** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeChatSessionIdAtom 组合使用） */
@@ -138,29 +148,32 @@ export const messagesAtom = atom<Record<string, AgentChatMessagePublic>>({});
 // user message id → assistant message ids
 export const messageReplieIdsAtom = atom<Record<string, string[]>>({});
 
-export const messageAtomFamily = atomFamily((id: string) =>
-  atom((get) => get(messagesAtom)[id]),
+export const messageAtomFamily = atomFamily(
+  (id: string) => atom((get) => get(messagesAtom)[id]),
+  (a, b) => a === b,
 );
 
-export const userMessageTextAtomFamily = atomFamily((id: string) =>
-  atom((get) =>
-    (
-      (get(messageAtomFamily(id))?.blocks?.filter((b) => b.kind === "text") ||
-        []) as TextBlockPublic[]
-    )
-      .map((b) => b.content)
-      .join(""),
-  ),
+export const userMessageTextAtomFamily = atomFamily(
+  (id: string) =>
+    atom((get) =>
+      (
+        (get(messageAtomFamily(id))?.blocks?.filter((b) => b.kind === "text") ||
+          []) as TextBlockPublic[]
+      )
+        .map((b) => b.content)
+        .join(""),
+    ),
+  (a, b) => a === b,
 );
 
-export const messageReplieIdAtomFamily = atomFamily((id: string) =>
-  atom((get) => (get(messageReplieIdsAtom)[id] ?? ([] as string[]))[0]),
+export const messageReplieIdAtomFamily = atomFamily(
+  (id: string) =>
+    atom((get) => (get(messageReplieIdsAtom)[id] ?? ([] as string[]))[0]),
+  (a, b) => a === b,
 );
 
 /** 当前激活会话下的 segment id 顺序（与每条 user 消息的 id 一致） */
-export const activeUserMessageIdsAtom = atom((get) => {
-  return get(sessionMessageIdsAtomFamily(get(activeChatSessionIdAtom)));
-});
+export const activeUserMessageIdsAtom = atom<string[]>([]);
 
 /**
  * 当前会话「最后一条助手回复」内容签名；流式 delta / 工具块更新时变化，
@@ -205,16 +218,13 @@ export const openSegmentsAtom = (() => {
 export const segmentOpenAtomFamily = atomFamily((id: string) =>
   atom(
     (get) => get(openSegmentsAtom)[id] ?? false,
-    (_get, set, isOpen: boolean) => {
-      set(openSegmentsAtom, (prev) => ({ ...prev, [id]: isOpen }));
+    (_get, set, update: boolean | SetStateAction<boolean>) => {
+      set(openSegmentsAtom, (prev) => ({
+        ...prev,
+        [id]: typeof update === "function" ? update(prev[id]) : update,
+      }));
     },
   ),
-);
-
-export const toggleSegmentOpenAtomFamily = atomFamily((id: string) =>
-  atom(null, (get, set) => {
-    set(openSegmentsAtom, (prev) => ({ ...prev, [id]: !prev[id] }));
-  }),
 );
 
 const openLastFiveSegmentsForNewActiveSessionAtom = atom(null, (get, set) => {
@@ -223,12 +233,11 @@ const openLastFiveSegmentsForNewActiveSessionAtom = atom(null, (get, set) => {
   const userMessageIds = get(sessionMessageIdsAtomFamily(activeSession));
   if (!userMessageIds.length) return;
   const lastFiveMessageIds = userMessageIds.slice(-5);
-
-  for (const messageId of lastFiveMessageIds) {
-    setTimeout(() => {
+  startTransition(() => {
+    for (const messageId of lastFiveMessageIds) {
       set(segmentOpenAtomFamily(messageId), true);
-    }, 10);
-  }
+    }
+  });
 });
 
 function replaceSessionTurns(

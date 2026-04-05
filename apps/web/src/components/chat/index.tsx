@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
-  activeLastAssistantLayoutSignatureAtom,
-  activeUserMessageIdsAtom,
+
   chatErrorAtom,
   chatHydratedAtom,
   hydrateChatStateAtom,
@@ -12,51 +11,51 @@ import {
 import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/messages";
 import { ChatSessionTabs } from "./tabs";
+import { GeneratingIndicator } from "./messages/generating-indicator";
+import { AiChartThemeProvider } from "./messages/ai-chat-markdown";
 
-const scrollToBottom = (bottomTag: HTMLDivElement | null) => {
-  if (!bottomTag) return;
-  bottomTag.scrollIntoView({ behavior: "auto", block: 'nearest' });
-};
 
-export function HomeAiChat() {
+function ChatError() {
   const errorText = useAtomValue(chatErrorAtom);
+  if (!errorText) {
+    return null
+  }
+  return <p className="shrink-0 px-6 text-sm text-destructive" role="alert">
+    {errorText}
+  </p>
+}
+
+
+function HydrateChatState() {
   const hydrated = useAtomValue(chatHydratedAtom);
-  const userMessageIds = useAtomValue(activeUserMessageIdsAtom);
-  const lastAssistantLayoutSig = useAtomValue(activeLastAssistantLayoutSignatureAtom);
   const hydrate = useSetAtom(hydrateChatStateAtom);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-
-
   useEffect(() => {
     if (hydrated) return;
     void hydrate();
   }, [hydrate, hydrated]);
+  return null;
+}
 
-  useEffect(() => {
-    if (!hydrated) return;
-    scrollToBottom(bottomRef.current);
-  }, [hydrated]);
-
-  useEffect(() => {
-    scrollToBottom(bottomRef.current);
-  }, [userMessageIds, lastAssistantLayoutSig]);
+export function HomeAiChat() {
 
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <HydrateChatState />
       <ChatSessionTabs />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
-        <div className=" overflow-y-auto overflow-x-hidden h-full w-full">
-          <div className="flex w-full min-w-0 flex-col gap-3 p-6 pl-9 ">
-            <AiChatMessages />
-            <div ref={bottomRef} className=" h-0 w-full" />
+
+        <div className=" overflow-y-auto overflow-x-hidden h-full w-full relative">
+          <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>
+
+          <div className="flex w-full min-w-0 flex-col gap-3 pb-3 pl-9 pr-1">
+            <AiChartThemeProvider>
+              <AiChatMessages />
+            </AiChartThemeProvider>
+            <GeneratingIndicator />
           </div>
         </div>
-        {errorText ? (
-          <p className="shrink-0 px-6 text-sm text-destructive" role="alert">
-            {errorText}
-          </p>
-        ) : null}
+        <ChatError />
         <div className="shrink-0 px-6 pb-6">
           <AiChatComposer />
         </div>
