@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 
@@ -35,13 +35,9 @@ export const ChatSessionTabsActions = memo(function ChatSessionTabsActions() {
   const isBusy = useAtomValue(chatIsSendingAtom);
   const createSession = useSetAtom(createChatSessionAtom);
 
-  const onCreate = useCallback(() => {
-    void createSession();
-  }, [createSession]);
-
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <NewChatSessionButton disabled={isBusy} onCreate={onCreate} />
+      <NewChatSessionButton disabled={isBusy} onCreate={createSession} />
       <RenameButton disabled={isBusy} />
       <ArchiveButton disabled={isBusy} />
     </div>

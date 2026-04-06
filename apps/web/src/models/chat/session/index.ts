@@ -15,7 +15,6 @@ import {
   chatHydratedAtom,
   chatInputAtom,
   chatIsSendingAtom,
-  chatSessionsAtom,
 } from "./atoms.base";
 
 import { CHAT_DEFAULT_TITLE } from "./constants";
@@ -50,6 +49,7 @@ import {
   toggleSegmentOpenAtomFamily,
 } from "./segment-open";
 import {
+  chatSessionsAtom,
   refetchChatSessionsListAtom,
   selectChatSessionAtom,
 } from "./session-list";
@@ -187,16 +187,13 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
         message_count: created.messages.length,
       },
     ];
-    // set(sessionDetailAtomFamily(created.id), created);
     activeId = created.id;
   } else if (!activeId || !list.some((i) => i.id === activeId)) {
     activeId = list[0].id;
   }
-
   set(chatSessionsAtom, nextList);
-  if (activeId) await set(sessionDetailAtomFamily(activeId));
-
   set(activeSessionIdAtom, activeId);
+  if (activeId) await set(sessionDetailAtomFamily(activeId));
   set(chatHydratedAtom, true);
 });
 
