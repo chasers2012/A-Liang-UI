@@ -8,9 +8,10 @@ import type {
 import type { AssistantBlock } from "@/models/chat/types";
 
 export function appendAssistantDelta(
-  prev: AgentChatMessagePublic,
+  prev: AgentChatMessagePublic | undefined,
   delta: string,
-): AgentChatMessagePublic {
+): AgentChatMessagePublic | undefined {
+  if (!prev) return prev;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
   if (last?.kind === "text") {
@@ -25,24 +26,29 @@ export function appendAssistantDelta(
 }
 
 export function applyToolStart(
-  prev: AgentChatMessagePublic,
+  prev: AgentChatMessagePublic | undefined,
   payload: { name: string; id: string; args?: unknown },
-): AgentChatMessagePublic {
+): AgentChatMessagePublic | undefined {
+  if (!prev) return prev;
   const call: AgentChatToolCallPublic = {
     id: payload.id,
     name: payload.name,
     args: payload.args,
     status: "running",
   };
-  const blocks: AssistantBlock[] = [...(prev.blocks ?? []), { kind: "tool", call }];
+  const blocks: AssistantBlock[] = [
+    ...(prev.blocks ?? []),
+    { kind: "tool", call },
+  ];
   return { ...prev, blocks };
 }
 
 export function patchToolInBlocks(
-  prev: AgentChatMessagePublic,
+  prev: AgentChatMessagePublic | undefined,
   id: string,
   patch: Partial<AgentChatToolCallPublic>,
-): AgentChatMessagePublic {
+): AgentChatMessagePublic | undefined {
+  if (!prev) return prev;
   const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== "tool" || b.call.id !== id) return b;
     return { kind: "tool", call: { ...b.call, ...patch } };

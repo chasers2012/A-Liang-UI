@@ -9,12 +9,8 @@ import "@incremark/theme/styles.css";
 import { ChatMessageCollapsible } from "./chat-message-collapsible";
 
 
-
-
-
 export const AiChatMessages = memo(function AiChatMessages() {
   const userMessageIds = useAtomValue(activeUserMessageIdsAtom);
-  console.log("userMessageIds", userMessageIds);
 
   return (userMessageIds ?? []).map((mid) => (
     <ChatMessageCollapsible

@@ -1,5 +1,4 @@
 import { atom, type Getter, type Setter } from "jotai";
-import { atomFamily } from "jotai-family";
 import { startTransition } from "react";
 
 import {
@@ -10,10 +9,7 @@ import {
   postAgentChatStream,
   renameAgentChatSession,
 } from "@/lib/quant-agent-api";
-import type {
-  AgentChatMessagePublic,
-  AgentChatSessionSummaryPublic,
-} from "@/models";
+import type { AgentChatMessagePublic } from "@/models";
 import {
   chatErrorAtom,
   chatHydratedAtom,
@@ -35,10 +31,13 @@ import {
 import {
   activeSessionIdAtom,
   activeUserMessageIdsAtom,
+  chatSessionSummaryAtomFamily,
+  hasValidActiveChatSessionAtom,
   isActiveChatSessionAtomFamily,
 } from "./active-session";
 import {
   messagesAtomFamily,
+  removeSessionMessageAtom,
   replieIdOfMessageAtomFamily,
   replyOfMessageAtomFamily,
   sessionDetailAtomFamily,
@@ -50,6 +49,10 @@ import {
   segmentOpenAtomFamily,
   toggleSegmentOpenAtomFamily,
 } from "./segment-open";
+import {
+  refetchChatSessionsListAtom,
+  selectChatSessionAtom,
+} from "./session-list";
 
 export {
   activeUserMessageIdsAtom,
@@ -68,45 +71,11 @@ export {
   userMessageTextAtomFamily,
   activeSessionIdAtom,
   isActiveChatSessionAtomFamily,
+  chatSessionSummaryAtomFamily,
+  hasValidActiveChatSessionAtom,
+  refetchChatSessionsListAtom,
+  selectChatSessionAtom,
 };
-
-/** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeSessionIdAtom 组合使用） */
-export const chatSessionSummaryAtomFamily = atomFamily((sessionId: string) =>
-  atom((get): AgentChatSessionSummaryPublic | null => {
-    if (!sessionId) return null;
-    const sessions = get(chatSessionsAtom);
-    return sessions.find((s) => s.id === sessionId) ?? null;
-  }),
-);
-
-/** 当前激活 id 是否对应列表中的会话；仅在有无有效激活之间变化，切换 tab 时通常保持 true 不触发订阅者更新 */
-export const hasValidActiveChatSessionAtom = atom((get) => {
-  const id = get(activeSessionIdAtom);
-  if (!id) return false;
-  return get(chatSessionSummaryAtomFamily(id)) != null;
-});
-
-function removeSessionMessageAtoms(
-  get: Getter,
-  set: Setter,
-  sessionId: string,
-): void {
-  const userIds = get(sessionUserMessageIdsAtomFamily(sessionId));
-  if (!userIds?.length) return;
-
-  const removeIds = new Set<string>([
-    ...userIds,
-    ...userIds.flatMap((uid) => get(userMessageReplieIdsAtomFamily(uid)) ?? []),
-  ]);
-
-  for (const id of removeIds) {
-    set(messagesAtomFamily(id), undefined);
-  }
-  for (const uid of userIds) {
-    userMessageReplieIdsAtomFamily.remove(uid);
-  }
-  sessionUserMessageIdsAtomFamily.remove(sessionId);
-}
 
 function buildPayloadMessages(
   get: Getter,
@@ -177,19 +146,28 @@ function rollbackOptimisticSend(
   userMessageReplieIdsAtomFamily.remove(userId);
 }
 
-function patchAssistantMessage(
-  get: Getter,
-  set: Setter,
-  assistantId: string,
-  patch: (assistant: AgentChatMessagePublic) => AgentChatMessagePublic,
-): void {
-  startTransition(() => {
-    const assistant = get(messagesAtomFamily(assistantId));
-    if (!assistant) return;
-    const newAssistant = patch(assistant);
-    set(messagesAtomFamily(assistantId), newAssistant);
-  });
-}
+const patchAssistantMessageAtom = atom(
+  null,
+  (
+    get,
+    set,
+    {
+      mid,
+      patch,
+    }: {
+      mid: string;
+      patch: (
+        message: AgentChatMessagePublic | undefined,
+      ) => AgentChatMessagePublic | undefined;
+    },
+  ) => {
+    startTransition(() => {
+      const message = get(messagesAtomFamily(mid));
+      if (!message) return;
+      set(messagesAtomFamily(mid), patch);
+    });
+  },
+);
 
 export const hydrateChatStateAtom = atom(null, async (get, set) => {
   if (get(chatHydratedAtom)) return;
@@ -217,43 +195,10 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
 
   set(chatSessionsAtom, nextList);
   if (activeId) await set(sessionDetailAtomFamily(activeId));
-  console.log("activeId", activeId);
 
   set(activeSessionIdAtom, activeId);
   set(chatHydratedAtom, true);
 });
-
-/** 从服务端重新拉取当前会话列表（例如归档恢复后同步首页侧栏）。 */
-export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
-  set(chatErrorAtom, null);
-  try {
-    const list = await listAgentChatSessions();
-    set(chatSessionsAtom, list);
-
-    const activeId = get(activeSessionIdAtom);
-    if (activeId && !list.some((s) => s.id === activeId)) {
-      const fallback = list[0]?.id ?? null;
-      set(activeSessionIdAtom, fallback);
-      if (fallback) set(sessionDetailAtomFamily(fallback));
-    }
-  } catch (e) {
-    set(chatErrorAtom, e instanceof ApiError ? e.message : "刷新会话列表失败");
-  }
-});
-
-export const selectChatSessionAtom = atom(
-  null,
-  async (get, set, sessionId: string) => {
-    set(activeSessionIdAtom, sessionId);
-    startTransition(async () => {
-      await set(sessionDetailAtomFamily(sessionId));
-      const detail = get(sessionDetailAtomFamily(sessionId));
-      if (detail) {
-        set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-      }
-    });
-  },
-);
 
 export const createChatSessionAtom = atom(null, async (get, set) => {
   const detail = await createAgentChatSession({ title: CHAT_DEFAULT_TITLE });
@@ -284,7 +229,7 @@ export const archiveChatSessionAtom = atom(
 
     const nextSessions = sessions.filter((s) => s.id !== sessionId);
     set(chatSessionsAtom, nextSessions);
-    removeSessionMessageAtoms(get, set, sessionId);
+    set(removeSessionMessageAtom, sessionId);
 
     if (get(activeSessionIdAtom) !== sessionId) return;
 
@@ -365,30 +310,36 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           streamAssistantId = ids.assistant;
         },
         onDelta: (delta) => {
-          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
-            appendAssistantDelta(assistant, delta),
-          );
+          set(patchAssistantMessageAtom, {
+            mid: streamAssistantId,
+            patch: (message) => appendAssistantDelta(message, delta),
+          });
         },
         onToolStart: (payload) => {
-          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
-            applyToolStart(assistant, payload),
-          );
+          set(patchAssistantMessageAtom, {
+            mid: streamAssistantId,
+            patch: (message) => applyToolStart(message, payload),
+          });
         },
         onToolResult: (payload) => {
-          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
-            patchToolInBlocks(assistant, payload.id, {
-              status: "ok",
-              result: payload.result,
-            }),
-          );
+          set(patchAssistantMessageAtom, {
+            mid: streamAssistantId,
+            patch: (message) =>
+              patchToolInBlocks(message, payload.id, {
+                status: "ok",
+                result: payload.result,
+              }),
+          });
         },
         onToolError: (payload) => {
-          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
-            patchToolInBlocks(assistant, payload.id, {
-              status: "error",
-              error: payload.error,
-            }),
-          );
+          set(patchAssistantMessageAtom, {
+            mid: streamAssistantId,
+            patch: (message) =>
+              patchToolInBlocks(message, payload.id, {
+                status: "error",
+                error: payload.error,
+              }),
+          });
         },
       },
     );

@@ -94,3 +94,27 @@ export const sessionDetailAtomFamily = atomFamily(
     );
   },
 );
+
+export const removeSessionMessageAtom = atom(
+  null,
+  (get, set, sessionId: string | undefined | null) => {
+    if (!sessionId) return;
+    const userIds = get(sessionUserMessageIdsAtomFamily(sessionId));
+    if (!userIds?.length) return;
+
+    const removeIds = new Set<string>([
+      ...userIds,
+      ...userIds.flatMap(
+        (uid) => get(userMessageReplieIdsAtomFamily(uid)) ?? [],
+      ),
+    ]);
+
+    for (const id of removeIds) {
+      messagesAtomFamily.remove(id);
+    }
+    for (const uid of userIds) {
+      userMessageReplieIdsAtomFamily.remove(uid);
+    }
+    sessionUserMessageIdsAtomFamily.remove(sessionId);
+  },
+);
