@@ -14,13 +14,11 @@ import { ChatMessageCollapsible } from "./chat-message-collapsible";
 
 export const AiChatMessages = memo(function AiChatMessages() {
   const userMessageIds = useAtomValue(activeUserMessageIdsAtom);
-  const lastIndex = userMessageIds.length - 1;
 
-  return userMessageIds.map((mid, idx) => (
+  return (userMessageIds ?? []).map((mid) => (
     <ChatMessageCollapsible
       key={mid}
       mid={mid}
-      isLastSegment={idx === lastIndex}
     />
   ))
 });

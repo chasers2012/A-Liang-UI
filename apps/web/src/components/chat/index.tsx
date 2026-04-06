@@ -13,6 +13,7 @@ import { AiChatMessages } from "@/components/chat/messages";
 import { ChatSessionTabs } from "./tabs";
 import { GeneratingIndicator } from "./messages/generating-indicator";
 import { AiChartThemeProvider } from "./messages/ai-chat-markdown";
+import { MarkdownWarmup } from "./messages/markdown-warmup";
 
 
 function ChatError() {
@@ -48,8 +49,11 @@ export function HomeAiChat() {
         <div className=" overflow-y-auto overflow-x-hidden h-full w-full relative">
           <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>
 
-          <div className="flex w-full min-w-0 flex-col gap-3 pb-3 pl-9 pr-1">
+          <div id="chat-messages-container" className="flex w-full min-w-0 flex-col gap-3 pb-3 pl-9 pr-1">
             <AiChartThemeProvider>
+              <div className="hidden">
+                <MarkdownWarmup />
+              </div>
               <AiChatMessages />
             </AiChartThemeProvider>
             <GeneratingIndicator />

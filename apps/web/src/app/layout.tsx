@@ -8,7 +8,7 @@ import "./globals.css";
 import "@/features/factors/ui/factor-code-jar.css";
 import { cn } from "@/lib/utils";
 
-const publicSans = Public_Sans({subsets:['latin'],variable:'--font-sans'});
+const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

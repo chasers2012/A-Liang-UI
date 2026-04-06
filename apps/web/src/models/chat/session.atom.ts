@@ -23,9 +23,6 @@ import { startTransition, type SetStateAction } from "react";
 
 const LAST_ACTIVE_KEY = "quant-agent-chat-last-active-session-id";
 
-/** 稳定空引用：`?? []` / `return []` 每次新数组会让 Jotai 认为 derived 值变化并唤醒订阅者 */
-const EMPTY_SESSION_MESSAGE_IDS: string[] = [];
-
 function appendAssistantDelta(
   prev: AgentChatMessagePublic,
   delta: string,
@@ -104,10 +101,8 @@ export const activeChatSessionIdAtom = (() => {
  * 仅当该会话是否在「当前激活」之间切换时通知订阅者。
  * 用于 tab 项：避免整表订阅 `activeChatSessionIdAtom` 导致切换时 O(n) 重渲染。
  */
-export const isActiveChatSessionAtomFamily = atomFamily(
-  (sessionId: string) =>
-    atom((get) => get(activeChatSessionIdAtom) === sessionId),
-  (a, b) => a === b,
+export const isActiveChatSessionAtomFamily = atomFamily((sessionId: string) =>
+  atom((get) => get(activeChatSessionIdAtom) === sessionId),
 );
 
 /** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeChatSessionIdAtom 组合使用） */
@@ -130,26 +125,39 @@ export const chatIsSendingAtom = atom(false);
 export const chatErrorAtom = atom<string | null>(null);
 export const chatHydratedAtom = atom(false);
 
-// session id → user message ids
-export const sessionMessageIdsAtom = atom<Record<string, string[]>>({});
-
 export const sessionMessageIdsAtomFamily = atomFamily(
-  (sessionId: string | undefined | null) =>
-    atom<string[]>(
-      (get) =>
-        (sessionId && get(sessionMessageIdsAtom)[sessionId]) ||
-        EMPTY_SESSION_MESSAGE_IDS,
-    ),
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (_sessionId: string | undefined | null) => {
+    return atom<string[]>([]);
+  },
 );
 
 // message id -> AgentChatMessagePublic
-export const messagesAtom = atom<Record<string, AgentChatMessagePublic>>({});
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const messagesAtomFamily = atomFamily((_id: string) =>
+  atom<AgentChatMessagePublic | undefined>(undefined),
+);
 
 // user message id → assistant message ids
-export const messageReplieIdsAtom = atom<Record<string, string[]>>({});
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const messageReplieIdsAtomFamily = atomFamily((_id: string) =>
+  atom<string[]>([]),
+);
 
 export const messageAtomFamily = atomFamily(
-  (id: string) => atom((get) => get(messagesAtom)[id]),
+  (id: string) => atom((get) => get(messagesAtomFamily(id))),
+  (a, b) => a === b,
+);
+
+export const replyOfMessageAtomFamily = atomFamily(
+  (id: string) =>
+    atom((get) => {
+      const rid = (get(messageReplieIdsAtomFamily(id)) ?? [])[0];
+      if (!rid) {
+        return undefined;
+      }
+      return get(messageAtomFamily(rid));
+    }),
   (a, b) => a === b,
 );
 
@@ -167,8 +175,7 @@ export const userMessageTextAtomFamily = atomFamily(
 );
 
 export const messageReplieIdAtomFamily = atomFamily(
-  (id: string) =>
-    atom((get) => (get(messageReplieIdsAtom)[id] ?? ([] as string[]))[0]),
+  (id: string) => atom((get) => get(messageReplieIdsAtomFamily(id))[0]),
   (a, b) => a === b,
 );
 
@@ -200,43 +207,93 @@ export const activeLastAssistantLayoutSignatureAtom = atom((get) => {
   return sig;
 });
 
-/** 折叠状态更新走 transition，避免与流式内容抢同一帧 */
-export const openSegmentsAtom = (() => {
-  const base = atom<Record<string, boolean>>({});
+/** 折叠状态改为 atomFamily，避免单个 map atom 触发整表订阅 */
+export const segmentOpenAtomFamily = atomFamily((id: string) => {
+  const base = atom(false);
   return atom(
     (get) => get(base),
-    (_get, set, update: SetStateAction<Record<string, boolean>>) => {
-      requestAnimationFrame(() => {
-        startTransition(() => {
+    (get, set, update: SetStateAction<boolean>) => {
+      startTransition(() => {
+        requestAnimationFrame(() => {
           set(base, update);
         });
       });
     },
   );
-})();
+});
 
-export const segmentOpenAtomFamily = atomFamily((id: string) =>
-  atom(
-    (get) => get(openSegmentsAtom)[id] ?? false,
-    (_get, set, update: boolean | SetStateAction<boolean>) => {
-      set(openSegmentsAtom, (prev) => ({
-        ...prev,
-        [id]: typeof update === "function" ? update(prev[id]) : update,
-      }));
-    },
-  ),
-);
+export const toggleSegmentOpenAtomFamily = atomFamily((id: string) => {
+  return atom(null, (get, set) => {
+    set(segmentOpenAtomFamily(id), (prev) => !prev);
+  });
+});
+
+const stableDelayMs = 20;
+const scrollAfterDomSettles = (target: HTMLElement) => {
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  const container = document.getElementById("chat-messages-container");
+  if (!container) return;
+  const observer = new MutationObserver(() => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: "auto" });
+      });
+      observer.disconnect();
+      debounceTimer = null;
+    }, stableDelayMs);
+  });
+
+  observer.observe(container, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    characterData: true,
+  });
+
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "auto" });
+    });
+    observer.disconnect();
+    debounceTimer = null;
+  }, stableDelayMs);
+};
 
 const openLastFiveSegmentsForNewActiveSessionAtom = atom(null, (get, set) => {
   const activeSession = get(activeChatSessionIdAtom);
   if (!activeSession) return;
   const userMessageIds = get(sessionMessageIdsAtomFamily(activeSession));
-  if (!userMessageIds.length) return;
-  const lastFiveMessageIds = userMessageIds.slice(-5);
+  if (!userMessageIds?.length) return;
+  const lastFiveMessageIds = userMessageIds.slice(-1);
   startTransition(() => {
     for (const messageId of lastFiveMessageIds) {
       set(segmentOpenAtomFamily(messageId), true);
     }
+    const lastUserMessageId = userMessageIds[userMessageIds.length - 1];
+    if (!lastUserMessageId) return;
+
+    const targetId = `reply-${lastUserMessageId}-end`;
+
+    const existing = document.getElementById(targetId);
+    if (existing) {
+      scrollAfterDomSettles(existing);
+      return;
+    }
+
+    const appearObserver = new MutationObserver(() => {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      appearObserver.disconnect();
+      scrollAfterDomSettles(el);
+    });
+    const container = document.getElementById("chat-messages-container");
+    if (!container) return;
+    appearObserver.observe(container, {
+      childList: true,
+      subtree: true,
+    });
   });
 });
 
@@ -247,19 +304,15 @@ function replaceSessionTurns(
   turns: AgentChatMessagePublic[],
 ): void {
   const userIds: string[] = [];
-  const sessionMessageIds = get(sessionMessageIdsAtom);
-  const messages = get(messagesAtom);
-  const replies = get(messageReplieIdsAtom);
+  const prevUserIds = get(sessionMessageIdsAtomFamily(sessionId));
 
-  const prevUserIds = sessionMessageIds[sessionId] ?? [];
-  const nextMessages = { ...messages };
-  const nextReplies = { ...replies };
-
-  for (const uid of prevUserIds) {
-    delete nextMessages[uid];
-    const ridList = nextReplies[uid] ?? [];
-    for (const rid of ridList) delete nextMessages[rid];
-    delete nextReplies[uid];
+  for (const uid of prevUserIds ?? []) {
+    set(messagesAtomFamily(uid), undefined);
+    const ridList = get(messageReplieIdsAtomFamily(uid)) ?? [];
+    for (const rid of ridList) {
+      set(messagesAtomFamily(rid), undefined);
+    }
+    messageReplieIdsAtomFamily.remove(uid);
   }
 
   let i = 0;
@@ -271,26 +324,21 @@ function replaceSessionTurns(
     }
 
     userIds.push(m.id);
-    nextMessages[m.id] = m;
+    set(messagesAtomFamily(m.id), m);
 
     const next = turns[i + 1];
     if (next?.role === "assistant") {
-      nextMessages[next.id] = next;
-      nextReplies[m.id] = [next.id];
+      set(messagesAtomFamily(next.id), next);
+      set(messageReplieIdsAtomFamily(m.id), [next.id]);
       i += 2;
       continue;
     }
 
-    nextReplies[m.id] = [];
+    set(messageReplieIdsAtomFamily(m.id), []);
     i += 1;
   }
 
-  set(messagesAtom, nextMessages);
-  set(messageReplieIdsAtom, nextReplies);
-  set(sessionMessageIdsAtom, {
-    ...sessionMessageIds,
-    [sessionId]: userIds,
-  });
+  set(sessionMessageIdsAtomFamily(sessionId), userIds);
 }
 
 function removeSessionMessageAtoms(
@@ -298,31 +346,25 @@ function removeSessionMessageAtoms(
   set: Setter,
   sessionId: string,
 ): void {
-  const bySession = get(sessionMessageIdsAtom);
-  const userIds = bySession[sessionId] ?? [];
-  if (!userIds.length && !(sessionId in bySession)) return;
+  const userIds = get(sessionMessageIdsAtomFamily(sessionId));
+  if (!userIds?.length) return;
 
-  const replies = get(messageReplieIdsAtom);
   const removeIds = new Set<string>([
     ...userIds,
-    ...userIds.flatMap((uid) => replies[uid] ?? []),
+    ...userIds.flatMap((uid) => get(messageReplieIdsAtomFamily(uid)) ?? []),
   ]);
 
-  set(messagesAtom, (m) =>
-    Object.fromEntries(Object.entries(m).filter(([id]) => !removeIds.has(id))),
-  );
-  set(messageReplieIdsAtom, (r) =>
-    Object.fromEntries(
-      Object.entries(r).filter(([uid]) => !removeIds.has(uid)),
-    ),
-  );
-  set(sessionMessageIdsAtom, (s) =>
-    Object.fromEntries(Object.entries(s).filter(([sid]) => sid !== sessionId)),
-  );
+  for (const id of removeIds) {
+    set(messagesAtomFamily(id), undefined);
+  }
+  for (const uid of userIds) {
+    messageReplieIdsAtomFamily.remove(uid);
+  }
+  sessionMessageIdsAtomFamily.remove(sessionId);
 }
 
 export const sessionMessagesLoadedAtomFamily = atomFamily((sessionId: string) =>
-  atom((get) => sessionId in get(sessionMessageIdsAtom)),
+  atom(() => new Set(sessionMessageIdsAtomFamily.getParams()).has(sessionId)),
 );
 
 function setLastActiveSessionId(id: string | null): void {
@@ -397,22 +439,22 @@ function toApiMessage(
 }
 
 function buildPayloadMessages(
+  get: Getter,
   userIds: string[],
-  messages: Record<string, AgentChatMessagePublic>,
-  replies: Record<string, string[]>,
+  getReplies: (userId: string) => string[],
   optimisticAssistantId: string,
   pendingLocalUserId: string,
 ) {
   return userIds.flatMap((uid) => {
-    const user = messages[uid];
+    const user = get(messagesAtomFamily(uid));
     if (!user) return [];
 
     const userPart = toApiMessage(user, uid === pendingLocalUserId);
-    const firstReplyId = (replies[uid] ?? [])[0];
+    const firstReplyId = (getReplies(uid) ?? [])[0];
     if (!firstReplyId || firstReplyId === optimisticAssistantId)
       return [userPart];
 
-    const assistant = messages[firstReplyId];
+    const assistant = get(messagesAtomFamily(firstReplyId));
     if (!assistant) return [userPart];
 
     return [userPart, toApiMessage(assistant)];
@@ -420,6 +462,7 @@ function buildPayloadMessages(
 }
 
 function remapPendingChatMessageIds(
+  get: Getter,
   set: Setter,
   sessionId: string,
   fromUser: string,
@@ -427,35 +470,29 @@ function remapPendingChatMessageIds(
   fromAssistant: string,
   toAssistant: string,
 ): void {
-  set(sessionMessageIdsAtom, (prev) => ({
-    ...prev,
-    [sessionId]: (prev[sessionId] ?? []).map((id) =>
-      id === fromUser ? toUser : id,
-    ),
-  }));
-  set(messagesAtom, (prev) => {
-    const u = prev[fromUser];
-    const a = prev[fromAssistant];
-    if (!u || !a) return prev;
-    const next = { ...prev };
-    delete next[fromUser];
-    delete next[fromAssistant];
-    next[toUser] = { ...u, id: toUser };
-    next[toAssistant] = { ...a, id: toAssistant };
-    return next;
-  });
-  set(messageReplieIdsAtom, (prev) => {
-    const r = prev[fromUser];
-    const next = { ...prev };
-    delete next[fromUser];
-    next[toUser] = r ? [toAssistant] : [];
-    return next;
-  });
-  set(openSegmentsAtom, (prev) => {
-    if (!(fromUser in prev)) return prev;
-    const { [fromUser]: wasOpen, ...rest } = prev;
-    return { ...rest, [toUser]: wasOpen };
-  });
+  set(
+    sessionMessageIdsAtomFamily(sessionId),
+    (prev) => prev?.map((id) => (id === fromUser ? toUser : id)) ?? [],
+  );
+  const u = get(messagesAtomFamily(fromUser));
+  const a = get(messagesAtomFamily(fromAssistant));
+  if (u) {
+    set(messagesAtomFamily(toUser), { ...u, id: toUser });
+  }
+  if (a) {
+    set(messagesAtomFamily(toAssistant), { ...a, id: toAssistant });
+  }
+  set(messagesAtomFamily(fromUser), undefined);
+  set(messagesAtomFamily(fromAssistant), undefined);
+
+  const r = get(messageReplieIdsAtomFamily(fromUser)) ?? [];
+  messageReplieIdsAtomFamily.remove(fromUser);
+  set(messageReplieIdsAtomFamily(toUser), r.length ? [toAssistant] : []);
+  // set(segmentOpenAtomFamily, (prev) => {
+  //   if (!(fromUser in prev)) return prev;
+  //   const { [fromUser]: wasOpen, ...rest } = prev;
+  //   return { ...rest, [toUser]: wasOpen };
+  // });
 }
 
 function rollbackOptimisticSend(
@@ -464,36 +501,25 @@ function rollbackOptimisticSend(
   userId: string,
   assistantId: string,
 ): void {
-  set(sessionMessageIdsAtom, (prev) => ({
-    ...prev,
-    [targetSessionId]: (prev[targetSessionId] ?? []).filter(
-      (id) => id !== userId,
-    ),
-  }));
-  set(messagesAtom, (prev) =>
-    Object.fromEntries(
-      Object.entries(prev).filter(
-        ([id]) => id !== userId && id !== assistantId,
-      ),
-    ),
+  set(sessionMessageIdsAtomFamily(targetSessionId), (prev) =>
+    (prev ?? []).filter((id) => id !== userId),
   );
-  set(messageReplieIdsAtom, (prev) =>
-    Object.fromEntries(Object.entries(prev).filter(([uid]) => uid !== userId)),
-  );
+  set(messagesAtomFamily(userId), undefined);
+  set(messagesAtomFamily(assistantId), undefined);
+  messageReplieIdsAtomFamily.remove(userId);
 }
 
 function patchAssistantMessage(
+  get: Getter,
   set: Setter,
   assistantId: string,
   patch: (assistant: AgentChatMessagePublic) => AgentChatMessagePublic,
 ): void {
   startTransition(() => {
-    set(messagesAtom, (prev) => {
-      const assistant = prev[assistantId];
-      if (!assistant) return prev;
-      const newAssistant = patch(assistant);
-      return { ...prev, [assistantId]: newAssistant };
-    });
+    const assistant = get(messagesAtomFamily(assistantId));
+    if (!assistant) return;
+    const newAssistant = patch(assistant);
+    set(messagesAtomFamily(assistantId), newAssistant);
   });
 }
 
@@ -635,29 +661,22 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(chatErrorAtom, null);
   set(chatInputAtom, "");
   set(chatIsSendingAtom, true);
-  set(sessionMessageIdsAtom, (prev) => ({
-    ...prev,
-    [sessionId]: [...(prev[sessionId] ?? []), userTurn.id],
-  }));
-  set(messagesAtom, (prev) => ({
-    ...prev,
-    [userTurn.id]: userTurn,
-    [provisionalAssistantId]: {
-      id: provisionalAssistantId,
-      role: "assistant",
-      blocks: [],
-    },
-  }));
-  set(messageReplieIdsAtom, (prev) => ({
-    ...prev,
-    [userTurn.id]: [provisionalAssistantId],
-  }));
+  set(sessionMessageIdsAtomFamily(sessionId), (prev) =>
+    (prev ?? []).concat(userTurn.id),
+  );
+  set(messagesAtomFamily(userTurn.id), userTurn);
+  set(messagesAtomFamily(provisionalAssistantId), {
+    id: provisionalAssistantId,
+    role: "assistant",
+    blocks: [],
+  });
+  set(messageReplieIdsAtomFamily(userTurn.id), [provisionalAssistantId]);
 
   try {
     const payloadMessages = buildPayloadMessages(
-      get(sessionMessageIdsAtom)[sessionId] ?? [],
-      get(messagesAtom),
-      get(messageReplieIdsAtom),
+      get,
+      get(sessionMessageIdsAtomFamily(sessionId)) ?? [],
+      (uid) => get(messageReplieIdsAtomFamily(uid)) ?? [],
       provisionalAssistantId,
       provisionalUserId,
     );
@@ -668,6 +687,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
         onMessageIds: (ids) => {
           if (!ids.user || !ids.assistant) return;
           remapPendingChatMessageIds(
+            get,
             set,
             sessionId,
             streamUserId,
@@ -679,17 +699,17 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           streamAssistantId = ids.assistant;
         },
         onDelta: (delta) => {
-          patchAssistantMessage(set, streamAssistantId, (assistant) =>
+          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
             appendAssistantDelta(assistant, delta),
           );
         },
         onToolStart: (payload) => {
-          patchAssistantMessage(set, streamAssistantId, (assistant) =>
+          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
             applyToolStart(assistant, payload),
           );
         },
         onToolResult: (payload) => {
-          patchAssistantMessage(set, streamAssistantId, (assistant) =>
+          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
             patchToolInBlocks(assistant, payload.id, {
               status: "ok",
               result: payload.result,
@@ -697,7 +717,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           );
         },
         onToolError: (payload) => {
-          patchAssistantMessage(set, streamAssistantId, (assistant) =>
+          patchAssistantMessage(get, set, streamAssistantId, (assistant) =>
             patchToolInBlocks(assistant, payload.id, {
               status: "error",
               error: payload.error,

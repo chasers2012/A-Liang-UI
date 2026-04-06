@@ -1,13 +1,9 @@
 "use client";
 
-import { Activity, memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from "lucide-react";
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+
 import type { ChatToolCallDisplay } from "@/models/chat/types";
 
 function formatJson(v: unknown): string {
@@ -87,12 +83,8 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
   });
 
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={setOpen}
-      className="mb-2 rounded-md border border-border/60 bg-muted/30 text-left last:mb-0"
-    >
-      <CollapsibleTrigger
+    <div className="mb-2 rounded-md border border-border/60 bg-muted/30 text-left last:mb-0">
+      <div onClick={() => setOpen(o => !o)}
         className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-xs font-medium outline-none \
            hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 \
            [&[data-panel-open]_svg:first-child]:rotate-90"
@@ -100,9 +92,9 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
       >
         <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform" />
         <ToolCallHeader name={name} status={status} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="border-border/40 border-t px-3 py-2">
-        <Activity mode={open ? "visible" : "hidden"}>
+      </div>
+      {open && (
+        <div className="border-border/40 border-t px-3 py-2">
           {args !== undefined ? (
             <div className="mb-2">
               <span className="text-[11px] text-muted-foreground">参数</span>
@@ -118,8 +110,8 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
           {status === "error" && error ? (
             <p className="text-[11px] leading-relaxed text-destructive">{error}</p>
           ) : null}
-        </Activity>
-      </CollapsibleContent>
-    </Collapsible>
+        </div>
+      )}
+    </div>
   );
 }

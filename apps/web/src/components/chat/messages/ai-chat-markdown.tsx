@@ -15,20 +15,16 @@ import { cn } from "@/lib/utils";
 
 
 
-
 export const AiChatMarkdown = memo(function AiChatMarkdown({
   content,
-  className, isFinished,
+  className,
 }: {
   content: string;
   className?: string;
-  isFinished: boolean;
 }) {
-
   return (
-
     <div className={cn("ai-chat-md wrap-break-word text-sm leading-relaxed", className)}>
-      <IncremarkContent content={content} isFinished={isFinished} />
+      <IncremarkContent content={content} />
     </div>
   );
 });

@@ -25,7 +25,11 @@ export type AgentChatToolCallPublic = {
   error?: string;
 };
 
-export type TextBlockPublic = { kind: "text"; content: string };
+export type TextBlockPublic = {
+  kind: "text";
+  content: string;
+  completed?: boolean;
+};
 export type ToolBlockPublic = { kind: "tool"; call: AgentChatToolCallPublic };
 
 /** 与后端 ``AssistantBlockPublic`` 一致。 */
