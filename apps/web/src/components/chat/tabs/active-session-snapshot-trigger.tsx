@@ -5,10 +5,10 @@ import { useAtomValue, useStore } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import {
-  activeChatSessionIdAtom,
+  activeSessionIdAtom,
   chatSessionSummaryAtomFamily,
   hasValidActiveChatSessionAtom,
-} from "@/models/chat/session.atom";
+} from "@/models/chat/session";
 
 /** 对当前激活会话做 store 快照后回调；不因切换 tab 而重绘（仅订阅是否存在有效激活会话） */
 export const ActiveSessionSnapshotTrigger = memo(function ActiveSessionSnapshotTrigger({
@@ -26,7 +26,7 @@ export const ActiveSessionSnapshotTrigger = memo(function ActiveSessionSnapshotT
   const canAct = useAtomValue(hasValidActiveChatSessionAtom);
 
   const onClick = useCallback(() => {
-    const id = store.get(activeChatSessionIdAtom);
+    const id = store.get(activeSessionIdAtom);
     if (!id) return;
     const a = store.get(chatSessionSummaryAtomFamily(id));
     if (!a) return;

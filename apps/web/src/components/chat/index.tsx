@@ -7,7 +7,7 @@ import {
   chatErrorAtom,
   chatHydratedAtom,
   hydrateChatStateAtom,
-} from "@/models/chat/session.atom";
+} from "@/models/chat/session";
 import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/messages";
 import { ChatSessionTabs } from "./tabs";

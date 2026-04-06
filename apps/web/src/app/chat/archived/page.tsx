@@ -35,7 +35,7 @@ import type { AgentChatSessionArchivedSummaryPublic } from "@/models";
 import {
   refetchChatSessionsListAtom,
   selectChatSessionAtom,
-} from "@/models/chat/session.atom";
+} from "@/models/chat/session";
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);

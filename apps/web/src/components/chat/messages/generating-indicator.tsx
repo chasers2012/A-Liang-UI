@@ -1,4 +1,4 @@
-import { chatIsSendingAtom } from "@/models/chat/session.atom";
+import { chatIsSendingAtom } from "@/models/chat/session";
 import { useAtomValue } from "jotai";
 import { Loader2 } from "lucide-react";
 import { Activity, memo } from "react";

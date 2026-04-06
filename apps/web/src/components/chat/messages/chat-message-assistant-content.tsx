@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { useAtomValue } from "jotai";
 
-import { replyOfMessageAtomFamily } from "@/models/chat/session.atom";
+import { replyOfMessageAtomFamily } from "@/models/chat/session";
 import { AiChatMarkdown } from "./ai-chat-markdown";
 import { ChatToolCallCard } from "./chat-tool-call-card";
 

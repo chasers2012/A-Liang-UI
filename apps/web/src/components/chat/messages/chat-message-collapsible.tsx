@@ -5,10 +5,11 @@ import { Activity, memo } from "react";
 import { ChatMessageAssistantContent } from "./chat-message-assistant-content";
 import { ChatMessageUserContent } from "./chat-message-user-content";
 
-import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily, userMessageTextAtomFamily } from "@/models/chat/session.atom";
+import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily, userMessageTextAtomFamily } from "@/models/chat/session";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
+import { segementOpenEffect } from "@/models/chat/session/segment-open";
 
 
 
@@ -18,6 +19,7 @@ export const ChatMessageCollapsible = memo(function ChatMessageCollapsible({
 }: {
   mid: string;
 }) {
+  useAtom(segementOpenEffect);
   const isOpen = useAtomValue(segmentOpenAtomFamily(mid));
   const toggleOpen = useSetAtom(toggleSegmentOpenAtomFamily(mid));
   const messageText = useAtomValue(userMessageTextAtomFamily(mid));

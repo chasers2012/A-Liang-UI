@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import {
   chatSessionSummaryAtomFamily,
   renameChatSessionAtom,
-} from "@/models/chat/session.atom";
+} from "@/models/chat/session";
 
 import { ActiveSessionSnapshotTrigger } from "./active-session-snapshot-trigger";
 

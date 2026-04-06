@@ -5,7 +5,7 @@ import { ArrowUp, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom } from "@/models/chat/session.atom";
+import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom } from "@/models/chat/session";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
 

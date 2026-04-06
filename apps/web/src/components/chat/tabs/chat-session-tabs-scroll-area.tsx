@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgentChatSessionSummaryPublic } from "@/models";
-import { activeChatSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatSessionAtom } from "@/models/chat/session.atom";
+import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatSessionAtom } from "@/models/chat/session";
 
 import { ChatSessionTabItem } from "./chat-session-tab-item";
 
@@ -54,7 +54,7 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
       if (disabled || sessions.length === 0) return;
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       e.preventDefault();
-      const activeId = store.get(activeChatSessionIdAtom);
+      const activeId = store.get(activeSessionIdAtom);
       const cur =
         activeId != null ? sessions.findIndex((s) => s.id === activeId) : -1;
       const i = cur >= 0 ? cur : 0;
