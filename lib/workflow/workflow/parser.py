@@ -105,32 +105,6 @@ class Parser:
         )
 
     @staticmethod
-    def parse_workflow_node_source(
-        source: str,
-    ) -> Node:
-        """Parse a workflow-node python source snippet by instantiating its decorated class.
-
-        Note: this executes *source* to recover runtime metadata produced by the
-        ``@workflow_node(...)`` decorator (including Socket subclasses and custom kwargs).
-        """
-        from .node_loader import WorkflowNodeLoader
-
-        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
-        try:
-            node_obj = node_cls()  # type: ignore[call-arg]
-        except Exception:
-            # Some node classes define a required __init__; we only need class-level metadata.
-            node_obj = node_cls.__new__(node_cls)  # type: ignore[misc]
-
-        node_obj.label = str(getattr(node_obj, "label", "") or "").strip()
-        node_obj.description = str(getattr(node_obj, "description", "") or "").strip()
-
-        # Ensure attributes exist with correct container types.
-        node_obj.inputs = tuple(getattr(node_obj, "inputs", ()) or ())
-        node_obj.outputs = tuple(getattr(node_obj, "outputs", ()) or ())
-        return node_obj
-
-    @staticmethod
     def parse_node(json_dict: dict[str, Any]) -> Node:
         from .node_loader import WorkflowNodeLoader
 

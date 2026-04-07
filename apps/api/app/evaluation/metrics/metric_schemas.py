@@ -3,7 +3,7 @@ from __future__ import annotations
 from custom_code import validate_identifier_name as validate_metric_name
 from custom_code import validate_source_syntax
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from workflow.parser import Parser
+from workflow.node_loader import WorkflowNodeLoader
 
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 
@@ -34,8 +34,8 @@ class EvaluationMetricCreate(BaseModel):
         if not s:
             raise ValueError("source 不能为空")
         validate_source_syntax(s)
-        node = Parser.parse_workflow_node_source(s)
-        name = node.label
+        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(s)
+        name = node_cls.label
         validate_metric_name(name)
 
         return s
@@ -46,9 +46,9 @@ class EvaluationMetricCreate(BaseModel):
         now: str,
         source_path: str,
     ) -> EvaluationMetricRecord:
-        node = Parser.parse_workflow_node_source(self.source)
-        name = node.label
-        description = node.description
+        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(self.source)
+        name = node_cls.label
+        description = node_cls.description
         return EvaluationMetricRecord(
             id=metric_id,
             name=name,

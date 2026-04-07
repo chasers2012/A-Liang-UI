@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from custom_code import SourceFiles
-from workflow.parser import Parser
 from workspace import ensure_dir
 
 from app.datetime_utils import utc_now_iso
@@ -77,11 +76,6 @@ class EvaluationMetricsRegistry(
         if rec is None:
             return None
 
-        # Derive sockets from source to keep the registry record minimal.
-        source = cls.read_source(rec)
-        node = Parser.parse_workflow_node_source(source)
-        inputs = list(getattr(node, "inputs", ()) or ())
-        outputs = list(getattr(node, "outputs", ()) or ())
         return EvaluationMetricSummaryPublic(
             id=rec.id,
             name=rec.name,
@@ -89,8 +83,8 @@ class EvaluationMetricsRegistry(
             source_path=rec.source_path,
             created_at=rec.created_at,
             updated_at=rec.updated_at,
-            inputs=[Parser.serialize_socket(s) for s in inputs],
-            outputs=[Parser.serialize_socket(s) for s in outputs],
+            inputs=[],
+            outputs=[],
         )
 
     @classmethod
@@ -99,10 +93,6 @@ class EvaluationMetricsRegistry(
         if rec is None:
             return None
 
-        # Derive sockets from source to keep the registry record minimal.
-        source = cls.read_source(rec)
-        node = Parser.parse_workflow_node_source(source)
-
         return EvaluationMetricDetailPublic(
             id=rec.id,
             name=rec.name,
@@ -110,7 +100,7 @@ class EvaluationMetricsRegistry(
             source_path=rec.source_path,
             created_at=rec.created_at,
             updated_at=rec.updated_at,
-            inputs=[Parser.serialize_socket(s) for s in node.inputs],
-            outputs=[Parser.serialize_socket(s) for s in node.outputs],
-            source=source,
+            inputs=[],
+            outputs=[],
+            source=cls.read_source(rec),
         )
