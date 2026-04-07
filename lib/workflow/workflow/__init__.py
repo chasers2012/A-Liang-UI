@@ -14,12 +14,10 @@ from .node_types import (
     BooleanNodeParam,
     Node,
     NodeParam,
-    NodeParamModel,
     NumberNodeParam,
     OptionsNodeParam,
     Socket,
     StringNodeParam,
-    validate_node_param_list,
 )
 
 __all__ = [
@@ -27,7 +25,6 @@ __all__ = [
     "BooleanNodeParam",
     "Node",
     "NodeParam",
-    "NodeParamModel",
     "NumberNodeParam",
     "OptionsNodeParam",
     "Socket",
@@ -42,7 +39,6 @@ __all__ = [
     "collect_node_classes",
     "gather_node_inputs",
     "topological_order",
-    "validate_node_param_list",
     "workflow_node",
     "workflow_node_type_key",
 ]

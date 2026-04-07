@@ -1,16 +1,12 @@
-"""Workflow node type metadata: dataclass definitions and JSON :class:`NodeParamModel`.
+"""Workflow node type metadata for workflow sockets, params, and nodes.
 
-- **Dataclasses** ``Socket``, ``NodeParam`` subclasses, ``Node``: used by ``@workflow_node`` and
-  :meth:`collect_node_classes` / catalogs.
-- **Pydantic** ``NodeParamModel`` / :func:`validate_node_param_list`: same public JSON shape as
-  ``NodeParam.serialize()``; used by API layers that need validation without Python node classes.
+Used by ``@workflow_node`` and :meth:`collect_node_classes` / catalogs.
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import Any
 
 from .node_loader import WorkflowNodeLoader
 
@@ -396,38 +392,3 @@ class Node:
             )
 
         return node_obj
-
-
-# --- Pydantic (JSON interchange) ------------------------------------------------
-
-_PARAM_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-
-
-class NodeParamModel:
-    """Declarative schema for workflow node parameters (besides graph inputs).
-
-    For ``entry="execute"``, parameter keys are merged into the keyword arguments
-    passed to ``execute`` along with linked socket values.
-    """
-
-    def __init__(
-        self,
-        key: str,
-        label: str = "",
-        type: Literal["number", "boolean", "string"] = "number",
-        default: Any | None = None,
-        minimum: float | int | None = None,
-        maximum: float | int | None = None,
-    ) -> None:
-        self.key = key
-        self.label = label
-        self.type = type
-        self.default = default
-        self.minimum = minimum
-        self.maximum = maximum
-
-
-def validate_node_param_list(items: list[NodeParamModel]) -> None:
-    keys = [x.key for x in items]
-    if len(keys) != len(set(keys)):
-        raise ValueError("workflow_parameters 存在重复的 key")
