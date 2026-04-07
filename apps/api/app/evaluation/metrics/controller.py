@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.datetime_utils import utc_now_iso
+from app.common.datetime_utils import utc_now_iso
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 
 from .redistry import EvaluationMetricsRegistry

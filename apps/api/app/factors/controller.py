@@ -7,7 +7,7 @@ import sys
 from custom_code import SourceFiles, validate_identifier_name, validate_source_syntax
 from factor import Factor
 
-from app.datetime_utils import utc_now_iso
+from app.common.datetime_utils import utc_now_iso
 from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorCreate,

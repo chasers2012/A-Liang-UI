@@ -4,6 +4,7 @@ from typing import Any
 
 from langchain_core.tools import tool
 
+from app.common.datetime_utils import utc_now_iso
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import (
     DataSourceCreate,
@@ -19,7 +20,6 @@ from app.datasources.table_columns import (
     sql_config_for_column_listing,
 )
 from app.datasources.verify import verify_datasource
-from app.datetime_utils import utc_now_iso
 from app.routers.datasources import _merge_patch, list_datasources
 
 

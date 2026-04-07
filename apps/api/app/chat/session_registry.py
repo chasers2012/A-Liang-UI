@@ -13,7 +13,7 @@ from app.chat.schemas import (
     ChatSessionSummaryPublic,
     ensure_chat_message_ids,
 )
-from app.datetime_utils import utc_now_iso
+from app.common.datetime_utils import utc_now_iso
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 from app.workspace_config import save_workspace_config, workspace_config_path
 

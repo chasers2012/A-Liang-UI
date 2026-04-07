@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app import datetime_utils
+from app.common import datetime_utils
 from app.common.id import create_id_generator
 
 FACTORS_DIR = "factors/source"

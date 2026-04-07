@@ -4,8 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
-from app.datetime_utils import utc_now_iso
 
 DataSourceType = Literal["sql", "csv"]
 
