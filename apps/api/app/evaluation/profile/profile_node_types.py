@@ -24,9 +24,9 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     # metrics nodes
     for metric in EvaluationMetricsRegistry.list_items():
         source = EvaluationMetricsRegistry.read_source(metric)
-        _, _, inputs, outputs = Parser.parse_workflow_node_source(source)
-        inputs = [Parser.serialize_socket(s) for s in inputs]
-        outputs = [Parser.serialize_socket(s) for s in outputs]
+        node = Parser.parse_workflow_node_source(source)
+        inputs = [Parser.serialize_socket(s) for s in node.inputs]
+        outputs = [Parser.serialize_socket(s) for s in node.outputs]
 
         out.append(
             EvaluationNodeTypePublic(

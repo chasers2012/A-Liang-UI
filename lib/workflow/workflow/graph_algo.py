@@ -31,11 +31,3 @@ def topological_order(
     if len(out) != len(by_id):
         raise ValueError("workflow graph contains a cycle")
     return out
-
-
-def assert_acyclic(
-    nodes: Sequence[Node],
-    links: Sequence[WorkflowLink],
-) -> None:
-    """Raise ``ValueError`` if the graph has a cycle."""
-    topological_order(nodes, links)
