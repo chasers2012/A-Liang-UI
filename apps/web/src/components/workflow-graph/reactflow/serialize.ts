@@ -133,7 +133,7 @@ export function toReactFlowNodes(
     return {
       id: n.id,
       type: "workflowStep",
-      position: { x: num(n.pos[0]), y: num(n.pos[1]) },
+      position: { x: num(n.pos?.[0]), y: num(n.pos?.[1]) },
       data: {
         backendType: n.type,
         label: def?.label ?? n.label ?? n.type,

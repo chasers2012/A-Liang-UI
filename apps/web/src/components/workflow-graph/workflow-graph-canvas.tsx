@@ -1,6 +1,6 @@
 "use client";
 
-import { Maximize2, Minus, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Maximize2, Minus, Plus, Trash2 } from "lucide-react";
 import {
   forwardRef,
   useCallback,
@@ -54,6 +54,7 @@ import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { isWireInputSpec } from "./workflow-node-input-spec";
 import { WorkflowGraphPersisted } from "./reactflow/types";
+import { ErrorBoundary } from "next/dist/client/components/error-boundary";
 
 
 /** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
@@ -227,7 +228,34 @@ function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, 
 }
 
 
-
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error;
+  reset: () => void;
+}) {
+  return (
+    <div className="m-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">工作流渲染出错，请检查工作流文件</p>
+          <p className="mt-1 text-xs break-all opacity-90">{error.message || ""}</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="border-destructive/40 bg-background text-foreground hover:bg-muted"
+          onClick={reset}
+        >
+          重试
+        </Button>
+      </div>
+    </div>
+  );
+}
 export const WorkflowGraphCanvas = forwardRef<
   WorkflowGraphCanvasHandle,
   WorkflowGraphCanvasProps
@@ -385,40 +413,42 @@ export const WorkflowGraphCanvas = forwardRef<
               onDragOver={onDragOver}
               onDrop={onDrop}
             >
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-                onInit={(inst) => {
-                  reactFlowRef.current = inst;
-                }}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={readOnly ? undefined : onConnect}
-                isValidConnection={readOnly ? undefined : isValidConnection}
-                onMoveEnd={onMoveEnd}
-                defaultViewport={initialViewport}
-                fitView={!initialViewport}
-                deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
-                nodesDraggable={!readOnly}
-                nodesConnectable={!readOnly}
-                elementsSelectable={!readOnly}
-                zoomOnScroll
-                zoomOnPinch
-                panOnScroll={false}
-                proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
-                className="min-h-[280px] flex-1"
-              >
-                <Background
-                  id="workflow-graph-bg"
-                  gap={22}
-                  size={1}
-                  variant={BackgroundVariant.Dots}
-                  className="opacity-60"
-                />
-                <Controls showInteractive={false} />
-                <WorkflowGraphZoomToolbar />
-              </ReactFlow>
+              <ErrorBoundary errorComponent={Error}>
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
+                  onInit={(inst) => {
+                    reactFlowRef.current = inst;
+                  }}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  onConnect={readOnly ? undefined : onConnect}
+                  isValidConnection={readOnly ? undefined : isValidConnection}
+                  onMoveEnd={onMoveEnd}
+                  defaultViewport={initialViewport}
+                  fitView={!initialViewport}
+                  deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+                  nodesDraggable={!readOnly}
+                  nodesConnectable={!readOnly}
+                  elementsSelectable={!readOnly}
+                  zoomOnScroll
+                  zoomOnPinch
+                  panOnScroll={false}
+                  proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
+                  className="min-h-[280px] flex-1"
+                >
+                  <Background
+                    id="workflow-graph-bg"
+                    gap={22}
+                    size={1}
+                    variant={BackgroundVariant.Dots}
+                    className="opacity-60"
+                  />
+                  <Controls showInteractive={false} />
+                  <WorkflowGraphZoomToolbar />
+                </ReactFlow>
+              </ErrorBoundary>
 
             </div>
           </WorkflowGraphContextProvider>
