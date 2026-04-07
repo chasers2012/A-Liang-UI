@@ -11,7 +11,7 @@ from workflow import WorkflowExecutor
 from workflow.parser import Parser
 
 from app.evaluation.profile.schemas import EvaluationProfileRecord
-from app.factors.registry import FactorItemsRegistry
+from app.factors.controller import get_factor
 from app.factors.schemas import utc_now_iso
 
 from .schemas import FactorEvaluationRecord
@@ -63,7 +63,7 @@ def run_evaluation_profile_workflow(
     profile: EvaluationProfileRecord,
 ) -> FactorEvaluationRecord:
 
-    factor = FactorItemsRegistry.get_factor(factor_id)
+    factor = get_factor(factor_id)
 
     exec_ctx: dict[str, Any] = {"factor": factor}
 

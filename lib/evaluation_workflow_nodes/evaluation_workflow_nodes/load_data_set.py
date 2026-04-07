@@ -1,3 +1,4 @@
+from app.data_set.controller import get_data_set
 from app.data_set.redistry import DataSetsStore
 from evaluate.data_set import DataSet
 from workflow import Socket, workflow_node
@@ -24,4 +25,7 @@ class LoadDataSet:
         data_set_id = kwargs.get("data_set")
         if not isinstance(data_set_id, str) or not data_set_id.strip():
             raise ValueError("data_set 参数不能为空")
-        return DataSetsStore.get_data_set(data_set_id)
+        data_set = get_data_set(data_set_id)
+        if data_set is None:
+            raise ValueError(f"data_set {data_set_id} 不存在")
+        return data_set

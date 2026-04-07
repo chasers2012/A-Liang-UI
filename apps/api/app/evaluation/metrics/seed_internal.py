@@ -2,7 +2,7 @@ from evaluate import EvaluationMetric
 
 from app.common.packages import find_subclass_files
 from app.evaluation.metrics.constants import INTERNAL_EVALUATION_METRIC_PACKAGES
-from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.controller import create_evaluation_metric
 from app.evaluation.metrics.schemas import EvaluationMetricCreate
 
 
@@ -23,9 +23,7 @@ def seed_internal_evaluation_metric_package() -> None:
         try:
             with open(source_path, encoding="utf-8") as f:
                 source = f.read()
-                EvaluationMetricsRegistry.create_evaluation_metric(
-                    EvaluationMetricCreate(source=source), source_path
-                )
+                create_evaluation_metric(EvaluationMetricCreate(source=source), source_path)
         except Exception as e:
             print(f"seeding internal evaluation metric package failed: {e}")
     print("seeding internal evaluation metric package done")

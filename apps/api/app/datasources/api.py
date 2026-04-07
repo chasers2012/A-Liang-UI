@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from app.datasources.controller import get_datasource as get_datasource_instance
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import (
     DataSourceCreate,
@@ -115,7 +116,7 @@ def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
 def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:
     """供数据集绑定等场景列出该数据源可声明的因子依赖字段名。"""
     try:
-        inst = DataSourceItemsRegistry.get_datasource(ds_id)
+        inst = get_datasource_instance(ds_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     if inst is None:

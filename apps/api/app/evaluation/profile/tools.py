@@ -8,12 +8,15 @@ import workflow.node_types as _workflow_node_types
 from langchain_core.tools import tool
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
-from app.evaluation.profile.redistry import (
-    EvaluationProfilesRegistry,
+from app.evaluation.profile.controller import (
     FactorNotFoundError,
     ProfileNotFoundError,
 )
+from app.evaluation.profile.controller import (
+    run_factor_evaluation as run_factor_evaluation_controller,
+)
+from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
+from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
@@ -145,7 +148,7 @@ def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
 )
 def run_factor_evaluation(profile_id: str, factor_id: str) -> dict[str, Any]:
     try:
-        row = EvaluationProfilesRegistry.run_factor_evaluation(profile_id, factor_id)
+        row = run_factor_evaluation_controller(profile_id, factor_id)
     except ProfileNotFoundError:
         raise ValueError(f"评价方案 {profile_id} 不存在") from None
     except FactorNotFoundError:

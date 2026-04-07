@@ -5,9 +5,18 @@ from typing import Any
 from langchain_core.tools import tool
 
 from app.factors.constants import NEW_FACTOR_TEMPLATE
-from app.factors.registry import FactorItemsRegistry, factor_detail
+from app.factors.controller import (
+    create_factor as create_factor_controller,
+)
+from app.factors.controller import (
+    factor_detail,
+    list_factors,
+)
+from app.factors.controller import (
+    update_factor as update_factor_controller,
+)
+from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import FactorCreate, FactorPatch
-from app.routers.factors import list_factors
 
 
 @tool(
@@ -45,7 +54,7 @@ def create_factor(body: FactorCreate) -> dict[str, Any]:
         src = src.replace('name = ""', f'name = "{body.name}"')
         body = body.model_copy(update={"source": src})
 
-    rec = FactorItemsRegistry.create_factor(body)
+    rec = create_factor_controller(body)
 
     return factor_detail(rec).model_dump()
 
@@ -65,7 +74,7 @@ def get_factor_list() -> list[dict[str, Any]]:
 
 @tool(description="更新因子，返回所更新的因子详情")
 def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
-    rec = FactorItemsRegistry.update_item(factor_id, body)
+    rec = update_factor_controller(factor_id, body)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
     return factor_detail(rec).model_dump()

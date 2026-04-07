@@ -9,7 +9,7 @@ from __future__ import annotations
 from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
-from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.controller import list_metric_records, read_metric_source
 from app.evaluation.profile.internal_nodes import get_internal_nodes
 
 from .schemas import EvaluationNodeTypePublic
@@ -23,8 +23,8 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     out.extend(internal_nodes)
 
     # metrics nodes
-    for metric in EvaluationMetricsRegistry.list_items():
-        source = EvaluationMetricsRegistry.read_source(metric)
+    for metric in list_metric_records():
+        source = read_metric_source(metric)
         node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
         inputs = [Parser.serialize_socket(s) for s in node_cls.inputs]
         outputs = [Parser.serialize_socket(s) for s in node_cls.outputs]

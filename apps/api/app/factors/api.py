@@ -11,12 +11,16 @@ from app.evaluation_run.schemas import (
     FactorEvaluationsSummaryPublic,
 )
 from app.factors.constants import NEW_FACTOR_TEMPLATE
-from app.factors.registry import (
-    FactorItemsRegistry,
-    delete_source_file,
+from app.factors.controller import (
+    create_factor as create_factor_record,
+)
+from app.factors.controller import (
+    delete_factor_source_file,
     factor_detail,
     list_factors,
+    update_factor,
 )
+from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
@@ -110,7 +114,7 @@ def get_factor(factor_id: str) -> FactorDetailPublic:
 @router.post("", response_model=FactorDetailPublic)
 def create_factor(body: FactorCreate) -> FactorDetailPublic:
     try:
-        rec = FactorItemsRegistry.create_factor(body)
+        rec = create_factor_record(body)
     except ValueError as e:
         http_bad_request(e)
     return factor_detail(rec)
@@ -119,7 +123,7 @@ def create_factor(body: FactorCreate) -> FactorDetailPublic:
 @router.patch("/{factor_id}", response_model=FactorDetailPublic)
 def patch_factor(factor_id: str, body: FactorPatch) -> FactorDetailPublic:
     try:
-        rec = FactorItemsRegistry.update_factor(factor_id, body)
+        rec = update_factor(factor_id, body)
     except ValueError as e:
         http_bad_request(e)
     if rec is None:
@@ -132,7 +136,7 @@ def delete_factor(factor_id: str) -> None:
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
-    delete_source_file(rec)
+    delete_factor_source_file(rec)
     FactorItemsRegistry.delete_item(factor_id)
     with contextlib.suppress(ValueError):
         delete_evaluation_for_factor(factor_id)

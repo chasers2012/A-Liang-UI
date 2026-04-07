@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.controller import ensure_metrics_loaded
 from app.evaluation.profile.schemas import EvaluationWorkflow
 from workflow import Node, WorkflowLink
 
@@ -9,7 +9,7 @@ _MIC = "evaluation_workflow_nodes.mean_ic.MeanIC"
 
 
 def test_duplicate_node_types_allowed(workspace_tmp):
-    EvaluationMetricsRegistry.load()
+    ensure_metrics_loaded()
     EvaluationWorkflow(
         nodes=[
             Node(id="a", type=_CALC, pos=[0, 0]),

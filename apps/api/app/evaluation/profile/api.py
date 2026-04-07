@@ -5,12 +5,13 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
-from app.evaluation.profile.redistry import (
-    EvaluationProfilesRegistry,
+from app.evaluation.profile.controller import (
     FactorNotFoundError,
     ProfileNotFoundError,
+    run_factor_evaluation,
 )
+from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
+from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationNodeTypePublic,
     EvaluationProfileCreate,
@@ -66,7 +67,7 @@ def post_factor_evaluation_run_for_profile(
     factor_id: str,
 ) -> FactorEvaluationRowPublic:
     try:
-        return EvaluationProfilesRegistry.run_factor_evaluation(profile_id, factor_id)
+        return run_factor_evaluation(profile_id, factor_id)
     except ProfileNotFoundError:
         raise HTTPException(status_code=404, detail="评价方案不存在") from None
     except FactorNotFoundError:

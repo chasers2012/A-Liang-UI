@@ -4,7 +4,7 @@ import os
 
 from sqlalchemy import create_engine, text
 
-from app.datasources.registry import resolve_csv_path
+from app.datasources.controller import resolve_csv_path
 from app.datasources.schemas import DataSourceRecord
 from app.datasources.sql_url import build_sqlalchemy_url
 

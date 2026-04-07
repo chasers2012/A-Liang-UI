@@ -6,23 +6,25 @@ from langchain_core.tools import tool
 
 from app.datetime_utils import utc_now_iso
 from app.evaluation.metrics.constants import DEFAULT_METRIC_SOURCE
-from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
-from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.controller import (
+    apply_metric_patch,
+    get_metric_record,
+    list_metric_records,
+    load_metric,
+    load_metric_detail,
+    update_metric_record,
+    write_metric_source,
+)
+from app.evaluation.metrics.controller import (
+    create_evaluation_metric as create_evaluation_metric_controller,
+)
+from app.evaluation.metrics.controller import (
+    delete_evaluation_metric as delete_evaluation_metric_controller,
+)
 from app.evaluation.metrics.schemas import (
     EvaluationMetricCreate,
     EvaluationMetricPatch,
-    EvaluationMetricRecord,
-    metric_source_validators,
 )
-from app.routers.evaluation_metrics import list_evaluation_metrics
-
-
-def _merge_patch(rec: EvaluationMetricRecord, patch: EvaluationMetricPatch) -> None:
-    data = patch.model_dump(exclude_unset=True)
-    if "name" in data:
-        rec.name = data["name"]
-    if "description" in data:
-        rec.description = (data["description"] or "").strip()
 
 
 @tool(
@@ -48,11 +50,11 @@ def create_evaluation_metric(body: dict[str, Any]) -> dict[str, Any]:
         src = DEFAULT_METRIC_SOURCE.strip()
     try:
         create_body = EvaluationMetricCreate(source=src)
-        rec = EvaluationMetricsRegistry.create_evaluation_metric(create_body)
+        rec = create_evaluation_metric_controller(create_body)
     except ValueError as e:
         raise ValueError(str(e)) from e
 
-    loaded = EvaluationMetricsRegistry.load_metric(rec.id)
+    loaded = load_metric(rec.id)
     if loaded is None:
         raise ValueError(f"评价指标 {rec.id} 创建后加载失败")
     return loaded.model_dump()
@@ -60,7 +62,7 @@ def create_evaluation_metric(body: dict[str, Any]) -> dict[str, Any]:
 
 @tool(description="获取评价指标详情（含完整 source），返回所获取的指标详情")
 def get_evaluation_metric_detail(metric_id: str) -> dict[str, Any]:
-    detail = EvaluationMetricsRegistry.load_metric_detail(metric_id)
+    detail = load_metric_detail(metric_id)
     if detail is None:
         raise ValueError(f"评价指标 {metric_id} 不存在")
     return detail.model_dump()
@@ -68,27 +70,25 @@ def get_evaluation_metric_detail(metric_id: str) -> dict[str, Any]:
 
 @tool(description="获取评价指标列表，返回所获取的指标摘要列表")
 def get_evaluation_metric_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_evaluation_metrics()]
+    return [
+        x.model_dump() for rec in list_metric_records() if (x := load_metric(rec.id)) is not None
+    ]
 
 
 @tool(description="更新评价指标，返回所更新指标的摘要（含 inputs/outputs）")
 def update_evaluation_metric(metric_id: str, body: EvaluationMetricPatch) -> dict[str, Any]:
     unset = body.model_dump(exclude_unset=True)
 
-    def _apply(rec: EvaluationMetricRecord) -> None:
-        _merge_patch(rec, body)
+    def _apply(rec) -> None:
+        apply_metric_patch(rec, body)
         if "source" in unset and body.source is not None:
-            EvaluationMetricsRegistry.write_source(
-                rec,
-                body.source,
-                validators=metric_source_validators,
-            )
+            write_metric_source(rec, body.source)
         rec.updated_at = utc_now_iso()
 
-    rec = EvaluationMetricsRegistry.update_item(metric_id, _apply)
+    rec = update_metric_record(metric_id, _apply)
     if rec is None:
         raise ValueError(f"评价指标 {metric_id} 不存在")
-    loaded = EvaluationMetricsRegistry.load_metric(rec.id)
+    loaded = load_metric(rec.id)
     if loaded is None:
         raise ValueError(f"评价指标 {metric_id} 不存在")
     return loaded.model_dump()
@@ -96,11 +96,10 @@ def update_evaluation_metric(metric_id: str, body: EvaluationMetricPatch) -> dic
 
 @tool(description="删除评价指标，返回所删除指标的登记信息")
 def delete_evaluation_metric(metric_id: str) -> dict[str, Any]:
-    rec = EvaluationMetricsRegistry.get_item(metric_id)
+    rec = get_metric_record(metric_id)
     if rec is None:
         raise ValueError(f"评价指标 {metric_id} 不存在")
-    EvaluationMetricPackageManager.delete_evaluation_metric_package(metric_id)
-    deleted = EvaluationMetricsRegistry.delete_item(metric_id)
+    deleted = delete_evaluation_metric_controller(metric_id)
     if deleted is None:
         raise ValueError(f"评价指标 {metric_id} 不存在")
     return deleted.model_dump()
