@@ -2,6 +2,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from inspect import isawaitable, iscoroutinefunction
+from pathlib import Path
 
 # Imports must follow bootstrap so workspace node packages exist before routers load catalogs.
 from fastapi import FastAPI
@@ -16,6 +17,36 @@ from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
 from app.startup_jobs import STARTUP_JOBS
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+def _bootstrap_env() -> None:
+    # Prefer app-level .env.local, then root .env.local, then examples.
+    app_root = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
+    for candidate in (
+        app_root / ".env.local",
+        repo_root / ".env.local",
+        app_root / ".env.example",
+        repo_root / ".env.example",
+    ):
+        _load_env_file(candidate)
+
+
+_bootstrap_env()
 
 
 @asynccontextmanager

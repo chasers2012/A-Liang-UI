@@ -31,3 +31,14 @@ def _register_evaluation_scheme_workflow_node_segment() -> None:
         type_key = getattr(node_cls, "type", "") or workflow_node_type_key(node_cls)
         if isinstance(type_key, str) and type_key.strip():
             loader.register_node(type_key, node_cls)
+
+
+@register_startup_job
+def _seed_evaluation_profile_examples() -> None:
+    # Avoid duplicated seed execution in forked/spawned worker processes.
+    if parent_process() is not None:
+        return
+
+    from app.evaluation.profile.seed_examples import seed_evaluation_profile_examples
+
+    seed_evaluation_profile_examples()

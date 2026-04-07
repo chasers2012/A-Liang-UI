@@ -1,0 +1,297 @@
+{
+  "nodes": [
+    {
+      "id": "load",
+      "type": "evaluation_workflow_nodes.load_data_set.LoadDataSet",
+      "pos": [
+        0,
+        0
+      ],
+      "params": {}
+    },
+    {
+      "id": "calc",
+      "type": "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode",
+      "pos": [
+        260,
+        0
+      ],
+      "params": {
+        "start_date": "2025-01-01",
+        "end_date": "2025-12-31",
+        "quantiles": 5
+      }
+    },
+    {
+      "id": "factor_returns",
+      "type": "390d1b54-c9aa-5632-a543-29378ecac3af",
+      "pos": [
+        520,
+        -240
+      ],
+      "params": {
+        "demeaned": true,
+        "group_adjust": false,
+        "equal_weight": false,
+        "by_asset": false
+      }
+    },
+    {
+      "id": "mean_ret",
+      "type": "92ac8817-db43-5468-baf6-8ba3091488ef",
+      "pos": [
+        520,
+        -60
+      ],
+      "params": {
+        "by_date": false,
+        "by_group": false,
+        "demeaned": true,
+        "group_adjust": false
+      }
+    },
+    {
+      "id": "mean_ret_by_date",
+      "type": "92ac8817-db43-5468-baf6-8ba3091488ef",
+      "pos": [
+        520,
+        140
+      ],
+      "params": {
+        "by_date": true,
+        "by_group": false,
+        "demeaned": true,
+        "group_adjust": false
+      }
+    },
+    {
+      "id": "rate_ret",
+      "type": "0f9ea4d7-a664-5f28-ac55-8d451f4c6b6c",
+      "pos": [
+        780,
+        -60
+      ],
+      "params": {}
+    },
+    {
+      "id": "rate_ret_by_date",
+      "type": "0f9ea4d7-a664-5f28-ac55-8d451f4c6b6c",
+      "pos": [
+        780,
+        140
+      ],
+      "params": {}
+    },
+    {
+      "id": "std_conv",
+      "type": "3d9e5a63-bcee-5a5c-bd01-26384f6777f9",
+      "pos": [
+        780,
+        300
+      ],
+      "params": {}
+    },
+    {
+      "id": "alpha_beta",
+      "type": "c4370b47-d50f-54f2-8126-f3f80e262742",
+      "pos": [
+        780,
+        -240
+      ],
+      "params": {
+        "demeaned": true,
+        "group_adjust": false,
+        "equal_weight": false
+      }
+    },
+    {
+      "id": "spread",
+      "type": "6218a6c2-0ca7-5f06-997b-0f59ff24302d",
+      "pos": [
+        1040,
+        170
+      ],
+      "params": {
+        "upper_quant": 5,
+        "lower_quant": 1
+      }
+    },
+    {
+      "id": "factor_cumret_1d",
+      "type": "f51cff02-3c3c-50ab-a94f-90d56399a9ad",
+      "pos": [
+        1040,
+        -240
+      ],
+      "params": {
+        "period": "1D",
+        "long_short": true,
+        "group_neutral": false,
+        "equal_weight": false
+      }
+    },
+    {
+      "id": "structured",
+      "type": "cbe019c4-e178-5390-ae61-c4a6550b9571",
+      "pos": [
+        1320,
+        -40
+      ],
+      "params": {}
+    },
+    {
+      "id": "echarts",
+      "type": "evaluation_workflow_nodes.visiualization.echarts_line.EchartsLineNode",
+      "pos": [
+        1560,
+        220
+      ],
+      "params": {
+        "show_legend": true,
+        "show_tooltip": true
+      }
+    },
+    {
+      "id": "collect",
+      "type": "evaluation_workflow_nodes.collect_result.CollectResult",
+      "pos": [
+        1800,
+        80
+      ],
+      "params": {}
+    }
+  ],
+  "links": [
+    {
+      "from_node": "load",
+      "from_socket": "data_set",
+      "to_node": "calc",
+      "to_socket": "data_set"
+    },
+    {
+      "from_node": "calc",
+      "from_socket": "clean_factor",
+      "to_node": "factor_returns",
+      "to_socket": "clean_factor"
+    },
+    {
+      "from_node": "calc",
+      "from_socket": "clean_factor",
+      "to_node": "mean_ret",
+      "to_socket": "clean_factor"
+    },
+    {
+      "from_node": "calc",
+      "from_socket": "clean_factor",
+      "to_node": "mean_ret_by_date",
+      "to_socket": "clean_factor"
+    },
+    {
+      "from_node": "factor_returns",
+      "from_socket": "returns",
+      "to_node": "alpha_beta",
+      "to_socket": "returns"
+    },
+    {
+      "from_node": "calc",
+      "from_socket": "clean_factor",
+      "to_node": "alpha_beta",
+      "to_socket": "clean_factor"
+    },
+    {
+      "from_node": "mean_ret",
+      "from_socket": "mean_return_by_quantile",
+      "to_node": "rate_ret",
+      "to_socket": "returns"
+    },
+    {
+      "from_node": "mean_ret_by_date",
+      "from_socket": "mean_return_by_quantile",
+      "to_node": "rate_ret_by_date",
+      "to_socket": "returns"
+    },
+    {
+      "from_node": "mean_ret_by_date",
+      "from_socket": "mean_return_by_quantile_std_error",
+      "to_node": "std_conv",
+      "to_socket": "std"
+    },
+    {
+      "from_node": "rate_ret_by_date",
+      "from_socket": "rate_of_return",
+      "to_node": "spread",
+      "to_socket": "mean_returns"
+    },
+    {
+      "from_node": "std_conv",
+      "from_socket": "std_converted",
+      "to_node": "spread",
+      "to_socket": "std_err"
+    },
+    {
+      "from_node": "calc",
+      "from_socket": "clean_factor",
+      "to_node": "factor_cumret_1d",
+      "to_socket": "clean_factor"
+    },
+    {
+      "from_node": "alpha_beta",
+      "from_socket": "alpha_beta",
+      "to_node": "structured",
+      "to_socket": "alpha_beta"
+    },
+    {
+      "from_node": "rate_ret",
+      "from_socket": "rate_of_return",
+      "to_node": "structured",
+      "to_socket": "mean_quant_rateret"
+    },
+    {
+      "from_node": "rate_ret_by_date",
+      "from_socket": "rate_of_return",
+      "to_node": "structured",
+      "to_socket": "mean_quant_rateret_bydate"
+    },
+    {
+      "from_node": "spread",
+      "from_socket": "mean_return_spread",
+      "to_node": "structured",
+      "to_socket": "mean_ret_spread_quant"
+    },
+    {
+      "from_node": "spread",
+      "from_socket": "mean_return_spread_std_error",
+      "to_node": "structured",
+      "to_socket": "std_spread_quant"
+    },
+    {
+      "from_node": "factor_cumret_1d",
+      "from_socket": "cumulative_returns",
+      "to_node": "structured",
+      "to_socket": "factor_returns_1d"
+    },
+    {
+      "from_node": "structured",
+      "from_socket": "chart_payloads",
+      "to_node": "echarts",
+      "to_socket": "payload"
+    },
+    {
+      "from_node": "structured",
+      "from_socket": "structured",
+      "to_node": "collect",
+      "to_socket": "result"
+    },
+    {
+      "from_node": "echarts",
+      "from_socket": "option",
+      "to_node": "collect",
+      "to_socket": "result"
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 0.75
+  }
+}

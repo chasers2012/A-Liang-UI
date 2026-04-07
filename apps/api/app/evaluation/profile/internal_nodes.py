@@ -7,7 +7,12 @@ from workflow.parser import Parser
 
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic
 
-INTERNAL_NODES = [LoadDataSet, CalculateFactorValueNode, CollectResult, EchartsLineNode]
+INTERNAL_NODES = [
+    LoadDataSet,
+    CalculateFactorValueNode,
+    CollectResult,
+    EchartsLineNode,
+]
 
 
 def get_internal_nodes() -> list[EvaluationNodeTypePublic]:
