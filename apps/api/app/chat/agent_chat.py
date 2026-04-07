@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import Any
 
 from app.chat.chat_llm import stream_chunk_text
-from app.chat.llm_schemas import ChatRequest, message_text_for_model
+from app.chat.schemas import ChatRequest, message_text_for_model
 from app.chat.tool_registry import ChatToolRegistry
 from langchain_core.messages import (
     AIMessage,

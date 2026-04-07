@@ -28,7 +28,7 @@ def _register_evaluation_workflow_node_segment() -> None:
     # JSON can keep storing evaluation metric ids as `node.type`.
     from workflow import Node, WorkflowNodeLoader
 
-    from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+    from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
 
     @lru_cache(maxsize=256)
     def _metric_id_to_node_cls(type_key: str) -> type[Node] | None:

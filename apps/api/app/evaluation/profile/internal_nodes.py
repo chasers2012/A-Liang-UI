@@ -5,7 +5,7 @@ from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNod
 from workflow import Node
 from workflow.parser import Parser
 
-from app.evaluation.profile.profile_schemas import EvaluationNodeTypePublic
+from app.evaluation.profile.schemas import EvaluationNodeTypePublic
 
 INTERNAL_NODES = [LoadDataSet, CalculateFactorValueNode, CollectResult, EchartsLineNode]
 

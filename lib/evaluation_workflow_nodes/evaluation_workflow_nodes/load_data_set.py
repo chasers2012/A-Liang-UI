@@ -1,4 +1,4 @@
-from app.data_set.data_sets_store import DataSetsStore
+from app.data_set.redistry import DataSetsStore
 from evaluate.data_set import DataSet
 from workflow import Socket, workflow_node
 from workflow.node_types import OptionsNodeParam
@@ -9,10 +9,7 @@ from workflow.node_types import OptionsNodeParam
         OptionsNodeParam(
             name="data_set",
             label="数据集",
-            options=lambda: [{
-                "label": s.name,
-                "value": s.id
-            } for s in DataSetsStore.list_items()],
+            options=lambda: [{"label": s.name, "value": s.id} for s in DataSetsStore.list_items()],
         ),
     ],
     output_sockets=[
@@ -21,7 +18,6 @@ from workflow.node_types import OptionsNodeParam
     label="加载数据集",
 )
 class LoadDataSet:
-
     def execute(self, **kwargs) -> DataSet:
         print("正在加载数据集")
         print(kwargs)

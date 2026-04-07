@@ -2,8 +2,8 @@ from evaluate import EvaluationMetric
 
 from app.common.packages import find_subclass_files
 from app.evaluation.metrics.constants import INTERNAL_EVALUATION_METRIC_PACKAGES
-from app.evaluation.metrics.metric_schemas import EvaluationMetricCreate
-from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.schemas import EvaluationMetricCreate
 
 
 def seed_internal_evaluation_metric_package() -> None:

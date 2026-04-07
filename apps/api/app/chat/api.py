@@ -11,7 +11,7 @@ from typing import Any
 
 from app.chat.agent_chat import lc_messages_from_chat_request, sse_event_iter_for_chat
 from app.chat.chat_llm import build_chat_model_from_workspace_settings
-from app.chat.llm_schemas import (
+from app.chat.schemas import (
     AssistantBlockPublic,
     ChatMessageIn,
     ChatRequest,

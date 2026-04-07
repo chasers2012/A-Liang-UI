@@ -5,7 +5,8 @@ from fastapi import APIRouter, HTTPException
 from app.datetime_utils import utc_now_iso
 from app.evaluation.metrics.constants import DEFAULT_METRIC_SOURCE
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
-from app.evaluation.metrics.metric_schemas import (
+from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricPatch,
@@ -13,7 +14,6 @@ from app.evaluation.metrics.metric_schemas import (
     EvaluationMetricSummaryPublic,
     metric_source_validators,
 )
-from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 
 router = APIRouter(prefix="/evaluation-metrics", tags=["evaluation-metrics"])
 

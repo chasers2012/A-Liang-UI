@@ -9,10 +9,10 @@ from __future__ import annotations
 from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
-from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
+from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
 from app.evaluation.profile.internal_nodes import get_internal_nodes
 
-from .profile_schemas import EvaluationNodeTypePublic
+from .schemas import EvaluationNodeTypePublic
 
 
 def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic]:

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.chat.llm_schemas import (
+from app.chat.schemas import (
     ChatMessageIn,
     ChatSessionArchivedSummaryPublic,
     ChatSessionDetailPublic,

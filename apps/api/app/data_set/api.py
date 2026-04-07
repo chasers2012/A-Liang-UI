@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.data_set.data_set_schemas import (
+from app.data_set.redistry import DataSetsStore
+from app.data_set.schemas import (
     DataSetCreate,
     DataSetDatasourceBindingInput,
     DataSetDatasourceBindingPublic,
@@ -11,7 +12,6 @@ from app.data_set.data_set_schemas import (
     DataSetPublic,
     DataSetRecord,
 )
-from app.data_set.data_sets_store import DataSetsStore
 from app.datasources.registry import DataSourceItemsRegistry
 from app.datasources.schemas import DataSourceRecord, utc_now_iso
 
@@ -155,6 +155,7 @@ def create_data_set(body: DataSetCreate) -> DataSetPublic:
 
 @router.patch("/{data_set_id}", response_model=DataSetPublic)
 def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
+
     def _apply(rec: DataSetRecord) -> None:
         if body.datasource_bindings is not None:
             _validate_and_touch_datasources(list(body.datasource_bindings))

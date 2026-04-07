@@ -11,7 +11,7 @@ from app.evaluation_run.schemas import FactorEvaluationRowPublic
 from app.evaluation_run.service import execute_and_persist_factor_evaluation_run
 from app.factors.registry import FactorItemsRegistry
 
-from .profile_schemas import EvaluationProfileRecord
+from .schemas import EvaluationProfileRecord
 
 PROFILES_DIR = "evaluation/profiles"
 

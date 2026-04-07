@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from app.evaluation.profile.profile_schemas import EvaluationProfileRecord
+from app.evaluation.profile.schemas import EvaluationProfileRecord
 from app.evaluation_run.profile_workflow_runner import run_evaluation_profile_workflow
 
-from .evaluations_store import upsert_evaluation_for_factor
+from .redistry import upsert_evaluation_for_factor
 from .schemas import FactorEvaluationRecord
 
 

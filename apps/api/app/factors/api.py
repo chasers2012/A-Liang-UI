@@ -4,7 +4,7 @@ import contextlib
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation_run.evaluations_store import delete_evaluation_for_factor
+from app.evaluation_run.redistry import delete_evaluation_for_factor
 from app.evaluation_run.schemas import (
     FactorEvaluationRowPublic,
     FactorEvaluationsAggregatePublic,
@@ -37,7 +37,7 @@ def get_factor_list() -> list[FactorSummaryPublic]:
 
 @router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
 def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
-    from app.evaluation_run.evaluations_store import load_evaluations_file
+    from app.evaluation_run.redistry import load_evaluations_file
 
     try:
         ev_file = load_evaluations_file()

@@ -5,13 +5,13 @@ from typing import Any
 from fastapi import HTTPException
 from langchain_core.tools import tool
 
-from app.data_set.data_set_schemas import (
+from app.data_set.redistry import DataSetsStore
+from app.data_set.schemas import (
     DataSetCreate,
     DataSetDatasourceBindingInput,
     DataSetPatch,
     DataSetRecord,
 )
-from app.data_set.data_sets_store import DataSetsStore
 from app.datasources.schemas import utc_now_iso
 from app.routers.data_sets import (
     _merge_patch,
@@ -65,6 +65,7 @@ def get_data_set_list() -> list[dict[str, Any]]:
     )
 )
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
+
     def _apply(rec: DataSetRecord) -> None:
         try:
             if body.datasource_bindings is not None:

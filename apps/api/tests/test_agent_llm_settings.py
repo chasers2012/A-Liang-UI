@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.chat.llm_schemas import LlmSettings
+from app.chat.schemas import LlmSettings
 from pydantic import ValidationError
 
 

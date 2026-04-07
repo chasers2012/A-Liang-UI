@@ -9,17 +9,17 @@ from langchain_core.tools import tool
 
 from app.datasources.schemas import utc_now_iso
 from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
-from app.evaluation.profile.profile_schemas import (
+from app.evaluation.profile.redistry import (
+    EvaluationProfilesRegistry,
+    FactorNotFoundError,
+    ProfileNotFoundError,
+)
+from app.evaluation.profile.schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
     workflow_public_dict,
-)
-from app.evaluation.profile.profiles_store import (
-    EvaluationProfilesRegistry,
-    FactorNotFoundError,
-    ProfileNotFoundError,
 )
 
 _EMPTY_WORKFLOW_JSON = json.dumps(

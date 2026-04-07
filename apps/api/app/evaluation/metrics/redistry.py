@@ -10,7 +10,7 @@ from app.evaluation.metrics.constants import REGISTRY_FILENAME, USER_METRIC_WORK
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 
-from .metric_schemas import (
+from .schemas import (
     EvaluationMetricCreate,
     EvaluationMetricDetailPublic,
     EvaluationMetricRecord,

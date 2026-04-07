@@ -4,7 +4,7 @@ from app.datasources.registry import DataSourceItemsRegistry
 from app.persistence.workspace_registry import WorkspaceItemsRegistry
 from evaluate.data_set import DataSet, DataSourceBinding
 
-from .data_set_schemas import DataSetRecord, DataSetsFile
+from .schemas import DataSetRecord, DataSetsFile
 
 REGISTRY_FILENAME = "data_sets/registry.json"
 

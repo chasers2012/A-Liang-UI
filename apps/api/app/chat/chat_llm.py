@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from app.chat.llm_schemas import LlmSettings
+from app.chat.schemas import LlmSettings
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
 

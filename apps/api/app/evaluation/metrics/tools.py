@@ -7,13 +7,13 @@ from langchain_core.tools import tool
 from app.datetime_utils import utc_now_iso
 from app.evaluation.metrics.constants import DEFAULT_METRIC_SOURCE
 from app.evaluation.metrics.metric_package_manager import EvaluationMetricPackageManager
-from app.evaluation.metrics.metric_schemas import (
+from app.evaluation.metrics.redistry import EvaluationMetricsRegistry
+from app.evaluation.metrics.schemas import (
     EvaluationMetricCreate,
     EvaluationMetricPatch,
     EvaluationMetricRecord,
     metric_source_validators,
 )
-from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.routers.evaluation_metrics import list_evaluation_metrics
 
 
