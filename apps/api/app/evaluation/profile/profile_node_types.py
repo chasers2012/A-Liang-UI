@@ -6,7 +6,7 @@ Built-in nodes and parsed metrics both expose a unified ``inputs`` list on
 
 from __future__ import annotations
 
-from workflow.parse import parse_workflow_node_source
+from workflow.parser import Parser
 
 from app.evaluation.metrics.metrics_store import EvaluationMetricsRegistry
 from app.evaluation.profile.internal_nodes import get_internal_nodes
@@ -24,9 +24,9 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     # metrics nodes
     for metric in EvaluationMetricsRegistry.list_items():
         source = EvaluationMetricsRegistry.read_source(metric)
-        _, _, inputs, outputs = parse_workflow_node_source(source)
-        inputs = [s.serialize() for s in inputs]
-        outputs = [s.serialize() for s in outputs]
+        _, _, inputs, outputs = Parser.parse_workflow_node_source(source)
+        inputs = [Parser.serialize_socket(s) for s in inputs]
+        outputs = [Parser.serialize_socket(s) for s in outputs]
 
         out.append(
             EvaluationNodeTypePublic(

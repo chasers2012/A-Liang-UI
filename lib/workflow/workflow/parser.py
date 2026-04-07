@@ -1,20 +1,77 @@
-"""Centralized parsing helpers for workflow JSON payloads."""
+"""Centralized parsing helpers for workflow JSON payloads and node Python source."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .graph import WorkflowGraph, WorkflowLink, WorkflowViewport
-    from .node_types import Node, Socket
+    from .node_types import (
+        Node,
+        NodeParam,
+        Socket,
+        WorkflowGraph,
+        WorkflowLink,
+        WorkflowViewport,
+    )
 
 
 class Parser:
     """Parse workflow payload dictionaries into runtime workflow objects."""
 
     @staticmethod
+    def serialize_socket(socket: Socket) -> dict[str, Any]:
+        """JSON-friendly socket / param specification used by API responses."""
+        from .node_types import NodeParam, NumberNodeParam, OptionsNodeParam
+
+        if isinstance(socket, NumberNodeParam):
+            return {
+                **Parser._serialize_node_param(socket),
+                "minimum": socket.minimum,
+                "maximum": socket.maximum,
+            }
+        if isinstance(socket, OptionsNodeParam):
+            opts = socket.options
+            options = list(opts()) if callable(opts) else list(opts or [])
+            return {**Parser._serialize_node_param(socket), "options": options}
+        if isinstance(socket, NodeParam):
+            return Parser._serialize_node_param(socket)
+        return {
+            "name": socket.name,
+            "required": socket.required,
+            "label": socket.label,
+            "description": socket.description,
+            "value_type": socket.value_type,
+            "render_type": socket.render_type,
+        }
+
+    @staticmethod
+    def _serialize_node_param(param: NodeParam) -> dict[str, Any]:
+        return {
+            "name": param.name,
+            "required": param.required,
+            "label": param.label,
+            "description": param.description,
+            "value_type": param.value_type,
+            "render_type": param.render_type,
+            "default": param.default,
+        }
+
+    @staticmethod
+    def serialize_node(node: Node) -> dict[str, Any]:
+        """JSON-friendly node definition payload."""
+        return {
+            "type": node.type,
+            "label": node.label,
+            "description": node.description,
+            "category": node.category,
+            "inputs": [Parser.serialize_socket(s) for s in node.inputs],
+            "outputs": [Parser.serialize_socket(s) for s in node.outputs],
+            "params": node.params,
+        }
+
+    @staticmethod
     def parse_workflow_link(config_dict: dict[str, Any]) -> WorkflowLink:
-        from .graph import WorkflowLink
+        from .node_types import WorkflowLink
 
         return WorkflowLink(
             id=config_dict.get("id"),
@@ -26,7 +83,7 @@ class Parser:
 
     @staticmethod
     def parse_workflow_viewport(config_dict: dict[str, Any]) -> WorkflowViewport:
-        from .graph import WorkflowViewport
+        from .node_types import WorkflowViewport
 
         return WorkflowViewport(
             x=config_dict.get("x", 0.0),
@@ -46,6 +103,30 @@ class Parser:
             value_type=config_dict.get("value_type", ""),
             render_type=config_dict.get("render_type", ""),
         )
+
+    @staticmethod
+    def parse_workflow_node_source(
+        source: str,
+    ) -> tuple[str, str, list[Socket], list[Socket]]:
+        """Parse a workflow-node python source snippet by instantiating its decorated class.
+
+        Note: this executes *source* to recover runtime metadata produced by the
+        ``@workflow_node(...)`` decorator (including Socket subclasses and custom kwargs).
+        """
+        from .node_loader import WorkflowNodeLoader
+
+        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+        try:
+            node_obj = node_cls()  # type: ignore[call-arg]
+        except Exception:
+            # Some node classes define a required __init__; we only need class-level metadata.
+            node_obj = node_cls.__new__(node_cls)  # type: ignore[misc]
+
+        label = str(getattr(node_obj, "label", "") or "").strip()
+        description = str(getattr(node_obj, "description", "") or "").strip()
+        inputs = list(getattr(node_obj, "inputs", ()) or ())
+        outputs = list(getattr(node_obj, "outputs", ()) or ())
+        return label, description, inputs, outputs
 
     @staticmethod
     def parse_node(json_dict: dict[str, Any]) -> Node:
@@ -98,7 +179,7 @@ class Parser:
 
     @staticmethod
     def parse_workflow_graph(config_dict: dict[str, Any]) -> WorkflowGraph:
-        from .graph import WorkflowGraph
+        from .node_types import WorkflowGraph
 
         nodes = [
             Parser.parse_node(node_conf)

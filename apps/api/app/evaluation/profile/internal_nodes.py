@@ -3,6 +3,7 @@ from evaluation_workflow_nodes.collect_result import CollectResult
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
 from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
 from workflow import Node
+from workflow.parser import Parser
 
 from app.evaluation.profile.profile_schemas import EvaluationNodeTypePublic
 
@@ -19,8 +20,8 @@ def get_internal_nodes() -> list[EvaluationNodeTypePublic]:
                 label=node_instance.label,
                 description=node_instance.description,
                 category=node_instance.category,
-                inputs=[s.serialize() for s in node_instance.inputs],
-                outputs=[s.serialize() for s in node_instance.outputs],
+                inputs=[Parser.serialize_socket(s) for s in node_instance.inputs],
+                outputs=[Parser.serialize_socket(s) for s in node_instance.outputs],
             )
         )
     return ret

@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .graph import WorkflowGraph
 from .graph_algo import topological_order
-from .node_types import Node
+from .node_types import Node, WorkflowGraph
 from .parser import Parser
 
 

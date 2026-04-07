@@ -1,6 +1,8 @@
-"""Workflow node type metadata for workflow sockets, params, and nodes.
+"""Workflow node type metadata (sockets, params, nodes) and graph container models.
 
-Used by ``@workflow_node`` and :meth:`collect_node_classes` / catalogs.
+Socket / :class:`Node` definitions are used by ``@workflow_node`` and
+:meth:`collect_node_classes` / catalogs. :class:`WorkflowGraph` holds serialized
+graph instances (nodes, links, viewport).
 """
 
 from __future__ import annotations
@@ -35,17 +37,6 @@ class Socket:
         self.description = description
         self.value_type = value_type
         self.render_type = render_type
-
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly socket specification used by API responses."""
-        return {
-            "name": self.name,
-            "required": self.required,
-            "label": self.label,
-            "description": self.description,
-            "value_type": self.value_type,
-            "render_type": self.render_type,
-        }
 
 
 class AppendableSocket(Socket):
@@ -97,14 +88,6 @@ class NodeParam(Socket):
         self.default = default
         self.render_type = getattr(type(self), "render_type", None)
 
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly socket specification used by API responses."""
-        return {
-            **super().serialize(),
-            "default": self.default,
-            "render_type": self.render_type,
-        }
-
 
 class OptionsNodeParam(NodeParam):
     options: list[str | float | int] | Callable | None = None
@@ -131,14 +114,6 @@ class OptionsNodeParam(NodeParam):
             **_ignored,
         )
         self.options = options
-
-    def serialize(self) -> dict[str, Any]:
-        opts = self.options
-        options = list(opts()) if callable(opts) else list(opts or [])
-        return {
-            **super().serialize(),
-            "options": options,
-        }
 
 
 class NumberNodeParam(NodeParam):
@@ -171,9 +146,6 @@ class NumberNodeParam(NodeParam):
         )
         self.minimum = minimum
         self.maximum = maximum
-
-    def serialize(self) -> dict[str, Any]:
-        return {**super().serialize(), "minimum": self.minimum, "maximum": self.maximum}
 
 
 class StringNodeParam(NodeParam):
@@ -308,14 +280,84 @@ class Node:
     def execute(self, **_kwargs: Any) -> tuple[Any, ...]:
         pass
 
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly node definition payload."""
+
+# --- Graph instance models (nodes + links + viewport) -------------------------
+
+
+class WorkflowLink:
+    id: str | None = None
+    from_node: str
+    from_socket: str
+    to_node: str
+    to_socket: str
+
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        from_node: str = "",
+        from_socket: str = "",
+        to_node: str = "",
+        to_socket: str = "",
+    ) -> None:
+        self.id = id
+        self.from_node = from_node
+        self.from_socket = from_socket
+        self.to_node = to_node
+        self.to_socket = to_socket
+
+    def serialize(self) -> dict:
         return {
-            "type": self.type,
-            "label": self.label,
-            "description": self.description,
-            "category": self.category,
-            "inputs": [s.serialize() for s in self.inputs],
-            "outputs": [s.serialize() for s in self.outputs],
-            "params": self.params,
+            "id": self.id,
+            "from_node": self.from_node,
+            "from_socket": self.from_socket,
+            "to_node": self.to_node,
+            "to_socket": self.to_socket,
+        }
+
+
+class WorkflowViewport:
+    x: float = 0.0
+    y: float = 0.0
+    zoom: float = 1.0
+
+    def __init__(self, x: float = 0.0, y: float = 0.0, zoom: float = 1.0) -> None:
+        self.x = x
+        self.y = y
+        self.zoom = zoom
+
+    def serialize(self) -> dict:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "zoom": self.zoom,
+        }
+
+
+class WorkflowGraph:
+    nodes: list[Node]
+    links: list[WorkflowLink]
+    viewport: WorkflowViewport | None
+
+    def __init__(
+        self,
+        *,
+        nodes: list[Node] | None = None,
+        links: list[WorkflowLink] | None = None,
+        viewport: WorkflowViewport | None = None,
+    ) -> None:
+        self.nodes = list(nodes or [])
+        self.links = list(links or [])
+        self.viewport = viewport
+
+    def serialize(self) -> dict:
+        from .parser import Parser
+
+        nodes_payload: list[dict[str, Any]] = []
+        for node in self.nodes:
+            nodes_payload.append(Parser.serialize_node(node))
+        return {
+            "nodes": nodes_payload,
+            "links": [link.serialize() for link in self.links],
+            "viewport": self.viewport.serialize() if self.viewport else None,
         }

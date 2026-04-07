@@ -5,8 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from collections.abc import Sequence
 
-from .graph import WorkflowLink
-from .node_types import Node
+from .node_types import Node, WorkflowLink
 
 
 def topological_order(
