@@ -8,6 +8,7 @@ from typing import Any
 from .graph import WorkflowGraph
 from .graph_algo import topological_order
 from .node_types import Node
+from .parser import Parser
 
 
 class WorkflowUnknownNodeTypeError(LookupError):
@@ -71,7 +72,7 @@ class WorkflowExecutor:
     ) -> dict[str, dict[str, Any]]:
         """Run the workflow from a JSON string; return ``node_id -> {output_socket: value}``.
 
-        *workflow* must decode to a dict accepted by :meth:`WorkflowGraph.parse`
+        *workflow* must decode to a dict accepted by :meth:`Parser.parse_workflow_graph`
         (same shape as :meth:`WorkflowGraph.serialize`).
 
         *context* keys are merged into each node's kwargs (before static ``params`` and
@@ -83,7 +84,7 @@ class WorkflowExecutor:
         if not isinstance(payload, dict):
             raise TypeError("workflow JSON must decode to an object")
 
-        graph = WorkflowGraph.parse(payload)
+        graph = Parser.parse_workflow_graph(payload)
         if not graph.nodes:
             return {}
 

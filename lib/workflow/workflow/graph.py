@@ -38,16 +38,6 @@ class WorkflowLink:
             "to_socket": self.to_socket,
         }
 
-    @staticmethod
-    def parse(config_dict: dict) -> WorkflowLink:
-        return WorkflowLink(
-            id=config_dict.get("id"),
-            from_node=config_dict.get("from_node", ""),
-            from_socket=config_dict.get("from_socket", ""),
-            to_node=config_dict.get("to_node", ""),
-            to_socket=config_dict.get("to_socket", ""),
-        )
-
 
 class WorkflowViewport:
     x: float = 0.0
@@ -65,16 +55,6 @@ class WorkflowViewport:
             "y": self.y,
             "zoom": self.zoom,
         }
-
-    @staticmethod
-    def parse(config_dict: dict) -> WorkflowViewport:
-        if not isinstance(config_dict, dict):
-            config_dict = {}
-        return WorkflowViewport(
-            x=config_dict.get("x", 0.0),
-            y=config_dict.get("y", 0.0),
-            zoom=config_dict.get("zoom", 1.0),
-        )
 
 
 class WorkflowGraph:
@@ -102,21 +82,3 @@ class WorkflowGraph:
             "links": [link.serialize() for link in self.links],
             "viewport": self.viewport.serialize() if self.viewport else None,
         }
-
-    @staticmethod
-    def parse(config_dict: dict) -> WorkflowGraph:
-        nodes: list[Node] = []
-        for node_conf in config_dict.get("nodes", []):
-            n = Node.parse(node_conf)
-            nodes.append(n)
-        links = [WorkflowLink.parse(link_conf) for link_conf in config_dict.get("links", [])]
-        vp_raw = config_dict.get("viewport")
-        if vp_raw is None:
-            viewport = None
-        else:
-            viewport = WorkflowViewport.parse(vp_raw if isinstance(vp_raw, dict) else {})
-        return WorkflowGraph(
-            nodes=nodes,
-            links=links,
-            viewport=viewport,
-        )

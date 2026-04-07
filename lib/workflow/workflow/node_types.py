@@ -8,8 +8,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from .node_loader import WorkflowNodeLoader
-
 # --- Dataclasses (compile-time node metadata) ---------------------------------
 
 
@@ -37,17 +35,6 @@ class Socket:
         self.description = description
         self.value_type = value_type
         self.render_type = render_type
-
-    @staticmethod
-    def parse(config_dict: dict) -> Socket:
-        return Socket(
-            name=config_dict.get("name", ""),
-            required=config_dict.get("required", False),
-            label=config_dict.get("label", ""),
-            description=config_dict.get("description", ""),
-            value_type=config_dict.get("value_type", ""),
-            render_type=config_dict.get("render_type", ""),
-        )
 
     def serialize(self) -> dict[str, Any]:
         """JSON-friendly socket specification used by API responses."""
@@ -318,7 +305,7 @@ class Node:
         self.outputs = outputs or ()
         self.params = params or {}
 
-    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
+    def execute(self, **_kwargs: Any) -> tuple[Any, ...]:
         pass
 
     def serialize(self) -> dict[str, Any]:
@@ -332,63 +319,3 @@ class Node:
             "outputs": [s.serialize() for s in self.outputs],
             "params": self.params,
         }
-
-    @staticmethod
-    def parse(json_dict: dict[str, Any]) -> Node:
-        """Parse a workflow graph node config.
-
-        Expected JSON shape is consistent with :meth:`serialize` (plus a few
-        optional UI fields like ``description`` that may be omitted).
-        """
-
-        type_key = json_dict.get("type", "")
-        if not isinstance(type_key, str) or not type_key.strip():
-            raise ValueError("node payload missing string field 'type'")
-
-        node_cls = WorkflowNodeLoader.instance().resolve(type_key)
-
-        # Try to build the node instance. Many built-in nodes have no required
-        # __init__ args; still, we mirror parse_workflow_node_source's behavior
-        # (fall back to __new__ if no-arg init fails).
-        try:
-            node_obj: Node = node_cls()  # type: ignore[call-arg]
-        except Exception:
-            node_obj = node_cls.__new__(node_cls)  # type: ignore[misc]
-
-        # Graph-instance fields.
-        node_obj.id = json_dict.get("id", "") if isinstance(json_dict.get("id"), str) else ""
-
-        pos_raw = json_dict.get("pos")
-        if isinstance(pos_raw, list) and len(pos_raw) >= 2:
-            try:
-                node_obj.pos = [float(pos_raw[0]), float(pos_raw[1])]
-            except (TypeError, ValueError):
-                node_obj.pos = [0.0, 0.0]
-        else:
-            node_obj.pos = [0.0, 0.0]
-
-        params_raw = json_dict.get("params", {})
-        node_obj.params = params_raw if isinstance(params_raw, dict) else {}
-
-        # Optional UI/persisted overrides (do not affect execution semantics).
-        for k in ("label", "description", "category", "entry", "type"):
-            v = json_dict.get(k)
-            if isinstance(v, str) and v.strip():
-                setattr(node_obj, k, v)
-
-        # If the resolved class doesn't carry socket metadata (or it was lost),
-        # we can reconstruct socket order from JSON payload.
-        if not getattr(node_obj, "outputs", None) and isinstance(json_dict.get("outputs"), list):
-            node_obj.outputs = tuple(
-                Socket.parse(s)
-                for s in json_dict.get("outputs", [])
-                if isinstance(s, dict) and s.get("name")
-            )
-        if not getattr(node_obj, "inputs", None) and isinstance(json_dict.get("inputs"), list):
-            node_obj.inputs = tuple(
-                Socket.parse(s)
-                for s in json_dict.get("inputs", [])
-                if isinstance(s, dict) and s.get("name")
-            )
-
-        return node_obj

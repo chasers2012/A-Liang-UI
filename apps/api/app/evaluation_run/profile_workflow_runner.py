@@ -7,7 +7,8 @@ import traceback
 from typing import Any
 
 from evaluation_workflow_nodes.collect_result import CollectResult
-from workflow import WorkflowExecutor, WorkflowGraph
+from workflow import WorkflowExecutor
+from workflow.parser import Parser
 
 from app.evaluation.profile.profile_schemas import EvaluationProfileRecord
 from app.factors.registry import FactorItemsRegistry
@@ -38,7 +39,7 @@ def _extract_collected_result(
     if not isinstance(payload, dict):
         return None
 
-    graph = WorkflowGraph.parse(payload)
+    graph = Parser.parse_workflow_graph(payload)
     if not graph.nodes:
         return None
 
