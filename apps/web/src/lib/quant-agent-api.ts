@@ -551,13 +551,12 @@ export function runFactorEvaluation(
     return Promise.reject(new Error("evaluationProfileId is required"));
   }
   const init: RequestInit = { method: "POST" };
-  if (options.dataSetId != null) {
-    init.body = JSON.stringify({
-      data_set_id: options.dataSetId,
-    });
-  }
+  init.body = JSON.stringify({
+    profile_id: profileId,
+    factor_id: factorId,
+  });
   return apiFetchJson<FactorEvaluationRowPublic>(
-    `/evaluation-profiles/${encodeURIComponent(profileId)}/factors/${encodeURIComponent(factorId)}/evaluations/run`,
+    "/evaluation-profiles/evaluations/run",
     init,
   );
 }

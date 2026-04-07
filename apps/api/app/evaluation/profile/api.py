@@ -5,11 +5,6 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.profile.controller import (
-    FactorNotFoundError,
-    ProfileNotFoundError,
-    run_factor_evaluation,
-)
 from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
@@ -20,8 +15,6 @@ from app.evaluation.profile.schemas import (
     EvaluationProfileRecord,
     workflow_public_dict,
 )
-from app.evaluation_run.schemas import FactorEvaluationRowPublic
-from app.http_errors import http_bad_request
 
 router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
 
@@ -56,24 +49,6 @@ def _merge_evaluation_profile_patch(
 @router.get("/node-types", response_model=list[EvaluationNodeTypePublic])
 def list_node_types() -> list[EvaluationNodeTypePublic]:
     return list_evaluation_profile_node_types_public()
-
-
-@router.post(
-    "/{profile_id}/factors/{factor_id}/evaluations/run",
-    response_model=FactorEvaluationRowPublic,
-)
-def post_factor_evaluation_run_for_profile(
-    profile_id: str,
-    factor_id: str,
-) -> FactorEvaluationRowPublic:
-    try:
-        return run_factor_evaluation(profile_id, factor_id)
-    except ProfileNotFoundError:
-        raise HTTPException(status_code=404, detail="评价方案不存在") from None
-    except FactorNotFoundError:
-        raise HTTPException(status_code=404, detail="因子不存在") from None
-    except ValueError as e:
-        http_bad_request(e)
 
 
 @router.get("", response_model=list[EvaluationProfilePublic])

@@ -13,6 +13,7 @@ from app.data_set import api as data_sets_router
 from app.datasources import api as datasources_router
 from app.evaluation.metrics import api as evaluation_metrics_router
 from app.evaluation.profile import api as evaluation_profiles_router
+from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
 from app.startup_jobs import STARTUP_JOBS
 
@@ -41,6 +42,7 @@ app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)
 app.include_router(evaluation_metrics_router.router)
 app.include_router(evaluation_profiles_router.router)
+app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
 

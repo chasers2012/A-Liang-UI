@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from app.evaluation_run.schemas import (
+from app.evaluation.run.schemas import (
     FactorEvaluationRecord,
     FactorEvaluationsFile,
 )

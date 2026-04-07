@@ -30,6 +30,11 @@ class FactorEvaluationRowPublic(BaseModel):
     results: Any = None
 
 
+class RunFactorEvaluationRequest(BaseModel):
+    profile_id: str
+    factor_id: str
+
+
 class FactorEvaluationsAggregatePublic(BaseModel):
     total_factors: int
     evaluated_count: int
