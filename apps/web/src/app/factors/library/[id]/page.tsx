@@ -51,7 +51,7 @@ function formatIso(iso: string): string {
 }
 
 function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
-  const r = row.results ?? row.metric_results;
+  const r = row.results;
   if (r === null || r === undefined) return false;
   if (Array.isArray(r)) return r.length > 0;
   if (typeof r === "object") return Object.keys(r as Record<string, unknown>).length > 0;

@@ -43,8 +43,6 @@ export interface FactorEvaluationRowPublic {
   mean_return_spread?: Record<string, number>;
   /** Present when the run used a named evaluation profile (with or without workflow nodes). */
   evaluation_profile_id?: string | null;
-  /** @deprecated 旧字段：工作流节点输出（可能已被 results 替代）。 */
-  metric_results?: Record<string, unknown>;
 }
 
 export interface FactorEvaluationsSummaryPublic {

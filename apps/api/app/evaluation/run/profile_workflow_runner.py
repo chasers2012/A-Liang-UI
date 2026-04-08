@@ -125,6 +125,14 @@ def _extract_collected_result(
         if nid in node_results:
             collected_values.append(node_results[nid])
 
+    # CollectResult 无 output_sockets 时 format_output 会把 (tuple,) 原样返回；
+    # 单收集节点时等价于 ([merged_list],)，此处展平为 merged_list，便于 JSON 与前端遍历。
+    if len(collected_values) == 1:
+        only = collected_values[0]
+        if isinstance(only, tuple) and len(only) == 1:
+            return only[0]
+        return only
+
     return collected_values
 
 

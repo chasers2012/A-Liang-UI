@@ -77,8 +77,24 @@ def build_returns_tear_workflow_template() -> dict:
                 params={"period": "1D", "long_short": True, "group_neutral": False},
             ),
             Node(id="structured", type=structured_type, pos=[1180, -80]),
-            Node(id="echarts", type=echarts_type, pos=[1420, 120]),
-            Node(id="collect", type=collect_type, pos=[1640, 20]),
+            Node(id="echarts_mean_q", type=echarts_type, pos=[1420, -180]),
+            Node(id="echarts_bydate", type=echarts_type, pos=[1420, -40]),
+            Node(id="echarts_spread", type=echarts_type, pos=[1420, 100]),
+            Node(id="echarts_cumret", type=echarts_type, pos=[1420, 240]),
+            Node(
+                id="collect",
+                type=collect_type,
+                pos=[1640, 20],
+                params={
+                    "result": [
+                        {"from_node": "structured", "from_socket": "structured"},
+                        {"from_node": "echarts_mean_q", "from_socket": "option"},
+                        {"from_node": "echarts_bydate", "from_socket": "option"},
+                        {"from_node": "echarts_spread", "from_socket": "option"},
+                        {"from_node": "echarts_cumret", "from_socket": "option"},
+                    ]
+                },
+            ),
         ],
         links=[
             WorkflowLink(
@@ -188,8 +204,26 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             WorkflowLink(
                 from_node="structured",
-                from_socket="chart_payloads",
-                to_node="echarts",
+                from_socket="chart_mean_return_by_quantile",
+                to_node="echarts_mean_q",
+                to_socket="payload",
+            ),
+            WorkflowLink(
+                from_node="structured",
+                from_socket="chart_quantile_returns_by_date",
+                to_node="echarts_bydate",
+                to_socket="payload",
+            ),
+            WorkflowLink(
+                from_node="structured",
+                from_socket="chart_mean_ret_spread",
+                to_node="echarts_spread",
+                to_socket="payload",
+            ),
+            WorkflowLink(
+                from_node="structured",
+                from_socket="chart_factor_cumret_1d",
+                to_node="echarts_cumret",
                 to_socket="payload",
             ),
             WorkflowLink(
@@ -199,7 +233,28 @@ def build_returns_tear_workflow_template() -> dict:
                 to_socket="result",
             ),
             WorkflowLink(
-                from_node="echarts", from_socket="option", to_node="collect", to_socket="result"
+                from_node="echarts_mean_q",
+                from_socket="option",
+                to_node="collect",
+                to_socket="result",
+            ),
+            WorkflowLink(
+                from_node="echarts_bydate",
+                from_socket="option",
+                to_node="collect",
+                to_socket="result",
+            ),
+            WorkflowLink(
+                from_node="echarts_spread",
+                from_socket="option",
+                to_node="collect",
+                to_socket="result",
+            ),
+            WorkflowLink(
+                from_node="echarts_cumret",
+                from_socket="option",
+                to_node="collect",
+                to_socket="result",
             ),
         ],
     )

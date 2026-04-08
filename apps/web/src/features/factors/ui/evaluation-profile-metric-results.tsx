@@ -14,19 +14,28 @@ function isEchartsPayload(v: unknown): v is EchartsPayload {
   return o.type === "echart" && "option" in o;
 }
 
-function optionHasLineSeries(option: unknown): boolean {
-  if (!option || typeof option !== "object") return false;
-  const o = option as Record<string, unknown>;
-  const series = o.series;
-  if (!Array.isArray(series)) return false;
-  return series.some((s) => {
-    if (!s || typeof s !== "object") return false;
-    const ss = s as Record<string, unknown>;
-    return ss.type === "line";
-  });
+/**
+ * 与后端 `profile_workflow_runner._extract_collected_result` + `_to_jsonable` 对齐：
+ * 单 Collect 节点时常见为 `[[ structured, ...echart ]]`（外层多包一层数组），需展开一层再遍历。
+ * 若结果被序列化成字符串，则先 JSON.parse。
+ */
+function normalizeEvalResults(raw: unknown): unknown {
+  if (raw == null) return raw;
+  if (typeof raw === "string") {
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return raw;
+    }
+  }
+  if (Array.isArray(raw) && raw.length === 1 && Array.isArray(raw[0])) {
+    return raw[0];
+  }
+  return raw;
 }
 
-function collectEchartsLinePayloads(value: unknown): EchartsPayload[] {
+/** 深度遍历评价结果，收集所有 `EchartsLineNode` 输出的 `{ type: "echart", option }`（一节点一图，结果里可出现多个）。 */
+function collectEchartsPayloads(value: unknown): EchartsPayload[] {
   const out: EchartsPayload[] = [];
   const visited = new Set<unknown>();
 
@@ -37,7 +46,7 @@ function collectEchartsLinePayloads(value: unknown): EchartsPayload[] {
       visited.add(v);
 
       if (isEchartsPayload(v)) {
-        if (optionHasLineSeries(v.option)) out.push(v);
+        out.push(v);
         return;
       }
 
@@ -60,12 +69,12 @@ export function EvaluationProfileMetricResultsPanel(props: {
 }) {
   const { evalRow } = props;
 
-  const lineCharts = useMemo(
-    () => collectEchartsLinePayloads(evalRow.results ?? evalRow.metric_results),
-    [evalRow.results, evalRow.metric_results],
+  const charts = useMemo(
+    () => collectEchartsPayloads(normalizeEvalResults(evalRow.results)),
+    [evalRow.results],
   );
 
-  if (!(evalRow.results ?? evalRow.metric_results)) {
+  if (evalRow.results == null) {
     return (
       <p className="text-sm text-muted-foreground">
         当前评价没有工作流节点输出。
@@ -73,20 +82,20 @@ export function EvaluationProfileMetricResultsPanel(props: {
     );
   }
 
-  if (lineCharts.length === 0) {
+  if (charts.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        未找到 `EchartsLineNode` 的可视化数据（或不是线图系列）。
+        未找到 ECharts 图表数据（工作流需包含 `EchartsLineNode` 节点输出）。
       </p>
     );
   }
 
   return (
     <div className="space-y-4">
-      {lineCharts.map((p, idx) => (
+      {charts.map((p, idx) => (
         <div key={idx} className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground">
-            ECharts 线图 #{idx + 1}
+            {charts.length === 1 ? "ECharts 图表" : `ECharts 图表 #${idx + 1}`}
           </div>
           <EchartsOptionChart option={p.option} />
         </div>

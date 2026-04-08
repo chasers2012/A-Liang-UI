@@ -140,11 +140,47 @@
       "params": {}
     },
     {
-      "id": "echarts",
+      "id": "echarts_mean_q",
       "type": "evaluation_workflow_nodes.visiualization.echarts_line.EchartsLineNode",
       "pos": [
         1560,
-        220
+        -180
+      ],
+      "params": {
+        "show_legend": true,
+        "show_tooltip": true
+      }
+    },
+    {
+      "id": "echarts_bydate",
+      "type": "evaluation_workflow_nodes.visiualization.echarts_line.EchartsLineNode",
+      "pos": [
+        1560,
+        -40
+      ],
+      "params": {
+        "show_legend": true,
+        "show_tooltip": true
+      }
+    },
+    {
+      "id": "echarts_spread",
+      "type": "evaluation_workflow_nodes.visiualization.echarts_line.EchartsLineNode",
+      "pos": [
+        1560,
+        100
+      ],
+      "params": {
+        "show_legend": true,
+        "show_tooltip": true
+      }
+    },
+    {
+      "id": "echarts_cumret",
+      "type": "evaluation_workflow_nodes.visiualization.echarts_line.EchartsLineNode",
+      "pos": [
+        1560,
+        240
       ],
       "params": {
         "show_legend": true,
@@ -158,7 +194,30 @@
         1800,
         80
       ],
-      "params": {}
+      "params": {
+        "result": [
+          {
+            "from_node": "structured",
+            "from_socket": "structured"
+          },
+          {
+            "from_node": "echarts_mean_q",
+            "from_socket": "option"
+          },
+          {
+            "from_node": "echarts_bydate",
+            "from_socket": "option"
+          },
+          {
+            "from_node": "echarts_spread",
+            "from_socket": "option"
+          },
+          {
+            "from_node": "echarts_cumret",
+            "from_socket": "option"
+          }
+        ]
+      }
     }
   ],
   "links": [
@@ -272,8 +331,26 @@
     },
     {
       "from_node": "structured",
-      "from_socket": "chart_payloads",
-      "to_node": "echarts",
+      "from_socket": "chart_mean_return_by_quantile",
+      "to_node": "echarts_mean_q",
+      "to_socket": "payload"
+    },
+    {
+      "from_node": "structured",
+      "from_socket": "chart_quantile_returns_by_date",
+      "to_node": "echarts_bydate",
+      "to_socket": "payload"
+    },
+    {
+      "from_node": "structured",
+      "from_socket": "chart_mean_ret_spread",
+      "to_node": "echarts_spread",
+      "to_socket": "payload"
+    },
+    {
+      "from_node": "structured",
+      "from_socket": "chart_factor_cumret_1d",
+      "to_node": "echarts_cumret",
       "to_socket": "payload"
     },
     {
@@ -283,7 +360,25 @@
       "to_socket": "result"
     },
     {
-      "from_node": "echarts",
+      "from_node": "echarts_mean_q",
+      "from_socket": "option",
+      "to_node": "collect",
+      "to_socket": "result"
+    },
+    {
+      "from_node": "echarts_bydate",
+      "from_socket": "option",
+      "to_node": "collect",
+      "to_socket": "result"
+    },
+    {
+      "from_node": "echarts_spread",
+      "from_socket": "option",
+      "to_node": "collect",
+      "to_socket": "result"
+    },
+    {
+      "from_node": "echarts_cumret",
       "from_socket": "option",
       "to_node": "collect",
       "to_socket": "result"
