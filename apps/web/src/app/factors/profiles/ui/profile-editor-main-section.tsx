@@ -72,7 +72,7 @@ export function ProfileWorkflowEditorBlock(props: {
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
-          <aside className="h-full w-[220px] flex-col overflow-hidden rounded-md border border-border/70 bg-muted/10 md:flex">
+          <aside className="h-full w-[300px] max-w-[30%] flex-col overflow-hidden rounded-md border border-border/70 bg-muted/10 md:flex">
             <div className=" border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               节点列表
             </div>
@@ -109,9 +109,6 @@ export function ProfileWorkflowEditorBlock(props: {
                           >
                             <div className="text-xs font-medium leading-5 text-foreground">
                               {it.label}
-                            </div>
-                            <div className="truncate font-mono text-[10px] leading-4 text-muted-foreground">
-                              {it.type}
                             </div>
                           </li>
                         ))}

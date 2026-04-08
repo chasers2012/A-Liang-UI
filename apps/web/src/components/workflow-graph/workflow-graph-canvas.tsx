@@ -12,7 +12,6 @@ import {
 import {
   Background,
   BackgroundVariant,
-  Controls,
   Panel,
   ReactFlow,
   addEdge,
@@ -422,7 +421,6 @@ export const WorkflowGraphCanvas = forwardRef<
                   variant={BackgroundVariant.Dots}
                   className="opacity-60"
                 />
-                <Controls showInteractive={false} />
                 <WorkflowGraphZoomToolbar />
               </ReactFlow>
             </ErrorBoundary>
