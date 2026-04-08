@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Handle,
-  Position,
   useEdges,
+  useStore,
   useUpdateNodeInternals,
 } from "reactflow";
 
@@ -14,7 +13,39 @@ import type { WorkflowSocketDefinition } from "../../types";
 import {
   appendableHandleBase,
   appendableHandleId,
+  normalizeAppendableHandle,
 } from "../appendable-handle";
+import { WorkflowHandle } from "./workflow-handle";
+
+// eslint-disable-next-line complexity
+function pickSourceValueTypeFromStore(s: unknown): string | null {
+  const anyState = s as {
+    connectionNodeId?: string | null;
+    connectionHandleId?: string | null;
+    connection?: {
+      inProgress?: boolean;
+      source?: string | null;
+      sourceHandle?: string | null;
+    } | null;
+    getNodes?: () => Array<{ id: string; data?: unknown }>;
+  };
+  const isConnecting = Boolean(anyState.connectionNodeId) || Boolean(anyState.connection?.inProgress);
+  if (!isConnecting) return null;
+  if (!anyState.getNodes) return null;
+
+  const sourceNodeId = (anyState.connection?.source ?? anyState.connectionNodeId) ?? null;
+  const sourceHandleId =
+    (anyState.connection?.sourceHandle ?? anyState.connectionHandleId) ?? null;
+  if (!sourceNodeId || !sourceHandleId) return null;
+
+  const nodes = anyState.getNodes();
+  const n = nodes.find((x) => x.id === sourceNodeId);
+  const outputs =
+    (n?.data as { outputs?: { name: string; value_type: string }[] } | undefined)?.outputs ?? [];
+  const baseHandle = normalizeAppendableHandle(String(sourceHandleId));
+  const hit = outputs.find((o) => o.name === baseHandle);
+  return hit?.value_type ?? null;
+}
 
 
 
@@ -32,6 +63,14 @@ export function SocketRow({
   const isInput = side === "input";
   const edges = useEdges();
   const updateNodeInternals = useUpdateNodeInternals();
+  const isConnecting = useStore((s) => {
+    const anyState = s as unknown as {
+      connectionNodeId?: string | null;
+      connection?: { inProgress?: boolean } | null;
+    };
+    return Boolean(anyState.connectionNodeId) || Boolean(anyState.connection?.inProgress);
+  });
+  const sourceValueType = useStore(pickSourceValueTypeFromStore);
 
   const isAppendable = isInput && socket.render_type === "appendable";
   const [descTipOpen, setDescTipOpen] = useState(false);
@@ -70,13 +109,23 @@ export function SocketRow({
                 isInput ? "justify-start pr-2 pl-3" : "justify-end pr-3 pl-2",
               )}
             >
-              <Handle
-                type={isInput ? "target" : "source"}
-                position={isInput ? Position.Left : Position.Right}
-                id={handleId}
-                className="h-2! w-2!"
-                isConnectable={!readOnly}
-              />
+              {/** 拖线时，对类型不匹配的 target handle 显示 disabled 颜色并禁用连接 */}
+              {(() => {
+                const targetType = (socket.value_type ?? "").trim();
+                const sourceType = (sourceValueType ?? "").trim();
+                const mismatch =
+                  isInput && isConnecting && targetType && sourceType
+                    ? targetType !== sourceType
+                    : false;
+                return (
+                  <WorkflowHandle
+                    isInput={isInput}
+                    id={handleId}
+                    disabled={readOnly || mismatch}
+                    mismatch={mismatch}
+                  />
+                );
+              })()}
               <span className={cn("flex min-w-0 items-center gap-1", isInput ? "" : "flex-row-reverse")}>
                 <span className={cn("truncate", isInput ? "" : "text-right")}>{displayName}</span>
                 {socket.description ? (

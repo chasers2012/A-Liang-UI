@@ -52,7 +52,6 @@ import {
 import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
-import { isWireInputSpec } from "./workflow-node-input-spec";
 import { WorkflowGraphPersisted } from "./reactflow/types";
 import { ErrorBoundary } from "next/dist/client/components/error-boundary";
 
@@ -270,13 +269,16 @@ export const WorkflowGraphCanvas = forwardRef<
         const targetNode = nodes.find((n) => n.id === c.target);
         const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
           ?.outputs;
-        const targetInputsRaw = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)
-          ?.inputs;
-        const targetInputs = (targetInputsRaw ?? []).filter(isWireInputSpec);
+        const targetInputs = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)
+          ?.inputs ?? [];
 
         const out = sourceOutputs?.find((s) => s.name === sourceHandle);
         const inp = targetInputs.find((s) => s.name === targetHandle);
         if (!out || !inp) return false;
+
+        // 对于 param（内联字段）常见 value_type 为空；此时视为“任意类型可接入”，
+        // 由后续将 param 提升为 socket 后再按节点真实输入类型约束。
+        if (!inp.value_type || !out.value_type) return true;
 
         return out.value_type === inp.value_type;
       },

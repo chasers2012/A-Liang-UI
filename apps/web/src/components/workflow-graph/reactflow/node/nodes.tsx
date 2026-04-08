@@ -59,6 +59,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
     },
     [id, setNodes],
   );
+  void readOnly;
 
   return (
     <div
@@ -111,6 +112,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
             return (
               <ParamRow
                 key={spec.key}
+                nodeId={id}
                 spec={spec}
                 readOnly={readOnly}
                 value={nodeParamEffectiveValue(data.params, spec)}
