@@ -48,7 +48,10 @@ function rectOfNode(
   n: Node,
   fallback: { width: number; height: number },
 ): Rect {
-  const w = clampFinite((n as unknown as { width?: number }).width, fallback.width);
+  const w = clampFinite(
+    (n as unknown as { width?: number }).width,
+    fallback.width,
+  );
   const h = clampFinite(
     (n as unknown as { height?: number }).height,
     fallback.height,
@@ -126,7 +129,11 @@ function applySeparation(
   return true;
 }
 
-function tryResolvePair(state: CollisionState, aId: string, bId: string): boolean {
+function tryResolvePair(
+  state: CollisionState,
+  aId: string,
+  bId: string,
+): boolean {
   const nA = state.byId.get(aId);
   const nB = state.byId.get(bId);
   if (!nA || !nB) return false;
@@ -154,10 +161,15 @@ function tryResolvePair(state: CollisionState, aId: string, bId: string): boolea
   return applySeparation(state, aId, bId, pushX, sign, sep);
 }
 
-function buildState(nodes: Node[], opts: ResolveCollisionsOptions): CollisionState {
+function buildState(
+  nodes: Node[],
+  opts: ResolveCollisionsOptions,
+): CollisionState {
   return {
     byId: new Map(nodes.map((n) => [n.id, n])),
-    pos: new Map(nodes.map((n) => [n.id, { x: n.position.x, y: n.position.y }])),
+    pos: new Map(
+      nodes.map((n) => [n.id, { x: n.position.x, y: n.position.y }]),
+    ),
     ids: nodes.map((n) => n.id),
     margin: opts.margin ?? 16,
     overlapThreshold: opts.overlapThreshold ?? 0.15,
@@ -214,4 +226,3 @@ export function resolveCollisions(
 
   return withUpdatedPositions(nodes, state.pos);
 }
-

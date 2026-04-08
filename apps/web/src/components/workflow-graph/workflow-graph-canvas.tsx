@@ -8,7 +8,6 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import {
   Background,
@@ -17,17 +16,11 @@ import {
   Panel,
   ReactFlow,
   addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
   useReactFlow,
   useStore,
   type Connection,
   type IsValidConnection,
-  type Edge,
-  type EdgeChange,
   type Node,
-  type NodeChange,
-  type OnConnect,
   type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
@@ -86,7 +79,7 @@ export function WorkflowGraphZoomToolbar() {
     <Panel position="bottom-left" className="m-3!">
       <div
         data-slot="workflow-graph-zoom"
-        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
+        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md"
       >
         {!readOnly ? (
           <Button
@@ -156,61 +149,17 @@ export type WorkflowGraphCanvasProps = {
   readOnly?: boolean;
 };
 
-
-function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, WorkflowNodeTypeDefinition>) {
-  const initialNodes = useMemo(
-    () => toReactFlowNodes(initialGraph, catalog),
-    [initialGraph, catalog],
-  );
-  const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
-
-  const [nodes, setNodes] = useState<Node[]>(initialNodes);
-  const [edges, setEdges] = useState<Edge[]>(initialEdges);
-
-  useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes]);
-  useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges]);
-
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
-
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
-
-  const onConnect: OnConnect = useCallback((c: Connection) => {
-    if (!c.target || !c.targetHandle) return;
-    setEdges((eds) => {
-      const withoutSameInputHandle = eds.filter(
-        (e) =>
-          !(e.target === c.target && e.targetHandle === c.targetHandle),
-      );
-      return addEdge(
-        {
-          ...c,
-          id: crypto.randomUUID(),
-          type: "default",
-        },
-        withoutSameInputHandle,
-      );
-    });
-  }, []);
-
-  return useMemo(
-    () => ({
-      nodes,
-      edges,
-      onNodesChange,
-      onEdgesChange,
-      onConnect,
-      setNodes,
-    }),
-    [nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes],
-  );
+function pickConnectionNodes(
+  rf: ReactFlowInstance | null,
+  sourceId: string,
+  targetId: string,
+) {
+  if (!rf) return { sourceNode: undefined, targetNode: undefined };
+  const allNodes = rf.getNodes();
+  return {
+    sourceNode: allNodes.find((n) => n.id === sourceId),
+    targetNode: allNodes.find((n) => n.id === targetId),
+  };
 }
 
 
@@ -252,9 +201,62 @@ export const WorkflowGraphCanvas = forwardRef<
   ) {
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
+    const initialNodes = useMemo(
+      () => toReactFlowNodes(initialGraph, catalog),
+      [initialGraph, catalog],
+    );
+    const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
 
-    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes } =
-      useGraph(initialGraph, catalog);
+    const fitViewOptions = useMemo(() => ({ padding: 0.18, duration: 200 }), []);
+
+    const onInit = useCallback((inst: ReactFlowInstance) => {
+      reactFlowRef.current = inst;
+    }, []);
+
+    useEffect(() => {
+      const rf = reactFlowRef.current;
+      if (!rf) return;
+      rf.setNodes(initialNodes);
+      rf.setEdges(initialEdges);
+    }, [initialNodes, initialEdges]);
+
+    const onNodeDragStop = useCallback(
+      (_: unknown, node: Node) => {
+        if (readOnly) return;
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setNodes((nds) =>
+          resolveCollisions(nds, {
+            fixedNodeId: node.id,
+            margin: 32,
+            maxIterations: 80,
+            overlapThreshold: 0.12,
+          }),
+        );
+      },
+      [readOnly],
+    );
+
+    const onConnect = useCallback((c: Connection) => {
+      if (readOnly) return;
+      if (!c.target || !c.targetHandle) return;
+      const rf = reactFlowRef.current;
+      if (!rf) return;
+      rf.setEdges((eds) => {
+        const withoutSameInputHandle = eds.filter(
+          (e) =>
+            !(e.target === c.target && e.targetHandle === c.targetHandle),
+        );
+        return addEdge(
+          {
+            ...c,
+            id: crypto.randomUUID(),
+            type: "default",
+          },
+          withoutSameInputHandle,
+        );
+      });
+    }, [readOnly]);
 
     const isValidConnection: IsValidConnection = useCallback(
       (c) => {
@@ -265,8 +267,11 @@ export const WorkflowGraphCanvas = forwardRef<
         const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
         const targetHandle = normalizeAppendableHandle(c.targetHandle);
 
-        const sourceNode = nodes.find((n) => n.id === c.source);
-        const targetNode = nodes.find((n) => n.id === c.target);
+        const { sourceNode, targetNode } = pickConnectionNodes(
+          reactFlowRef.current,
+          c.source,
+          c.target,
+        );
         const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
           ?.outputs;
         const targetInputs = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)
@@ -282,14 +287,16 @@ export const WorkflowGraphCanvas = forwardRef<
 
         return out.value_type === inp.value_type;
       },
-      [nodes],
+      [],
     );
 
     const addNode = useCallback(
       (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
         if (readOnly) return;
         const def = catalog[typeKey];
-        setNodes((prev) => {
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setNodes((prev) => {
           const idx = prev.length;
           const fallbackPos = {
             x: 40 + (idx % 3) * 260,
@@ -317,12 +324,16 @@ export const WorkflowGraphCanvas = forwardRef<
           });
         });
       },
-      [catalog, readOnly, setNodes],
+      [catalog, readOnly],
     );
 
     const getGraph = useCallback(() => {
-      return toPersistedWorkflowGraph(nodes, edges);
-    }, [nodes, edges]);
+      const rf = reactFlowRef.current;
+      if (!rf) {
+        return toPersistedWorkflowGraph(initialNodes, initialEdges);
+      }
+      return toPersistedWorkflowGraph(rf.getNodes(), rf.getEdges());
+    }, [initialEdges, initialNodes]);
 
     useImperativeHandle(
       ref,
@@ -330,15 +341,15 @@ export const WorkflowGraphCanvas = forwardRef<
       [getGraph, addNode],
     );
 
-    const onDragOver = (e: React.DragEvent) => {
+    const onDragOver = useCallback((e: React.DragEvent) => {
       if (readOnly) return;
       const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
       if (!has) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "copy";
-    };
+    }, [readOnly]);
 
-    const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
       if (readOnly) return;
       const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
       if (!typeKey) return;
@@ -363,7 +374,7 @@ export const WorkflowGraphCanvas = forwardRef<
         return;
       }
       addNode(typeKey, { position: flowPos });
-    };
+    }, [addNode, readOnly]);
 
     return (
       <div
@@ -384,29 +395,16 @@ export const WorkflowGraphCanvas = forwardRef<
 
             <ErrorBoundary errorComponent={Error}>
               <ReactFlow
-                nodes={nodes}
-                edges={edges}
+                defaultNodes={initialNodes}
+                defaultEdges={initialEdges}
                 nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-                onInit={(inst) => {
-                  reactFlowRef.current = inst;
-                }}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeDragStop={(_, node) => {
-                  if (readOnly) return;
-                  setNodes((nds) =>
-                    resolveCollisions(nds, {
-                      fixedNodeId: node.id,
-                      margin: 32,
-                      maxIterations: 80,
-                      overlapThreshold: 0.12,
-                    }),
-                  );
-                }}
+                onlyRenderVisibleElements
+                onInit={onInit}
+                onNodeDragStop={onNodeDragStop}
                 onConnect={readOnly ? undefined : onConnect}
                 isValidConnection={readOnly ? undefined : isValidConnection}
                 fitView
-                fitViewOptions={{ padding: 0.18, duration: 200 }}
+                fitViewOptions={fitViewOptions}
                 deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
                 nodesDraggable={!readOnly}
                 nodesConnectable={!readOnly}

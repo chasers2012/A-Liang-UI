@@ -64,7 +64,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
   return (
     <div
       className={cn(
-        "min-w-[220px] max-w-[min(320px,92vw)] rounded-lg border bg-popover/95 text-popover-foreground shadow-sm backdrop-blur",
+        "min-w-[220px] max-w-[min(320px,92vw)] rounded-lg border bg-popover text-popover-foreground shadow-sm transform-gpu will-change-transform",
         selected ? "border-primary ring-2 ring-primary/30" : "border-border",
       )}
     >

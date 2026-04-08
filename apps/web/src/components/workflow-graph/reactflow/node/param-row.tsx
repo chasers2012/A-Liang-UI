@@ -1,7 +1,7 @@
 
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
-import { useEdges, useStore } from "reactflow";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useStore } from "reactflow";
 import { BooleanParamRow, DateParamRow, DateTimeParamRow, NumberParamRow, SelectParamRow, StringParamRow } from "./params";
 import { WorkflowHandle } from "./workflow-handle";
 
@@ -68,14 +68,20 @@ export function ParamRow(props: {
   const { key, label, type, render_type: rt, ...rest } = spec;
   void type;
   const renderLabel = label?.trim() || key;
-  const edges = useEdges();
-  const isConnected = useMemo(() => {
-    for (const e of edges) {
-      if (e.target !== nodeId) continue;
-      if ((e.targetHandle ?? "") === key) return true;
-    }
-    return false;
-  }, [edges, key, nodeId]);
+  // 避免订阅整份 edges：只订阅“是否连接”这个派生值，减少无关更新导致的重渲染。
+  const isConnectedSelector = useCallback(
+    (s: unknown) => {
+      const anyState = s as { edges?: Array<{ target?: string; targetHandle?: string | null }> };
+      const edges = anyState.edges ?? [];
+      for (const e of edges) {
+        if (e.target !== nodeId) continue;
+        if ((e.targetHandle ?? "") === key) return true;
+      }
+      return false;
+    },
+    [key, nodeId],
+  );
+  const isConnected = useStore(isConnectedSelector);
   const inputReadOnly = readOnly || isConnected;
   const isConnecting = useStore((s) => {
     const anyState = s as unknown as {

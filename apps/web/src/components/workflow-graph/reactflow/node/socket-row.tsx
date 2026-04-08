@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  useEdges,
   useStore,
   useUpdateNodeInternals,
 } from "reactflow";
@@ -61,7 +60,6 @@ export function SocketRow({
   readOnly: boolean;
 }) {
   const isInput = side === "input";
-  const edges = useEdges();
   const updateNodeInternals = useUpdateNodeInternals();
   const isConnecting = useStore((s) => {
     const anyState = s as unknown as {
@@ -75,15 +73,22 @@ export function SocketRow({
   const isAppendable = isInput && socket.render_type === "appendable";
   const [descTipOpen, setDescTipOpen] = useState(false);
 
-  const connectedCount = useMemo(() => {
-    if (!isAppendable) return 0;
-    let n = 0;
-    for (const e of edges) {
-      if (e.target !== nodeId) continue;
-      if (appendableHandleBase(e.targetHandle ?? "") === socket.name) n += 1;
-    }
-    return n;
-  }, [edges, isAppendable, nodeId, socket.name]);
+  // 避免订阅整份 edges：只订阅“连接数”这个派生值，减少无关更新导致的重渲染。
+  const connectedCountSelector = useCallback(
+    (s: unknown) => {
+      if (!isAppendable) return 0;
+      const anyState = s as { edges?: Array<{ target?: string; targetHandle?: string | null }> };
+      const edges = anyState.edges ?? [];
+      let n = 0;
+      for (const e of edges) {
+        if (e.target !== nodeId) continue;
+        if (appendableHandleBase(e.targetHandle ?? "") === socket.name) n += 1;
+      }
+      return n;
+    },
+    [isAppendable, nodeId, socket.name],
+  );
+  const connectedCount = useStore(connectedCountSelector);
 
   const slots = Math.max(1, connectedCount + 1);
 
