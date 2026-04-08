@@ -39,6 +39,7 @@ import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
 } from "./reactflow/workflow-graph-reactflow-defaults";
+import { resolveCollisions } from "./reactflow/resolve-collisions";
 import {
   WorkflowGraphContextProvider,
   useWorkflowGraphContext,
@@ -293,21 +294,25 @@ export const WorkflowGraphCanvas = forwardRef<
             y: 40 + Math.floor(idx / 3) * 120,
           };
           const position = opts?.position ?? fallbackPos;
-          return [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              type: "workflowStep",
-              position,
-              data: {
-                backendType: typeKey,
-                label: def?.label ?? typeKey,
-                inputs: def?.inputs ?? [],
-                outputs: def?.outputs ?? [],
-                params: {},
-              },
-            } satisfies Node,
-          ];
+          const node = {
+            id: crypto.randomUUID(),
+            type: "workflowStep",
+            position,
+            data: {
+              backendType: typeKey,
+              label: def?.label ?? typeKey,
+              inputs: def?.inputs ?? [],
+              outputs: def?.outputs ?? [],
+              params: {},
+            },
+          } satisfies Node;
+
+          return resolveCollisions([...prev, node], {
+            fixedNodeId: node.id,
+            margin: 16,
+            maxIterations: 80,
+            overlapThreshold: 0.12,
+          });
         });
       },
       [catalog, readOnly, setNodes],
@@ -387,6 +392,17 @@ export const WorkflowGraphCanvas = forwardRef<
                   }}
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
+                  onNodeDragStop={(_, node) => {
+                    if (readOnly) return;
+                    setNodes((nds) =>
+                      resolveCollisions(nds, {
+                        fixedNodeId: node.id,
+                        margin: 16,
+                        maxIterations: 80,
+                        overlapThreshold: 0.12,
+                      }),
+                    );
+                  }}
                   onConnect={readOnly ? undefined : onConnect}
                   isValidConnection={readOnly ? undefined : isValidConnection}
                   fitView
