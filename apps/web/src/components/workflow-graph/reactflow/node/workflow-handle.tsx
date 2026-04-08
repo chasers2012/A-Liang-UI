@@ -35,7 +35,7 @@ export function WorkflowHandle(
       className,
       "h-2! w-2!",
       {
-        "hidden": hidden,
+        "invisible": hidden,
         "bg-muted-foreground/30! border-muted-foreground/40! opacity-60": disabledByMismatch,
       }
     )}
