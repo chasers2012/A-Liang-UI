@@ -32,7 +32,6 @@ import {
   type FactorSummaryPublic,
 } from "@/lib/quant-agent-api";
 import type { EvaluationProfilePublic } from "@/models/evaluation-profile/dto";
-import type { FactorDetailPublic } from "@/models/factor/dto";
 import {
   factorDetailStateAtomFamily,
   factorEvaluationRunningAtom,
@@ -224,61 +223,6 @@ function FactorDetailHeaderActions(props: {
   );
 }
 
-function FactorMetadataCard(props: { detail: FactorDetailPublic }) {
-  const { detail } = props;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>元数据</CardTitle>
-        <CardDescription>来自 registry 与源码路径</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        {detail.description ? (
-          <p className="leading-relaxed text-muted-foreground">
-            {detail.description}
-          </p>
-        ) : (
-          <p className="text-muted-foreground/70">无描述</p>
-        )}
-        <dl className="grid gap-2 text-xs">
-          <div className="flex flex-wrap gap-x-2 gap-y-1">
-            <dt className="text-muted-foreground">group</dt>
-            <dd className="font-mono text-[0.7rem]">{detail.group}</dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2 gap-y-1">
-            <dt className="text-muted-foreground">max_window</dt>
-            <dd className="font-mono tabular-nums">{detail.max_window}</dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <dt className="text-muted-foreground">dependencies</dt>
-            <dd className="font-mono text-[0.7rem] leading-relaxed break-all">
-              {detail.dependencies.join(", ") || "—"}
-            </dd>
-          </div>
-          <div className="flex flex-col gap-1">
-            <dt className="text-muted-foreground">source_path</dt>
-            <dd className="break-all font-mono text-[0.7rem]">
-              {detail.source_path}
-            </dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2 gap-y-1">
-            <dt className="text-muted-foreground">创建</dt>
-            <dd className="font-mono tabular-nums text-[0.7rem]">
-              {formatIso(detail.created_at)}
-            </dd>
-          </div>
-          <div className="flex flex-wrap gap-x-2 gap-y-1">
-            <dt className="text-muted-foreground">更新</dt>
-            <dd className="font-mono tabular-nums text-[0.7rem]">
-              {formatIso(detail.updated_at)}
-            </dd>
-          </div>
-        </dl>
-      </CardContent>
-    </Card>
-  );
-}
-
 function FactorEvaluationCard(props: {
   evalRow: FactorEvaluationRowPublic | null;
   evalProfile: EvaluationProfilePublic | null;
@@ -343,7 +287,6 @@ function FactorEvaluationCard(props: {
 }
 
 function FactorDetailLoadedView(props: {
-  detail: FactorDetailPublic;
   loadError: string | null;
   evalRow: FactorEvaluationRowPublic | null;
   evalProfile: EvaluationProfilePublic | null;
@@ -357,7 +300,6 @@ function FactorDetailLoadedView(props: {
   onRunEvaluation: () => void;
 }) {
   const {
-    detail,
     loadError,
     evalRow,
     evalProfile,
@@ -380,8 +322,7 @@ function FactorDetailLoadedView(props: {
         </Alert>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <FactorMetadataCard detail={detail} />
+      <div className="grid gap-6">
         <FactorEvaluationCard
           evalRow={evalRow}
           evalProfile={evalProfile}
@@ -564,7 +505,6 @@ export default function FactorDetailPage() {
       }
     >
       <FactorDetailLoadedView
-        detail={detail}
         loadError={loadError}
         evalRow={evalRow}
         evalProfile={evalProfile}
