@@ -2,68 +2,62 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
-from workspace import ensure_dir, workspace_path
+from sqlmodel import select
 
 from app.agent_workflows.schemas import AgentWorkflowRecord
+from app.persistence.models import AgentWorkflowRow
+from app.persistence.sqlite_db import get_session
 
 
 class AgentWorkflowRegistry:
-    """Load/save/delete workflow JSON files under ``agent/workflows/``."""
+    """DB-backed registry for agent workflows."""
 
-    WORKFLOWS_DIR = "agent/workflows"
+    @staticmethod
+    def _row_to_record(row: AgentWorkflowRow) -> AgentWorkflowRecord:
+        return AgentWorkflowRecord(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            graph=row.graph,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
 
-    @classmethod
-    def _workflows_dir(cls) -> Path:
-        return ensure_dir(cls.WORKFLOWS_DIR)
-
-    @classmethod
-    def _workflow_path(cls, wf_id: str) -> Path:
-        return workspace_path(cls.WORKFLOWS_DIR, f"{wf_id}.json")
-
-    @classmethod
-    def _read_record(cls, path: Path) -> AgentWorkflowRecord | None:
-        if not path.is_file():
-            return None
-        raw = path.read_text(encoding="utf-8")
-        if not raw.strip():
-            return None
-        data = json.loads(raw)
-        return AgentWorkflowRecord.model_validate(data)
-
-    @classmethod
-    def _write_record(cls, rec: AgentWorkflowRecord) -> None:
-        cls._workflows_dir()
-        path = cls._workflow_path(rec.id)
-        path.write_text(
-            json.dumps(rec.model_dump(), ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+    @staticmethod
+    def _record_to_row(rec: AgentWorkflowRecord) -> AgentWorkflowRow:
+        return AgentWorkflowRow(
+            id=rec.id,
+            name=rec.name,
+            description=rec.description,
+            graph=rec.graph,
+            created_at=rec.created_at,
+            updated_at=rec.updated_at,
         )
 
     @classmethod
     def list_all(cls) -> list[AgentWorkflowRecord]:
-        d = cls._workflows_dir()
-        records: list[AgentWorkflowRecord] = []
-        for p in sorted(d.glob("*.json")):
-            rec = cls._read_record(p)
-            if rec is not None:
-                records.append(rec)
-        return records
+        with get_session() as session:
+            rows = list(session.exec(select(AgentWorkflowRow)))
+        return [cls._row_to_record(r) for r in rows]
 
     @classmethod
     def get_by_id(cls, wf_id: str) -> AgentWorkflowRecord | None:
-        return cls._read_record(cls._workflow_path(wf_id))
+        with get_session() as session:
+            row = session.get(AgentWorkflowRow, wf_id)
+            return cls._row_to_record(row) if row is not None else None
 
     @classmethod
     def save(cls, rec: AgentWorkflowRecord) -> None:
-        cls._write_record(rec)
+        with get_session() as session:
+            session.merge(cls._record_to_row(rec))
+            session.commit()
 
     @classmethod
     def delete_by_id(cls, wf_id: str) -> bool:
-        path = cls._workflow_path(wf_id)
-        if not path.is_file():
-            return False
-        path.unlink()
-        return True
+        with get_session() as session:
+            row = session.get(AgentWorkflowRow, wf_id)
+            if row is None:
+                return False
+            session.delete(row)
+            session.commit()
+            return True

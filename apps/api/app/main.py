@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import app.persistence
 from app.agent_workflows import api as agent_workflows_router
 from app.chat import api as agent_llm_router
 from app.data_set import api as data_sets_router

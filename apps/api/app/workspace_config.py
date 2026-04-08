@@ -25,16 +25,12 @@ def load_workspace_config(
     model_type: type[T],
     *,
     default_factory: Callable[[], T],
-    json_error_label: str | None = None,
-    non_dict_returns_default: bool = False,
 ) -> T:
     """
     Read *filename* relative to workspace root.
 
-    Missing or whitespace-only file yields *default_factory*(). Invalid JSON
-    raises ``ValueError`` when *json_error_label* is set (message prefix),
-    otherwise ``json.JSONDecodeError``. When *non_dict_returns_default* is true,
-    a non-object JSON root returns the default without validating.
+    Missing or whitespace-only file yields *default_factory*().
+    Invalid JSON raises ``json.JSONDecodeError``.
     """
     path = workspace_config_path(filename)
     if not path.is_file():
@@ -44,12 +40,8 @@ def load_workspace_config(
         return default_factory()
     try:
         data: Any = json.loads(raw)
-    except json.JSONDecodeError as e:
-        if json_error_label is not None:
-            raise ValueError(f"{json_error_label}: invalid JSON ({e})") from e
+    except json.JSONDecodeError:
         raise
-    if non_dict_returns_default and not isinstance(data, dict):
-        return default_factory()
     if not isinstance(data, dict):
         raise ValueError(f"{filename}: expected JSON object")
     return model_type.model_validate(data)

@@ -1,30 +1,38 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from sqlmodel import select
 
-from app.evaluation.run.schemas import (
-    EvaluationRunRecord,
-    EvaluationRunsFile,
-)
-from app.persistence.workspace_registry import WorkspaceItemsRegistry
-
-EVALUATION_RUNS_FILENAME = "evaluation/run/registry.json"
+from app.evaluation.run.schemas import EvaluationRunRecord
+from app.persistence.models import EvaluationRunRow
+from app.persistence.sqlite_db import get_session
 
 
-class EvaluationRunsStore(WorkspaceItemsRegistry[EvaluationRunRecord, EvaluationRunsFile]):
-    """Workspace ``evaluation/run/registry.json`` (all runs history)."""
+def _row_to_record(row: EvaluationRunRow) -> EvaluationRunRecord:
+    return EvaluationRunRecord(
+        id=row.id,
+        start_at=row.start_at,
+        end_at=row.end_at,
+        factor_id=row.factor_id,
+        error=row.error,
+        evaluation_profile_id=row.evaluation_profile_id,
+        results=row.results,
+    )
 
-    filename = EVALUATION_RUNS_FILENAME
-    file_model = EvaluationRunsFile
 
-    @classmethod
-    def load_workspace_kwargs(cls) -> dict[str, Any]:
-        return {"json_error_label": "evaluation_run_registry.json"}
+def _record_to_row(rec: EvaluationRunRecord) -> EvaluationRunRow:
+    return EvaluationRunRow(
+        id=rec.id,
+        start_at=rec.start_at,
+        end_at=rec.end_at,
+        factor_id=rec.factor_id,
+        error=rec.error,
+        evaluation_profile_id=rec.evaluation_profile_id,
+        results=rec.results,
+    )
 
-    @classmethod
-    def load(cls) -> EvaluationRunsFile:
-        return super().load()
+
+class EvaluationRunsStore:
+    """SQLite table `evaluation_runs` (all runs history)."""
 
     @classmethod
     def get_by_factor_id(cls, factor_id: str) -> EvaluationRunRecord | None:
@@ -32,7 +40,13 @@ class EvaluationRunsStore(WorkspaceItemsRegistry[EvaluationRunRecord, Evaluation
 
     @classmethod
     def list_by_factor_id(cls, factor_id: str) -> list[EvaluationRunRecord]:
-        return [rec for rec in cls.list_items() if rec.factor_id == factor_id]
+        with get_session() as session:
+            rows = list(
+                session.exec(
+                    select(EvaluationRunRow).where(EvaluationRunRow.factor_id == factor_id)
+                )
+            )
+        return [_row_to_record(r) for r in rows]
 
     @classmethod
     def get_latest_by_factor_id(cls, factor_id: str) -> EvaluationRunRecord | None:
@@ -43,34 +57,43 @@ class EvaluationRunsStore(WorkspaceItemsRegistry[EvaluationRunRecord, Evaluation
 
     @classmethod
     def append(cls, rec: EvaluationRunRecord) -> None:
-        cls.add_item(rec)
+        with get_session() as session:
+            session.add(_record_to_row(rec))
+            session.commit()
 
     @classmethod
     def delete_by_id(cls, run_id: str) -> bool:
-        return cls.delete_item(run_id) is not None
+        with get_session() as session:
+            row = session.get(EvaluationRunRow, run_id)
+            if row is None:
+                return False
+            session.delete(row)
+            session.commit()
+            return True
 
     @classmethod
     def delete_for_factor(cls, factor_id: str) -> None:
-        records = cls.list_by_factor_id(factor_id)
-        for rec in records:
-            cls.delete_item(rec.id)
+        with get_session() as session:
+            rows = list(
+                session.exec(
+                    select(EvaluationRunRow).where(EvaluationRunRow.factor_id == factor_id)
+                )
+            )
+            for row in rows:
+                session.delete(row)
+            session.commit()
 
+    @classmethod
+    def list_items(cls) -> list[EvaluationRunRecord]:
+        with get_session() as session:
+            rows = list(session.exec(select(EvaluationRunRow)))
+        return [_row_to_record(r) for r in rows]
 
-def evaluations_file_path() -> Path:
-    return EvaluationRunsStore.path()
-
-
-def load_evaluations_file() -> EvaluationRunsFile:
-    """
-    Load workspace ``evaluation/run/registry.json``.
-    Missing or whitespace-only file -> empty items.
-    Raises ValueError on invalid JSON or schema validation failure.
-    """
-    return EvaluationRunsStore.load()
-
-
-def save_evaluations_file(data: EvaluationRunsFile) -> None:
-    EvaluationRunsStore.save(data)
+    @classmethod
+    def get_item(cls, run_id: str) -> EvaluationRunRecord | None:
+        with get_session() as session:
+            row = session.get(EvaluationRunRow, run_id)
+            return _row_to_record(row) if row is not None else None
 
 
 def delete_evaluation_run_for_factor(factor_id: str) -> None:

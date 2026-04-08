@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any
-
 from app.chat.schemas import (
+    AssistantBlockPublic,
     ChatMessageIn,
     ChatSessionArchivedSummaryPublic,
     ChatSessionDetailPublic,
@@ -14,130 +11,103 @@ from app.chat.schemas import (
     ensure_chat_message_ids,
 )
 from app.common.datetime_utils import utc_now_iso
-from app.persistence.workspace_registry import WorkspaceItemsRegistry
-from app.workspace_config import save_workspace_config, workspace_config_path
+from app.common.id import create_id_generator
+from app.persistence.models import ChatMessageRow, ChatSessionRow
+from app.persistence.sqlite_db import get_session
+from sqlmodel import select
 
 CHAT_SESSIONS_FILENAME = "agent/chat_sessions.json"
 CHAT_SESSIONS_DIR = "agent/chat_sessions"
 MAX_SESSION_MESSAGES = 200
 
 
-class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessionsFile]):
-    filename = CHAT_SESSIONS_FILENAME
-    file_model = ChatSessionsFile
+def _session_row_to_record(row: ChatSessionRow) -> ChatSessionRecord:
+    return ChatSessionRecord(
+        id=row.id,
+        title=row.title,
+        message_file=ChatSessionRegistry._message_filename(row.id),
+        message_count=row.message_count,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+        archived_at=row.archived_at,
+    )
+
+
+def _session_record_to_row(rec: ChatSessionRecord) -> ChatSessionRow:
+    return ChatSessionRow(
+        id=rec.id,
+        title=rec.title,
+        message_count=rec.message_count,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+        archived_at=rec.archived_at,
+    )
+
+
+class ChatSessionRegistry:
+    id_generator = create_id_generator("ChatSessionRegistry")
 
     @classmethod
     def _message_filename(cls, session_id: str) -> str:
         return f"{CHAT_SESSIONS_DIR}/{session_id}.messages.json"
 
     @classmethod
-    def _read_messages_file(cls, message_file: str) -> list[ChatMessageIn]:
-        path = workspace_config_path(message_file)
-        if not path.is_file():
-            return []
-        raw = path.read_text(encoding="utf-8")
-        if not raw.strip():
-            return []
-        data: Any = json.loads(raw)
-        if not isinstance(data, list):
-            return []
-        out: list[ChatMessageIn] = []
-        for m in data:
-            if isinstance(m, dict):
-                out.append(ChatMessageIn.model_validate(m))
-        if any(not (m.id or "").strip() for m in out):
-            out = ensure_chat_message_ids(out)
-            cls._write_messages_file(message_file, out)
-        return out
-
-    @classmethod
     def _write_messages_file(cls, message_file: str, messages: list[ChatMessageIn]) -> None:
-        path = workspace_config_path(message_file)
-        payload = [m.model_dump(mode="json", exclude_none=True) for m in messages]
-        path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-        )
+        _ = message_file, messages
 
     @classmethod
-    def _load_raw_items(cls) -> list[Any]:
-        path = workspace_config_path(cls.filename)
-        if not path.is_file():
-            return []
-        raw = path.read_text(encoding="utf-8")
-        if not raw.strip():
-            return []
-        data: Any = json.loads(raw)
-        if not isinstance(data, dict):
-            return []
-        items = data.get("items")
-        if not isinstance(items, list):
-            return []
-        return items
-
-    @classmethod
-    def _migrate_item(cls, it: dict[str, Any]) -> tuple[dict[str, Any] | None, bool]:
-        sid = str(it.get("id") or "").strip()
-        if not sid:
-            return None, False
-
-        migrated = False
-        legacy_messages = it.get("messages")
-        if "message_file" not in it:
-            it["message_file"] = cls._message_filename(sid)
-            migrated = True
-        if "message_count" not in it:
-            it["message_count"] = 0
-            migrated = True
-
-        if isinstance(legacy_messages, list):
-            msgs: list[ChatMessageIn] = []
-            for m in legacy_messages:
-                if isinstance(m, dict):
-                    msgs.append(ChatMessageIn.model_validate(m))
-            msgs = ensure_chat_message_ids(msgs[-MAX_SESSION_MESSAGES:])
-            cls._write_messages_file(it["message_file"], msgs)
-            it["message_count"] = len(msgs)
-            it.pop("messages", None)
-            migrated = True
-
-        return it, migrated
+    def generate_id(cls, name: str | None = None) -> str:
+        return cls.id_generator(name)
 
     @classmethod
     def load(cls) -> ChatSessionsFile:
-        """
-        Load registry and auto-migrate legacy format where session items stored ``messages`` inline.
-        After migration, messages are moved to per-session files and registry records use
-        ``message_file`` + ``message_count``.
-        """
-        path = workspace_config_path(cls.filename)
-        if not path.is_file():
-            return ChatSessionsFile()
-        raw = path.read_text(encoding="utf-8")
-        if not raw.strip():
-            return ChatSessionsFile()
-        data: Any = json.loads(raw)
-        if not isinstance(data, dict):
-            return ChatSessionsFile()
-        items = cls._load_raw_items()
-        if not items:
-            return ChatSessionsFile()
+        return ChatSessionsFile(items=cls.list_items())
 
-        migrated = False
-        new_items: list[dict[str, Any]] = []
-        for it in items:
-            if not isinstance(it, dict):
-                continue
-            migrated_item, item_migrated = cls._migrate_item(it)
-            if migrated_item is None:
-                continue
-            migrated = migrated or item_migrated
-            new_items.append(migrated_item)
+    @classmethod
+    def list_items(cls) -> list[ChatSessionRecord]:
+        with get_session() as session:
+            rows = list(session.exec(select(ChatSessionRow)))
+        return [_session_row_to_record(r) for r in rows]
 
-        out = ChatSessionsFile.model_validate({**data, "items": new_items})
-        if migrated:
-            save_workspace_config(cls.filename, out)
-        return out
+    @classmethod
+    def get_item(cls, session_id: str) -> ChatSessionRecord | None:
+        with get_session() as session:
+            row = session.get(ChatSessionRow, session_id)
+            return _session_row_to_record(row) if row is not None else None
+
+    @classmethod
+    def add_item(cls, item: ChatSessionRecord) -> None:
+        with get_session() as session:
+            session.add(_session_record_to_row(item))
+            session.commit()
+
+    @classmethod
+    def update_item(cls, session_id: str, fn) -> ChatSessionRecord | None:  # type: ignore[no-untyped-def]
+        with get_session() as session:
+            row = session.get(ChatSessionRow, session_id)
+            if row is None:
+                return None
+            rec = _session_row_to_record(row)
+            fn(rec)
+            session.merge(_session_record_to_row(rec))
+            session.commit()
+            return rec
+
+    @classmethod
+    def delete_item(cls, session_id: str) -> ChatSessionRecord | None:
+        with get_session() as session:
+            row = session.get(ChatSessionRow, session_id)
+            if row is None:
+                return None
+            rec = _session_row_to_record(row)
+            msgs = list(
+                session.exec(select(ChatMessageRow).where(ChatMessageRow.session_id == session_id))
+            )
+            for m in msgs:
+                session.delete(m)
+            session.delete(row)
+            session.commit()
+            return rec
 
     @classmethod
     def create_session(cls, title: str) -> ChatSessionRecord:
@@ -151,7 +121,6 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
             created_at=now,
             updated_at=now,
         )
-        cls._write_messages_file(rec.message_file, [])
         cls.add_item(rec)
         return rec
 
@@ -193,7 +162,23 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         def _apply(rec: ChatSessionRecord) -> None:
             if rec.archived_at is not None:
                 raise ValueError("会话已归档")
-            cls._write_messages_file(rec.message_file, trimmed)
+            with get_session() as session:
+                rows = list(
+                    session.exec(select(ChatMessageRow).where(ChatMessageRow.session_id == rec.id))
+                )
+                for r in rows:
+                    session.delete(r)
+                for m in trimmed:
+                    session.add(
+                        ChatMessageRow(
+                            id=(m.id or "").strip(),
+                            session_id=rec.id,
+                            role=m.role,
+                            blocks=[b.model_dump(mode="json", exclude_none=True) for b in m.blocks],
+                            created_at=None,
+                        )
+                    )
+                session.commit()
             rec.message_count = len(trimmed)
             rec.updated_at = utc_now_iso()
 
@@ -216,7 +201,6 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
 
     @classmethod
     def delete_session(cls, session_id: str) -> ChatSessionRecord | None:
-        # Backward-compatible alias: deletion now means archiving.
         return cls.archive_session(session_id)
 
     @classmethod
@@ -240,10 +224,6 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         deleted = cls.delete_item(session_id)
         if deleted is None:
             return None
-
-        path = workspace_config_path(deleted.message_file)
-        if isinstance(path, Path) and path.is_file():
-            path.unlink(missing_ok=True)
         return deleted
 
     @classmethod
@@ -251,7 +231,20 @@ class ChatSessionRegistry(WorkspaceItemsRegistry[ChatSessionRecord, ChatSessions
         rec = cls.get_active_item(session_id)
         if rec is None:
             return None
-        return cls._read_messages_file(rec.message_file)
+        with get_session() as session:
+            rows = list(
+                session.exec(select(ChatMessageRow).where(ChatMessageRow.session_id == session_id))
+            )
+        out: list[ChatMessageIn] = []
+        for r in rows:
+            out.append(
+                ChatMessageIn(
+                    id=r.id,
+                    role=r.role,  # type: ignore[arg-type]
+                    blocks=[AssistantBlockPublic.model_validate(b) for b in (r.blocks or [])],
+                )
+            )
+        return ensure_chat_message_ids(out)
 
 
 def record_to_summary(rec: ChatSessionRecord) -> ChatSessionSummaryPublic:
@@ -277,7 +270,7 @@ def record_to_detail(rec: ChatSessionRecord) -> ChatSessionDetailPublic:
     return ChatSessionDetailPublic(
         id=rec.id,
         title=rec.title,
-        messages=ChatSessionRegistry._read_messages_file(rec.message_file),
+        messages=ChatSessionRegistry.get_messages(rec.id) or [],
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )

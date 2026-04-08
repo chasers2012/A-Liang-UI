@@ -2,67 +2,63 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from sqlmodel import select
 
-from workspace import ensure_dir, workspace_path
+from app.persistence.models import EvaluationProfileRow
+from app.persistence.sqlite_db import get_session
 
 from .schemas import EvaluationProfileRecord
 
-PROFILES_DIR = "evaluation/profiles"
-
 
 class EvaluationProfilesRegistry:
-    """Load/save/delete profile JSON files under ``evaluation/profiles/``."""
+    """DB-backed registry for evaluation profiles."""
 
-    @classmethod
-    def _profiles_dir(cls) -> Path:
-        return ensure_dir(PROFILES_DIR)
+    @staticmethod
+    def _row_to_record(row: EvaluationProfileRow) -> EvaluationProfileRecord:
+        return EvaluationProfileRecord(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            workflow=row.workflow,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
 
-    @classmethod
-    def _profile_path(cls, profile_id: str) -> Path:
-        return workspace_path(PROFILES_DIR, f"{profile_id}.json")
-
-    @classmethod
-    def _read_record(cls, path: Path) -> EvaluationProfileRecord | None:
-        if not path.is_file():
-            return None
-        raw = path.read_text(encoding="utf-8")
-        if not raw.strip():
-            return None
-        data = json.loads(raw)
-        return EvaluationProfileRecord.model_validate(data)
-
-    @classmethod
-    def _write_record(cls, rec: EvaluationProfileRecord) -> None:
-        path = cls._profile_path(rec.id)
-        path.write_text(
-            json.dumps(rec.model_dump(mode="json"), ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
+    @staticmethod
+    def _record_to_row(rec: EvaluationProfileRecord) -> EvaluationProfileRow:
+        return EvaluationProfileRow(
+            id=rec.id,
+            name=rec.name,
+            description=rec.description,
+            workflow=rec.workflow,
+            created_at=rec.created_at,
+            updated_at=rec.updated_at,
         )
 
     @classmethod
     def list_all(cls) -> list[EvaluationProfileRecord]:
-        d = cls._profiles_dir()
-        records: list[EvaluationProfileRecord] = []
-        for p in sorted(d.glob("*.json")):
-            rec = cls._read_record(p)
-            if rec is not None:
-                records.append(rec)
-        return records
+        with get_session() as session:
+            rows = list(session.exec(select(EvaluationProfileRow)))
+        return [cls._row_to_record(r) for r in rows]
 
     @classmethod
     def get_by_id(cls, profile_id: str) -> EvaluationProfileRecord | None:
-        return cls._read_record(cls._profile_path(profile_id))
+        with get_session() as session:
+            row = session.get(EvaluationProfileRow, profile_id)
+            return cls._row_to_record(row) if row is not None else None
 
     @classmethod
     def save(cls, rec: EvaluationProfileRecord) -> None:
-        cls._write_record(rec)
+        with get_session() as session:
+            session.merge(cls._record_to_row(rec))
+            session.commit()
 
     @classmethod
     def delete_by_id(cls, profile_id: str) -> bool:
-        path = cls._profile_path(profile_id)
-        if not path.is_file():
-            return False
-        path.unlink()
-        return True
+        with get_session() as session:
+            row = session.get(EvaluationProfileRow, profile_id)
+            if row is None:
+                return False
+            session.delete(row)
+            session.commit()
+            return True

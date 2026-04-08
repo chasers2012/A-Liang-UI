@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class EvaluationRunRecord(BaseModel):
@@ -21,17 +21,6 @@ class EvaluationRunRecord(BaseModel):
 class EvaluationRunsFile(BaseModel):
     version: int = 1
     items: list[EvaluationRunRecord] = Field(default_factory=list)
-
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize_legacy_items(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-        items = data.get("items")
-        if isinstance(items, dict):
-            data = dict(data)
-            data["items"] = list(items.values())
-        return data
 
 
 class EvaluationRunRowPublic(BaseModel):

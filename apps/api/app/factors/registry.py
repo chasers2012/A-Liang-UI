@@ -1,21 +1,91 @@
 from __future__ import annotations
 
+from sqlmodel import select
+
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
     FactorPatch,
     FactorRecord,
-    FactorRegistryFile,
     FactorSummaryPublic,
 )
-from app.persistence.workspace_registry import WorkspaceItemsRegistry
+from app.persistence.models import FactorRow
+from app.persistence.sqlite_db import get_session
 
 FACTORS_REGISTRY_FILENAME = "factors/registry.json"
 
 
-class FactorItemsRegistry(WorkspaceItemsRegistry[FactorRecord, FactorRegistryFile]):
-    filename = FACTORS_REGISTRY_FILENAME
-    file_model = FactorRegistryFile
+def _row_to_record(row: FactorRow) -> FactorRecord:
+    return FactorRecord(
+        id=row.id,
+        name=row.name,
+        group=row.group,
+        description=row.description,
+        max_window=row.max_window,
+        dependencies=list(row.dependencies or []),
+        source_path=row.source_path,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+def _record_to_row(rec: FactorRecord) -> FactorRow:
+    return FactorRow(
+        id=rec.id,
+        name=rec.name,
+        group=rec.group,
+        description=rec.description,
+        max_window=rec.max_window,
+        dependencies=list(rec.dependencies),
+        source_path=rec.source_path,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+    )
+
+
+class FactorItemsRegistry:
+    @classmethod
+    def list_items(cls) -> list[FactorRecord]:
+        with get_session() as session:
+            rows = list(session.exec(select(FactorRow)))
+        return [_row_to_record(r) for r in rows]
+
+    @classmethod
+    def get_item(cls, item_id: str) -> FactorRecord | None:
+        with get_session() as session:
+            row = session.get(FactorRow, item_id)
+            if row is None:
+                return None
+            return _row_to_record(row)
+
+    @classmethod
+    def add_item(cls, item: FactorRecord) -> None:
+        with get_session() as session:
+            session.add(_record_to_row(item))
+            session.commit()
+
+    @classmethod
+    def update_item(cls, item_id: str, fn) -> FactorRecord | None:  # type: ignore[no-untyped-def]
+        with get_session() as session:
+            row = session.get(FactorRow, item_id)
+            if row is None:
+                return None
+            rec = _row_to_record(row)
+            fn(rec)
+            session.merge(_record_to_row(rec))
+            session.commit()
+            return rec
+
+    @classmethod
+    def delete_item(cls, item_id: str) -> FactorRecord | None:
+        with get_session() as session:
+            row = session.get(FactorRow, item_id)
+            if row is None:
+                return None
+            rec = _row_to_record(row)
+            session.delete(row)
+            session.commit()
+            return rec
 
     @classmethod
     def create_factor(cls, body: FactorCreate) -> FactorRecord:

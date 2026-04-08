@@ -12,7 +12,3 @@ class DataSetsStore(WorkspaceItemsRegistry[DataSetRecord, DataSetsFile]):
 
     filename = REGISTRY_FILENAME
     file_model = DataSetsFile
-
-    @classmethod
-    def load_workspace_kwargs(cls) -> dict:
-        return {"non_dict_returns_default": True}
