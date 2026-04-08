@@ -1,7 +1,4 @@
-import { Viewport } from "reactflow";
 import { WorkflowGraphNode } from "..";
-
-export type WorkflowGraphViewport = Viewport;
 
 export type WorkflowGraphLink = {
   id?: string | null;
@@ -14,5 +11,4 @@ export type WorkflowGraphLink = {
 export type WorkflowGraphPersisted = {
   nodes: WorkflowGraphNode[];
   links: WorkflowGraphLink[];
-  viewport?: WorkflowGraphViewport;
 };

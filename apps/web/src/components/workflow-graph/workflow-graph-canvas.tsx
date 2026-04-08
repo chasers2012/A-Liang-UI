@@ -29,7 +29,6 @@ import {
   type NodeChange,
   type OnConnect,
   type ReactFlowInstance,
-  type Viewport,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -147,13 +146,11 @@ export type WorkflowGraphCanvasHandle = {
     typeKey: string,
     opts?: { position?: { x: number; y: number } },
   ) => void;
-  /** 调整视图以包含所有节点。 */
-  fitViewAll: () => Promise<void>;
 };
 
 export type WorkflowGraphCanvasProps = {
   nodeTypes: WorkflowNodeTypeDefinition[];
-  /** 初始图：工作流图对象（`{nodes,links,viewport}`）。 */
+  /** 初始图：工作流图对象（`{nodes,links}`）。 */
   initialGraph: WorkflowGraphPersisted;
   className?: string;
   readOnly?: boolean;
@@ -166,17 +163,9 @@ function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, 
     [initialGraph, catalog],
   );
   const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
-  const initialViewport = useMemo(
-    () => initialGraph.viewport,
-    [initialGraph.viewport],
-  );
 
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
-  const [viewport, setViewport] = useState<Viewport | undefined>(
-    initialViewport,
-  );
-
 
   useEffect(() => {
     setNodes(initialNodes);
@@ -184,9 +173,6 @@ function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, 
   useEffect(() => {
     setEdges(initialEdges);
   }, [initialEdges]);
-  useEffect(() => {
-    setViewport(initialViewport);
-  }, [initialViewport]);
 
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
@@ -214,17 +200,17 @@ function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, 
     });
   }, []);
 
-  return useMemo(() => ({
-    nodes,
-    edges,
-    viewport,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    setViewport,
-    setNodes,
-    initialViewport
-  }), [nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport]);
+  return useMemo(
+    () => ({
+      nodes,
+      edges,
+      onNodesChange,
+      onEdgesChange,
+      onConnect,
+      setNodes,
+    }),
+    [nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes],
+  );
 }
 
 
@@ -267,9 +253,8 @@ export const WorkflowGraphCanvas = forwardRef<
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
-    const { nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport } = useGraph(initialGraph, catalog);
-
-
+    const { nodes, edges, onNodesChange, onEdgesChange, onConnect, setNodes } =
+      useGraph(initialGraph, catalog);
 
     const isValidConnection: IsValidConnection = useCallback(
       (c) => {
@@ -296,10 +281,6 @@ export const WorkflowGraphCanvas = forwardRef<
       },
       [nodes],
     );
-
-    const onMoveEnd = (_: unknown, vp: Viewport) => {
-      setViewport(vp);
-    };
 
     const addNode = useCallback(
       (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
@@ -333,30 +314,13 @@ export const WorkflowGraphCanvas = forwardRef<
     );
 
     const getGraph = useCallback(() => {
-      const rfViewport = reactFlowRef.current?.getViewport?.();
-      return toPersistedWorkflowGraph(nodes, edges, rfViewport ?? viewport);
-    }, [nodes, edges, viewport]);
-
-    const fitViewAll = useCallback((): Promise<void> => {
-      const rf = reactFlowRef.current;
-      if (!rf) return Promise.resolve();
-
-      return new Promise<void>((resolve) => {
-        // 保存时会触发重渲染；延迟一帧，确保 React Flow 已完成节点尺寸测量。
-        requestAnimationFrame(() => {
-          const padding = 0.18;
-          const duration = 200;
-          rf.fitView({ padding, duration });
-          // 等待 fitView 动画/布局结束后再 resolve，保证 getViewport() 已更新。
-          setTimeout(resolve, duration + 50);
-        });
-      });
-    }, []);
+      return toPersistedWorkflowGraph(nodes, edges);
+    }, [nodes, edges]);
 
     useImperativeHandle(
       ref,
-      () => ({ getGraph, addNode, fitViewAll }),
-      [getGraph, addNode, fitViewAll],
+      () => ({ getGraph, addNode }),
+      [getGraph, addNode],
     );
 
     const onDragOver = (e: React.DragEvent) => {
@@ -425,9 +389,8 @@ export const WorkflowGraphCanvas = forwardRef<
                   onEdgesChange={onEdgesChange}
                   onConnect={readOnly ? undefined : onConnect}
                   isValidConnection={readOnly ? undefined : isValidConnection}
-                  onMoveEnd={onMoveEnd}
-                  defaultViewport={initialViewport}
-                  fitView={!initialViewport}
+                  fitView
+                  fitViewOptions={{ padding: 0.18, duration: 200 }}
                   deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
                   nodesDraggable={!readOnly}
                   nodesConnectable={!readOnly}

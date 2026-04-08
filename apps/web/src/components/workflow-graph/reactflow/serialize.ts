@@ -1,15 +1,11 @@
-import type { Edge, Node, Viewport } from "reactflow";
+import type { Edge, Node } from "reactflow";
 
 import type {
   WorkflowNodeInputSpec,
   WorkflowNodeTypeDefinition,
   WorkflowSocketDefinition,
 } from "../types";
-import type {
-  WorkflowGraphLink,
-  WorkflowGraphPersisted,
-  WorkflowGraphViewport,
-} from "./types";
+import type { WorkflowGraphLink, WorkflowGraphPersisted } from "./types";
 import {
   appendableHandleId,
   appendableSlotSortKey,
@@ -48,7 +44,6 @@ function arrayOrEmpty<T>(x: unknown): T[] {
 export const EMPTY_WORKFLOW: WorkflowGraphPersisted = {
   nodes: [],
   links: [],
-  viewport: undefined,
 };
 
 function parsePersistedNode(
@@ -94,17 +89,6 @@ function parsePersistedLink(l: unknown): WorkflowGraphLink | null {
   };
 }
 
-function parsePersistedViewport(
-  raw: unknown,
-): WorkflowGraphViewport | undefined {
-  if (raw == null || !isRecord(raw)) return undefined;
-  return {
-    x: num(raw.x),
-    y: num(raw.y),
-    zoom: num(raw.zoom, 1),
-  };
-}
-
 export function parsePersistedWorkflowGraphPayload(
   raw: unknown,
 ): WorkflowGraphPersisted {
@@ -120,7 +104,6 @@ export function parsePersistedWorkflowGraphPayload(
   return {
     nodes,
     links,
-    viewport: parsePersistedViewport(raw.viewport),
   };
 }
 
@@ -323,7 +306,6 @@ function persistedNodesWithAppendableParams(
 export function toPersistedWorkflowGraph(
   nodes: Node[],
   edges: Edge[],
-  viewport: Viewport | undefined,
 ): WorkflowGraphPersisted {
   const { outLinks, appendableWiresByNode } =
     linksAndAppendableWireAccumFromEdges(nodes, edges);
@@ -336,6 +318,5 @@ export function toPersistedWorkflowGraph(
   return {
     nodes: outNodes,
     links: outLinks,
-    viewport: viewport,
   };
 }

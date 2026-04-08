@@ -25,7 +25,6 @@ def _profile_workflow_missing_data_set() -> dict:
             }
         ],
         "links": [],
-        "viewport": None,
     }
 
 
@@ -70,7 +69,6 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
                 "to_socket": "result",
             },
         ],
-        "viewport": None,
     }
 
 

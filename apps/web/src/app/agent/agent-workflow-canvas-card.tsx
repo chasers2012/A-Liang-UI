@@ -75,8 +75,6 @@ export function AgentWorkflowCanvasCard({
     setSaving(true);
     setSaveOk(false);
     try {
-      // 先把 viewport 调整到“包含所有节点”的范围，再保存 viewport 到后端。
-      await canvasRef.current.fitViewAll();
       const currentGraph = canvasRef.current.getGraph();
       await patchAgentWorkflow(workflowId, { graph: currentGraph });
       setSaveOk(true);
@@ -123,6 +121,7 @@ export function AgentWorkflowCanvasCard({
       <CardContent className="flex-1 overflow-hidden p-0">
         {nodeTypes.length > 0 && (
           <WorkflowGraphCanvas
+            key={workflowId}
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={graph}

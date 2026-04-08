@@ -21,7 +21,6 @@ def _profile_workflow_missing_data_set() -> dict:
             }
         ],
         "links": [],
-        "viewport": None,
     }
 
 

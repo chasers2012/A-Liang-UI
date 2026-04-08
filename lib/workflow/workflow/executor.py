@@ -72,7 +72,7 @@ class WorkflowExecutor:
         """Run the workflow from a JSON string; return ``node_id -> {output_socket: value}``.
 
         *workflow* must decode to a dict accepted by :meth:`Parser.parse_workflow_graph`
-        (same shape as :meth:`WorkflowGraph.serialize`).
+        (same shape as :meth:`WorkflowGraph.serialize`: ``nodes`` + ``links``).
 
         *context* keys are merged into each node's kwargs (before static ``params`` and
         link inputs, which override). The full mapping is also available under ``context``.

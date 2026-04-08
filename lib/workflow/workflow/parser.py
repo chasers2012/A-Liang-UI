@@ -11,7 +11,6 @@ if TYPE_CHECKING:
         Socket,
         WorkflowGraph,
         WorkflowLink,
-        WorkflowViewport,
     )
 
 
@@ -79,16 +78,6 @@ class Parser:
             from_socket=config_dict.get("from_socket", ""),
             to_node=config_dict.get("to_node", ""),
             to_socket=config_dict.get("to_socket", ""),
-        )
-
-    @staticmethod
-    def parse_workflow_viewport(config_dict: dict[str, Any]) -> WorkflowViewport:
-        from .node_types import WorkflowViewport
-
-        return WorkflowViewport(
-            x=config_dict.get("x", 0.0),
-            y=config_dict.get("y", 0.0),
-            zoom=config_dict.get("zoom", 1.0),
         )
 
     @staticmethod
@@ -167,14 +156,9 @@ class Parser:
             for link_conf in config_dict.get("links", [])
             if isinstance(link_conf, dict)
         ]
-        vp_raw = config_dict.get("viewport")
-        if vp_raw is None:
-            viewport = None
-        else:
-            viewport = Parser.parse_workflow_viewport(vp_raw if isinstance(vp_raw, dict) else {})
-
+        # viewport 不再参与执行与持久化；旧 JSON 中的字段忽略。
         return WorkflowGraph(
             nodes=nodes,
             links=links,
-            viewport=viewport,
+            viewport=None,
         )

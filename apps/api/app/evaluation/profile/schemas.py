@@ -11,7 +11,7 @@ from app.datasources.schemas import utc_now_iso
 
 EvaluationWorkflow = WorkflowGraph
 
-_EMPTY_WORKFLOW: dict[str, Any] = {"nodes": [], "links": [], "viewport": None}
+_EMPTY_WORKFLOW: dict[str, Any] = {"nodes": [], "links": []}
 
 
 def workflow_public_dict(workflow_json: str) -> dict[str, Any]:

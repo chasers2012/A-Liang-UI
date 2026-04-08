@@ -2,7 +2,7 @@
 
 Socket / :class:`Node` definitions are used by ``@workflow_node`` and
 :meth:`collect_node_classes` / catalogs. :class:`WorkflowGraph` holds serialized
-graph instances (nodes, links, viewport).
+graph instances (nodes + links; viewport is not persisted).
 """
 
 from __future__ import annotations
@@ -281,7 +281,7 @@ class Node:
         pass
 
 
-# --- Graph instance models (nodes + links + viewport) -------------------------
+# --- Graph instance models (nodes + links) ------------------------------------
 
 
 class WorkflowLink:
@@ -359,5 +359,4 @@ class WorkflowGraph:
         return {
             "nodes": nodes_payload,
             "links": [link.serialize() for link in self.links],
-            "viewport": self.viewport.serialize() if self.viewport else None,
         }
