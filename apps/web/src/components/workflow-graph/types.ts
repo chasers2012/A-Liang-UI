@@ -23,6 +23,7 @@ export type WorkflowNodeInputSpec = WorkflowSocketDefinition & {
 export type WorkflowNodeTypeDefinition = {
   type: string;
   label: string;
+  description?: string;
   /** 可选分类：由上层业务决定是否使用 */
   category?: string;
   inputs: WorkflowNodeInputSpec[];

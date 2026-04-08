@@ -25,6 +25,7 @@ export interface NodeTypeSocketPublic {
   required: boolean;
   value_type: string;
   label?: string;
+  description?: string;
   default?: unknown;
   render_type?: string | null;
   options?: Array<string | number> | null;

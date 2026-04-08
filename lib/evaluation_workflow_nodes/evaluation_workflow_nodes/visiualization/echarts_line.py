@@ -160,7 +160,7 @@ def build_echarts_option(
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart 与 option 的可视化配置对象；格式：JSON 对象 {'type':'echart','option':{...}}",
+            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",

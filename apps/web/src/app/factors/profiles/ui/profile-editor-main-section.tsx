@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type RefObject } from "react";
 
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { MarkdownContent } from "@/components/markdown/markdown-content";
 import {
   listEvaluationNodeTypes,
   type EvaluationNodeTypeCatalogItemPublic,
@@ -23,6 +24,7 @@ function toWorkflowNodeTypes(
   return catalog.map((c) => ({
     type: c.type,
     label: c.label,
+    description: c.description,
     category: c.category ?? undefined,
     inputs: c.inputs,
     outputs: c.outputs,
@@ -110,6 +112,12 @@ export function ProfileWorkflowEditorBlock(props: {
                             <div className="text-xs font-medium leading-5 text-foreground">
                               {it.label}
                             </div>
+                            {it.description ? (
+                              <MarkdownContent
+                                content={it.description}
+                                className="mt-0.5 text-[11px] text-muted-foreground"
+                              />
+                            ) : null}
                           </li>
                         ))}
                       </ul>

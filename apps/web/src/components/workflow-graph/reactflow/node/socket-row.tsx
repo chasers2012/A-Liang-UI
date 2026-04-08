@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HelpCircle } from "lucide-react";
+import { MarkdownContent } from "@/components/markdown/markdown-content";
 
 import type { WorkflowSocketDefinition } from "../../types";
 import {
@@ -158,7 +159,9 @@ export const SocketRow = memo(function SocketRow({
                         </button>
                       }
                     />
-                    <TooltipContent side="top">{socket.description}</TooltipContent>
+                    <TooltipContent side="top" className="max-w-96">
+                      <MarkdownContent content={socket.description} />
+                    </TooltipContent>
                   </Tooltip>
                 ) : null}
               </span>
