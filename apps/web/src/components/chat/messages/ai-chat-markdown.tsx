@@ -154,5 +154,5 @@ const SHADCN_THEME_DARK = mergeTheme(incremarkDarkTheme, {
 export const AiChartThemeProvider = memo(function AiChartThemeProvider({ children }: { children: React.ReactNode }) {
   const { resolvedTheme } = useTheme();
   const shadcnTheme = useMemo(() => resolvedTheme === "dark" ? SHADCN_THEME_DARK : SHADCN_THEME_LIGHT, [resolvedTheme]);
-  return <IncremarkThemeProvider theme={shadcnTheme}>{children}</IncremarkThemeProvider>;
+  return <IncremarkThemeProvider theme={shadcnTheme} className="contents">{children}</IncremarkThemeProvider>;
 });

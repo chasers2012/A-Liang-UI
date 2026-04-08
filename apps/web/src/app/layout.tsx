@@ -34,9 +34,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", publicSans.variable)}
+      className={cn("overflow-hidden h-full antialiased", geistSans.variable, geistMono.variable, "font-sans", publicSans.variable)}
     >
-      <body className="flex min-h-dvh flex-col h-screen w-screen">
+      <body className="overflow-hidden flex min-h-dvh flex-col h-screen w-screen">
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

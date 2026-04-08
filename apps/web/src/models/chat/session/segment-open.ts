@@ -36,7 +36,11 @@ const scrollAfterDomSettles = (target: HTMLElement) => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: "auto" });
+        target.scrollIntoView({
+          behavior: "auto",
+          block: "nearest",
+          inline: "nearest",
+        });
       });
       observer.disconnect();
       debounceTimer = null;
@@ -53,7 +57,11 @@ const scrollAfterDomSettles = (target: HTMLElement) => {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "auto" });
+      target.scrollIntoView({
+        behavior: "auto",
+        block: "nearest",
+        inline: "nearest",
+      });
     });
     observer.disconnect();
     debounceTimer = null;

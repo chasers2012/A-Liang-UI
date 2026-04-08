@@ -41,11 +41,11 @@ export function HomeAiChat() {
 
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden w-full h-full">
       <HydrateChatState />
       <ChatSessionTabs />
       <div className="flex flex-1 flex-col gap-3 overflow-hidden">
-        <div className="overflow-y-auto overflow-x-hidden w-full relative flex-1">
+        <div className="overflow-x-hidden overflow-y-auto w-full relative flex-1">
           <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>
           <div id="chat-messages-container" className="w-full flex flex-col gap-3 pb-3 pl-9 pr-3">
             <AiChartThemeProvider>
