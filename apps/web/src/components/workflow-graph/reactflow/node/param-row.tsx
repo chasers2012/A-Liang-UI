@@ -1,6 +1,6 @@
 
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { useStore } from "reactflow";
 import { BooleanParamRow, DateParamRow, DateTimeParamRow, NumberParamRow, SelectParamRow, StringParamRow } from "./params";
 import { WorkflowHandle } from "./workflow-handle";
@@ -57,7 +57,7 @@ const paramTypeMap = {
 } as const;
 
 
-export function ParamRow(props: {
+export const ParamRow = memo(function ParamRow(props: {
   nodeId: string;
   spec: NodeParamModel;
   value: unknown;
@@ -143,4 +143,4 @@ export function ParamRow(props: {
     </div>
   );
 
-}
+});

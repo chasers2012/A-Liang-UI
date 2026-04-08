@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   useStore,
   useUpdateNodeInternals,
@@ -48,7 +48,7 @@ function pickSourceValueTypeFromStore(s: unknown): string | null {
 
 
 
-export function SocketRow({
+export const SocketRow = memo(function SocketRow({
   nodeId,
   side,
   socket,
@@ -168,4 +168,4 @@ export function SocketRow({
       )}
     </div>
   );
-}
+});
