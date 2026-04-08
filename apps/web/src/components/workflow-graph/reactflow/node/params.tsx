@@ -74,6 +74,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
     <div>
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <Select
+        modal={false}
         value={current}
         onValueChange={(v) => {
           if (v === null || v === undefined) return;
@@ -99,7 +100,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
             }}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent alignItemWithTrigger={false}>
           {optionsItems.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
