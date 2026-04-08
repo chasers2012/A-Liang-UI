@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type RefObject } from "react";
 
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import {
   listEvaluationNodeTypes,
   type EvaluationNodeTypeCatalogItemPublic,
@@ -32,8 +33,9 @@ export function ProfileWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
   canvasKey: number;
   canvasRef: RefObject<WorkflowGraphCanvasHandle | null>;
+  className?: string;
 }) {
-  const { workflow, canvasKey, canvasRef } = props;
+  const { workflow, canvasKey, canvasRef, className } = props;
 
   const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
@@ -64,17 +66,17 @@ export function ProfileWorkflowEditorBlock(props: {
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
-    <div className="space-y-3">
+    <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <Label className="shrink-0">工作流</Label>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
-        <div className="flex gap-3">
-          <aside className="hidden w-[220px] shrink-0 overflow-hidden rounded-md border border-border/70 bg-muted/10 md:block">
-            <div className="border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="flex min-h-0 flex-1 gap-3">
+          <aside className="hidden h-full min-h-0 w-[220px] shrink-0 flex-col overflow-hidden rounded-md border border-border/70 bg-muted/10 md:flex">
+            <div className="shrink-0 border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               节点列表
             </div>
-            <div className="max-h-[min(560px,72vh)] overflow-auto p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto p-2">
               {catalogGroups.length === 0 ? (
                 <p className="px-1 py-1 text-sm text-muted-foreground">暂无节点</p>
               ) : (
@@ -125,7 +127,7 @@ export function ProfileWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
-            className="h-[min(560px,72vh)] min-h-[320px] flex-1"
+            className="h-full min-h-0 flex-1"
           />
         </div>
       )}

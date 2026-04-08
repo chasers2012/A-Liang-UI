@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 export interface FactorEditPageDescriptionProps {
   description: string;
   onDescriptionChange: (description: string) => void;
+  /** 无障碍名称，默认「因子描述」 */
+  descriptionAriaLabel?: string;
 }
 
 const bodyTypography =
@@ -17,6 +19,7 @@ const bodyTypography =
 export function FactorEditPageDescription({
   description,
   onDescriptionChange,
+  descriptionAriaLabel = "因子描述",
 }: FactorEditPageDescriptionProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(description);
@@ -64,7 +67,7 @@ export function FactorEditPageDescription({
               "text-foreground outline-none",
               "rounded-none focus-visible:border-primary focus-visible:ring-0",
             )}
-            aria-label="因子描述"
+            aria-label={descriptionAriaLabel}
           />
         </span>
       </span>

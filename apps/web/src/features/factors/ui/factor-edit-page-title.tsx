@@ -10,11 +10,14 @@ import { cn } from "@/lib/utils";
 export interface FactorEditPageTitleProps {
   name: string;
   onNameChange: (name: string) => void;
+  /** 无障碍名称，默认「因子名称」 */
+  nameAriaLabel?: string;
 }
 
 export function FactorEditPageTitle({
   name,
   onNameChange,
+  nameAriaLabel = "因子名称",
 }: FactorEditPageTitleProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
@@ -88,7 +91,7 @@ export function FactorEditPageTitle({
               titleTypography,
               "rounded-none focus-visible:border-primary focus-visible:ring-0",
             )}
-            aria-label="因子名称"
+            aria-label={nameAriaLabel}
           />
         </span>
       </span>

@@ -54,6 +54,9 @@ export default function EvaluationProfileDetailPage() {
     <FactorFormPageContainer
       title={row.name}
       description={row.description || "无描述"}
+      className="max-w-full"
+      fillHeight
+      gap="sm"
       action={
         <Link
           href={`/factors/profiles/${encodeURIComponent(id)}/edit`}

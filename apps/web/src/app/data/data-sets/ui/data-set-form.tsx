@@ -16,7 +16,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -28,6 +27,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { cn } from "@/lib/utils";
 import {
   ApiError,
@@ -548,14 +549,26 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   return (
     <Page
       gap="none"
-      title={mode === "create" ? "新增数据集" : "编辑数据集"}
-      description="可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。"
+      title={
+        <FactorEditPageTitle
+          name={form.name}
+          onNameChange={(n) => set({ name: n })}
+          nameAriaLabel="数据集名称"
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={form.description}
+          onDescriptionChange={(d) => set({ description: d })}
+          descriptionAriaLabel="数据集说明"
+        />
+      }
       headerClassName="mb-8"
       action={
         <PageFormHeaderActions
           formId={DATA_SET_MAIN_FORM_ID}
           submitting={submitting}
-          submitDisabled={enabledDs.length === 0}
+          submitDisabled={enabledDs.length === 0 || !form.name.trim()}
           cancelHref={
             mode === "edit" && dataSetId
               ? `/data/data-sets/${encodeURIComponent(dataSetId)}`
@@ -585,34 +598,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           </Alert>
         ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>基本信息</CardTitle>
-            <CardDescription>名称与说明</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="ts-name">名称</Label>
-              <Input
-                id="ts-name"
-                value={form.name}
-                onChange={(e) => set({ name: e.target.value })}
-                placeholder="例如：沪深 2023 样本"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ts-desc">说明</Label>
-              <Textarea
-                id="ts-desc"
-                value={form.description}
-                onChange={(e) => set({ description: e.target.value })}
-                rows={2}
-                className="min-h-0 resize-y"
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <p className="text-sm text-muted-foreground">
+          可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。
+        </p>
 
         <Card>
           <CardHeader>

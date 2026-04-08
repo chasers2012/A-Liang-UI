@@ -24,6 +24,9 @@ function validateSqlForCreate(form: FormState): void {
 async function createDatasourceFromForm(
   form: FormState,
 ): Promise<DataSourcePublic> {
+  if (!form.name.trim()) {
+    throw new Error("请填写显示名称");
+  }
   if (form.type === "sql") {
     validateSqlForCreate(form);
     return await createDatasource({

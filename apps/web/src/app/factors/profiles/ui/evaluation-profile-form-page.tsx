@@ -5,12 +5,11 @@ import { useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { createEvaluationProfile, getEvaluationProfile, patchEvaluationProfile } from "@/lib/quant-agent-api";
 
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
 import { EMPTY_EVALUATION_WORKFLOW } from "./profile-form-shared";
@@ -28,7 +27,6 @@ export function EvaluationProfileFormPage(props: Props) {
   const isEdit = Boolean(id);
 
   const formId = isEdit ? "evaluation-profile-edit-form" : "evaluation-profile-new-form";
-  const title = isEdit ? "编辑评价方案" : "新增评价方案";
   const cancelHref = isEdit
     ? `/factors/profiles/${encodeURIComponent(id ?? "")}`
     : "/factors/profiles";
@@ -112,7 +110,7 @@ export function EvaluationProfileFormPage(props: Props) {
 
   if (loading) {
     return (
-      <FactorFormPageContainer>
+      <FactorFormPageContainer title={isEdit ? "编辑评价方案" : "新增评价方案"}>
         <p className="text-sm text-muted-foreground">加载中…</p>
       </FactorFormPageContainer>
     );
@@ -120,7 +118,23 @@ export function EvaluationProfileFormPage(props: Props) {
 
   return (
     <FactorFormPageContainer
-      title={title}
+      title={
+        <FactorEditPageTitle
+          name={name}
+          onNameChange={setName}
+          nameAriaLabel="评价方案名称"
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={description}
+          onDescriptionChange={setDescription}
+          descriptionAriaLabel="评价方案描述"
+        />
+      }
+      className="max-w-full"
+      fillHeight
+      gap="sm"
       action={
         <PageFormHeaderActions
           formId={formId}
@@ -132,35 +146,17 @@ export function EvaluationProfileFormPage(props: Props) {
         />
       }
     >
-      <form id={formId} className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+      <form
+        id={formId}
+        className="flex min-h-0 flex-1 flex-col gap-6"
+        onSubmit={(e) => void onSubmit(e)}
+      >
         {formError && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="shrink-0">
             <AlertTitle>无法保存</AlertTitle>
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
         )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="ep-name">名称</Label>
-            <Input
-              id="ep-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={isEdit ? undefined : "默认 IC 方案"}
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="ep-desc">描述</Label>
-            <Textarea
-              id="ep-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
-
 
         <ProfileWorkflowEditorBlock
           workflow={workflow}

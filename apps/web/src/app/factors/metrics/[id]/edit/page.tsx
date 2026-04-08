@@ -5,12 +5,12 @@ import { useParams, useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 
@@ -107,7 +107,7 @@ export default function EditEvaluationMetricPage() {
 
   if (loading) {
     return (
-      <FactorFormPageContainer>
+      <FactorFormPageContainer title="编辑评价指标">
         <p className="text-sm text-muted-foreground">加载中…</p>
       </FactorFormPageContainer>
     );
@@ -115,7 +115,20 @@ export default function EditEvaluationMetricPage() {
 
   return (
     <FactorFormPageContainer
-      title="编辑评价指标"
+      title={
+        <FactorEditPageTitle
+          name={name}
+          onNameChange={setName}
+          nameAriaLabel="评价指标名称"
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={description}
+          onDescriptionChange={setDescription}
+          descriptionAriaLabel="评价指标描述"
+        />
+      }
       action={
         <PageFormHeaderActions
           formId={EVALUATION_METRIC_EDIT_FORM_ID}
@@ -136,26 +149,6 @@ export default function EditEvaluationMetricPage() {
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="em-edit-name">名称</Label>
-            <Input
-              id="em-edit-name"
-              className="font-mono text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="em-edit-desc">描述</Label>
-            <Textarea
-              id="em-edit-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
         <div className="space-y-2">
           <Label>源码</Label>
           <FactorCodeJar

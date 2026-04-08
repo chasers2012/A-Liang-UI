@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/lib/quant-agent-api";
 
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
 import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
 
@@ -126,7 +126,20 @@ export default function NewEvaluationMetricPage() {
 
   return (
     <FactorFormPageContainer
-      title="新增评价指标"
+      title={
+        <FactorEditPageTitle
+          name={name}
+          onNameChange={setName}
+          nameAriaLabel="评价指标名称"
+        />
+      }
+      description={
+        <FactorEditPageDescription
+          description={description}
+          onDescriptionChange={setDescription}
+          descriptionAriaLabel="评价指标描述"
+        />
+      }
       action={
         <PageFormHeaderActions
           formId={EVALUATION_METRIC_NEW_FORM_ID}
@@ -155,28 +168,6 @@ export default function NewEvaluationMetricPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="em-name">名称</Label>
-            <Input
-              id="em-name"
-              className="font-mono text-sm"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="my_metric"
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="em-desc">描述</Label>
-            <Textarea
-              id="em-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
         <div className="space-y-2">
           <Label>源码</Label>
           {templateLoading && (

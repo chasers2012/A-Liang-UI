@@ -2,12 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   listEvaluationNodeTypes,
   type EvaluationProfilePublic,
@@ -31,8 +26,9 @@ function toWorkflowNodeTypes(
 export function ProfileDetailWorkflowCard(props: {
   profile: EvaluationProfilePublic;
   profileId: string;
+  className?: string;
 }) {
-  const { profile, profileId } = props;
+  const { profile, profileId, className } = props;
   const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
@@ -43,11 +39,17 @@ export function ProfileDetailWorkflowCard(props: {
   }, []);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>工作流</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <section
+      className={cn("flex min-h-0 flex-1 flex-col gap-2", className)}
+      aria-labelledby="profile-workflow-heading"
+    >
+      <h2
+        id="profile-workflow-heading"
+        className="shrink-0 text-sm font-semibold leading-none tracking-tight"
+      >
+        工作流
+      </h2>
+      <div className="flex min-h-0 flex-1 flex-col">
         {catalog.length === 0 ? (
           <p className="text-sm text-muted-foreground">加载画布…</p>
         ) : (
@@ -56,10 +58,10 @@ export function ProfileDetailWorkflowCard(props: {
             nodeTypes={nodeTypes}
             initialGraph={profile.workflow}
             readOnly
-            className="h-[min(560px,72vh)] min-h-[320px]"
+            className="h-full min-h-0 flex-1"
           />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

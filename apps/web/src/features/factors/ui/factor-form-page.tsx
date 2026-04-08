@@ -16,6 +16,9 @@ type FactorFormPageContainerProps = {
   | "headerClassName"
   | "action"
   | "showAppHeaderBack"
+  | "fillHeight"
+  | "gap"
+  | "className"
 >;
 
 export function FactorFormPageContainer({
@@ -25,6 +28,9 @@ export function FactorFormPageContainer({
   headerClassName,
   action,
   showAppHeaderBack,
+  fillHeight,
+  gap,
+  className,
 }: FactorFormPageContainerProps) {
   return (
     <Page
@@ -33,6 +39,9 @@ export function FactorFormPageContainer({
       headerClassName={headerClassName}
       action={action}
       showAppHeaderBack={showAppHeaderBack}
+      fillHeight={fillHeight}
+      gap={gap}
+      className={className}
     >
       {children}
     </Page>

@@ -3,7 +3,6 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,6 +16,7 @@ import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import type { DataSourceType, SqlPublic } from "@/lib/quant-agent-api";
 
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import type { EditorMode, FormState } from "../form-model";
 import { DatasourceFormCsv } from "./datasource-form-csv";
 import { DatasourceFormSql } from "./datasource-form-sql";
@@ -59,7 +59,13 @@ export function DatasourceForm({
   return (
     <Page
       gap="none"
-      title={editorMode === "create" ? "新增数据源" : "编辑数据源"}
+      title={
+        <FactorEditPageTitle
+          name={form.name}
+          onNameChange={(n) => set({ name: n })}
+          nameAriaLabel="数据源显示名称"
+        />
+      }
       description={
         editorMode === "create"
           ? "连接信息保存在服务端 workspace；接口不会返回密码明文。"
@@ -70,6 +76,7 @@ export function DatasourceForm({
         <PageFormHeaderActions
           formId={DATASOURCE_MAIN_FORM_ID}
           submitting={submitting}
+          submitDisabled={!form.name.trim()}
           cancelHref={cancelHref}
         />
       }
@@ -101,15 +108,6 @@ export function DatasourceForm({
           )}
 
           <FormSection title="基本设置">
-            <div className="grid gap-2">
-              <Label htmlFor="ds-name">显示名称</Label>
-              <Input
-                id="ds-name"
-                required
-                value={form.name}
-                onChange={(e) => set({ name: e.target.value })}
-              />
-            </div>
             <div className="flex flex-wrap gap-8 pt-1">
               <Label
                 htmlFor="ds-enabled"
