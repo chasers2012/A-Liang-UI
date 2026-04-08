@@ -311,7 +311,7 @@ export const WorkflowGraphCanvas = forwardRef<
 
           return resolveCollisions([...prev, node], {
             fixedNodeId: node.id,
-            margin: 16,
+            margin: 32,
             maxIterations: 80,
             overlapThreshold: 0.12,
           });
@@ -397,7 +397,7 @@ export const WorkflowGraphCanvas = forwardRef<
                   setNodes((nds) =>
                     resolveCollisions(nds, {
                       fixedNodeId: node.id,
-                      margin: 16,
+                      margin: 32,
                       maxIterations: 80,
                       overlapThreshold: 0.12,
                     }),

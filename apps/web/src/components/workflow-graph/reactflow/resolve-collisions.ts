@@ -141,11 +141,16 @@ function tryResolvePair(state: CollisionState, aId: string, bId: string): boolea
   const { ox, oy } = overlaps(rA, rB, state.margin);
   if (ox <= 0 || oy <= 0) return false;
 
-  if (overlapRatio(rA, rB, ox, oy) < state.overlapThreshold) return false;
-
   const pushX = ox < oy;
   const sep = pushX ? ox : oy;
   const sign = centerSign(rA, rB, pushX);
+
+  // overlapThreshold 主要用于“抖动”场景；但在 margin 校正碰撞时，
+  // sep 即便在相对体量上很小，也仍可能意味着 margin 没满足（视觉上会显得距离不够）。
+  // 因此：只有当 sep 像素级别也极小，才跳过该对碰撞的推开。
+  const ratio = overlapRatio(rA, rB, ox, oy);
+  if (ratio < state.overlapThreshold && sep < 2) return false;
+
   return applySeparation(state, aId, bId, pushX, sign, sep);
 }
 
@@ -157,7 +162,9 @@ function buildState(nodes: Node[], opts: ResolveCollisionsOptions): CollisionSta
     margin: opts.margin ?? 16,
     overlapThreshold: opts.overlapThreshold ?? 0.15,
     fixedNodeId: opts.fixedNodeId,
-    fallbackSize: opts.fallbackSize ?? { width: 260, height: 140 },
+    // workflowStep 节点宽度最小 220px，且高度会随 ParamRow 数量增长；
+    // 默认 fallback 过小会导致“没测量到尺寸时推得不够”。
+    fallbackSize: opts.fallbackSize ?? { width: 320, height: 240 },
   };
 }
 
