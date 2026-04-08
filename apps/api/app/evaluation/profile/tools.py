@@ -8,7 +8,7 @@ import workflow.node_types as _workflow_node_types
 from langchain_core.tools import tool
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
+from app.evaluation.profile.controller import list_evaluation_profile_node_types_public
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationProfileCreate,

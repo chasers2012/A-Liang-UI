@@ -14,10 +14,21 @@ from workflow import Socket, workflow_node
     description="将简单收益序列累积化（Alphalens.performance.cumulative_returns）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("returns", required=True, value_type="scalar_json"),
+        Socket(
+            "returns",
+            required=True,
+            value_type="scalar_json",
+            label="收益序列",
+            description="简单收益率序列",
+        ),
     ],
     output_sockets=[
-        Socket("cumulative_returns", value_type="scalar_json"),
+        Socket(
+            "cumulative_returns",
+            value_type="scalar_json",
+            label="累计收益序列",
+            description="累计化后的收益序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+        ),
     ],
     entry="evaluate",
 )

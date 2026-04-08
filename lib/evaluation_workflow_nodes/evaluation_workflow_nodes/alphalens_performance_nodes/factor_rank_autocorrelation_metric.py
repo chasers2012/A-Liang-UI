@@ -14,13 +14,26 @@ from workflow import NumberNodeParam, Socket, workflow_node
     description="因子秩的自相关（Alphalens.performance.factor_rank_autocorrelation）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket(
+            "clean_factor",
+            required=True,
+            value_type="factor_data_clean",
+            label="清洗后因子数据",
+            description="由计算因子节点输出",
+        ),
     ],
     workflow_parameters=[
-        NumberNodeParam("period", required=False, default=1),
+        NumberNodeParam(
+            "period", required=False, default=1, label="滞后期", description="秩自相关的滞后期长度"
+        ),
     ],
     output_sockets=[
-        Socket("autocorrelation", value_type="scalar_json"),
+        Socket(
+            "autocorrelation",
+            value_type="scalar_json",
+            label="秩自相关",
+            description="因子秩自相关时间序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+        ),
     ],
     entry="evaluate",
 )

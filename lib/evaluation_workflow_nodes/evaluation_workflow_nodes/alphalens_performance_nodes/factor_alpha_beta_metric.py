@@ -14,17 +14,52 @@ from workflow import BooleanNodeParam, Socket, workflow_node
     description="计算因子 Alpha、Beta 及其年化 Alpha（Alphalens.performance.factor_alpha_beta）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket(
+            "clean_factor",
+            required=True,
+            value_type="factor_data_clean",
+            label="清洗后因子数据",
+            description="由计算因子节点输出",
+        ),
         # 可选：若上游已计算 factor_returns，可直接提供以避免重复计算
-        Socket("returns", required=False, value_type="dataframe"),
+        Socket(
+            "returns",
+            required=False,
+            value_type="dataframe",
+            label="因子收益(可选)",
+            description="可选上游 factor_returns 输出",
+        ),
     ],
     workflow_parameters=[
-        BooleanNodeParam("demeaned", required=False, default=True),
-        BooleanNodeParam("group_adjust", required=False, default=False),
-        BooleanNodeParam("equal_weight", required=False, default=False),
+        BooleanNodeParam(
+            "demeaned",
+            required=False,
+            default=True,
+            label="去均值",
+            description="是否按横截面去均值",
+        ),
+        BooleanNodeParam(
+            "group_adjust",
+            required=False,
+            default=False,
+            label="分组中性化",
+            description="是否在组内中性化",
+        ),
+        BooleanNodeParam(
+            "equal_weight",
+            required=False,
+            default=False,
+            label="等权",
+            description="是否使用等权重",
+        ),
     ],
     output_sockets=[
-        Socket("alpha_beta", value_type="dataframe"),
+        Socket(
+            "alpha_beta",
+            value_type="dataframe",
+            label="Alpha/Beta",
+            description="Alpha、Beta 与年化 Alpha 指标；格式：pd.DataFrame，index 为指标名，columns 为周期列",
+        ),
     ],
     entry="evaluate",
 )

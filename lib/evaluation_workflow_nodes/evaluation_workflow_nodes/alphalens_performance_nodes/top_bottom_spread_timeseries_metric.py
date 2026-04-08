@@ -14,16 +14,51 @@ from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
     description="从按日期/分位的收益（MultiIndex）计算 Top-Bottom 分位收益差的时间序列，并附带滚动均值",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("mean_returns_bydate", required=True, value_type="dataframe"),
+        Socket(
+            "mean_returns_bydate",
+            required=True,
+            value_type="dataframe",
+            label="分位日收益",
+            description="按 (factor_quantile, date) 组织的 MultiIndex DataFrame",
+        ),
     ],
     workflow_parameters=[
-        StringNodeParam("period", required=False, default="1D", label="周期列名"),
-        NumberNodeParam("upper_quant", required=False, default=5, label="高分位"),
-        NumberNodeParam("lower_quant", required=False, default=1, label="低分位"),
-        NumberNodeParam("rolling_window", required=False, default=22, label="滚动窗口(交易日)"),
+        StringNodeParam(
+            "period",
+            required=False,
+            default="1D",
+            label="周期列名",
+            description="用于计算 spread 的收益列名",
+        ),
+        NumberNodeParam(
+            "upper_quant",
+            required=False,
+            default=5,
+            label="高分位",
+            description="spread 分子的分位编号",
+        ),
+        NumberNodeParam(
+            "lower_quant",
+            required=False,
+            default=1,
+            label="低分位",
+            description="spread 分母对应对比的分位编号",
+        ),
+        NumberNodeParam(
+            "rolling_window",
+            required=False,
+            default=22,
+            label="滚动窗口(交易日)",
+            description="均线窗口长度",
+        ),
     ],
     output_sockets=[
-        Socket("spread_ts", value_type="dataframe"),
+        Socket(
+            "spread_ts",
+            value_type="dataframe",
+            label="分位差时间序列",
+            description="包含 spread 与其滚动均值 ma；格式：pd.DataFrame，index 为日期，columns 固定为 spread/ma",
+        ),
     ],
     entry="evaluate",
 )

@@ -14,16 +14,45 @@ from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
     description="各持有期平均信息系数（Alphalens）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("clean_factor", required=True, value_type="factor_data_clean"),
+        Socket(
+            "clean_factor",
+            required=True,
+            value_type="factor_data_clean",
+            label="清洗后因子数据",
+            description="由计算因子节点输出",
+        ),
     ],
     workflow_parameters=[
-        BooleanNodeParam("group_adjust", required=False, default=False),
-        BooleanNodeParam("by_group", required=False, default=False),
+        BooleanNodeParam(
+            "group_adjust",
+            required=False,
+            default=False,
+            label="分组中性化",
+            description="是否在组内中性化",
+        ),
+        BooleanNodeParam(
+            "by_group",
+            required=False,
+            default=False,
+            label="按分组输出",
+            description="True 时输出按 group 拆分结果",
+        ),
         # by_time 为空字符串时视为不传（最终传 None 给 alphalens）
-        StringNodeParam("by_time", required=False, default=""),
+        StringNodeParam(
+            "by_time",
+            required=False,
+            default="",
+            label="时间分组",
+            description="例如 M/W；为空表示不按时间分组",
+        ),
     ],
     output_sockets=[
-        Socket("mean_ic", value_type="scalar_json"),
+        Socket(
+            "mean_ic",
+            value_type="scalar_json",
+            label="平均 IC",
+            description="Mean IC 结果；格式：JSON 可序列化对象（dict/series 结构，键为周期或分组）",
+        ),
     ],
     entry="evaluate",
 )

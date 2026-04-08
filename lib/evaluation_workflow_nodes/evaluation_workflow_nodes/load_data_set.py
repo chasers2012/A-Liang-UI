@@ -10,13 +10,21 @@ from workflow.node_types import OptionsNodeParam
         OptionsNodeParam(
             name="data_set",
             label="数据集",
+            description="选择要加载的数据集 ID",
             options=lambda: [{"label": s.name, "value": s.id} for s in DataSetsStore.list_items()],
         ),
     ],
     output_sockets=[
-        Socket(name="data_set", value_type="data_set", label="数据集"),
+        Socket(
+            name="data_set",
+            value_type="data_set",
+            label="数据集",
+            description="加载完成后的 DataSet 实例",
+        ),
     ],
     label="加载数据集",
+    description="根据数据集 ID 从存储中加载 DataSet 对象",
+    category="factor_evaluation",
 )
 class LoadDataSet:
     def execute(self, **kwargs) -> DataSet:

@@ -14,7 +14,13 @@ from workflow import Socket, StringNodeParam, workflow_node
     description="将不同持有期收益统一换算为单位收益率（Alphalens.utils.rate_of_return）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("returns", required=True, value_type="dataframe"),
+        Socket(
+            "returns",
+            required=True,
+            value_type="dataframe",
+            label="多周期收益",
+            description="列为不同持有期的收益矩阵",
+        ),
     ],
     workflow_parameters=[
         StringNodeParam(
@@ -26,7 +32,12 @@ from workflow import Socket, StringNodeParam, workflow_node
         ),
     ],
     output_sockets=[
-        Socket("rate_of_return", value_type="dataframe"),
+        Socket(
+            "rate_of_return",
+            value_type="dataframe",
+            label="单位收益率",
+            description="折算到基准周期后的收益率；格式：pd.DataFrame，index 与输入一致，columns 为各周期收益率列",
+        ),
     ],
     entry="evaluate",
 )

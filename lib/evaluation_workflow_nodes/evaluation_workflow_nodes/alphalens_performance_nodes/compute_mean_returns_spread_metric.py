@@ -14,16 +14,50 @@ from workflow import NumberNodeParam, Socket, workflow_node
     description="计算高/低分位的均值收益差（Alphalens.performance.compute_mean_returns_spread）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("mean_returns", required=True, value_type="dataframe"),
-        Socket("std_err", required=False, value_type="dataframe"),
+        Socket(
+            "mean_returns",
+            required=True,
+            value_type="dataframe",
+            label="分位平均收益",
+            description="mean_return_by_quantile 的输出",
+        ),
+        Socket(
+            "std_err",
+            required=False,
+            value_type="dataframe",
+            label="标准误",
+            description="可选，mean_return_by_quantile_std_error",
+        ),
     ],
     workflow_parameters=[
-        NumberNodeParam("upper_quant", required=False, default=5),
-        NumberNodeParam("lower_quant", required=False, default=1),
+        NumberNodeParam(
+            "upper_quant",
+            required=False,
+            default=5,
+            label="高分位",
+            description="用于计算 spread 的上分位",
+        ),
+        NumberNodeParam(
+            "lower_quant",
+            required=False,
+            default=1,
+            label="低分位",
+            description="用于计算 spread 的下分位",
+        ),
     ],
     output_sockets=[
-        Socket("mean_return_spread", value_type="scalar_json"),
-        Socket("mean_return_spread_std_error", value_type="scalar_json"),
+        Socket(
+            "mean_return_spread",
+            value_type="scalar_json",
+            label="分位收益差",
+            description="高分位减低分位后的收益差；格式：JSON 可序列化序列（dict[period, number]）",
+        ),
+        Socket(
+            "mean_return_spread_std_error",
+            value_type="scalar_json",
+            label="分位收益差标准误",
+            description="收益差对应标准误；格式：JSON 可序列化序列（dict[period, number]）",
+        ),
     ],
     entry="evaluate",
 )

@@ -14,13 +14,30 @@ from workflow import Socket, StringNodeParam, workflow_node
     description="将按日期/分位的收益（MultiIndex）转为分位累计收益曲线（每列一个分位）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("mean_returns_bydate", required=True, value_type="dataframe"),
+        Socket(
+            "mean_returns_bydate",
+            required=True,
+            value_type="dataframe",
+            label="分位日收益",
+            description="按 (factor_quantile, date) 组织的 MultiIndex DataFrame",
+        ),
     ],
     workflow_parameters=[
-        StringNodeParam("period", required=False, default="1D", label="周期列名"),
+        StringNodeParam(
+            "period",
+            required=False,
+            default="1D",
+            label="周期列名",
+            description="选择用于累积计算的持有期列，如 1D/5D",
+        ),
     ],
     output_sockets=[
-        Socket("cumulative_returns_by_quantile", value_type="dataframe"),
+        Socket(
+            "cumulative_returns_by_quantile",
+            value_type="dataframe",
+            label="分位累计收益",
+            description="每个分位一列的累计收益曲线；格式：pd.DataFrame，index 为日期，columns 为 Q1..Qn 分位列",
+        ),
     ],
     entry="evaluate",
 )

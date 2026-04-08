@@ -14,14 +14,34 @@ from workflow import NodeParam, Socket, StringNodeParam, workflow_node
     description="根据权重序列构建持仓/仓位时间序列（Alphalens.performance.positions）",
     category="Alphalens Performance",
     input_sockets=[
-        Socket("weights", required=True, value_type="dataframe"),
+        Socket(
+            "weights",
+            required=True,
+            value_type="dataframe",
+            label="资产权重",
+            description="因子权重或策略权重序列",
+        ),
     ],
     workflow_parameters=[
-        StringNodeParam("period", required=False, default="1D"),
-        NodeParam("freq", required=False, value_type="scalar_json", default=None),
+        StringNodeParam(
+            "period", required=False, default="1D", label="持有期", description="调仓与持仓计算周期"
+        ),
+        NodeParam(
+            "freq",
+            required=False,
+            value_type="scalar_json",
+            default=None,
+            label="频率(可选)",
+            description="可选 pandas offset/freq",
+        ),
     ],
     output_sockets=[
-        Socket("positions", value_type="dataframe"),
+        Socket(
+            "positions",
+            value_type="dataframe",
+            label="持仓矩阵",
+            description="按时间展开的资产持仓；格式：pd.DataFrame，index 为时间，columns 为资产代码，value 为仓位",
+        ),
     ],
     entry="evaluate",
 )

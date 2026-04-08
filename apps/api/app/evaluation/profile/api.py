@@ -5,7 +5,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasources.schemas import utc_now_iso
-from app.evaluation.profile.profile_node_types import list_evaluation_profile_node_types_public
+from app.evaluation.profile.controller import list_evaluation_profile_node_types_public
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationNodeTypePublic,
