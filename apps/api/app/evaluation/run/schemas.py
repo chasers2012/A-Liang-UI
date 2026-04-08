@@ -1,23 +1,41 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
-class FactorEvaluationRecord(BaseModel):
-    evaluated_at: str
+class EvaluationRunRecord(BaseModel):
+    id: str = Field(default_factory=lambda: uuid4().hex)
+    start_at: datetime
+    end_at: datetime
+    factor_id: str
+
     error: str | None = None
     evaluation_profile_id: str | None = None
     results: Any = None
 
 
-class FactorEvaluationsFile(BaseModel):
+class EvaluationRunsFile(BaseModel):
     version: int = 1
-    items: dict[str, FactorEvaluationRecord] = Field(default_factory=dict)
+    items: list[EvaluationRunRecord] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_items(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        items = data.get("items")
+        if isinstance(items, dict):
+            data = dict(data)
+            data["items"] = list(items.values())
+        return data
 
 
-class FactorEvaluationRowPublic(BaseModel):
+class EvaluationRunRowPublic(BaseModel):
+    id: str | None = None
     factor_id: str
     name: str
     has_evaluation: bool
@@ -30,12 +48,12 @@ class FactorEvaluationRowPublic(BaseModel):
     results: Any = None
 
 
-class RunFactorEvaluationRequest(BaseModel):
+class RunEvaluationRunRequest(BaseModel):
     profile_id: str
     factor_id: str
 
 
-class FactorEvaluationsAggregatePublic(BaseModel):
+class EvaluationRunsAggregatePublic(BaseModel):
     total_factors: int
     evaluated_count: int
     unevaluated_count: int
@@ -43,6 +61,17 @@ class FactorEvaluationsAggregatePublic(BaseModel):
     mean_ic_primary_avg: float | None = None
 
 
-class FactorEvaluationsSummaryPublic(BaseModel):
-    aggregate: FactorEvaluationsAggregatePublic
-    rows: list[FactorEvaluationRowPublic]
+class EvaluationRunsSummaryPublic(BaseModel):
+    aggregate: EvaluationRunsAggregatePublic
+    rows: list[EvaluationRunRowPublic]
+
+
+class EvaluationRunDetailPublic(BaseModel):
+    id: str
+    factor_id: str
+    factor_name: str | None = None
+    start_at: datetime
+    end_at: datetime
+    error: str | None = None
+    evaluation_profile_id: str | None = None
+    results: Any = None

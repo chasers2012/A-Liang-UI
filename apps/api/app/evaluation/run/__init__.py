@@ -1,4 +1,4 @@
-"""Factor evaluation execution and persisted results."""
+"""Evaluation run execution and persisted results."""
 
 from __future__ import annotations
 

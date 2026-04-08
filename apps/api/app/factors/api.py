@@ -4,11 +4,11 @@ import contextlib
 
 from fastapi import APIRouter, HTTPException
 
-from app.evaluation.run.redistry import delete_evaluation_for_factor
+from app.evaluation.run.controller import delete_evaluation_runs_for_factor
 from app.evaluation.run.schemas import (
-    FactorEvaluationRowPublic,
-    FactorEvaluationsAggregatePublic,
-    FactorEvaluationsSummaryPublic,
+    EvaluationRunRowPublic,
+    EvaluationRunsAggregatePublic,
+    EvaluationRunsSummaryPublic,
 )
 from app.factors.constants import NEW_FACTOR_TEMPLATE
 from app.factors.controller import (
@@ -39,8 +39,8 @@ def get_factor_list() -> list[FactorSummaryPublic]:
     return list_factors()
 
 
-@router.get("/evaluations/summary", response_model=FactorEvaluationsSummaryPublic)
-def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
+@router.get("/evaluations/summary", response_model=EvaluationRunsSummaryPublic)
+def evaluation_runs_summary() -> EvaluationRunsSummaryPublic:
     from app.evaluation.run.redistry import load_evaluations_file
 
     try:
@@ -49,15 +49,20 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
         http_internal_server_error(e)
 
     items = FactorItemsRegistry.list_items()
-    rows: list[FactorEvaluationRowPublic] = []
+    rows: list[EvaluationRunRowPublic] = []
     ic_for_avg: list[float] = []
     evaluated_ok = 0
+    latest_eval_runs_by_factor_id = {}
+    for run in ev_file.items:
+        current = latest_eval_runs_by_factor_id.get(run.factor_id)
+        if current is None or run.end_at > current.end_at:
+            latest_eval_runs_by_factor_id[run.factor_id] = run
 
     for rec in items:
-        ev_rec = ev_file.items.get(rec.id)
+        ev_rec = latest_eval_runs_by_factor_id.get(rec.id)
         if ev_rec is None:
             rows.append(
-                FactorEvaluationRowPublic(
+                EvaluationRunRowPublic(
                     factor_id=rec.id,
                     name=rec.name,
                     has_evaluation=False,
@@ -72,11 +77,12 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
             evaluated_ok += 1
 
         rows.append(
-            FactorEvaluationRowPublic(
+            EvaluationRunRowPublic(
+                id=ev_rec.id,
                 factor_id=rec.id,
                 name=rec.name,
                 has_evaluation=True,
-                evaluated_at=ev_rec.evaluated_at,
+                evaluated_at=ev_rec.end_at.isoformat(),
                 error=err,
                 evaluation_profile_id=ev_rec.evaluation_profile_id,
                 results=ev_rec.results,
@@ -88,14 +94,14 @@ def factor_evaluations_summary() -> FactorEvaluationsSummaryPublic:
     if ic_for_avg:
         mean_ic_primary = sum(ic_for_avg) / len(ic_for_avg)
 
-    aggregate = FactorEvaluationsAggregatePublic(
+    aggregate = EvaluationRunsAggregatePublic(
         total_factors=total,
         evaluated_count=evaluated_ok,
         unevaluated_count=total - evaluated_ok,
         primary_period=PRIMARY_IC_PERIOD,
         mean_ic_primary_avg=mean_ic_primary,
     )
-    return FactorEvaluationsSummaryPublic(aggregate=aggregate, rows=rows)
+    return EvaluationRunsSummaryPublic(aggregate=aggregate, rows=rows)
 
 
 @router.get("/template", response_model=str)
@@ -139,4 +145,4 @@ def delete_factor(factor_id: str) -> None:
     delete_factor_source_file(rec)
     FactorItemsRegistry.delete_item(factor_id)
     with contextlib.suppress(ValueError):
-        delete_evaluation_for_factor(factor_id)
+        delete_evaluation_runs_for_factor(factor_id)

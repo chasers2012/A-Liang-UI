@@ -176,7 +176,7 @@ export function FactorEvaluationsOverview() {
                   status = "成功";
                 }
                 return (
-                  <TableRow key={r.factor_id}>
+                  <TableRow key={r.id ?? r.factor_id}>
                     <TableCell className="max-w-40 truncate font-mono text-xs font-medium">
                       <Link
                         href={`/factors/library/${encodeURIComponent(r.factor_id)}`}

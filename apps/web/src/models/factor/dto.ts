@@ -25,6 +25,8 @@ export interface FactorEvaluationsAggregatePublic {
 }
 
 export interface FactorEvaluationRowPublic {
+  /** Evaluation run primary key (not factor_id/profile_id). */
+  id?: string | null;
   factor_id: string;
   name: string;
   has_evaluation: boolean;
