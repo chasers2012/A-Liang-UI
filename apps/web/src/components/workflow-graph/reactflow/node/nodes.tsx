@@ -16,7 +16,6 @@ import {
   inputSpecToNodeParamModel,
   isWireInputSpec,
 } from "../../workflow-node-input-spec";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { SocketRow } from "./socket-row";
 
 
@@ -106,22 +105,20 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
       </div>
 
       {inlineInputSpecs.length > 0 ? (
-        <ScrollArea className="nodrag nopan border-t border-border/80 px-2.5 py-2.5 max-h-[min(240px,40vh)]">
-          <div className="flex flex-col gap-2">
-            {inlineInputSpecs.map((raw) => {
-              const spec = inputSpecToNodeParamModel(raw);
-              return (
-                <ParamRow
-                  key={spec.key}
-                  spec={spec}
-                  readOnly={readOnly}
-                  value={nodeParamEffectiveValue(data.params, spec)}
-                  onChange={(v) => onParamChange(spec.key, v)}
-                />
-              );
-            })}
-          </div>
-        </ScrollArea>
+        <div className="nodrag nopan border-t border-border/80 px-2.5 py-2.5 flex flex-col gap-2">
+          {inlineInputSpecs.map((raw) => {
+            const spec = inputSpecToNodeParamModel(raw);
+            return (
+              <ParamRow
+                key={spec.key}
+                spec={spec}
+                readOnly={readOnly}
+                value={nodeParamEffectiveValue(data.params, spec)}
+                onChange={(v) => onParamChange(spec.key, v)}
+              />
+            );
+          })}
+        </div>
       ) : null}
     </div>
   );
