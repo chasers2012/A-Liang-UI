@@ -37,11 +37,6 @@ export type PageProps = {
   description?: ReactNode;
   /** 传给页面主内容区标题块 `<header>` 的 class（例如 `gap="none"` 时用 `mb-8` 与正文拉开间距）。 */
   headerClassName?: string;
-  /**
-   * 主内容区占满侧栏剩余高度，子级可用 `flex-1 min-h-0` 撑满；正文区不再整体滚动，
-   * 由子组件内部滚动（如全屏对话）。
-   */
-  fillHeight?: boolean;
   /** Vertical gap between flex children: `sm` = 1rem, `lg` = 2rem (列表/分区页默认). */
   gap?: PageGap;
   /** 是否显示顶栏面包屑与返回（默认 true）。 */
@@ -59,7 +54,6 @@ export type PageProps = {
 type PageChromeProps = PageProps & { pathname: string };
 
 type PagePrimaryColumnProps = {
-  fillHeight: boolean;
   gap: PageGap;
   className?: string;
   showPageHeading: boolean;
@@ -70,7 +64,6 @@ type PagePrimaryColumnProps = {
 };
 
 function PagePrimaryColumn({
-  fillHeight,
   gap,
   className,
   showPageHeading,
@@ -82,8 +75,7 @@ function PagePrimaryColumn({
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-0 min-w-0 w-full max-w-7xl flex-1 flex-col p-6 md:p-8",
-        fillHeight ? "overflow-hidden" : "overflow-y-auto",
+        "mx-auto flex min-h-full min-w-0 w-full max-w-7xl flex-col p-6 md:p-8",
         gapClass[gap],
         className,
       )}
@@ -102,11 +94,7 @@ function PagePrimaryColumn({
           ) : null}
         </header>
       ) : null}
-      {fillHeight && children != null ? (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
-      ) : (
-        children
-      )}
+      {children}
     </div>
   );
 }
@@ -167,7 +155,6 @@ const PageChrome = memo(function PageChrome({
   title,
   description,
   headerClassName,
-  fillHeight = false,
   gap = "lg",
   showAppHeader = true,
   showAppHeaderBack,
@@ -194,7 +181,7 @@ const PageChrome = memo(function PageChrome({
 
   return (
     <PageAppHeaderContext.Provider value={headerContextValue}>
-      <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+      <div className="flex h-full flex-1 min-w-0 w-full flex-col">
         {showAppHeader ? (
           <PageChromeAppHeader
             pathname={pathname}
@@ -203,17 +190,18 @@ const PageChrome = memo(function PageChrome({
           />
         ) : null}
 
-        <PagePrimaryColumn
-          fillHeight={fillHeight}
-          gap={gap}
-          className={className}
-          showPageHeading={showPageHeading}
-          title={title}
-          description={description}
-          headerClassName={headerClassName}
-        >
-          {children}
-        </PagePrimaryColumn>
+        <div className="min-w-0 w-full flex-1 overflow-y-auto">
+          <PagePrimaryColumn
+            gap={gap}
+            className={className}
+            showPageHeading={showPageHeading}
+            title={title}
+            description={description}
+            headerClassName={headerClassName}
+          >
+            {children}
+          </PagePrimaryColumn>
+        </div>
       </div>
     </PageAppHeaderContext.Provider>
   );

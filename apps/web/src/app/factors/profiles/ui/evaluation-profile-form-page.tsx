@@ -10,7 +10,7 @@ import { createEvaluationProfile, getEvaluationProfile, patchEvaluationProfile }
 
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
 import { EMPTY_EVALUATION_WORKFLOW } from "./profile-form-shared";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
@@ -97,25 +97,25 @@ export function EvaluationProfileFormPage(props: Props) {
 
   if (loadError) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (loading) {
     return (
-      <FactorFormPageContainer title={isEdit ? "编辑评价方案" : "新增评价方案"}>
+      <Page title={isEdit ? "编辑评价方案" : "新增评价方案"}>
         <p className="text-sm text-muted-foreground">加载中…</p>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={
         <FactorEditPageTitle
           name={name}
@@ -130,8 +130,7 @@ export function EvaluationProfileFormPage(props: Props) {
           descriptionAriaLabel="评价方案描述"
         />
       }
-      className="max-w-full"
-      fillHeight
+      className={"max-w-full flex-1 min-h-0 h-full overflow-hidden"}
       gap="sm"
       action={
         <PageFormHeaderActions
@@ -162,6 +161,6 @@ export function EvaluationProfileFormPage(props: Props) {
           canvasRef={canvasRef}
         />
       </form>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

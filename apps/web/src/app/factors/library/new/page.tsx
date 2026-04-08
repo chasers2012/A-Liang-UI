@@ -20,9 +20,9 @@ import {
   FactorFormFields,
 } from "@/features/factors/ui/factor-form-fields";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
+import { Page } from "@/components/page";
 import {
   FACTOR_MAIN_FORM_ID,
-  FactorFormPageContainer,
   FactorFormLoading,
 } from "@/features/factors/ui/factor-form-page";
 
@@ -82,14 +82,14 @@ export default function NewFactorPage() {
 
   if (bootstrapping) {
     return (
-      <FactorFormPageContainer title="新增因子">
+      <Page title="新增因子">
         <FactorFormLoading />
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={
         <FactorEditPageTitle
           name={form.name}
@@ -139,6 +139,6 @@ export default function NewFactorPage() {
       <p className="text-sm text-muted-foreground">
         保存成功后将进入该因子的详情页。
       </p>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

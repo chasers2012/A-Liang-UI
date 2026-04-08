@@ -12,7 +12,7 @@ import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_EDIT_FORM_ID = "evaluation-metric-edit-form";
 
@@ -86,35 +86,35 @@ export default function EditEvaluationMetricPage() {
 
   if (!id) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>无效 id</AlertTitle>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (loadError) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (loading) {
     return (
-      <FactorFormPageContainer title="编辑评价指标">
+      <Page title="编辑评价指标">
         <p className="text-sm text-muted-foreground">加载中…</p>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={
         <FactorEditPageTitle
           name={name}
@@ -158,6 +158,6 @@ export default function EditEvaluationMetricPage() {
           />
         </div>
       </form>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

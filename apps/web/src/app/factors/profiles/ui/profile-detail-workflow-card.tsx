@@ -58,7 +58,7 @@ export function ProfileDetailWorkflowCard(props: {
             nodeTypes={nodeTypes}
             initialGraph={profile.workflow}
             readOnly
-            className="h-full min-h-0 flex-1"
+            className="h-full flex-1"
           />
         )}
       </div>

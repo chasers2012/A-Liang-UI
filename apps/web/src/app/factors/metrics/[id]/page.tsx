@@ -21,7 +21,7 @@ import {
   loadEvaluationMetricDetailAtomFamily,
 } from "@/models/evaluation-metric/list-detail.atom";
 
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 
 export default function EvaluationMetricDetailPage() {
   const params = useParams<{ id: string }>();
@@ -36,27 +36,27 @@ export default function EvaluationMetricDetailPage() {
 
   if (!id) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>无效 id</AlertTitle>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (error || !row) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant={error ? "destructive" : "default"}>
           <AlertTitle>{error ? "加载失败" : "加载中…"}</AlertTitle>
           {error ? <AlertDescription>{error}</AlertDescription> : null}
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={<span className="font-mono">{row.name}</span>}
       description={row.description || "无描述"}
       action={
@@ -91,6 +91,6 @@ export default function EvaluationMetricDetailPage() {
           </pre>
         </CardContent>
       </Card>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

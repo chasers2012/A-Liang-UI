@@ -19,11 +19,11 @@ import {
   FactorFormFields,
 } from "@/features/factors/ui/factor-form-fields";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
+import { Page } from "@/components/page";
 import {
   FACTOR_MAIN_FORM_ID,
   FactorFormLoadError,
   FactorFormLoading,
-  FactorFormPageContainer,
 } from "@/features/factors/ui/factor-form-page";
 
 export default function EditFactorPage() {
@@ -82,9 +82,9 @@ export default function EditFactorPage() {
 
   if (loading) {
     return (
-      <FactorFormPageContainer title="编辑因子">
+      <Page title="编辑因子">
         <FactorFormLoading />
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
@@ -93,7 +93,7 @@ export default function EditFactorPage() {
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={
         <FactorEditPageTitle
           name={form.name}
@@ -137,6 +137,6 @@ export default function EditFactorPage() {
         保存且源码有变更时会自动生成代码快照。{" "}
         （评价历史已移除）
       </p>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

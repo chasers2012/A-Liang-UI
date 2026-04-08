@@ -11,7 +11,7 @@ import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/lib/quant
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
 
@@ -125,7 +125,7 @@ export default function NewEvaluationMetricPage() {
   };
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={
         <FactorEditPageTitle
           name={name}
@@ -184,6 +184,6 @@ export default function NewEvaluationMetricPage() {
           )}
         </div>
       </form>
-    </FactorFormPageContainer>
+    </Page>
   );
 }

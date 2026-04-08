@@ -66,17 +66,17 @@ export function ProfileWorkflowEditorBlock(props: {
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
-    <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
-      <Label className="shrink-0">工作流</Label>
+    <div className={cn("flex flex-col min-h-0 flex-1 gap-3", className)}>
+      <Label className="">工作流</Label>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
-        <div className="flex min-h-0 flex-1 gap-3">
-          <aside className="hidden h-full min-h-0 w-[220px] shrink-0 flex-col overflow-hidden rounded-md border border-border/70 bg-muted/10 md:flex">
-            <div className="shrink-0 border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
+          <aside className="h-full w-[220px] flex-col overflow-hidden rounded-md border border-border/70 bg-muted/10 md:flex">
+            <div className=" border-b border-border/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               节点列表
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto p-2">
               {catalogGroups.length === 0 ? (
                 <p className="px-1 py-1 text-sm text-muted-foreground">暂无节点</p>
               ) : (
@@ -127,8 +127,9 @@ export function ProfileWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
-            className="h-full min-h-0 flex-1"
+            className="h-full flex-1"
           />
+
         </div>
       )}
     </div>

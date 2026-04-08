@@ -15,7 +15,7 @@ import {
   loadEvaluationProfileDetailAtomFamily,
 } from "@/models/evaluation-profile/list-detail.atom";
 
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 import { ProfileDetailWorkflowCard } from "../ui/profile-detail-workflow-card";
 
 export default function EvaluationProfileDetailPage() {
@@ -31,31 +31,30 @@ export default function EvaluationProfileDetailPage() {
 
   if (!id) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>无效 id</AlertTitle>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (error || !row) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant={error ? "destructive" : "default"}>
           <AlertTitle>{error ? "加载失败" : "加载中…"}</AlertTitle>
           {error ? <AlertDescription>{error}</AlertDescription> : null}
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={row.name}
       description={row.description || "无描述"}
       className="max-w-full"
-      fillHeight
       gap="sm"
       action={
         <Link
@@ -68,6 +67,6 @@ export default function EvaluationProfileDetailPage() {
       }
     >
       <ProfileDetailWorkflowCard profile={row} profileId={id} />
-    </FactorFormPageContainer>
+    </Page>
   );
 }

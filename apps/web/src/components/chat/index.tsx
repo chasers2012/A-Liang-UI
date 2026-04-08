@@ -41,15 +41,13 @@ export function HomeAiChat() {
 
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       <HydrateChatState />
       <ChatSessionTabs />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden">
-
-        <div className=" overflow-y-auto overflow-x-hidden h-full w-full relative">
+      <div className="flex flex-1 flex-col gap-3 overflow-hidden">
+        <div className="overflow-y-auto overflow-x-hidden w-full relative flex-1">
           <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>
-
-          <div id="chat-messages-container" className="flex w-full min-w-0 flex-col gap-3 pb-3 pl-9 pr-1">
+          <div id="chat-messages-container" className="w-full flex flex-col gap-3 pb-3 pl-9 pr-3">
             <AiChartThemeProvider>
               <div className="hidden">
                 <MarkdownWarmup />
@@ -60,7 +58,7 @@ export function HomeAiChat() {
           </div>
         </div>
         <ChatError />
-        <div className="shrink-0 px-6 pb-6">
+        <div className="h-fit px-6 pb-6">
           <AiChatComposer />
         </div>
       </div>

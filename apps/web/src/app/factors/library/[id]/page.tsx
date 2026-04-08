@@ -44,7 +44,7 @@ import { DeleteFactorDialog } from "@/features/factors/ui/delete-factor-dialog";
 import {
   EvaluationProfileMetricResultsPanel,
 } from "@/features/factors/ui/evaluation-profile-metric-results";
-import { FactorFormPageContainer } from "@/features/factors/ui/factor-form-page";
+import { Page } from "@/components/page";
 
 function formatIso(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
@@ -505,30 +505,30 @@ export default function FactorDetailPage() {
 
   if (!id) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>无效 id</AlertTitle>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (loading) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <p className="text-sm text-muted-foreground">加载中…</p>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
   if (!detail) {
     return (
-      <FactorFormPageContainer>
+      <Page>
         <Alert variant="destructive">
           <AlertTitle>无法加载因子</AlertTitle>
           <AlertDescription>{loadError ?? "未知错误"}</AlertDescription>
         </Alert>
-      </FactorFormPageContainer>
+      </Page>
     );
   }
 
@@ -545,7 +545,7 @@ export default function FactorDetailPage() {
   };
 
   return (
-    <FactorFormPageContainer
+    <Page
       title={<span className="font-mono">{detail.name}</span>}
       description={
         detail.description.trim() !== "" ? (
@@ -591,6 +591,6 @@ export default function FactorDetailPage() {
         onDismiss={() => setS((prev) => ({ ...prev, deleteTarget: null }))}
         onConfirm={confirmDelete}
       />
-    </FactorFormPageContainer>
+    </Page>
   );
 }

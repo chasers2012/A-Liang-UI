@@ -375,61 +375,58 @@ export const WorkflowGraphCanvas = forwardRef<
             "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
             readOnly && "workflow-graph-canvas-root--readonly",
           )}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
         >
           <WorkflowGraphContextProvider readOnly={readOnly}>
-            <div
-              className="relative min-h-[280px] flex-1"
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-            >
-              <ErrorBoundary errorComponent={Error}>
-                <ReactFlow
-                  nodes={nodes}
-                  edges={edges}
-                  nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-                  onInit={(inst) => {
-                    reactFlowRef.current = inst;
-                  }}
-                  onNodesChange={onNodesChange}
-                  onEdgesChange={onEdgesChange}
-                  onNodeDragStop={(_, node) => {
-                    if (readOnly) return;
-                    setNodes((nds) =>
-                      resolveCollisions(nds, {
-                        fixedNodeId: node.id,
-                        margin: 16,
-                        maxIterations: 80,
-                        overlapThreshold: 0.12,
-                      }),
-                    );
-                  }}
-                  onConnect={readOnly ? undefined : onConnect}
-                  isValidConnection={readOnly ? undefined : isValidConnection}
-                  fitView
-                  fitViewOptions={{ padding: 0.18, duration: 200 }}
-                  deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
-                  nodesDraggable={!readOnly}
-                  nodesConnectable={!readOnly}
-                  elementsSelectable={!readOnly}
-                  zoomOnScroll
-                  zoomOnPinch
-                  panOnScroll={false}
-                  proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
-                  className="min-h-[280px] flex-1"
-                >
-                  <Background
-                    id="workflow-graph-bg"
-                    gap={22}
-                    size={1}
-                    variant={BackgroundVariant.Dots}
-                    className="opacity-60"
-                  />
-                  <Controls showInteractive={false} />
-                  <WorkflowGraphZoomToolbar />
-                </ReactFlow>
-              </ErrorBoundary>
 
-            </div>
+            <ErrorBoundary errorComponent={Error}>
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
+                onInit={(inst) => {
+                  reactFlowRef.current = inst;
+                }}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeDragStop={(_, node) => {
+                  if (readOnly) return;
+                  setNodes((nds) =>
+                    resolveCollisions(nds, {
+                      fixedNodeId: node.id,
+                      margin: 16,
+                      maxIterations: 80,
+                      overlapThreshold: 0.12,
+                    }),
+                  );
+                }}
+                onConnect={readOnly ? undefined : onConnect}
+                isValidConnection={readOnly ? undefined : isValidConnection}
+                fitView
+                fitViewOptions={{ padding: 0.18, duration: 200 }}
+                deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+                nodesDraggable={!readOnly}
+                nodesConnectable={!readOnly}
+                elementsSelectable={!readOnly}
+                zoomOnScroll
+                zoomOnPinch
+                panOnScroll={false}
+                proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
+                className="min-h-[280px] flex-1"
+              >
+                <Background
+                  id="workflow-graph-bg"
+                  gap={22}
+                  size={1}
+                  variant={BackgroundVariant.Dots}
+                  className="opacity-60"
+                />
+                <Controls showInteractive={false} />
+                <WorkflowGraphZoomToolbar />
+              </ReactFlow>
+            </ErrorBoundary>
+
           </WorkflowGraphContextProvider>
         </div>
       </div>
