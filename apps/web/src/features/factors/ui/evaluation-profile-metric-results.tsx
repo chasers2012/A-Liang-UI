@@ -16,7 +16,7 @@ function isEchartsPayload(v: unknown): v is EchartsPayload {
 
 /**
  * 与后端 `profile_workflow_runner._extract_collected_result` + `_to_jsonable` 对齐：
- * 单 Collect 节点时常见为 `[[ structured, ...echart ]]`（外层多包一层数组），需展开一层再遍历。
+ * 单 Collect 节点时常见为 `[[ ...echart ]]`（外层多包一层数组），需展开一层再遍历。
  * 若结果被序列化成字符串，则先 JSON.parse。
  */
 function normalizeEvalResults(raw: unknown): unknown {

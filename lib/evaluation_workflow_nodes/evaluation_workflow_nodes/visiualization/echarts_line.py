@@ -25,15 +25,19 @@ def _normalize_x_values(values: list[Any]) -> list[Any]:
     return out
 
 
-def _as_series_payload(
+def build_echarts_option(
     data: pd.DataFrame,
     *,
     x_field: str,
     y_fields: list[str],
     smooth: bool,
     series_type: str,
+    title: str = "",
+    x_axis_type: str = "category",
+    show_legend: bool = True,
+    show_tooltip: bool = True,
 ) -> dict[str, Any]:
-    if x_field == "__index__":
+    if not x_field.strip():
         x_values = _normalize_x_values(data.index.tolist())
     else:
         if x_field not in data.columns:
@@ -52,54 +56,34 @@ def _as_series_payload(
                 "smooth": smooth,
             }
         )
-    return {"x_axis": x_values, "series": series}
-
-
-def build_echarts_option(
-    payload: dict[str, Any],
-    *,
-    title: str = "",
-    x_axis_type: str = "category",
-    show_legend: bool = True,
-    show_tooltip: bool = True,
-) -> dict[str, Any]:
-    x_values = payload.get("x_axis", [])
-    series = payload.get("series", [])
-    y_axis = payload.get("y_axis")
-
-    if not isinstance(series, list) or not series:
+    if not series:
         raise ValueError("payload.series must be a non-empty list")
 
     option: dict[str, Any] = {
-        "title": {"text": title or str(payload.get("title", ""))},
-        "xAxis": {"type": x_axis_type, "data": _normalize_x_values(list(x_values))},
+        "title": {"text": title},
+        "xAxis": {"type": x_axis_type, "data": x_values},
         "series": series,
+        "yAxis": {"type": "value"},
     }
-
-    if y_axis is None:
-        option["yAxis"] = {"type": "value"}
-    else:
-        option["yAxis"] = y_axis
-
     if show_legend:
-        option["legend"] = payload.get("legend", {})
+        option["legend"] = {}
     if show_tooltip:
-        option["tooltip"] = payload.get("tooltip", {"trigger": "axis"})
-
-    grid = payload.get("grid")
-    if grid is not None:
-        option["grid"] = grid
+        option["tooltip"] = {"trigger": "axis"}
     return option
 
 
 @workflow_node(
     label="ECharts Options",
-    description="通用 ECharts option 构造节点（支持 dataframe 映射与标准化 payload 输入）",
+    description="通用 ECharts option 构造节点（从 DataFrame 映射 x/y 字段生成 option）",
     input_sockets=[
-        Socket("data", required=False, value_type="dataframe", label="数据(DataFrame)"),
-        Socket("payload", required=False, value_type="scalar_json", label="标准化图表数据"),
-        StringNodeParam("x_field", required=False, default="__index__", label="X 轴字段"),
-        StringNodeParam("y_fields", required=False, default="value", label="Y 字段(逗号分隔)"),
+        Socket("data", required=True, value_type="dataframe", label="数据(DataFrame)"),
+        StringNodeParam("x_field", required=False, default="", label="X 轴字段"),
+        StringNodeParam(
+            "y_fields",
+            required=False,
+            default="value",
+            label="Y 字段(逗号分隔，* 表示全部列)",
+        ),
         OptionsNodeParam(
             "series_type",
             required=False,
@@ -141,9 +125,8 @@ def build_echarts_option(
 class EchartsLineNode:
     def execute(
         self,
-        data: pd.DataFrame | None = None,
-        payload: dict[str, Any] | None = None,
-        x_field: str = "__index__",
+        data: pd.DataFrame,
+        x_field: str = "",
         y_fields: str = "value",
         series_type: str = "line",
         title: str = "",
@@ -157,26 +140,22 @@ class EchartsLineNode:
         _ = kwargs
         extra = extra_options or {}
 
-        if payload is not None:
-            if isinstance(payload, list):
-                raise ValueError("payload must be a dict (single chart), not a list")
-            item = payload
-        else:
-            if data is None:
-                raise ValueError("either payload or data is required")
-            y_field_list = [x.strip() for x in y_fields.split(",") if x.strip()]
-            if not y_field_list:
-                raise ValueError("y_fields must contain at least one field")
-            item = _as_series_payload(
-                data,
-                x_field=x_field,
-                y_fields=y_field_list,
-                smooth=smooth,
-                series_type=series_type,
-            )
+        if isinstance(data, pd.Series):
+            data = data.to_frame(name="value")
 
+        raw_y = y_fields.strip()
+        if raw_y in ("*", "__all__"):
+            y_field_list = [str(c) for c in data.columns]
+        else:
+            y_field_list = [x.strip() for x in y_fields.split(",") if x.strip()]
+        if not y_field_list:
+            raise ValueError("y_fields must contain at least one field (or use *)")
         option = build_echarts_option(
-            item,
+            data,
+            x_field=x_field,
+            y_fields=y_field_list,
+            smooth=smooth,
+            series_type=series_type,
             title=title,
             x_axis_type=x_axis_type,
             show_legend=show_legend,
