@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Mean Return by Quantile",
-    description="按分位桶计算均值收益与标准误（Alphalens.performance.mean_return_by_quantile）",
+    description="按因子分位计算均值收益与标准误，可按日期或分组统计。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -57,13 +57,13 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "mean_return_by_quantile",
             value_type="dataframe",
             label="分位平均收益",
-            description="各分位桶的平均收益；格式：pd.DataFrame，index 为 quantile（可含 date/group 层级），columns 为收益周期",
+            description="各分位桶的平均收益\n\n**数据格式**\n- pd.DataFrame，index 为 quantile（可含 date/group 层级），columns 为收益周期",
         ),
         Socket(
             "mean_return_by_quantile_std_error",
             value_type="dataframe",
             label="分位平均收益标准误",
-            description="各分位桶收益的标准误；格式：pd.DataFrame，index/columns 与 mean_return_by_quantile 对齐",
+            description="各分位桶收益的标准误\n\n**数据格式**\n- pd.DataFrame，index/columns 与 mean_return_by_quantile 对齐",
         ),
     ],
     entry="evaluate",

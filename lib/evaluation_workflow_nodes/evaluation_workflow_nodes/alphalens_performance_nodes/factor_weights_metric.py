@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Factor Weights",
-    description="根据因子构建资产权重（Alphalens.performance.factor_weights）",
+    description="根据因子值构建资产权重，支持组中性或等权设置。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -50,7 +50,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "weights",
             value_type="dataframe",
             label="资产权重",
-            description="因子映射得到的权重序列；格式：pd.DataFrame/Series，index 为日期（可含资产维度），columns 为资产代码",
+            description="因子映射得到的权重序列\n\n**数据格式**\n- pd.DataFrame/Series，index 为日期（可含资产维度），columns 为资产代码",
         ),
     ],
     entry="evaluate",

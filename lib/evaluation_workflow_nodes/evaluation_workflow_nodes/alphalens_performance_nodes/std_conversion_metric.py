@@ -11,7 +11,7 @@ from workflow import Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="Std Conversion",
-    description="将不同持有期标准差统一换算到基准周期（Alphalens.utils.std_conversion）",
+    description="将不同周期收益标准差折算到统一基准周期，便于跨周期比较风险。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -36,7 +36,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             "std_converted",
             value_type="dataframe",
             label="标准差折算结果",
-            description="折算到基准周期后的标准差；格式：pd.DataFrame，index 与输入一致，columns 为各周期标准差列",
+            description="折算到基准周期后的标准差\n\n**数据格式**\n- pd.DataFrame，index 与输入一致，columns 为各周期标准差列",
         ),
     ],
     entry="evaluate",

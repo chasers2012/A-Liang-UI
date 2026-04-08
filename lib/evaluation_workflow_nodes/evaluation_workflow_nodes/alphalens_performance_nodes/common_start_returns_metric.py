@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Common Start Returns",
-    description="从事件日对齐的收益窗口（Alphalens.performance.common_start_returns）",
+    description="提取并对齐事件窗口收益，将每个事件日前后窗口统一到共同时间轴（-before 到 +after）。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -35,7 +35,7 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
             required=False,
             value_type="dataframe",
             label="去均值参考(可选)",
-            description="可选传入用于去均值的 universe",
+            description="可选传入用于去均值的基准样本集合",
         ),
     ],
     workflow_parameters=[
@@ -65,7 +65,7 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
             "aligned_returns",
             value_type="dataframe",
             label="对齐收益窗口",
-            description="事件日对齐后的收益窗口；格式：pd.DataFrame，index 为相对事件期，columns 为资产或样本",
+            description="事件日对齐后的收益窗口\n\n**数据格式**\n- pd.DataFrame，index 为相对事件期，columns 为资产或样本",
         ),
     ],
     entry="evaluate",

@@ -18,7 +18,7 @@ from workflow import (
 
 @workflow_node(
     label="Pyfolio Input",
-    description="为 Pyfolio 格式生成收益/持仓/基准（Alphalens.performance.create_pyfolio_input）",
+    description="生成 Pyfolio 所需收益/持仓/基准序列。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -35,7 +35,7 @@ from workflow import (
             required=False,
             default="1D",
             label="持有期",
-            description="组合构建与收益计算的周期",
+            description="持有周期（如 1D、5D）",
         ),
         NumberNodeParam(
             "capital",
@@ -71,7 +71,7 @@ from workflow import (
             value_type="scalar_json",
             default=None,
             label="指定分位",
-            description="限制参与构建的分位集合",
+            description="限制参与构建的分位集合（如 [1, 5]）",
         ),
         NodeParam(
             "groups",
@@ -94,19 +94,19 @@ from workflow import (
             "returns",
             value_type="scalar_json",
             label="策略收益",
-            description="Pyfolio 可直接消费的收益序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+            description="Pyfolio 可直接消费的收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
         Socket(
             "positions",
             value_type="dataframe",
             label="策略持仓",
-            description="按时间展开的持仓矩阵；格式：pd.DataFrame，index 为时间，columns 为资产代码",
+            description="按时间展开的持仓矩阵\n\n**数据格式**\n- pd.DataFrame，index 为时间，columns 为资产代码",
         ),
         Socket(
             "benchmark",
             value_type="scalar_json",
             label="基准收益",
-            description="对应 benchmark_period 的基准收益序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+            description="对应 benchmark_period 的基准收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
     ],
     entry="evaluate",

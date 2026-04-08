@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="IC",
-    description="信息系数（Alphalens）",
+    description="计算信息系数 IC，按日期衡量因子值与未来收益的秩相关。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -43,7 +43,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "ic",
             value_type="dataframe",
             label="信息系数",
-            description="按周期计算得到的 IC；格式：pd.DataFrame，index 为日期（或分组日期），columns 为收益周期",
+            description="按周期计算得到的 IC\n\n**数据格式**\n- pd.DataFrame，index 为日期（或分组日期），columns 为收益周期",
         ),
     ],
     entry="evaluate",

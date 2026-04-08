@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Alpha & Beta",
-    description="计算因子 Alpha、Beta 及其年化 Alpha（Alphalens.performance.factor_alpha_beta）",
+    description="计算因子组合的 Alpha/Beta，输出超额收益（alpha）与市场暴露（beta）。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -58,7 +58,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "alpha_beta",
             value_type="dataframe",
             label="Alpha/Beta",
-            description="Alpha、Beta 与年化 Alpha 指标；格式：pd.DataFrame，index 为指标名，columns 为周期列",
+            description="Alpha、Beta 与年化 Alpha 指标\n\n**数据格式**\n- pd.DataFrame，index 为指标名，columns 为周期列",
         ),
     ],
     entry="evaluate",

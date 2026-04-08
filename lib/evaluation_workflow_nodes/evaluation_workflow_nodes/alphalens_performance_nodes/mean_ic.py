@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="Mean IC",
-    description="各持有期平均信息系数（Alphalens）",
+    description="计算平均信息系数 IC，可按时间窗或分组对 IC 求均值。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -51,7 +51,7 @@ from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
             "mean_ic",
             value_type="scalar_json",
             label="平均 IC",
-            description="Mean IC 结果；格式：JSON 可序列化对象（dict/series 结构，键为周期或分组）",
+            description="Mean IC 结果\n\n**数据格式**\n- JSON 可序列化对象（dict/series 结构，键为周期或分组）",
         ),
     ],
     entry="evaluate",

@@ -11,7 +11,7 @@ from workflow import Socket, workflow_node
 
 @workflow_node(
     label="Cumulative Returns",
-    description="将简单收益序列累积化（Alphalens.performance.cumulative_returns）",
+    description="将简单收益序列转换为累计收益时间序列。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -27,7 +27,7 @@ from workflow import Socket, workflow_node
             "cumulative_returns",
             value_type="scalar_json",
             label="累计收益序列",
-            description="累计化后的收益序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+            description="累计化后的收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
     ],
     entry="evaluate",

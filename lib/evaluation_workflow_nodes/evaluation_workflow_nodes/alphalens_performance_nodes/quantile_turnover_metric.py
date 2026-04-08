@@ -11,7 +11,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Quantile Turnover",
-    description="计算分位桶的换手率/流动性（Alphalens.performance.quantile_turnover）",
+    description="计算分位换手率，衡量目标分位中本期新进入资产的占比。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -26,7 +26,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
             required=False,
             value_type="dataframe",
             label="分位序列(可选)",
-            description="可选传入 factor_quantile 序列",
+            description="可选传入因子分位序列（factor_quantile）",
         ),
     ],
     workflow_parameters=[
@@ -46,7 +46,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
             "quantile_turnover",
             value_type="scalar_json",
             label="分位换手率",
-            description="目标分位的换手率时间序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+            description="目标分位的换手率时间序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
     ],
     entry="evaluate",

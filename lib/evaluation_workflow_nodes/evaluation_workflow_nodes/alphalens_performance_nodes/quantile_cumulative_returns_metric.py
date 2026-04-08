@@ -11,7 +11,7 @@ from workflow import Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="Quantile Cumulative Returns",
-    description="将按日期/分位的收益（MultiIndex）转为分位累计收益曲线（每列一个分位）",
+    description="将分位日收益转换为分位累计收益曲线。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -36,7 +36,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             "cumulative_returns_by_quantile",
             value_type="dataframe",
             label="分位累计收益",
-            description="每个分位一列的累计收益曲线；格式：pd.DataFrame，index 为日期，columns 为 Q1..Qn 分位列",
+            description="每个分位一列的累计收益曲线\n\n**数据格式**\n- pd.DataFrame，index 为日期，columns 为 Q1..Qn 分位列",
         ),
     ],
     entry="evaluate",

@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Avg Cum Return by Quantile",
-    description="按分位桶的平均累计收益曲线（Alphalens.performance.average_cumulative_return_by_quantile）",
+    description="计算分位平均累计收益曲线，输出事件窗口内各分位累计收益的均值与标准差。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -72,7 +72,7 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
             "average_cumulative_return",
             value_type="dataframe",
             label="分位平均累计收益",
-            description="各分位桶平均累计收益曲线；格式：pd.DataFrame，index 为事件窗口相对期，columns 为 quantile",
+            description="各分位桶平均累计收益曲线\n\n**数据格式**\n- pd.DataFrame，index 为事件窗口相对期，columns 为 quantile",
         ),
     ],
     entry="evaluate",

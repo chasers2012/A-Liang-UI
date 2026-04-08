@@ -11,7 +11,7 @@ from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="Top-Bottom Quantile Spread TS",
-    description="从按日期/分位的收益（MultiIndex）计算 Top-Bottom 分位收益差的时间序列，并附带滚动均值",
+    description="计算 Top-Bottom 分位收益差时间序列，并提供滚动均值辅助观察趋势。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -28,7 +28,7 @@ from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
             required=False,
             default="1D",
             label="周期列名",
-            description="用于计算 spread 的收益列名",
+            description="用于计算收益差的收益列名（如 1D、5D）",
         ),
         NumberNodeParam(
             "upper_quant",
@@ -57,7 +57,7 @@ from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
             "spread_ts",
             value_type="dataframe",
             label="分位差时间序列",
-            description="包含 spread 与其滚动均值 ma；格式：pd.DataFrame，index 为日期，columns 固定为 spread/ma",
+            description="包含 spread 与其滚动均值 ma\n\n**数据格式**\n- pd.DataFrame，index 为日期，columns 固定为 spread/ma",
         ),
     ],
     entry="evaluate",

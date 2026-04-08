@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Factor Returns",
-    description="根据权重计算分位/因子组合收益（Alphalens.performance.factor_returns）",
+    description="根据因子权重计算各持有期组合收益，可按资产维度返回。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -57,7 +57,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "returns",
             value_type="dataframe",
             label="因子收益",
-            description="因子组合收益 DataFrame；格式：pd.DataFrame，index 为日期，columns 为收益列或资产列",
+            description="因子组合收益 DataFrame\n\n**数据格式**\n- pd.DataFrame，index 为日期，columns 为收益列或资产列",
         ),
     ],
     entry="evaluate",

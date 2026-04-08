@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
 
 @workflow_node(
     label="Factor Cumulative Returns",
-    description="基于因子构建多空组合并计算累计收益（Alphalens.performance.factor_cumulative_returns）",
+    description="模拟因子组合并计算累计收益，按指定持有期/分位/分组筛选后输出组合累计收益曲线。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -24,7 +24,11 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
     ],
     workflow_parameters=[
         StringNodeParam(
-            "period", required=False, default="1D", label="持有期", description="累计收益计算周期"
+            "period",
+            required=False,
+            default="1D",
+            label="持有期",
+            description="持有周期（如 1D、5D）",
         ),
         BooleanNodeParam(
             "long_short",
@@ -53,7 +57,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
             value_type="scalar_json",
             default=None,
             label="指定分位",
-            description="限制参与计算的分位",
+            description="限制参与计算的分位集合（如 [1, 5]）",
         ),
         NodeParam(
             "groups",
@@ -61,7 +65,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
             value_type="scalar_json",
             default=None,
             label="指定分组",
-            description="限制参与计算的组别",
+            description="限制参与计算的组别集合",
         ),
     ],
     output_sockets=[
@@ -69,7 +73,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
             "cumulative_returns",
             value_type="scalar_json",
             label="累计收益",
-            description="因子组合的累计收益序列；格式：JSON 可序列化时间序列（dict[datetime, number] 或等价结构）",
+            description="因子组合的累计收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number] 或等价结构）",
         ),
     ],
     entry="evaluate",

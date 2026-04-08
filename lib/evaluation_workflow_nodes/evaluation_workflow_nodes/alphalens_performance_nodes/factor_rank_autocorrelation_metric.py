@@ -11,7 +11,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Rank Autocorrelation",
-    description="因子秩的自相关（Alphalens.performance.factor_rank_autocorrelation）",
+    description="计算因子秩自相关，通过比较不同时点的因子排名衡量换手与稳定性。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -32,7 +32,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
             "autocorrelation",
             value_type="scalar_json",
             label="秩自相关",
-            description="因子秩自相关时间序列；格式：JSON 可序列化时间序列（dict[datetime, number]）",
+            description="因子秩自相关时间序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
     ],
     entry="evaluate",
