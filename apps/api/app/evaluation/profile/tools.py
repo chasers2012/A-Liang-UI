@@ -8,6 +8,7 @@ import workflow.node_types as _workflow_node_types
 from langchain_core.tools import tool
 
 from app.datasource.schemas import utc_now_iso
+from app.evaluation.profile.constants import empty_workflow_template_dict
 from app.evaluation.profile.controller import list_evaluation_profile_node_types_public
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
@@ -16,34 +17,6 @@ from app.evaluation.profile.schemas import (
     EvaluationProfilePublic,
     EvaluationProfileRecord,
     workflow_public_dict,
-)
-
-_EMPTY_WORKFLOW_JSON = json.dumps(
-    {
-        "nodes": [],
-        "links": [],
-        "workflow_inputs": [
-            {
-                "name": "factor",
-                "required": True,
-                "label": "因子",
-                "description": "评价目标因子（运行时由 factor_id 注入）",
-                "value_type": "factor",
-                "render_type": "socket",
-            }
-        ],
-        "workflow_outputs": [
-            {
-                "name": "result",
-                "required": False,
-                "label": "结果",
-                "description": "评价工作流最终输出。",
-                "value_type": "scalar_json",
-                "render_type": "appendable",
-            }
-        ],
-    },
-    ensure_ascii=False,
 )
 
 
@@ -82,7 +55,7 @@ def _merge_evaluation_profile_patch(
     )
 )
 def get_evaluation_profile_workflow_template() -> str:
-    return _EMPTY_WORKFLOW_JSON
+    return json.dumps(empty_workflow_template_dict(), ensure_ascii=False)
 
 
 @tool(

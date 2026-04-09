@@ -26,6 +26,11 @@ from evaluation_workflow_nodes.alphalens_performance_nodes.top_bottom_spread_tim
     TopBottomSpreadTimeSeriesMetric,
 )
 from evaluation_workflow_nodes.calculate_factor_value import CalculateFactorValueNode
+from evaluation_workflow_nodes.constants import (
+    VALUE_TYPE_DATA_SET,
+    VALUE_TYPE_FACTOR,
+    VALUE_TYPE_SCALAR_JSON,
+)
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
 from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
 
@@ -218,17 +223,33 @@ def build_returns_tear_workflow_template() -> dict:
         ],
         workflow_inputs=[
             Socket(
+                name="data_set",
+                required=True,
+                value_type=VALUE_TYPE_DATA_SET,
+                label="数据集",
+                description="评价所使用的数据集实例",
+            ),
+            Socket(
                 name="factor",
                 required=True,
-                value_type="factor",
+                value_type=VALUE_TYPE_FACTOR,
                 label="因子",
                 description="评价目标因子（运行时由 factor_id 注入）",
-            )
+            ),
         ],
         workflow_outputs=[
-            Socket(name="result", required=False, value_type="scalar_json", label="结果")
+            Socket(
+                name="result",
+                required=False,
+                value_type=VALUE_TYPE_SCALAR_JSON,
+                label="结果",
+            )
         ],
         links=[
+            WorkflowLink(
+                from_=wi("data_set"),
+                to=n("load", "data_set"),
+            ),
             WorkflowLink(
                 from_=wi("factor"),
                 to=n("calc", "factor"),

@@ -4,6 +4,11 @@ from factor.data_set import DataSet
 from workflow import Socket, workflow_node
 from workflow.node_types import OptionsNodeParam
 
+from evaluation_workflow_nodes.constants import (
+    FACTOR_EVALUATION_CATEGORY,
+    VALUE_TYPE_DATA_SET,
+)
+
 
 @workflow_node(
     input_sockets=[
@@ -17,14 +22,14 @@ from workflow.node_types import OptionsNodeParam
     output_sockets=[
         Socket(
             name="data_set",
-            value_type="data_set",
+            value_type=VALUE_TYPE_DATA_SET,
             label="数据集",
             description="加载完成后的 DataSet 实例",
         ),
     ],
     label="加载数据集",
     description="根据数据集 ID 从存储中加载 DataSet 对象",
-    category="factor_evaluation",
+    category=FACTOR_EVALUATION_CATEGORY,
 )
 class LoadDataSet:
     def execute(self, **kwargs) -> DataSet:

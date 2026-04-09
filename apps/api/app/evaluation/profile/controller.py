@@ -4,6 +4,7 @@ from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
 from app.evaluation.metrics.controller import list_metric_records, read_metric_source
+from app.evaluation.profile.constants import evaluation_workflow_io_spec_dict
 from app.evaluation.profile.internal_nodes import get_internal_nodes
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
 
@@ -52,25 +53,4 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
 
 
 def get_evaluation_profile_workflow_io_spec() -> WorkflowIOSpecPublic:
-    return WorkflowIOSpecPublic(
-        workflow_inputs=[
-            {
-                "name": "factor",
-                "required": True,
-                "label": "因子",
-                "description": "评价目标因子（运行时由 factor_id 注入）",
-                "value_type": "factor",
-                "render_type": "socket",
-            }
-        ],
-        workflow_outputs=[
-            {
-                "name": "result",
-                "required": False,
-                "label": "结果",
-                "description": "评价工作流最终输出。",
-                "value_type": "scalar_json",
-                "render_type": "appendable",
-            }
-        ],
-    )
+    return WorkflowIOSpecPublic(**evaluation_workflow_io_spec_dict())

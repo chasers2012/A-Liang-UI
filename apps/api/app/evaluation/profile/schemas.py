@@ -8,38 +8,14 @@ from pydantic import BaseModel, field_validator
 from workflow import WorkflowGraph
 
 from app.datasource.schemas import utc_now_iso
+from app.evaluation.profile.constants import (
+    EVALUATION_EMPTY_WORKFLOW_TEMPLATE,
+    empty_workflow_template_dict,
+)
 
 EvaluationWorkflow = WorkflowGraph
 
-_EMPTY_WORKFLOW: dict[str, Any] = {
-    "nodes": [],
-    "links": [],
-    "workflow_inputs": [
-        {
-            "name": "factor",
-            "required": True,
-            "label": "因子",
-            "description": "评价目标因子（运行时由 factor_id 注入）",
-            "value_type": "factor",
-            "render_type": "socket",
-        }
-    ],
-    "workflow_outputs": [
-        {
-            "name": "result",
-            "required": False,
-            "label": "结果",
-            "description": "评价工作流最终输出。",
-            "value_type": "scalar_json",
-            "render_type": "appendable",
-        }
-    ],
-}
-
-
-def empty_workflow_template_dict() -> dict[str, Any]:
-    # Return a fresh dict instance for API/template consumers.
-    return dict(_EMPTY_WORKFLOW)
+_EMPTY_WORKFLOW: dict[str, Any] = EVALUATION_EMPTY_WORKFLOW_TEMPLATE
 
 
 def _validate_evaluation_workflow_dict(workflow: dict[str, Any]) -> None:
@@ -62,7 +38,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     """Parse stored workflow string into an object for API responses."""
     raw = workflow_json.strip()
     if not raw:
-        return dict(_EMPTY_WORKFLOW)
+        return empty_workflow_template_dict()
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("workflow 须为 JSON 对象")
@@ -74,7 +50,7 @@ def _stored_workflow_str(v: object) -> str:
     if isinstance(v, str):
         s = v.strip()
         if not s:
-            return json.dumps(dict(_EMPTY_WORKFLOW), ensure_ascii=False)
+            return json.dumps(empty_workflow_template_dict(), ensure_ascii=False)
         loaded = json.loads(s)
         if not isinstance(loaded, dict):
             raise TypeError("workflow 须为 JSON 字符串（对象）")
@@ -85,7 +61,7 @@ def _stored_workflow_str(v: object) -> str:
 
 def _coerce_workflow_dict(v: object, *, allow_none: bool) -> dict[str, Any] | None:
     if v is None:
-        return None if allow_none else dict(_EMPTY_WORKFLOW)
+        return None if allow_none else empty_workflow_template_dict()
     if isinstance(v, dict):
         _validate_evaluation_workflow_dict(v)
         return v
@@ -127,7 +103,7 @@ class EvaluationProfileCreate(BaseModel):
     def to_record(self) -> EvaluationProfileRecord:
         now = utc_now_iso()
         rid = str(uuid4())
-        wf = self.workflow if self.workflow is not None else dict(_EMPTY_WORKFLOW)
+        wf = self.workflow if self.workflow is not None else empty_workflow_template_dict()
         return EvaluationProfileRecord(
             id=rid,
             name=self.name.strip(),

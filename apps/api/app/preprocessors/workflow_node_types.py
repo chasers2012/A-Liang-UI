@@ -6,33 +6,13 @@ from typing import Any
 from workflow import Node, WorkflowNodeLoader
 from workflow.parser import Parser
 
+from app.data_set.constants import preprocessing_workflow_io_spec_dict
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
 from app.preprocessors.controller import list_preprocessor_records, resolve_preprocessor_class
 from app.startup_jobs import register_startup_job
 
 _REGISTERED_PREPROCESSOR_IDS: set[str] = set()
-_PREPROCESSING_WORKFLOW_IO_SPEC = WorkflowIOSpecPublic(
-    workflow_inputs=[
-        {
-            "name": "frames",
-            "required": True,
-            "label": "原始 frames",
-            "description": "由数据集加载原始数据后提供给预处理工作流。",
-            "value_type": "raw_frames",
-            "render_type": "socket",
-        }
-    ],
-    workflow_outputs=[
-        {
-            "name": "frames",
-            "required": True,
-            "label": "预处理结果",
-            "description": "预处理工作流输出的 frames 映射。",
-            "value_type": "raw_frames",
-            "render_type": "appendable",
-        }
-    ],
-)
+_PREPROCESSING_WORKFLOW_IO_SPEC = WorkflowIOSpecPublic(**preprocessing_workflow_io_spec_dict())
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:

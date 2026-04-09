@@ -6,34 +6,15 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.common.id import create_id_generator
+from app.data_set.constants import (
+    PREPROCESSING_EMPTY_WORKFLOW,
+    empty_preprocessing_workflow_dict,
+)
 from app.datasource.schemas import utc_now_iso
 
 generate_id = create_id_generator("data_sets")
 
-_EMPTY_WORKFLOW: dict[str, Any] = {
-    "nodes": [],
-    "links": [],
-    "workflow_inputs": [
-        {
-            "name": "frames",
-            "required": True,
-            "label": "原始 frames",
-            "description": "由数据集加载原始数据后提供给预处理工作流。",
-            "value_type": "raw_frames",
-            "render_type": "socket",
-        }
-    ],
-    "workflow_outputs": [
-        {
-            "name": "frames",
-            "required": True,
-            "label": "预处理结果",
-            "description": "预处理工作流输出的 frames 映射。",
-            "value_type": "raw_frames",
-            "render_type": "appendable",
-        }
-    ],
-}
+_EMPTY_WORKFLOW: dict[str, Any] = PREPROCESSING_EMPTY_WORKFLOW
 
 
 def _validate_preprocessing_workflow_dict(workflow: dict[str, Any]) -> None:
@@ -57,7 +38,7 @@ def _stored_workflow_str(v: object) -> str:
     if isinstance(v, str):
         s = v.strip()
         if not s:
-            return json.dumps(dict(_EMPTY_WORKFLOW), ensure_ascii=False)
+            return json.dumps(empty_preprocessing_workflow_dict(), ensure_ascii=False)
         loaded = json.loads(s)
         if not isinstance(loaded, dict):
             raise TypeError("workflow 必须是 JSON 字符串（对象）")
@@ -70,7 +51,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     """Parse stored workflow JSON string into an object for API responses."""
     raw = (workflow_json or "").strip()
     if not raw:
-        return dict(_EMPTY_WORKFLOW)
+        return empty_preprocessing_workflow_dict()
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("workflow 须为 JSON 对象")
@@ -153,7 +134,9 @@ class DataSetCreate(BaseModel):
     name: str
     description: str = ""
     datasource_bindings: list[DataSetDatasourceBindingInput]
-    preprocessing_workflow: dict[str, Any] = Field(default_factory=lambda: dict(_EMPTY_WORKFLOW))
+    preprocessing_workflow: dict[str, Any] = Field(
+        default_factory=empty_preprocessing_workflow_dict
+    )
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list)
@@ -171,7 +154,7 @@ class DataSetCreate(BaseModel):
     @classmethod
     def _workflow_create(cls, v: object) -> dict[str, Any]:
         if v is None:
-            wf = dict(_EMPTY_WORKFLOW)
+            wf = empty_preprocessing_workflow_dict()
             _validate_preprocessing_workflow_dict(wf)
             return wf
         if not isinstance(v, dict):

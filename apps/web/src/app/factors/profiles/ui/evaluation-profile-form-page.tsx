@@ -19,6 +19,10 @@ import { Page } from "@/components/page";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
 import { EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT } from "./profile-form-shared";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import {
+  EMPTY_WORKFLOW,
+  parsePersistedWorkflowGraphPayload,
+} from "@/components/workflow-graph/reactflow/serialize";
 import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 
 type Props = {
@@ -39,12 +43,7 @@ export function EvaluationProfileFormPage(props: Props) {
   const [templateLoading, setTemplateLoading] = useState(!isEdit);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>({
-    nodes: [],
-    links: [],
-    workflow_inputs: [],
-    workflow_outputs: [],
-  });
+  const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>(EMPTY_WORKFLOW);
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
 
@@ -79,16 +78,11 @@ export function EvaluationProfileFormPage(props: Props) {
     setTemplateLoading(true);
     void getEvaluationWorkflowTemplate()
       .then((tpl) => {
-        setWorkflow(tpl as unknown as WorkflowGraphPersisted);
+        setWorkflow(parsePersistedWorkflowGraphPayload(tpl));
         setCanvasKey((k) => k + 1);
       })
       .catch(() => {
-        setWorkflow({
-          nodes: [],
-          links: [],
-          workflow_inputs: [],
-          workflow_outputs: [],
-        });
+        setWorkflow(EMPTY_WORKFLOW);
       })
       .finally(() => setTemplateLoading(false));
   }, [isEdit]);

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from copy import deepcopy
-
 from fastapi import APIRouter, HTTPException
 
+from app.data_set.constants import empty_preprocessing_workflow_dict
 from app.data_set.redistry import DataSetsStore
 from app.data_set.schemas import (
     _EMPTY_WORKFLOW,
@@ -183,7 +182,7 @@ def list_data_sets() -> list[DataSetPublic]:
 
 @router.get("/workflow-template", response_model=dict)
 def get_data_set_workflow_template() -> dict:
-    return deepcopy(_EMPTY_WORKFLOW)
+    return empty_preprocessing_workflow_dict()
 
 
 @router.get("/{data_set_id}", response_model=DataSetPublic)

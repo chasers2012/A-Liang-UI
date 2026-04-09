@@ -13,23 +13,30 @@ from workflow import (
     workflow_node,
 )
 
+from evaluation_workflow_nodes.constants import (
+    FACTOR_EVALUATION_CATEGORY,
+    VALUE_TYPE_DATA_SET,
+    VALUE_TYPE_FACTOR,
+    VALUE_TYPE_FACTOR_DATA_CLEAN,
+)
+
 
 @workflow_node(
     label="计算因子",
     description="根据 Factor 实例与数据集上的评价区间、标的范围计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
-    category="factor_evaluation",
+    category=FACTOR_EVALUATION_CATEGORY,
     input_sockets=[
         Socket(
             "factor",
             required=True,
-            value_type="factor",
+            value_type=VALUE_TYPE_FACTOR,
             label="因子",
             description="待评价的 Factor 类输入",
         ),
         Socket(
             "data_set",
             required=True,
-            value_type="data_set",
+            value_type=VALUE_TYPE_DATA_SET,
             label="数据集",
             description="计算节点使用的数据集；评价区间与标的代码范围在数据集上配置",
         ),
@@ -44,7 +51,7 @@ from workflow import (
     output_sockets=[
         Socket(
             "clean_factor",
-            value_type="factor_data_clean",
+            value_type=VALUE_TYPE_FACTOR_DATA_CLEAN,
             label="清洗后因子数据",
             description="Alphalens 可直接消费的 factor_data_clean 数据",
         ),
