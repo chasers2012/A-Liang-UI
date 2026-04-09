@@ -237,6 +237,14 @@
   ],
   "workflow_inputs": [
     {
+      "name": "data_set",
+      "required": true,
+      "value_type": "data_set",
+      "label": "数据集",
+      "description": "评价所使用的数据集实例",
+      "render_type": "socket"
+    },
+    {
       "name": "factor",
       "required": true,
       "value_type": "factor",
@@ -256,6 +264,7 @@
     }
   ],
   "links": [
+    { "from": { "kind": "workflow_input", "socket": "data_set" }, "to": { "kind": "node", "node_id": "load", "socket": "data_set" } },
     { "from": { "kind": "workflow_input", "socket": "factor" }, "to": { "kind": "node", "node_id": "calc", "socket": "factor" } },
     { "from": { "kind": "node", "node_id": "load", "socket": "data_set" }, "to": { "kind": "node", "node_id": "calc", "socket": "data_set" } },
 
