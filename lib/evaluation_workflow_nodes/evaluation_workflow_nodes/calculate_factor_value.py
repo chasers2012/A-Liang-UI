@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from evaluate import AlphalensFactorEvaluator
-from evaluate.data_set import DataSet
 from factor import Factor
+from factor.data_set import DataSet
 from workflow import (
     NumberNodeParam,
     Socket,

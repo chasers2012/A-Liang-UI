@@ -1,6 +1,6 @@
 from app.data_set.controller import get_data_set
 from app.data_set.redistry import DataSetsStore
-from evaluate.data_set import DataSet
+from factor.data_set import DataSet
 from workflow import Socket, workflow_node
 from workflow.node_types import OptionsNodeParam
 

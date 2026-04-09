@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from evaluate.data_set import DataSet, DataSourceBinding
+from factor.data_set import DataSet, DataSourceBinding
 
 from app.data_set.redistry import DataSetsStore
 from app.datasource.controller import get_datasource

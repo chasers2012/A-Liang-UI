@@ -1,4 +1,5 @@
-from factor import DependencyResolver, FactorDataSource
+from factor.datasource import FactorDataSource
+from factor.dependency_resolver import DependencyResolver
 
 
 class DataSourceBinding:
