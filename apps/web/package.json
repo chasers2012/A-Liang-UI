@@ -44,6 +44,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "eslint-module-utils": "^2.12.1",
     "jotai-devtools": "^0.13.1",
     "tailwindcss": "^4",
     "typescript": "^5"

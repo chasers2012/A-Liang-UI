@@ -26,6 +26,7 @@ build
 .DS_Store
 Thumbs.db
 .cursor/plans
+.editorconfig
 
 # Logs
 *.log
