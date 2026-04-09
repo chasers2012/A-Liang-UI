@@ -251,7 +251,7 @@ class DataSet:
         executor = WorkflowExecutor()
         node_results = executor.execute(
             workflow,
-            context={"frames": raw_frames, **raw_frames},
+            workflow_inputs={"frames": raw_frames, **raw_frames},
         )
         workflow_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}

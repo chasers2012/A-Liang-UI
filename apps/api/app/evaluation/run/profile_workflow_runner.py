@@ -92,12 +92,15 @@ def run_evaluation_profile_workflow(
 
     factor = get_factor(factor_id)
 
-    exec_ctx: dict[str, Any] = {"factor": factor}
+    workflow_inputs: dict[str, Any] = {"factor": factor}
 
     executor = WorkflowExecutor()
 
     try:
-        node_results = executor.execute(profile.workflow, context=exec_ctx)
+        node_results = executor.execute(
+            profile.workflow,
+            workflow_inputs=workflow_inputs,
+        )
         workflow_result = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
         )

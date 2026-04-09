@@ -124,6 +124,7 @@ class WorkflowExecutor:
         self,
         workflow: str,
         context: dict[str, Any] | None = None,
+        workflow_inputs: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run the workflow from a JSON string.
 
@@ -132,6 +133,7 @@ class WorkflowExecutor:
 
         *context* keys are merged into each node's kwargs (before static ``params`` and
         link inputs, which override). The full mapping is also available under ``context``.
+        ``workflow_inputs`` provides values for graph-level workflow input sockets.
 
         Node implementations must be importable (e.g. workspace package parents on ``sys.path``).
         """
@@ -140,9 +142,10 @@ class WorkflowExecutor:
             raise TypeError("workflow JSON must decode to an object")
 
         graph = Parser.parse_workflow_graph(payload)
+        workflow_inputs_dict = dict(workflow_inputs or {})
         if not graph.nodes:
             workflow_inputs = {
-                socket.name: (context or {}).get(socket.name)
+                socket.name: workflow_inputs_dict.get(socket.name)
                 for socket in graph.workflow_inputs
                 if getattr(socket, "name", "")
             }
@@ -154,7 +157,7 @@ class WorkflowExecutor:
 
         ctx = dict(context or {})
         workflow_inputs = {
-            socket.name: ctx.get(socket.name)
+            socket.name: workflow_inputs_dict.get(socket.name)
             for socket in graph.workflow_inputs
             if getattr(socket, "name", "")
         }
