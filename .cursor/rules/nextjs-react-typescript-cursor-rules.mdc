@@ -2,53 +2,59 @@
 alwaysApply: true
 ---
 
-You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Radix UI and Tailwind.
+You are an expert in TypeScript, Next.js App Router (v16), React (v19), Tailwind CSS (v4), and shadcn/ui on top of Base UI primitives (@base-ui/react).
 
 Code Style and Structure
 
 - Write concise, technical TypeScript code with accurate examples.
-- Use functional and declarative programming patterns; avoid classes.
-- Prefer iteration and modularization over code duplication.
-- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
-- Structure files: exported component, subcomponents, helpers, static content, types.
+- Prefer functional and declarative patterns; avoid classes.
+- Prefer modularization and reuse over duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., `isLoading`, `hasError`).
+- Keep files focused and organized: exports, local helpers, and types.
 
 Naming Conventions
 
-- Use lowercase with dashes for directories (e.g., components/auth-wizard).
-- Favor named exports for components.
+- Use lowercase with dashes for directories (e.g., `components/auth-wizard`).
+- Favor named exports for reusable components and utilities.
 
 TypeScript Usage
 
-- Use TypeScript for all code; prefer interfaces over types.
-- Avoid enums; use maps instead.
-- Use functional components with TypeScript interfaces.
+- Use TypeScript for all app code.
+- Prefer explicit, narrow types at boundaries (props, API payloads, server actions).
+- Avoid enums; prefer union literals or constant maps.
+- Use interfaces for object-like contracts and types for unions/composition where clearer.
 
 Syntax and Formatting
 
-- Use the "function" keyword for pure functions.
-- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
-- Use declarative JSX.
+- Use declarative JSX and small composable components.
+- Keep conditionals and branches readable; use concise syntax only when it improves clarity.
+- Prefer `function` declarations for pure helpers and component definitions.
 
 UI and Styling
 
-- Use Shadcn UI, Radix, and Tailwind for components and styling.
-- Implement responsive design with Tailwind CSS; use a mobile-first approach.
+- Use shadcn/ui component patterns with Base UI primitives (`@base-ui/react`), not Radix-specific APIs.
+- Use Tailwind CSS v4 conventions (global CSS imports via `globals.css`; no legacy Tailwind config assumptions).
+- Reuse existing utilities such as `cn` from `@/lib/utils`.
+- Keep accessibility semantics intact (labels, roles, keyboard interactions, focus states).
 
-Performance Optimization
+Next.js and Performance
 
-- Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC).
-- Wrap client components in Suspense with fallback.
-- Use dynamic loading for non-critical components.
-- Optimize images: use WebP format, include size data, implement lazy loading.
+- Favor Server Components by default; add `"use client"` only at true client boundaries.
+- Avoid unnecessary `useEffect`/client state when server rendering can solve the problem.
+- Use dynamic imports for heavy, non-critical client modules.
+- Follow Next.js App Router best practices for data fetching, rendering, and routing.
 
-Key Conventions
+Jotai State Management
 
-- Use 'nuqs' for URL search parameter state management.
-- Optimize Web Vitals (LCP, CLS, FID).
-- Limit 'use client':
-  - Favor server components and Next.js SSR.
-  - Use only for Web API access in small components.
-  - Avoid for data fetching or state management.
+- Keep atoms outside render scope; never create atoms inline in component render. If dynamic atoms are required, memoize them with `useMemo`.
+- Prefer small, focused atoms over large object atoms to reduce re-render scope.
+- Prefer derived atoms for computed state; avoid doing heavy derivations in components.
+- Use `useAtomValue` for read-only access and `useSetAtom` for write-only actions; use `useAtom` only when both are needed.
+- Use `selectAtom`/`focusAtom`/`splitAtom` only for large nested state or list slicing; treat them as advanced tools, not defaults.
+- For persistence, use `atomWithStorage` with explicit storage keys and stable serialization.
+- In Next.js SSR flows, use Jotai `Provider` and hydrate initial state correctly to avoid hydration mismatch.
 
-Follow Next.js docs for Data Fetching, Rendering, and Routing.
-Only Adds "use client" on component or pages which are the client component conext bondary, do not add this to common components.
+Project-Specific Conventions
+
+- Keep icon usage aligned with current project defaults (Lucide in UI code unless specified otherwise).
+- Only add `"use client"` on components/pages that actually require browser-only APIs or client interactivity.
