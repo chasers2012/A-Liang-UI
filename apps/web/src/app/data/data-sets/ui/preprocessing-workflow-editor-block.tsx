@@ -58,12 +58,12 @@ export function PreprocessingWorkflowEditorBlock(props: {
   );
 
   return (
-    <div className={cn("flex flex-col min-h-0 flex-1 gap-3", className)}>
+    <div className={cn("flex h-full min-h-0 flex-1 flex-col gap-3", className)}>
       <Label className="">预处理工作流</Label>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
-        <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
+        <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
             items={catalog}
             onSelectType={(type) => canvasRef.current?.addNode(type)}

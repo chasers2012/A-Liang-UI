@@ -379,12 +379,13 @@ export const WorkflowGraphCanvas = forwardRef<
       <div
         data-slot="workflow-graph-layout"
         className={cn(
-          "flex min-h-[320px] flex-col gap-3", className
+          "flex h-full min-h-0 flex-col gap-3",
+          className,
         )}
       >
         <div
           className={cn(
-            "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
+            "workflow-graph-canvas-root relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
             readOnly && "workflow-graph-canvas-root--readonly",
           )}
           onDragOver={onDragOver}
@@ -412,7 +413,7 @@ export const WorkflowGraphCanvas = forwardRef<
                 zoomOnPinch
                 panOnScroll={false}
                 proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
-                className="min-h-[280px] flex-1"
+                className="h-full min-h-0 flex-1"
               >
                 <Background
                   id="workflow-graph-bg"
