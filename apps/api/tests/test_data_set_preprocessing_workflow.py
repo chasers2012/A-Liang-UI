@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 
 from app.data_set.controller import get_data_set
+from factor.preprocessing_workflow_nodes import CollectFrames, DataSetFramesInput
+from workflow.parser import Parser
 
 
 def _csv_datasource_body(name: str = "ds_csv") -> dict:
@@ -53,25 +55,26 @@ class MulClose(DataPreprocessorBase):
 
 
 def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> dict:
-    INPUT_FRAMES_TYPE = "factor.preprocessing_workflow_nodes.DataSetFramesInput"
-    COLLECT_FRAMES_TYPE = "factor.preprocessing_workflow_nodes.CollectFrames"
-    RAW_FRAMES_VALUE_TYPE = "raw_frames"
+    frames_input_outputs = [Parser.serialize_socket(s) for s in DataSetFramesInput.outputs]
+    collect_frames_inputs = [Parser.serialize_socket(s) for s in CollectFrames.inputs]
 
     return {
         "nodes": [
             {
                 "id": "frames_input",
-                "type": INPUT_FRAMES_TYPE,
+                "type": DataSetFramesInput.type,
                 "pos": [0, 0],
-                "label": "原始 frames 输入",
-                "category": "data_set_preprocess",
-                "inputs": [],
+                "label": DataSetFramesInput.label,
+                "category": DataSetFramesInput.category,
+                "inputs": [Parser.serialize_socket(s) for s in DataSetFramesInput.inputs],
                 "outputs": [
                     {
-                        "name": datasource_socket,
-                        "required": False,
-                        "value_type": RAW_FRAMES_VALUE_TYPE,
+                        **socket,
+                        "name": datasource_socket
+                        if socket.get("name") == "frames"
+                        else socket.get("name"),
                     }
+                    for socket in frames_input_outputs
                 ],
                 "params": {},
             },
@@ -85,7 +88,7 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
                     {
                         "name": "frames",
                         "required": True,
-                        "value_type": RAW_FRAMES_VALUE_TYPE,
+                        "value_type": "raw_frames",
                     },
                     {
                         "name": "config_json",
@@ -104,7 +107,7 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
                     {
                         "name": "frames",
                         "required": False,
-                        "value_type": RAW_FRAMES_VALUE_TYPE,
+                        "value_type": "raw_frames",
                     }
                 ],
                 "params": {
@@ -114,19 +117,12 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
             },
             {
                 "id": "collect_frames",
-                "type": COLLECT_FRAMES_TYPE,
+                "type": CollectFrames.type,
                 "pos": [420, 0],
-                "label": "预处理结果收集",
-                "category": "data_set_preprocess",
-                "inputs": [
-                    {
-                        "name": "frames",
-                        "required": True,
-                        "value_type": RAW_FRAMES_VALUE_TYPE,
-                        "render_type": "appendable",
-                    }
-                ],
-                "outputs": [],
+                "label": CollectFrames.label,
+                "category": CollectFrames.category,
+                "inputs": collect_frames_inputs,
+                "outputs": [Parser.serialize_socket(s) for s in CollectFrames.outputs],
                 "params": {},
             },
         ],

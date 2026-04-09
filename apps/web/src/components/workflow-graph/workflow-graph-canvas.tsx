@@ -42,6 +42,7 @@ import {
   toReactFlowNodes,
 } from "./reactflow/serialize";
 import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
+import { SYSTEM_PREPROCESSING_NODE_TYPES } from "./system-preprocessing-node-types";
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { WorkflowGraphPersisted } from "./reactflow/types";
@@ -52,15 +53,20 @@ import { ErrorBoundary } from "next/dist/client/components/error-boundary";
 export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
   "application/x-workflow-graph-node-type";
 
+function isProtectedPreprocessingNode(node: Node): boolean {
+  const nodeData = (node.data ?? {}) as { backendType?: unknown };
+  return SYSTEM_PREPROCESSING_NODE_TYPES.has(String(nodeData.backendType ?? ""));
+}
+
 
 export function WorkflowGraphZoomToolbar() {
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } =
     useReactFlow();
   const { readOnly } = useWorkflowGraphContext();
-  const hasSelection = useStore(
+  const hasDeletableSelection = useStore(
     useCallback(
       (s) =>
-        s.getNodes().some((n) => n.selected) ||
+        s.getNodes().some((node) => node.selected && !isProtectedPreprocessingNode(node)) ||
         s.edges.some((e) => e.selected),
       [],
     ),
@@ -68,8 +74,11 @@ export function WorkflowGraphZoomToolbar() {
 
   const onDeleteSelected = useCallback(() => {
     if (readOnly) return;
+    const deletableNodes = getNodes().filter(
+      (node) => node.selected && !isProtectedPreprocessingNode(node),
+    );
     deleteElements({
-      nodes: getNodes().filter((n) => n.selected),
+      nodes: deletableNodes,
       edges: getEdges().filter((e) => e.selected),
     });
   }, [readOnly, deleteElements, getNodes, getEdges]);
@@ -87,7 +96,7 @@ export function WorkflowGraphZoomToolbar() {
             size="icon"
             className="h-8 w-8 rounded-none border-b border-border text-destructive hover:text-destructive"
             onClick={onDeleteSelected}
-            disabled={!hasSelection}
+            disabled={!hasDeletableSelection}
             aria-label="删除选中的节点或连线"
             title="删除选中（Delete / Backspace）"
           >

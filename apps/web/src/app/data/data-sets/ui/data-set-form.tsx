@@ -50,6 +50,10 @@ import {
 
 import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import {
+  COLLECT_FRAMES_NODE_TYPE,
+  DATA_SET_FRAMES_INPUT_NODE_TYPE,
+} from "@/components/workflow-graph/system-preprocessing-node-types";
 import { PreprocessingWorkflowEditorBlock } from "./preprocessing-workflow-editor-block";
 
 export type DataSetBindingFormRow = {
@@ -70,43 +74,6 @@ export type DataSetFormState = {
 };
 
 export function emptyDataSetForm(): DataSetFormState {
-  const COLLECT_FRAMES_TYPE =
-    "factor.preprocessing_workflow_nodes.CollectFrames";
-  const INPUT_FRAMES_TYPE =
-    "factor.preprocessing_workflow_nodes.DataSetFramesInput";
-  const defaultWorkflow: WorkflowGraphPersisted = {
-    nodes: [
-      {
-        id: "frames_input",
-        type: INPUT_FRAMES_TYPE,
-        label: "原始 frames 输入",
-        category: "data_set_preprocess",
-        inputs: [],
-        outputs: [],
-        pos: [0, 0],
-        params: {},
-      },
-      {
-        id: "collect_frames",
-        type: COLLECT_FRAMES_TYPE,
-        label: "预处理结果收集",
-        category: "data_set_preprocess",
-        inputs: [
-          {
-            name: "frames",
-            required: true,
-            value_type: "raw_frames",
-            render_type: "appendable",
-            label: "输入 frames",
-          },
-        ],
-        outputs: [],
-        pos: [360, 0],
-        params: {},
-      },
-    ],
-    links: [],
-  };
   return {
     name: "",
     description: "",
@@ -118,7 +85,7 @@ export function emptyDataSetForm(): DataSetFormState {
         asset_column: "",
       },
     ],
-    preprocessing_workflow: defaultWorkflow,
+    preprocessing_workflow: { nodes: [], links: [] },
     start: "2023-01-01",
     end: "2024-12-31",
     instrument_codes_text: "",
@@ -155,20 +122,16 @@ function syncFramesInputNodeOutputs(
   datasourceIds: string[],
   datasourceNameById: Record<string, string>,
 ): WorkflowGraphPersisted {
-  const INPUT_FRAMES_TYPE =
-    "factor.preprocessing_workflow_nodes.DataSetFramesInput";
-  const COLLECT_FRAMES_TYPE =
-    "factor.preprocessing_workflow_nodes.CollectFrames";
   const desiredOutputs = buildFramesInputOutputs(datasourceIds, datasourceNameById);
   const desiredSocketNames = new Set(desiredOutputs.map((x) => x.name));
   const currentFramesInputNode = workflow.nodes.find(
-    (n) => n.type === INPUT_FRAMES_TYPE,
+    (n) => n.type === DATA_SET_FRAMES_INPUT_NODE_TYPE,
   );
   const framesInputNodeId = currentFramesInputNode?.id;
   if (!framesInputNodeId) return workflow;
   let hasChange = false;
   const nodes = workflow.nodes.map((node) => {
-    if (node.type !== INPUT_FRAMES_TYPE) return node;
+    if (node.type !== DATA_SET_FRAMES_INPUT_NODE_TYPE) return node;
     const current = JSON.stringify(node.outputs ?? []);
     const next = JSON.stringify(desiredOutputs);
     if (current === next) return node;
@@ -189,7 +152,7 @@ function syncFramesInputNodeOutputs(
 
   const collectNode = [...nodes]
     .reverse()
-    .find((n) => n.type === COLLECT_FRAMES_TYPE);
+    .find((n) => n.type === COLLECT_FRAMES_NODE_TYPE);
   if (collectNode && datasourceIds.length > 0) {
     const existingDirectLinkSockets = new Set(
       links
@@ -354,21 +317,7 @@ function validateDataSetBindings(bindings: DataSetBindingFormRow[]): string | nu
   return null;
 }
 
-function validatePreprocessingWorkflow(
-  workflow: WorkflowGraphPersisted,
-): string | null {
-  const COLLECT_FRAMES_TYPE =
-    "factor.preprocessing_workflow_nodes.CollectFrames";
-
-  if (!workflow?.nodes?.length) {
-    return "请配置预处理工作流（需要至少包含 CollectFrames 节点）";
-  }
-
-  const hasCollect = workflow.nodes.some((n) => n.type === COLLECT_FRAMES_TYPE);
-  if (!hasCollect) {
-    return "预处理工作流缺少结果收集节点 CollectFrames";
-  }
-
+function validatePreprocessingWorkflow(workflow: WorkflowGraphPersisted): string | null {
   for (const node of workflow.nodes) {
     const params = node.params ?? {};
     const cfg = params["config_json"];
@@ -794,8 +743,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       setFormError(bindingsError);
       return;
     }
-    const wf =
+    const rawWorkflow =
       canvasRef.current?.getGraph() ?? form.preprocessing_workflow;
+    const wf = rawWorkflow;
     const wfError = validatePreprocessingWorkflow(wf);
     if (wfError) {
       setFormError(wfError);

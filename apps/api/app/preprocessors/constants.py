@@ -14,29 +14,14 @@ from workflow import Socket, workflow_node
     description="新预处理器（模板）",
     category="data_set_preprocess",
     input_sockets=[
-        Socket("frames", required=True, value_type="raw_frames"),
-        Socket("config_json", required=False, value_type="string"),
-        Socket("datasource_ids_csv", required=False, value_type="string"),
+        Socket("dataframe", required=True, value_type="dataframe"),
     ],
-    output_sockets=[Socket("frames", required=False, value_type="raw_frames")],
+    output_sockets=[Socket("dataframe", required=False, value_type="raw_frames")],
 )
 class NewPreprocessor(DataPreprocessorBase):
-    \"""新预处理器（模板）
 
-    - frames: dict[datasource_id, raw_dataframe]
-    - raw_dataframe: 物理列名的 DataFrame（未 rename、未设 index）
-    \"""
-
-    def transform(self, **kwargs: Any) -> dict[str, pd.DataFrame]:
-        frames = kwargs.get("frames", {})
-        config = kwargs.get("config", {})
-        if not isinstance(frames, dict):
-            raise ValueError("frames 必须为 dict[str, DataFrame]")
-        if not isinstance(config, dict):
-            raise ValueError("config 必须为 JSON object")
-
-        # 示例：打印每个输入 dataframe 的所有列名
-        for datasource_id, df in frames.items():
-            print(f"[{datasource_id}] columns: {list(df.columns)}")
-        return frames
+    def transform(self, **kwargs: Any) -> pd.DataFrame:
+        df = kwargs.get('dataframe')
+        print(f"columns: {list(df.columns)}")
+        return df
 """.lstrip()

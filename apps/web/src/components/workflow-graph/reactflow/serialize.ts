@@ -11,6 +11,7 @@ import {
   appendableSlotSortKey,
   normalizeAppendableHandle,
 } from "./appendable-handle";
+import { SYSTEM_PREPROCESSING_NODE_TYPES } from "../system-preprocessing-node-types";
 
 function appendableSocketNamesFromInputs(
   inputs: WorkflowNodeInputSpec[],
@@ -119,6 +120,7 @@ export function toReactFlowNodes(
       id: n.id,
       type: "workflowStep",
       position: { x: num(n.pos?.[0]), y: num(n.pos?.[1]) },
+      deletable: !SYSTEM_PREPROCESSING_NODE_TYPES.has(n.type),
       data: {
         backendType: n.type,
         label: def?.label ?? n.label ?? n.type,
