@@ -10,15 +10,11 @@ export interface SqlPublic {
   db_name: string;
   has_password: boolean;
   table: string;
-  date_column: string;
-  asset_column: string;
   column_map: Record<string, string>;
 }
 
 export interface CsvPublic {
   path: string;
-  date_column: string;
-  asset_column: string;
   read_csv_kwargs: Record<string, unknown>;
 }
 

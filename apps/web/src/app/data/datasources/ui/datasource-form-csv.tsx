@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import type { FormState } from "../form-model";
-import { FieldPair, FormSection } from "./form-section";
+import { FormSection } from "./form-section";
 
 type Props = {
   form: FormState;
@@ -32,26 +32,6 @@ export function DatasourceFormCsv({ form, setForm }: Props) {
           onChange={(e) => set({ csv_path: e.target.value })}
         />
       </div>
-      <FieldPair>
-        <div className="grid gap-2">
-          <Label htmlFor="ds-csv-dcol">日期列</Label>
-          <Input
-            id="ds-csv-dcol"
-            required
-            value={form.csv_date_column}
-            onChange={(e) => set({ csv_date_column: e.target.value })}
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="ds-csv-acol">资产列</Label>
-          <Input
-            id="ds-csv-acol"
-            required
-            value={form.csv_asset_column}
-            onChange={(e) => set({ csv_asset_column: e.target.value })}
-          />
-        </div>
-      </FieldPair>
       <div className="grid gap-2">
         <Label htmlFor="ds-kw">read_csv_kwargs（JSON）</Label>
         <Textarea

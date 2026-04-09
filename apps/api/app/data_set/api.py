@@ -37,6 +37,9 @@ def _bindings_to_public(
                 datasource_name=name,
                 datasource_type=typ,
                 dependencies=list(b.dependencies),
+                alias=(dict(b.alias) if b.alias else None),
+                date_column=b.date_column.strip(),
+                asset_column=b.asset_column.strip(),
             )
         )
     return out
@@ -65,6 +68,40 @@ def _validate_datasource_enabled(ds_id: str) -> DataSourceRecord:
     return rec
 
 
+def _validate_binding_alias(alias: dict | None) -> None:
+    if alias is None:
+        return
+    for k, v in alias.items():
+        kk = str(k).strip()
+        vv = str(v).strip()
+        if not kk or not vv:
+            raise HTTPException(status_code=400, detail="alias 中的键和值均不能为空")
+
+
+def _strip_deps(deps: list[str]) -> list[str]:
+    return [x.strip() for x in deps if str(x).strip()]
+
+
+def _validate_binding_dependencies(
+    *,
+    deps: list[str],
+    require_non_empty: bool,
+    seen_fields: set[str],
+) -> None:
+    if require_non_empty and not deps:
+        raise HTTPException(
+            status_code=400,
+            detail="多个数据源时，每条绑定必须填写 dependencies（因子依赖字段名，如 close、volume）",
+        )
+    for d in deps:
+        if d in seen_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"依赖字段「{d}」不能同时出现在多条数据源绑定中",
+            )
+        seen_fields.add(d)
+
+
 def _validate_bindings_inputs(
     bindings: list[DataSetDatasourceBindingInput],
 ) -> None:
@@ -76,19 +113,17 @@ def _validate_bindings_inputs(
         ds = b.datasource_id.strip()
         if not ds:
             raise HTTPException(status_code=400, detail="数据源 id 不能为空")
-        deps = [x.strip() for x in b.dependencies if str(x).strip()]
-        if n > 1 and not deps:
+        if not b.date_column.strip() or not b.asset_column.strip():
             raise HTTPException(
-                status_code=400,
-                detail="多个数据源时，每条绑定必须填写 dependencies（因子依赖字段名，如 close、volume）",
+                status_code=400, detail="每条绑定必须填写 date_column 与 asset_column"
             )
-        for d in deps:
-            if d in seen_fields:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"依赖字段「{d}」不能同时出现在多条数据源绑定中",
-                )
-            seen_fields.add(d)
+        _validate_binding_alias(b.alias)
+        deps = _strip_deps(b.dependencies)
+        _validate_binding_dependencies(
+            deps=deps,
+            require_non_empty=n > 1,
+            seen_fields=seen_fields,
+        )
 
 
 def _inputs_to_stored(
@@ -98,6 +133,9 @@ def _inputs_to_stored(
         DataSetDatasourceBindingStored(
             datasource_id=b.datasource_id.strip(),
             dependencies=[x.strip() for x in b.dependencies if str(x).strip()],
+            alias=(dict(b.alias) if b.alias else None),
+            date_column=b.date_column.strip(),
+            asset_column=b.asset_column.strip(),
         )
         for b in bindings
     ]
@@ -169,6 +207,9 @@ def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
                 DataSetDatasourceBindingInput(
                     datasource_id=b.datasource_id,
                     dependencies=list(b.dependencies),
+                    alias=(dict(b.alias) if b.alias else None),
+                    date_column=b.date_column,
+                    asset_column=b.asset_column,
                 )
                 for b in rec.datasource_bindings
             ]

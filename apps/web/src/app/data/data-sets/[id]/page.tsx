@@ -179,6 +179,16 @@ export default function DataSetDetailPage() {
                       {b.dependencies.length ? b.dependencies.join(", ") : "（空：单源时使用因子全部依赖）"}
                     </dd>
                   </div>
+                  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
+                    <dt className="text-muted-foreground">alias</dt>
+                    <dd className="font-mono text-xs break-all">
+                      {b.alias && Object.keys(b.alias).length
+                        ? Object.entries(b.alias)
+                          .map(([k, v]) => `${k}=${v}`)
+                          .join(", ")
+                        : "—"}
+                    </dd>
+                  </div>
                 </dl>
                 <Link
                   href="/data/datasources"

@@ -183,20 +183,6 @@ export function DatasourceDetailLoaded({
                 <dt className="text-muted-foreground">table</dt>
                 <dd className="break-all font-mono text-xs">{ds.sql.table}</dd>
               </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">date_column</dt>
-                <dd className="font-mono text-xs">{ds.sql.date_column}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">asset_column</dt>
-                <dd className="font-mono text-xs">{ds.sql.asset_column}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">column_map</dt>
-                <dd className="break-all font-mono text-xs">
-                  {JSON.stringify(ds.sql.column_map, null, 0)}
-                </dd>
-              </div>
             </dl>
           </CardContent>
         </Card>
@@ -212,14 +198,6 @@ export function DatasourceDetailLoaded({
               <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                 <dt className="text-muted-foreground">path</dt>
                 <dd className="break-all font-mono text-xs">{ds.csv.path}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">date_column</dt>
-                <dd className="font-mono text-xs">{ds.csv.date_column}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">asset_column</dt>
-                <dd className="font-mono text-xs">{ds.csv.asset_column}</dd>
               </div>
               <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                 <dt className="text-muted-foreground">read_csv_kwargs</dt>

@@ -67,8 +67,6 @@ def sql_config_for_column_listing(
         db_password=body.db_password.strip(),
         db_name=body.db_name.strip(),
         table=table,
-        date_column="_",
-        asset_column="_",
         column_map={},
     )
 

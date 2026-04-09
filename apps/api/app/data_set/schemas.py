@@ -14,6 +14,8 @@ class DataSetDatasourceBindingStored(BaseModel):
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)
     alias: dict[str, str] | None = None
+    date_column: str = ""
+    asset_column: str = ""
 
 
 class DataSetRecord(BaseModel):
@@ -38,6 +40,9 @@ class DataSetsFile(BaseModel):
 class DataSetDatasourceBindingInput(BaseModel):
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)
+    alias: dict[str, str] | None = None
+    date_column: str = ""
+    asset_column: str = ""
 
     @field_validator("dependencies", mode="before")
     @classmethod
@@ -47,6 +52,29 @@ class DataSetDatasourceBindingInput(BaseModel):
         if not isinstance(v, list):
             raise TypeError("dependencies must be a list")
         return [str(x).strip() for x in v if str(x).strip()]
+
+    @field_validator("alias", mode="before")
+    @classmethod
+    def _normalize_alias(cls, v: object) -> dict[str, str] | None:
+        if v is None:
+            return None
+        if not isinstance(v, dict):
+            raise TypeError("alias must be a dict")
+        out: dict[str, str] = {}
+        for k, val in v.items():
+            kk = str(k).strip()
+            vv = str(val).strip()
+            if not kk or not vv:
+                continue
+            out[kk] = vv
+        return out or None
+
+    @field_validator("date_column", "asset_column", mode="before")
+    @classmethod
+    def _strip_index_cols(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return str(v).strip()
 
 
 class DataSetCreate(BaseModel):
@@ -75,6 +103,9 @@ class DataSetCreate(BaseModel):
             DataSetDatasourceBindingStored(
                 datasource_id=b.datasource_id.strip(),
                 dependencies=list(b.dependencies),
+                alias=(dict(b.alias) if b.alias else None),
+                date_column=b.date_column.strip(),
+                asset_column=b.asset_column.strip(),
             )
             for b in self.datasource_bindings
         ]
@@ -107,6 +138,9 @@ class DataSetDatasourceBindingPublic(BaseModel):
     datasource_name: str
     datasource_type: str
     dependencies: list[str]
+    alias: dict[str, str] | None = None
+    date_column: str
+    asset_column: str
 
 
 class DataSetPublic(BaseModel):

@@ -22,15 +22,11 @@ class SqlConfigStored(BaseModel):
     db_password: str = ""
     db_name: str = ""
     table: str
-    date_column: str
-    asset_column: str
     column_map: dict[str, str] = Field(default_factory=dict)
 
 
 class CsvConfigStored(BaseModel):
     path: str
-    date_column: str
-    asset_column: str
     read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -75,8 +71,6 @@ class SqlCreate(BaseModel):
     db_password: str = ""
     db_name: str
     table: str
-    date_column: str
-    asset_column: str
     column_map: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -91,8 +85,6 @@ class SqlCreate(BaseModel):
 
 class CsvCreate(BaseModel):
     path: str
-    date_column: str
-    asset_column: str
     read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -132,8 +124,6 @@ class DataSourceCreate(BaseModel):
                 db_password=s.db_password,
                 db_name=s.db_name.strip(),
                 table=s.table.strip(),
-                date_column=s.date_column.strip(),
-                asset_column=s.asset_column.strip(),
                 column_map=dict(s.column_map),
             )
             return DataSourceRecord(
@@ -149,8 +139,6 @@ class DataSourceCreate(BaseModel):
         assert self.csv is not None
         csv = CsvConfigStored(
             path=self.csv.path,
-            date_column=self.csv.date_column,
-            asset_column=self.csv.asset_column,
             read_csv_kwargs=dict(self.csv.read_csv_kwargs),
         )
         return DataSourceRecord(
@@ -173,15 +161,11 @@ class SqlPatch(BaseModel):
     db_password: str | None = None
     db_name: str | None = None
     table: str | None = None
-    date_column: str | None = None
-    asset_column: str | None = None
     column_map: dict[str, str] | None = None
 
 
 class CsvPatch(BaseModel):
     path: str | None = None
-    date_column: str | None = None
-    asset_column: str | None = None
     read_csv_kwargs: dict[str, Any] | None = None
 
 
@@ -202,15 +186,11 @@ class SqlPublic(BaseModel):
     db_name: str = ""
     has_password: bool = False
     table: str
-    date_column: str
-    asset_column: str
     column_map: dict[str, str]
 
 
 class CsvPublic(BaseModel):
     path: str
-    date_column: str
-    asset_column: str
     read_csv_kwargs: dict[str, Any]
 
 
@@ -238,15 +218,11 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
             db_name=s.db_name,
             has_password=bool(s.db_password),
             table=s.table,
-            date_column=s.date_column,
-            asset_column=s.asset_column,
             column_map=dict(s.column_map),
         )
     elif rec.type == "csv" and rec.csv:
         csv_pub = CsvPublic(
             path=rec.csv.path,
-            date_column=rec.csv.date_column,
-            asset_column=rec.csv.asset_column,
             read_csv_kwargs=dict(rec.csv.read_csv_kwargs),
         )
     return DataSourcePublic(
@@ -284,6 +260,6 @@ class SqlTableColumnsResponse(BaseModel):
 
 
 class DatasourceDependencyFieldsResponse(BaseModel):
-    """因子依赖字段名：SQL 为 column_map 的键；CSV 为文件表头（不含日期/资产列）。"""
+    """数据源物理列名列表（供数据集配置 alias/date/asset 等映射使用）。"""
 
     fields: list[str]

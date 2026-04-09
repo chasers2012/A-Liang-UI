@@ -6,9 +6,10 @@ from factor.batch import (
 )
 from factor.data_set import DataSet, DataSourceBinding
 from factor.datasource import FactorDataSource
-from factor.dependency_resolver import DependencyResolver, panel_load_start_date
+from factor.dependency_resolver import DependencyResolver
 from factor.factor import Factor
 from factor.loader import FACTOR_GLOBALS, is_valid_factor_class
+from factor.panel import panel_load_start_date
 
 __all__ = [
     "FACTOR_GLOBALS",

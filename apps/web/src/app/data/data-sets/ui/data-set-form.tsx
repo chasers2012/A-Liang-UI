@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,6 +32,12 @@ import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-pag
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { cn } from "@/lib/utils";
 import {
+  AliasMapEditor,
+  depsFromAliasRows,
+  mapFromAliasRows,
+  type AliasMapRow,
+} from "./alias-map-editor";
+import {
   ApiError,
   createDataSet,
   getDataSet,
@@ -43,8 +50,9 @@ import {
 
 export type DataSetBindingFormRow = {
   datasource_id: string;
-  /** 因子依赖列名；顺序为预设字段在前，其余按填写顺序 */
-  dependencies: string[];
+  alias_rows: AliasMapRow[];
+  date_column: string;
+  asset_column: string;
 };
 
 export type DataSetFormState = {
@@ -60,7 +68,14 @@ export function emptyDataSetForm(): DataSetFormState {
   return {
     name: "",
     description: "",
-    bindings: [{ datasource_id: "", dependencies: [] }],
+    bindings: [
+      {
+        datasource_id: "",
+        alias_rows: [{ factor: "", column: "", enabled: true }],
+        date_column: "",
+        asset_column: "",
+      },
+    ],
     start: "2023-01-01",
     end: "2024-12-31",
     stock_codes_text: "",
@@ -78,9 +93,41 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     row.datasource_bindings.length > 0
       ? row.datasource_bindings.map((b) => ({
         datasource_id: b.datasource_id,
-        dependencies: normalizeBindingDependencies(b.dependencies, []),
+        date_column: b.date_column ?? "",
+        asset_column: b.asset_column ?? "",
+        alias_rows: (() => {
+          const alias = b.alias ?? {};
+          const deps = b.dependencies ?? [];
+          const rows: AliasMapRow[] = [];
+          const seen = new Set<string>();
+          for (const dep of deps) {
+            const logical = String(dep).trim();
+            if (!logical || seen.has(logical)) continue;
+            seen.add(logical);
+            rows.push({
+              factor: logical,
+              column: alias[logical] ?? logical,
+              enabled: true,
+            });
+          }
+          for (const [logicalRaw, physicalRaw] of Object.entries(alias)) {
+            const logical = String(logicalRaw).trim();
+            const physical = String(physicalRaw).trim();
+            if (!logical || !physical || seen.has(logical)) continue;
+            seen.add(logical);
+            rows.push({ factor: logical, column: physical, enabled: true });
+          }
+          return rows.length ? rows : [{ factor: "", column: "", enabled: true }];
+        })(),
       }))
-      : [{ datasource_id: "", dependencies: [] }];
+      : [
+        {
+          datasource_id: "",
+          alias_rows: [{ factor: "", column: "", enabled: true }],
+          date_column: "",
+          asset_column: "",
+        },
+      ];
   return {
     name: row.name,
     description: row.description,
@@ -106,75 +153,29 @@ export function parseStockCodesFromText(text: string): string[] {
   return out;
 }
 
-/** 按数据源给出的字段顺序排列已选依赖，并保留不在列表中的历史项（兼容旧数据） */
-function normalizeBindingDependencies(
-  deps: string[],
-  preferredOrder: string[],
-): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const f of preferredOrder) {
-    if (deps.includes(f) && !seen.has(f)) {
-      seen.add(f);
-      out.push(f);
-    }
-  }
-  for (const d of deps) {
-    if (!seen.has(d)) {
-      seen.add(d);
-      out.push(d);
-    }
-  }
-  return out;
-}
-
-function preferredFieldOrderForDatasource(
-  ds: DataSourcePublic | undefined,
-  csvDepFieldsById: Record<string, string[]>,
-): string[] {
-  if (!ds) return [];
-  if (ds.type === "sql" && ds.sql) {
-    return Object.keys(ds.sql.column_map)
-      .filter((k) => k.trim())
-      .sort((a, b) => a.localeCompare(b));
-  }
-  if (ds.type === "csv") {
-    return csvDepFieldsById[ds.id] ?? [];
-  }
-  return [];
-}
-
 const DATA_SET_MAIN_FORM_ID = "data-set-main-form";
 
 type BindingDependencyMessagesProps = {
-  csvLoading: boolean;
-  sqlMapEmpty: boolean;
-  csvNoDataColumns: boolean;
+  loading: boolean;
+  noDataColumns: boolean;
   extras: string[];
 };
 
 function BindingDependencyMessages({
-  csvLoading,
-  sqlMapEmpty,
-  csvNoDataColumns,
+  loading,
+  noDataColumns,
   extras,
 }: BindingDependencyMessagesProps) {
   return (
     <>
-      {csvLoading ? (
+      {loading ? (
         <p className="text-xs text-muted-foreground">
           正在加载该数据源可用字段…
         </p>
       ) : null}
-      {sqlMapEmpty ? (
+      {noDataColumns ? (
         <p className="text-xs text-amber-600 dark:text-amber-500">
-          该 SQL 数据源尚未配置字段映射（column_map），请先在「数据源」中保存映射后再勾选依赖。
-        </p>
-      ) : null}
-      {csvNoDataColumns ? (
-        <p className="text-xs text-amber-600 dark:text-amber-500">
-          未能从 CSV
-          读取到数据列（或仅剩日期/资产列）。请检查数据源路径与文件可读性。
+          未能读取到该数据源可用字段列表。请检查数据源配置与可连接性/可读性。
         </p>
       ) : null}
       {extras.length > 0 ? (
@@ -185,54 +186,6 @@ function BindingDependencyMessages({
         </p>
       ) : null}
     </>
-  );
-}
-
-type BindingDependencyCheckboxListProps = {
-  row: DataSetBindingFormRow;
-  fields: string[];
-  index: number;
-  updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
-};
-
-function BindingDependencyCheckboxList({
-  row,
-  fields,
-  index,
-  updateBinding,
-}: BindingDependencyCheckboxListProps) {
-  return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-md border border-border/60 bg-background/50 px-3 py-3">
-      {fields.map((field) => (
-        <Label
-          key={field}
-          className="flex cursor-pointer items-center gap-2 font-normal"
-        >
-          <input
-            type="checkbox"
-            className={cn(
-              "size-4 shrink-0 rounded border border-input accent-primary",
-              "cursor-pointer",
-            )}
-            checked={row.dependencies.includes(field)}
-            onChange={(e) => {
-              const on = e.target.checked;
-              const next = on
-                ? normalizeBindingDependencies(
-                  [...row.dependencies, field],
-                  fields,
-                )
-                : normalizeBindingDependencies(
-                  row.dependencies.filter((d) => d !== field),
-                  fields,
-                );
-              updateBinding(index, { dependencies: next });
-            }}
-          />
-          <span className="font-mono text-sm">{field}</span>
-        </Label>
-      ))}
-    </div>
   );
 }
 
@@ -260,20 +213,26 @@ function DataSetBindingRowBlock({
   removeBinding,
 }: DataSetBindingRowBlockProps) {
   const ds = datasources.find((d) => d.id === row.datasource_id.trim());
-  const fields = preferredFieldOrderForDatasource(ds, csvDepFields);
   const trimmedId = row.datasource_id.trim();
-  const csvLoading =
-    !!ds &&
-    ds.type === "csv" &&
-    !!trimmedId &&
-    !Object.prototype.hasOwnProperty.call(csvDepFields, trimmedId);
-  const extras = row.dependencies.filter((d) => !fields.includes(d));
-  const sqlMapEmpty =
-    ds?.type === "sql" &&
-    !!ds.sql &&
-    Object.keys(ds.sql.column_map).length === 0;
-  const csvNoDataColumns =
-    ds?.type === "csv" && !csvLoading && Boolean(trimmedId) && fields.length === 0;
+  const loading =
+    !!ds && !!trimmedId && !Object.prototype.hasOwnProperty.call(csvDepFields, trimmedId);
+  const physicalColumns = csvDepFields[trimmedId] ?? [];
+  const columnOptions = (() => {
+    const set = new Set<string>();
+    for (const c of physicalColumns) {
+      const t = String(c).trim();
+      if (t) set.add(t);
+    }
+    const d = row.date_column.trim();
+    const a = row.asset_column.trim();
+    if (d) set.add(d);
+    if (a) set.add(a);
+    return [...set].sort((x, y) => x.localeCompare(y));
+  })();
+  const useColumnSelects = columnOptions.length > 0;
+  const deps = depsFromAliasRows(row.alias_rows);
+  const extras = deps.filter((d) => !physicalColumns.includes(d));
+  const noDataColumns = !loading && Boolean(trimmedId) && physicalColumns.length === 0;
 
   return (
     <div
@@ -302,7 +261,13 @@ function DataSetBindingRowBlock({
           modal={false}
           items={dsItems}
           value={row.datasource_id}
-          onValueChange={(v) => v && updateBinding(index, { datasource_id: v })}
+          onValueChange={(v) =>
+            v &&
+            updateBinding(index, {
+              datasource_id: v,
+              date_column: "",
+              asset_column: "",
+            })}
           disabled={enabledDs.length === 0}
         >
           <SelectTrigger className="w-full min-w-0">
@@ -317,24 +282,101 @@ function DataSetBindingRowBlock({
           </SelectContent>
         </Select>
       </div>
+
+      <div className="space-y-2">
+        <Label>索引列（date / asset）</Label>
+        <p className="text-xs text-muted-foreground">
+          这两列用于把数据标准化为 (date, asset) 面板索引；与依赖字段映射独立。
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">date_column</Label>
+            {useColumnSelects ? (
+              <Select
+                modal={false}
+                value={row.date_column.trim() || undefined}
+                onValueChange={(v) => v && updateBinding(index, { date_column: v })}
+              >
+                <SelectTrigger className="w-full font-mono text-xs">
+                  <SelectValue placeholder="选择列" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnOptions.map((c) => (
+                    <SelectItem key={`d-${c}`} value={c} className="font-mono text-xs">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={row.date_column}
+                onChange={(e) => updateBinding(index, { date_column: e.target.value })}
+                placeholder="先选择数据源并等待列名加载"
+                className="font-mono text-xs"
+              />
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">asset_column</Label>
+            {useColumnSelects ? (
+              <Select
+                modal={false}
+                value={row.asset_column.trim() || undefined}
+                onValueChange={(v) => v && updateBinding(index, { asset_column: v })}
+              >
+                <SelectTrigger className="w-full font-mono text-xs">
+                  <SelectValue placeholder="选择列" />
+                </SelectTrigger>
+                <SelectContent>
+                  {columnOptions.map((c) => (
+                    <SelectItem key={`a-${c}`} value={c} className="font-mono text-xs">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={row.asset_column}
+                onChange={(e) => updateBinding(index, { asset_column: e.target.value })}
+                placeholder="先选择数据源并等待列名加载"
+                className="font-mono text-xs"
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="space-y-3">
         <div className="space-y-2">
-          <Label>依赖字段</Label>
+          <Label>依赖字段与映射</Label>
           <p className="text-xs text-muted-foreground">
-            选项来自该数据源配置（SQL 为字段映射的键名，CSV
-            为文件表头中的数据列）。单数据源时可全不选，表示使用因子全部依赖；多数据源时须至少选择一项。
+            在数据集里配置逻辑字段名（因子 dependencies）到数据源真实列名的映射。单数据源时可一个都不启用，表示运行时使用因子全部 dependencies；
+            多数据源时须至少启用一项来区分字段归属。
           </p>
           <BindingDependencyMessages
-            csvLoading={csvLoading}
-            sqlMapEmpty={sqlMapEmpty}
-            csvNoDataColumns={csvNoDataColumns}
+            loading={loading}
+            noDataColumns={noDataColumns}
             extras={extras}
           />
-          <BindingDependencyCheckboxList
-            row={row}
-            fields={fields}
-            index={index}
-            updateBinding={updateBinding}
+          <AliasMapEditor
+            physicalColumns={physicalColumns}
+            rows={row.alias_rows}
+            onChangeRows={(rows) => updateBinding(index, { alias_rows: rows })}
+            onAddRow={() =>
+              updateBinding(index, {
+                alias_rows: [
+                  ...(row.alias_rows.length
+                    ? row.alias_rows
+                    : [{ factor: "", column: "", enabled: true }]),
+                  { factor: "", column: "", enabled: true },
+                ],
+              })}
+            onRemoveRow={(removeIndex) =>
+              updateBinding(index, {
+                alias_rows: row.alias_rows.filter((_, i) => i !== removeIndex),
+              })}
           />
         </div>
       </div>
@@ -355,7 +397,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [loading, setLoading] = useState(mode === "edit");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  /** CSV 数据源的依赖字段（表头），按数据源 id 缓存 */
+  /** 数据源可用字段（用于勾选），按数据源 id 缓存 */
   const [csvDepFields, setCsvDepFields] = useState<Record<string, string[]>>({});
   const csvDepLoadedRef = useRef(new Set<string>());
 
@@ -378,7 +420,15 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const addBinding = useCallback(() => {
     setForm((f) => ({
       ...f,
-      bindings: [...f.bindings, { datasource_id: "", dependencies: [] }],
+      bindings: [
+        ...f.bindings,
+        {
+          datasource_id: "",
+          alias_rows: [{ factor: "", column: "", enabled: true }],
+          date_column: "",
+          asset_column: "",
+        },
+      ],
     }));
   }, []);
 
@@ -407,7 +457,14 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           if (enabled.length === 1) {
             setForm((prev) => ({
               ...prev,
-              bindings: [{ datasource_id: enabled[0].id, dependencies: [] }],
+              bindings: [
+                {
+                  datasource_id: enabled[0].id,
+                  alias_rows: [{ factor: "", column: "", enabled: true }],
+                  date_column: "",
+                  asset_column: "",
+                },
+              ],
             }));
           }
         }
@@ -435,7 +492,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     ];
     for (const id of ids) {
       const ds = datasources.find((d) => d.id === id);
-      if (ds?.type !== "csv") continue;
+      if (!ds) continue;
       if (csvDepLoadedRef.current.has(id)) continue;
       csvDepLoadedRef.current.add(id);
       void getDatasourceDependencyFields(id).then(
@@ -474,26 +531,31 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         setFormError("每条绑定须选择数据源");
         return;
       }
+      if (!b.date_column.trim() || !b.asset_column.trim()) {
+        setFormError("每条绑定须选择 date 列与 asset 列");
+        return;
+      }
     }
     if (form.bindings.length > 1) {
       for (const b of form.bindings) {
-        if (!b.dependencies.length) {
+        if (depsFromAliasRows(b.alias_rows).length === 0) {
           setFormError("多个数据源时，每条绑定须至少勾选一个依赖字段");
           return;
         }
       }
     }
     const stock_codes = parseStockCodesFromText(form.stock_codes_text);
-    const datasource_bindings = form.bindings.map((b) => ({
-      datasource_id: b.datasource_id.trim(),
-      dependencies: normalizeBindingDependencies(
-        b.dependencies,
-        preferredFieldOrderForDatasource(
-          datasources.find((d) => d.id === b.datasource_id.trim()),
-          csvDepFields,
-        ),
-      ),
-    }));
+    const datasource_bindings = form.bindings.map((b) => {
+      const alias = mapFromAliasRows(b.alias_rows);
+      const dependencies = depsFromAliasRows(b.alias_rows);
+      return {
+        datasource_id: b.datasource_id.trim(),
+        dependencies,
+        date_column: b.date_column.trim(),
+        asset_column: b.asset_column.trim(),
+        ...(Object.keys(alias).length ? { alias } : {}),
+      };
+    });
     const payload = {
       name,
       description: form.description.trim(),

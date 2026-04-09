@@ -404,7 +404,7 @@ export function getDatasource(id: string): Promise<DataSourcePublic> {
   );
 }
 
-/** 因子依赖字段名：SQL 为 column_map 键；CSV 为文件表头（不含日期/资产列） */
+/** 数据源物理列名列表（供数据集配置 alias/date/asset 等映射使用）。 */
 export function getDatasourceDependencyFields(
   id: string,
 ): Promise<{ fields: string[] }> {

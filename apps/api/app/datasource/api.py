@@ -50,10 +50,6 @@ def _merge_sql_credentials(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
 def _merge_sql_table_mapping(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
     if "table" in sp and sp["table"] is not None:
         sql.table = str(sp["table"])
-    if "date_column" in sp and sp["date_column"] is not None:
-        sql.date_column = str(sp["date_column"])
-    if "asset_column" in sp and sp["asset_column"] is not None:
-        sql.asset_column = str(sp["asset_column"])
     if "column_map" in sp and sp["column_map"] is not None:
         sql.column_map = dict(sp["column_map"])
 
@@ -67,10 +63,6 @@ def _merge_csv_subpatch(rec: DataSourceRecord, cp: dict[str, Any]) -> None:
     assert rec.csv is not None
     if "path" in cp:
         rec.csv.path = cp["path"]
-    if "date_column" in cp:
-        rec.csv.date_column = cp["date_column"]
-    if "asset_column" in cp:
-        rec.csv.asset_column = cp["asset_column"]
     if "read_csv_kwargs" in cp:
         rec.csv.read_csv_kwargs = dict(cp["read_csv_kwargs"])
 

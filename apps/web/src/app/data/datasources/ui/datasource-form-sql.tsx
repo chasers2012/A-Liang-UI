@@ -1,7 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,16 +12,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import type { SqlPublic } from "@/lib/quant-agent-api";
+import { fetchSqlTableColumns } from "@/lib/quant-agent-api";
 
 import type {
-  ColumnMapRow,
   EditorMode,
   FormState,
   SqlDriverForm,
 } from "../form-model";
-import { emptyColumnMapRows, mergeLoadedSqlColumns } from "../form-model";
-import { ColumnMapEditor } from "./column-map-editor";
+import { parseOptionalPort } from "../form-model";
 import { FieldPair, FormSection } from "./form-section";
 
 const DB_DRIVER_ITEMS: Record<SqlDriverForm, string> = {
@@ -47,73 +47,87 @@ export function DatasourceFormSql({
   const set = (patch: Partial<FormState>) =>
     setForm((f) => ({ ...f, ...patch }));
 
-  const updateColumnRow = (
-    index: number,
-    field: keyof ColumnMapRow,
-    value: string | boolean,
-  ) => {
-    setForm((f) => ({
-      ...f,
-      column_map_rows: f.column_map_rows.map((row, i) =>
-        i === index ? { ...row, [field]: value } : row,
-      ),
-    }));
-  };
+  const [loadingCols, setLoadingCols] = useState(false);
+  const [loadColsError, setLoadColsError] = useState<string | null>(null);
+  const [apiColumns, setApiColumns] = useState<string[]>([]);
+  const loadGenerationRef = useRef(0);
 
-  const applyLoadedSqlColumns = useCallback(
-    (apiColumns: string[]) => {
-      setForm((f) => ({
-        ...f,
-        column_map_rows: mergeLoadedSqlColumns(apiColumns, f.column_map_rows),
-      }));
-    },
-    [setForm],
-  );
+  const loadColumns = useCallback(async () => {
+    const t = form.table.trim();
+    if (!t) {
+      setLoadColsError("请先填写表名");
+      return;
+    }
+    const host = form.db_host.trim();
+    const dbName = form.db_name.trim();
+    if (editorMode === "create" && (!host || !dbName)) {
+      setLoadColsError("请先填写主机与数据库名");
+      return;
+    }
+    const generation = ++loadGenerationRef.current;
+    setLoadColsError(null);
+    setLoadingCols(true);
+    try {
+      const dbPort = parseOptionalPort(form.db_port) ?? null;
+      const { columns } = await fetchSqlTableColumns({
+        datasource_id: editorMode === "edit" ? editingDatasourceId : null,
+        db_driver: form.db_driver,
+        db_host: host,
+        db_port: dbPort,
+        db_username: form.db_username.trim(),
+        db_password: form.db_password,
+        db_name: dbName,
+        table: t,
+      });
+      if (generation !== loadGenerationRef.current) return;
+      setApiColumns(columns);
+      if (columns.length === 0) {
+        setLoadColsError("未返回任何列（请确认表名与权限）");
+      }
+    } catch (e) {
+      if (generation === loadGenerationRef.current) {
+        setLoadColsError(e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      if (generation === loadGenerationRef.current) {
+        setLoadingCols(false);
+      }
+    }
+  }, [
+    editorMode,
+    editingDatasourceId,
+    form.db_driver,
+    form.db_host,
+    form.db_port,
+    form.db_username,
+    form.db_password,
+    form.db_name,
+    form.table,
+  ]);
 
-  const addColumnRow = () => {
-    setForm((f) => ({
-      ...f,
-      column_map_rows: [
-        ...f.column_map_rows,
-        { factor: "", column: "", enabled: true },
-      ],
-    }));
-  };
+  const loadColumnsRef = useRef(loadColumns);
+  loadColumnsRef.current = loadColumns;
 
-  const removeColumnRow = (index: number) => {
-    setForm((f) => {
-      const next = f.column_map_rows.filter((_, i) => i !== index);
-      return {
-        ...f,
-        column_map_rows: next.length > 0 ? next : emptyColumnMapRows(),
-      };
-    });
-  };
-
-  /** 稳定引用，避免 ColumnMapEditor 在仅 column_map 等更新时误判 inspectContext 变化而循环自动拉列 */
-  const inspectContext = useMemo(
-    () => ({
-      datasourceId: editorMode === "edit" ? editingDatasourceId : null,
-      db_driver: form.db_driver,
-      db_host: form.db_host,
-      db_port: form.db_port,
-      db_username: form.db_username,
-      db_password: form.db_password,
-      db_name: form.db_name,
-      table: form.table,
-    }),
-    [
-      editorMode,
-      editingDatasourceId,
-      form.db_driver,
-      form.db_host,
-      form.db_port,
-      form.db_username,
-      form.db_password,
-      form.db_name,
-      form.table,
-    ],
-  );
+  useEffect(() => {
+    const t = form.table.trim();
+    if (!t) return;
+    const host = form.db_host.trim();
+    const dbName = form.db_name.trim();
+    if (editorMode === "create" && (!host || !dbName)) return;
+    const timer = window.setTimeout(() => {
+      void loadColumnsRef.current();
+    }, 480);
+    return () => clearTimeout(timer);
+  }, [
+    editorMode,
+    form.table,
+    form.db_host,
+    form.db_name,
+    form.db_driver,
+    form.db_port,
+    form.db_username,
+    form.db_password,
+  ]);
 
   return (
     <>
@@ -201,7 +215,7 @@ export function DatasourceFormSql({
 
       <FormSection
         title="表面板列"
-        description="填写要读取的数据表；日期列与资产列在下方「字段映射」中选择。"
+        description="填写要读取的数据表；字段映射与 date/asset 列请在「数据集」页面配置。"
       >
         <div className="grid gap-2">
           <Label htmlFor="ds-table">表名（可含 schema）</Label>
@@ -212,24 +226,28 @@ export function DatasourceFormSql({
             onChange={(e) => set({ table: e.target.value })}
           />
         </div>
-      </FormSection>
-
-      <FormSection
-        title="字段映射（column_map）"
-        description="从数据库加载列后，用下拉框选择日期列与资产列，并配置因子字段映射。"
-      >
-        <ColumnMapEditor
-          rows={form.column_map_rows}
-          dateColumn={form.date_column}
-          assetColumn={form.asset_column}
-          onDateColumnChange={(v) => set({ date_column: v })}
-          onAssetColumnChange={(v) => set({ asset_column: v })}
-          onChangeRow={updateColumnRow}
-          onApplyLoadedColumns={applyLoadedSqlColumns}
-          onAddRow={addColumnRow}
-          onRemoveRow={removeColumnRow}
-          inspectContext={inspectContext}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">
+            列名就绪后会自动刷新；也可手动点击刷新。
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={loadingCols}
+            onClick={() => void loadColumns()}
+          >
+            {loadingCols ? "刷新中…" : "刷新列名"}
+          </Button>
+        </div>
+        {loadColsError ? (
+          <p className="text-xs text-destructive">{loadColsError}</p>
+        ) : null}
+        {apiColumns.length > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            已读取列名：<span className="font-mono">{apiColumns.join(", ")}</span>
+          </p>
+        ) : null}
       </FormSection>
     </>
   );

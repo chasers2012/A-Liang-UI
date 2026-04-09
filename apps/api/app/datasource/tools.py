@@ -5,6 +5,7 @@ from typing import Any
 from langchain_core.tools import tool
 
 from app.common.datetime_utils import utc_now_iso
+from app.datasource.api import _merge_patch, list_datasources
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -20,15 +21,14 @@ from app.datasource.table_columns import (
     sql_config_for_column_listing,
 )
 from app.datasource.verify import verify_datasource
-from app.datasource.api import _merge_patch, list_datasources
 
 
 @tool(
     description=(
         "创建并保存一个数据源（SQL 或 CSV），返回创建后的数据源详情（对外展示结构，密码不返回明文）。"
         "入参 body：name、type（sql|csv）、enabled；"
-        "type=sql 时需提供 sql（db_host、db_name、table、date_column、asset_column 等）；"
-        "type=csv 时需提供 csv（path、date_column、asset_column）。"
+        "type=sql 时需提供 sql（db_host、db_name、table 等）；"
+        "type=csv 时需提供 csv（path）。"
     )
 )
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:

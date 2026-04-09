@@ -6,7 +6,6 @@ import {
 
 import type { EditorMode, FormState } from "./form-model";
 import {
-  mapFromRows,
   parseJsonObject,
   parseOptionalPort,
   sqlDriverFromApi,
@@ -15,9 +14,6 @@ import {
 function validateSqlForCreate(form: FormState): void {
   if (!form.db_host.trim() || !form.db_name.trim()) {
     throw new Error("请填写主机（IP）与数据库名");
-  }
-  if (!form.date_column.trim() || !form.asset_column.trim()) {
-    throw new Error("请选择或填写日期列与资产列");
   }
 }
 
@@ -41,9 +37,6 @@ async function createDatasourceFromForm(
         db_password: form.db_password,
         db_name: form.db_name.trim(),
         table: form.table.trim(),
-        date_column: form.date_column.trim(),
-        asset_column: form.asset_column.trim(),
-        column_map: mapFromRows(form.column_map_rows),
       },
     });
   }
@@ -53,8 +46,6 @@ async function createDatasourceFromForm(
     enabled: form.enabled,
     csv: {
       path: form.csv_path.trim(),
-      date_column: form.csv_date_column.trim(),
-      asset_column: form.csv_asset_column.trim(),
       read_csv_kwargs: parseJsonObject(
         form.read_csv_kwargs_json,
         "read_csv_kwargs",
@@ -84,16 +75,6 @@ function buildSqlPatchForEdit(
     sqlPatch.db_name = form.db_name.trim();
   }
   if (form.table.trim() !== o.table) sqlPatch.table = form.table.trim();
-  if (form.date_column.trim() !== o.date_column) {
-    sqlPatch.date_column = form.date_column.trim();
-  }
-  if (form.asset_column.trim() !== o.asset_column) {
-    sqlPatch.asset_column = form.asset_column.trim();
-  }
-  const cm = mapFromRows(form.column_map_rows);
-  if (JSON.stringify(cm) !== JSON.stringify(o.column_map)) {
-    sqlPatch.column_map = cm;
-  }
   return sqlPatch;
 }
 
@@ -104,12 +85,6 @@ function buildCsvPatchForEdit(
   const csvPatch: Record<string, unknown> = {};
   if (form.csv_path.trim() !== origCsv.path) {
     csvPatch.path = form.csv_path.trim();
-  }
-  if (form.csv_date_column.trim() !== origCsv.date_column) {
-    csvPatch.date_column = form.csv_date_column.trim();
-  }
-  if (form.csv_asset_column.trim() !== origCsv.asset_column) {
-    csvPatch.asset_column = form.csv_asset_column.trim();
   }
   const kw = parseJsonObject(form.read_csv_kwargs_json, "read_csv_kwargs");
   if (JSON.stringify(kw) !== JSON.stringify(origCsv.read_csv_kwargs)) {

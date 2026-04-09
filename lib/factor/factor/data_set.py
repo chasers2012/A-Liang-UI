@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter
-from factor.dependency_resolver import panel_load_start_date
+from factor.panel import panel_load_start_date
 
 
 class DataSourceBinding:
