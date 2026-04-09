@@ -53,7 +53,7 @@ def _to_public(rec: DataSetRecord) -> DataSetPublic:
         datasource_bindings=_bindings_to_public(rec.datasource_bindings),
         start=rec.start,
         end=rec.end,
-        stock_codes=list(rec.stock_codes),
+        instrument_codes=list(rec.instrument_codes),
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
@@ -163,8 +163,8 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
         rec.start = str(data["start"]).strip()
     if "end" in data and data["end"] is not None:
         rec.end = str(data["end"]).strip()
-    if "stock_codes" in data and data["stock_codes"] is not None:
-        rec.stock_codes = [c.strip() for c in data["stock_codes"] if str(c).strip()]
+    if "instrument_codes" in data and data["instrument_codes"] is not None:
+        rec.instrument_codes = [c.strip() for c in data["instrument_codes"] if str(c).strip()]
 
 
 @router.get("", response_model=list[DataSetPublic])

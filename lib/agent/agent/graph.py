@@ -130,7 +130,7 @@ def _node_validate_dry_run(state: FactorDiggingState) -> dict[str, Any]:
         state.get("factor_source") or "",
         dry_run_start_date=state.get("dry_run_start_date", DEFAULT_DRY_RUN_START_DATE),
         dry_run_end_date=state.get("dry_run_end_date", DEFAULT_DRY_RUN_END_DATE),
-        stock_codes=state.get("stock_codes"),
+        instrument_codes=state.get("instrument_codes"),
     )
     return {
         "dry_run_ok": out["dry_run_ok"],
@@ -147,7 +147,7 @@ def _node_evaluate_alphalens(state: FactorDiggingState) -> dict[str, Any]:
         skip_alphalens_evaluation=state.get("skip_alphalens_evaluation", False),
         eval_start_date=state.get("eval_start_date", DEFAULT_EVAL_START_DATE),
         eval_end_date=state.get("eval_end_date", DEFAULT_EVAL_END_DATE),
-        stock_codes=state.get("stock_codes"),
+        instrument_codes=state.get("instrument_codes"),
         quantiles=int(state.get("quantiles", DEFAULT_QUANTILES)),
     )
 

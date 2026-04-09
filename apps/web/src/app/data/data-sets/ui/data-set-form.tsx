@@ -61,7 +61,7 @@ export type DataSetFormState = {
   bindings: DataSetBindingFormRow[];
   start: string;
   end: string;
-  stock_codes_text: string;
+  instrument_codes_text: string;
 };
 
 export function emptyDataSetForm(): DataSetFormState {
@@ -78,7 +78,7 @@ export function emptyDataSetForm(): DataSetFormState {
     ],
     start: "2023-01-01",
     end: "2024-12-31",
-    stock_codes_text: "",
+    instrument_codes_text: "",
   };
 }
 
@@ -134,13 +134,13 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     bindings,
     start: toDateInputValue(row.start),
     end: toDateInputValue(row.end),
-    stock_codes_text: row.stock_codes.length
-      ? row.stock_codes.join("\n")
+    instrument_codes_text: row.instrument_codes.length
+      ? row.instrument_codes.join("\n")
       : "",
   };
 }
 
-export function parseStockCodesFromText(text: string): string[] {
+export function parseInstrumentCodesFromText(text: string): string[] {
   const parts = text.split(/[\s,;，；]+/u);
   const out: string[] = [];
   const seen = new Set<string>();
@@ -548,7 +548,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         }
       }
     }
-    const stock_codes = parseStockCodesFromText(form.stock_codes_text);
+    const instrument_codes = parseInstrumentCodesFromText(form.instrument_codes_text);
     const datasource_bindings = form.bindings.map((b) => {
       const alias = mapFromAliasRows(b.alias_rows);
       const dependencies = depsFromAliasRows(b.alias_rows);
@@ -566,7 +566,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       datasource_bindings,
       start: form.start.trim(),
       end: form.end.trim(),
-      stock_codes,
+      instrument_codes,
     };
     setSubmitting(true);
     try {
@@ -729,11 +729,11 @@ export function DataSetForm({ mode, dataSetId }: Props) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ts-stocks">股票代码（可选）</Label>
+              <Label htmlFor="ts-instruments">标的代码（可选）</Label>
               <Textarea
-                id="ts-stocks"
-                value={form.stock_codes_text}
-                onChange={(e) => set({ stock_codes_text: e.target.value })}
+                id="ts-instruments"
+                value={form.instrument_codes_text}
+                onChange={(e) => set({ instrument_codes_text: e.target.value })}
                 placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
                 rows={4}
                 className="min-h-0 resize-y font-mono text-xs"

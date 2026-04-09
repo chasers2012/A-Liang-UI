@@ -175,7 +175,7 @@ class AlphalensFactorEvaluator:
         *,
         start_date: str | None,
         end_date: str,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
         long_short: bool = True,
         close_col: str = "close",
     ) -> None:
@@ -185,7 +185,7 @@ class AlphalensFactorEvaluator:
         self.factor = factor
         self._start_date = start_date
         self._end_date = end_date
-        self._stock_codes = stock_codes
+        self._instrument_codes = instrument_codes
         self.long_short = long_short
         self.close_col = close_col
         self._close_wide: pd.DataFrame | None = None
@@ -197,7 +197,7 @@ class AlphalensFactorEvaluator:
             fields=fields,
             start_date=start_date,
             end_date=end_date,
-            stock_codes=stock_codes,
+            instrument_codes=instrument_codes,
             window=factor.max_window,
         )
         if self._price_panel.empty:
@@ -222,7 +222,7 @@ class AlphalensFactorEvaluator:
         factor_data = self.factor.calculate(
             self._start_date,
             self._end_date,
-            self._stock_codes,
+            self._instrument_codes,
         )
         if not isinstance(factor_data.index, pd.MultiIndex):
             raise ValueError("factor.calculate must return MultiIndex (date, asset)")
@@ -254,7 +254,7 @@ class AlphalensFactorEvaluator:
         factor_data = self.factor.calculate(
             self._start_date,
             self._end_date,
-            self._stock_codes,
+            self._instrument_codes,
         )
         if not isinstance(factor_data.index, pd.MultiIndex):
             raise ValueError("factor.calculate must return MultiIndex (date, asset)")

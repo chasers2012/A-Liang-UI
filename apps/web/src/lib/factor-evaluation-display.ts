@@ -12,7 +12,7 @@ export function formatEvaluationWindow(w?: FactorEvalWindow | null): string {
   return `${a} ~ ${b}`;
 }
 
-export function formatStockCount(n?: number | null): string {
+export function formatInstrumentCount(n?: number | null): string {
   if (n == null || Number.isNaN(n)) return "—";
-  return `${n} 只`;
+  return `${n} 个`;
 }

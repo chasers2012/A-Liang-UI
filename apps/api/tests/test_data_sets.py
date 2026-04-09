@@ -131,7 +131,7 @@ def test_data_sets_crud(client, workspace_tmp):
             "datasource_bindings": [_ds_binding("nonexistent", ["close"])],
             "start": "2023-01-01",
             "end": "2023-12-31",
-            "stock_codes": [],
+            "instrument_codes": [],
         },
     )
     assert r_bad.status_code == 400
@@ -144,7 +144,7 @@ def test_data_sets_crud(client, workspace_tmp):
             "datasource_bindings": [_ds_binding(ds_id, [])],
             "start": "2023-01-01",
             "end": "2023-12-31",
-            "stock_codes": ["A", "B"],
+            "instrument_codes": ["A", "B"],
         },
     )
     assert r1.status_code == 200
@@ -197,7 +197,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
             "datasource_bindings": [_ds_binding(ds_id, ["close"])],
             "start": "2023-01-01",
             "end": "2023-12-31",
-            "stock_codes": ["A"],
+            "instrument_codes": ["A"],
         },
     )
     assert r_ts.status_code == 200
@@ -252,7 +252,7 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
             "datasource_bindings": [_ds_binding(ds_id, ["close"])],
             "start": "2023-01-01",
             "end": "2024-12-31",
-            "stock_codes": [],
+            "instrument_codes": [],
         },
     )
     assert r_ts.status_code == 200

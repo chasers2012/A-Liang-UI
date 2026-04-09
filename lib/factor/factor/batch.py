@@ -54,7 +54,7 @@ def compute_factor_values_from_source(
     *,
     start_date: str | None,
     end_date: str,
-    stock_codes: list[str] | None = None,
+    instrument_codes: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Load a single panel (merged fields, max lookback) and compute all factors.
@@ -69,7 +69,7 @@ def compute_factor_values_from_source(
         fields=fields,
         start_date=start_date,
         end_date=end_date,
-        stock_codes=stock_codes,
+        instrument_codes=instrument_codes,
         window=window,
     )
     return compute_factor_values(factors, panel)

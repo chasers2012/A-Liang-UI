@@ -27,7 +27,7 @@ class DataSetRecord(BaseModel):
     datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
     start: str
     end: str
-    stock_codes: list[str] = Field(default_factory=list)
+    instrument_codes: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
 
@@ -80,15 +80,15 @@ class DataSetCreate(BaseModel):
     datasource_bindings: list[DataSetDatasourceBindingInput]
     start: str
     end: str
-    stock_codes: list[str] = Field(default_factory=list)
+    instrument_codes: list[str] = Field(default_factory=list)
 
-    @field_validator("stock_codes", mode="before")
+    @field_validator("instrument_codes", mode="before")
     @classmethod
     def _strip_codes(cls, v: object) -> list[str]:
         if v is None:
             return []
         if not isinstance(v, list):
-            raise TypeError("stock_codes must be a list")
+            raise TypeError("instrument_codes must be a list")
         return [str(x).strip() for x in v if str(x).strip()]
 
     def to_record(self) -> DataSetRecord:
@@ -111,7 +111,7 @@ class DataSetCreate(BaseModel):
             datasource_bindings=bindings,
             start=self.start.strip(),
             end=self.end.strip(),
-            stock_codes=[c.strip() for c in self.stock_codes if str(c).strip()],
+            instrument_codes=[c.strip() for c in self.instrument_codes if str(c).strip()],
             created_at=now,
             updated_at=now,
         )
@@ -125,7 +125,7 @@ class DataSetPatch(BaseModel):
     datasource_bindings: list[DataSetDatasourceBindingInput] | None = None
     start: str | None = None
     end: str | None = None
-    stock_codes: list[str] | None = None
+    instrument_codes: list[str] | None = None
 
 
 class DataSetDatasourceBindingPublic(BaseModel):
@@ -145,6 +145,6 @@ class DataSetPublic(BaseModel):
     datasource_bindings: list[DataSetDatasourceBindingPublic]
     start: str
     end: str
-    stock_codes: list[str]
+    instrument_codes: list[str]
     created_at: str
     updated_at: str

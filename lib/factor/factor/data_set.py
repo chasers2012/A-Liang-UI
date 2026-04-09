@@ -47,25 +47,25 @@ def _merge_date(arg: str | None, fallback: str | None) -> str | None:
     return n if n is not None else fallback
 
 
-def _norm_stock_codes(value: list[str] | None) -> list[str] | None:
+def _norm_instrument_codes(value: list[str] | None) -> list[str] | None:
     if value is None:
         return None
     out = [str(c).strip() for c in value if str(c).strip()]
     return out if out else None
 
 
-def _merge_stock_codes(arg: list[str] | None, fallback: list[str] | None) -> list[str] | None:
+def _merge_instrument_codes(arg: list[str] | None, fallback: list[str] | None) -> list[str] | None:
     """Use explicit ``arg`` when non-empty; ``None`` means fall back to dataset."""
     if arg is None:
-        return _norm_stock_codes(fallback)
-    return _norm_stock_codes(arg)
+        return _norm_instrument_codes(fallback)
+    return _norm_instrument_codes(arg)
 
 
 class DataSet:
     data_source_bindings: list[DataSourceBinding]
     start_date: str | None
     end_date: str | None
-    stock_codes: list[str] | None
+    instrument_codes: list[str] | None
 
     def __init__(
         self,
@@ -73,12 +73,12 @@ class DataSet:
         *,
         start_date: str | None = None,
         end_date: str | None = None,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
     ):
         self.data_source_bindings = data_source_bindings
         self.start_date = _norm_opt_date(start_date)
         self.end_date = _norm_opt_date(end_date)
-        self.stock_codes = _norm_stock_codes(stock_codes)
+        self.instrument_codes = _norm_instrument_codes(instrument_codes)
 
     def create_resolver(self):
         from factor.dependency_resolver import DependencyResolver
@@ -140,12 +140,12 @@ class DataSet:
         *,
         load_start: str,
         end_date: str,
-        stock_codes: list[str] | None,
+        instrument_codes: list[str] | None,
     ) -> list:
         filters: list = [BetweenFilter(column=binding.date_column, start=load_start, end=end_date)]
-        if stock_codes is not None:
+        if instrument_codes is not None:
             ucol = binding.universe_column or binding.asset_column
-            filters.append(InFilter(column=ucol, values=[str(c) for c in stock_codes]))
+            filters.append(InFilter(column=ucol, values=[str(c) for c in instrument_codes]))
         return filters
 
     def _empty_panel(self, *, columns: list[str]) -> pd.DataFrame:
@@ -195,7 +195,7 @@ class DataSet:
         window: int,
         start_date: str | None = None,
         end_date: str | None = None,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
     ) -> pd.DataFrame:
         if not fields:
             raise ValueError("fields must be non-empty")
@@ -206,7 +206,7 @@ class DataSet:
         eff_end = _merge_date(end_date, self.end_date)
         if not eff_end:
             raise ValueError("end_date is required (pass to get_panel or set end_date on DataSet)")
-        eff_codes = _merge_stock_codes(stock_codes, self.stock_codes)
+        eff_codes = _merge_instrument_codes(instrument_codes, self.instrument_codes)
 
         self._assert_fields_known(fields)
 
@@ -225,7 +225,7 @@ class DataSet:
                 b,
                 load_start=load_start,
                 end_date=eff_end,
-                stock_codes=eff_codes,
+                instrument_codes=eff_codes,
             )
             parts.append(
                 self._load_binding_panel(

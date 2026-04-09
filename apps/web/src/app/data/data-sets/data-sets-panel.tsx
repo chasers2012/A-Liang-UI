@@ -60,7 +60,7 @@ export function DataSetsPanel() {
       title="数据集"
       description={
         <>
-          配置因子评价的数据源绑定、日期区间与股票池。列表经{" "}
+          配置因子评价的数据源绑定、日期区间与标的池。列表经{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             {getQuantAgentApiBase()}
           </code>

@@ -31,7 +31,7 @@ def test_sql_data_source_sqlite_panel():
         fields=["close"],
         start_date="2025-01-02",
         end_date="2025-01-03",
-        stock_codes=None,
+        instrument_codes=None,
         window=0,
     )
     assert df.index.names == ("date", "asset")

@@ -19,10 +19,10 @@ type Props = {
   onDelete: (row: DataSetPublic) => void;
 };
 
-function stockSummary(codes: string[]): string {
+function instrumentSummary(codes: string[]): string {
   if (!codes.length) return "全部";
   if (codes.length <= 3) return codes.join(", ");
-  return `${codes.length} 只`;
+  return `${codes.length} 个`;
 }
 
 function datasourceSummary(row: DataSetPublic): string {
@@ -42,7 +42,7 @@ export function DataSetTable({ items, onDelete }: Props) {
           <TableHead>名称</TableHead>
           <TableHead>数据源</TableHead>
           <TableHead>日期范围</TableHead>
-          <TableHead>股票池</TableHead>
+          <TableHead>标的池</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
@@ -64,7 +64,7 @@ export function DataSetTable({ items, onDelete }: Props) {
               {row.start} ~ {row.end}
             </TableCell>
             <TableCell className="whitespace-normal text-sm text-muted-foreground">
-              {stockSummary(row.stock_codes)}
+              {instrumentSummary(row.instrument_codes)}
             </TableCell>
             <TableCell className="text-right">
               <div className="flex flex-wrap items-center justify-end gap-2">

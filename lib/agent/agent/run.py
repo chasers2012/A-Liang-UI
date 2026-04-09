@@ -6,7 +6,7 @@ CLI: 因子挖掘 Agent
 
   uv run python -m agent.run "基于换手率与动量构造反转因子"
 
-干跑与 Alphalens 的日期、股票列表、分位数、是否跳过评价等通过
+干跑与 Alphalens 的日期、标的列表、分位数、是否跳过评价等通过
 :func:`run_factor_digging` 的 ``execution`` 参数（或等价字段）写入 graph state；
 未传入时在 ``init_context`` 节点填入 :data:`agent.state.DEFAULT_FACTOR_DIGGING_EXECUTION`。
 
@@ -36,7 +36,7 @@ def run_factor_digging(
 
     ``execution`` 可选，合并进初始 state，键与 :class:`agent.state.FactorDiggingState`
     中干跑/评价相关字段一致，例如 ``dry_run_end_date``、``eval_end_date``、
-    ``stock_codes``、``quantiles``、``skip_alphalens_evaluation``。
+    ``instrument_codes``、``quantiles``、``skip_alphalens_evaluation``。
     """
     from agent.context import set_dependency_resolver
     from agent.graph import build_factor_digging_graph

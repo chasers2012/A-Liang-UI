@@ -27,7 +27,7 @@ def test_csv_data_source_wrong_column_names(tmp_path: Path):
             fields=["close"],
             start_date="2025-01-02",
             end_date="2025-01-02",
-            stock_codes=None,
+            instrument_codes=None,
             window=0,
         )
 
@@ -47,7 +47,7 @@ def test_csv_data_source_panel(tmp_path: Path):
         fields=["close"],
         start_date="2025-01-02",
         end_date="2025-01-03",
-        stock_codes=None,
+        instrument_codes=None,
         window=0,
     )
     assert df.index.names == ("date", "asset")
@@ -56,7 +56,7 @@ def test_csv_data_source_panel(tmp_path: Path):
     assert float(df.loc[("2025-01-03", "AAA"), "close"]) == 11.0
 
 
-def test_csv_data_source_stock_codes_filter(tmp_path: Path):
+def test_csv_data_source_instrument_codes_filter(tmp_path: Path):
     p = tmp_path / "bars.csv"
     p.write_text(
         "date,asset,close\n2025-01-02,AAA,1\n2025-01-02,BBB,2\n",
@@ -70,7 +70,7 @@ def test_csv_data_source_stock_codes_filter(tmp_path: Path):
         fields=["close"],
         start_date="2025-01-02",
         end_date="2025-01-02",
-        stock_codes=["BBB"],
+        instrument_codes=["BBB"],
         window=0,
     )
     assert len(df) == 1

@@ -30,7 +30,7 @@ def _http_error_detail(exc: HTTPException) -> str:
 
 @tool(
     description=(
-        "创建并保存一个数据集：名称、描述、日期区间、股票代码列表，以及至少一条已启用数据源的绑定。"
+        "创建并保存一个数据集：名称、描述、日期区间、标的代码列表，以及至少一条已启用数据源的绑定。"
         "多数据源时每条绑定需填写 dependencies（因子依赖字段名，如 close、volume），且同一字段不能重复出现在多条绑定中。"
     )
 )
@@ -61,7 +61,7 @@ def get_data_set_list() -> list[dict[str, Any]]:
 
 @tool(
     description=(
-        "更新数据集（名称、描述、数据源绑定、起止日期、股票代码等），行为与 PATCH /data-sets/{id} 一致。"
+        "更新数据集（名称、描述、数据源绑定、起止日期、标的代码等），行为与 PATCH /data-sets/{id} 一致。"
     )
 )
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:

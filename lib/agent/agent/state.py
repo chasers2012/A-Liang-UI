@@ -26,7 +26,7 @@ DEFAULT_FACTOR_DIGGING_EXECUTION: Final[dict[str, Any]] = {
     "dry_run_end_date": DEFAULT_DRY_RUN_END_DATE,
     "eval_start_date": DEFAULT_EVAL_START_DATE,
     "eval_end_date": DEFAULT_EVAL_END_DATE,
-    "stock_codes": None,
+    "instrument_codes": None,
     "quantiles": DEFAULT_QUANTILES,
     "skip_alphalens_evaluation": False,
 }
@@ -49,6 +49,6 @@ class FactorDiggingState(TypedDict, total=False):
     dry_run_end_date: str
     eval_start_date: str
     eval_end_date: str
-    stock_codes: list[str] | None
+    instrument_codes: list[str] | None
     quantiles: int
     skip_alphalens_evaluation: bool

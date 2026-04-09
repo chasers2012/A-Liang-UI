@@ -20,7 +20,7 @@ export interface DataSetPublic {
   datasource_bindings: DataSetDatasourceBindingPublic[];
   start: string;
   end: string;
-  stock_codes: string[];
+  instrument_codes: string[];
   created_at: string;
   updated_at: string;
 }

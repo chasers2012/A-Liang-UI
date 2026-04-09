@@ -217,10 +217,10 @@ export default function DataSetDetailPage() {
               <dd className="font-mono text-xs tabular-nums">{row.end}</dd>
             </div>
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-              <dt className="text-muted-foreground">stock_codes</dt>
+              <dt className="text-muted-foreground">instrument_codes</dt>
               <dd className="font-mono text-xs break-all">
-                {row.stock_codes.length
-                  ? row.stock_codes.join(", ")
+                {row.instrument_codes.length
+                  ? row.instrument_codes.join(", ")
                   : "（空数组：不限制标的）"}
               </dd>
             </div>

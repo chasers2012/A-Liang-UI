@@ -109,7 +109,7 @@ class Factor(ABC):
         self,
         start_date: str | None,
         end_date: str,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
         *,
         dependency_resolver: DependencyResolver | None = None,
     ) -> pd.DataFrame:
@@ -120,7 +120,7 @@ class Factor(ABC):
             start_date: ``YYYY-MM-DD``, or None / empty to keep only the last
                 available date (not after ``end_date`` when set).
             end_date: ``YYYY-MM-DD``
-            stock_codes: Assets to include, or None for full universe.
+            instrument_codes: Instruments (assets) to include, or None for full universe.
             dependency_resolver: Override instance :class:`DependencyResolver` for this call.
 
         Returns:
@@ -129,7 +129,7 @@ class Factor(ABC):
         price_data = self._load_data(
             start_date,
             end_date,
-            stock_codes,
+            instrument_codes,
             dependency_resolver=dependency_resolver,
         )
 
@@ -184,14 +184,14 @@ class Factor(ABC):
         self,
         start_date: str | None,
         end_date: str,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
         *,
         dependency_resolver: DependencyResolver | None = None,
     ) -> pd.DataFrame:
         return self.calculate(
             start_date,
             end_date,
-            stock_codes,
+            instrument_codes,
             dependency_resolver=dependency_resolver,
         )
 
@@ -199,7 +199,7 @@ class Factor(ABC):
         self,
         start_date: str | None,
         end_date: str,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
         dependencies: list[str] | None = None,
         *,
         dependency_resolver: DependencyResolver | None = None,
@@ -218,6 +218,6 @@ class Factor(ABC):
             fields=deps,
             start_date=start_date,
             end_date=end_date,
-            stock_codes=stock_codes,
+            instrument_codes=instrument_codes,
             window=self.max_window,
         )

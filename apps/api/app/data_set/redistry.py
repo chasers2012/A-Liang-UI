@@ -17,7 +17,7 @@ def _row_to_record(row: DataSetRow) -> DataSetRecord:
         datasource_bindings=bindings,
         start=row.start,
         end=row.end,
-        stock_codes=list(row.stock_codes or []),
+        instrument_codes=list(row.instrument_codes or []),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -31,7 +31,7 @@ def _record_to_row(rec: DataSetRecord) -> DataSetRow:
         datasource_bindings=[b.model_dump() for b in rec.datasource_bindings],
         start=rec.start,
         end=rec.end,
-        stock_codes=list(rec.stock_codes),
+        instrument_codes=list(rec.instrument_codes),
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )

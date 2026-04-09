@@ -28,12 +28,12 @@ class DependencyResolver:
         window: int,
         start_date: str | None = None,
         end_date: str | None = None,
-        stock_codes: list[str] | None = None,
+        instrument_codes: list[str] | None = None,
     ) -> pd.DataFrame:
         return self._data_set.get_panel(
             fields=fields,
             window=window,
             start_date=start_date,
             end_date=end_date,
-            stock_codes=stock_codes,
+            instrument_codes=instrument_codes,
         )

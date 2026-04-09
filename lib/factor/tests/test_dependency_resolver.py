@@ -64,7 +64,7 @@ def test_resolver_merges_two_sources_inner_join() -> None:
         fields=["close", "pe"],
         start_date="2024-01-01",
         end_date="2024-01-31",
-        stock_codes=None,
+        instrument_codes=None,
         window=0,
     )
     assert list(out.columns) == ["close", "pe"]
@@ -94,7 +94,7 @@ def test_dependency_columns_read_as_strings_are_coerced_to_numeric() -> None:
         fields=["close"],
         start_date="2024-01-01",
         end_date="2024-01-31",
-        stock_codes=None,
+        instrument_codes=None,
         window=0,
     )
     assert out["close"].dtype == "float64"
@@ -120,7 +120,7 @@ def test_register_datasource_alias_maps_physical_columns() -> None:
         fields=["close"],
         start_date="2024-01-01",
         end_date="2024-01-31",
-        stock_codes=None,
+        instrument_codes=None,
         window=0,
     )
     assert list(out.columns) == ["close"]
@@ -146,7 +146,7 @@ def test_alias_conflict_same_physical_two_logical_raises() -> None:
             fields=["close", "open"],
             start_date=None,
             end_date="2024-01-31",
-            stock_codes=None,
+            instrument_codes=None,
             window=0,
         )
 
@@ -180,7 +180,7 @@ def test_unknown_field_raises() -> None:
             fields=["nope"],
             start_date=None,
             end_date="2024-01-02",
-            stock_codes=None,
+            instrument_codes=None,
             window=0,
         )
 
@@ -193,6 +193,6 @@ def test_no_registration_raises() -> None:
             fields=["close"],
             start_date=None,
             end_date="2024-01-02",
-            stock_codes=None,
+            instrument_codes=None,
             window=0,
         )

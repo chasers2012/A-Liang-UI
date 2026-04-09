@@ -32,7 +32,7 @@ export interface FactorEvaluationRowPublic {
   has_evaluation: boolean;
   evaluated_at?: string | null;
   window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
+  instrument_count?: number | null;
   error?: string | null;
   /**
    * Workflow collected results payload (来自后端 FactorEvaluationRowPublic#results).

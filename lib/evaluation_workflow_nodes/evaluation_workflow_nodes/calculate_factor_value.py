@@ -16,7 +16,7 @@ from workflow import (
 
 @workflow_node(
     label="计算因子",
-    description="根据 Factor 实例与数据集上的评价区间、股票范围计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
+    description="根据 Factor 实例与数据集上的评价区间、标的范围计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -24,7 +24,7 @@ from workflow import (
             required=True,
             value_type="data_set",
             label="数据集",
-            description="计算节点使用的数据集；评价区间与股票代码范围在数据集上配置",
+            description="计算节点使用的数据集；评价区间与标的代码范围在数据集上配置",
         ),
         NumberNodeParam(
             "quantiles",
@@ -59,7 +59,7 @@ class CalculateFactorValueNode:
             factor,
             start_date=start,
             end_date=end,
-            stock_codes=data_set.stock_codes,
+            instrument_codes=data_set.instrument_codes,
             long_short=bool(kwargs.get("long_short", True)),
         )
         quantiles = kwargs.get("quantiles", 5)

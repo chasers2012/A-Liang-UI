@@ -51,7 +51,7 @@ def run_factor_dry_run(
     *,
     dry_run_start_date: str = DEFAULT_DRY_RUN_START_DATE,
     dry_run_end_date: str = DEFAULT_DRY_RUN_END_DATE,
-    stock_codes: list[str] | None = None,
+    instrument_codes: list[str] | None = None,
 ) -> dict[str, Any]:
     """Load factor source and run ``calculate()``; dict for graph state updates."""
     if not factor_source:
@@ -74,7 +74,7 @@ def run_factor_dry_run(
     try:
         cls, class_name = is_valid_factor_class(factor_source)
         inst = cls(dependency_resolver=resolver)
-        out = inst.calculate(start_date=start, end_date=end, stock_codes=stock_codes)
+        out = inst.calculate(start_date=start, end_date=end, instrument_codes=instrument_codes)
         if out.empty:
             return {
                 "dry_run_ok": False,
@@ -104,7 +104,7 @@ def run_alphalens_evaluation(
     skip_alphalens_evaluation: bool = False,
     eval_start_date: str = DEFAULT_EVAL_START_DATE,
     eval_end_date: str = DEFAULT_EVAL_END_DATE,
-    stock_codes: list[str] | None = None,
+    instrument_codes: list[str] | None = None,
     quantiles: int = DEFAULT_QUANTILES,
 ) -> dict[str, Any]:
     """Run Alphalens evaluation for the given factor source."""
@@ -137,7 +137,7 @@ def run_alphalens_evaluation(
             factor,
             start_date=start,
             end_date=end,
-            stock_codes=stock_codes,
+            instrument_codes=instrument_codes,
             long_short=True,
         )
         ev.evaluate_factor(quantiles=quantiles, periods=(1, 5, 10, 20))

@@ -26,7 +26,7 @@ def jsonable_metric_value(val: Any) -> Any:
     return val
 
 
-def stock_count_from_alignment(idx: pd.Index) -> int | None:
+def instrument_count_from_alignment(idx: pd.Index) -> int | None:
     if not isinstance(idx, pd.MultiIndex):
         return None
     try:
