@@ -11,7 +11,7 @@ import {
   appendableSlotSortKey,
   normalizeAppendableHandle,
 } from "./appendable-handle";
-import { SYSTEM_PREPROCESSING_NODE_TYPES } from "../system-preprocessing-node-types";
+import { SYSTEM_PREPROCESSING_NODE_TYPES } from "@/app/data/data-sets/ui/system-preprocessing-node-types";
 
 function appendableSocketNamesFromInputs(
   inputs: WorkflowNodeInputSpec[],

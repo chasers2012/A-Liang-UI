@@ -42,7 +42,7 @@ import {
   toReactFlowNodes,
 } from "./reactflow/serialize";
 import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
-import { SYSTEM_PREPROCESSING_NODE_TYPES } from "./system-preprocessing-node-types";
+import { SYSTEM_PREPROCESSING_NODE_TYPES } from "@/app/data/data-sets/ui/system-preprocessing-node-types";
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { WorkflowGraphPersisted } from "./reactflow/types";

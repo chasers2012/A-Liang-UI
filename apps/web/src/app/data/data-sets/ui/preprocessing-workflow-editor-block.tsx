@@ -16,7 +16,7 @@ import {
   type WorkflowNodeTypeDefinition,
 } from "@/components/workflow-graph";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
-import { SYSTEM_PREPROCESSING_NODE_TYPES } from "@/components/workflow-graph/system-preprocessing-node-types";
+import { SYSTEM_PREPROCESSING_NODE_TYPES } from "./system-preprocessing-node-types";
 
 function toWorkflowNodeTypes(
   catalog: EvaluationNodeTypeCatalogItemPublic[],

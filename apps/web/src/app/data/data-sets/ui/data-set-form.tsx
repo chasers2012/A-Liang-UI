@@ -51,9 +51,9 @@ import {
 import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 import {
-  COLLECT_FRAMES_NODE_TYPE,
-  DATA_SET_FRAMES_INPUT_NODE_TYPE,
-} from "@/components/workflow-graph/system-preprocessing-node-types";
+  ensureSystemPreprocessingNodes,
+  syncSystemPreprocessingWorkflow,
+} from "./system-preprocessing-node-types";
 import { PreprocessingWorkflowEditorBlock } from "./preprocessing-workflow-editor-block";
 
 export type DataSetBindingFormRow = {
@@ -85,129 +85,11 @@ export function emptyDataSetForm(): DataSetFormState {
         asset_column: "",
       },
     ],
-    preprocessing_workflow: { nodes: [], links: [] },
+    preprocessing_workflow: ensureSystemPreprocessingNodes({ nodes: [], links: [] }),
     start: "2023-01-01",
     end: "2024-12-31",
     instrument_codes_text: "",
   };
-}
-
-function buildFramesInputOutputs(
-  datasourceIds: string[],
-  datasourceNameById: Record<string, string>,
-): {
-  name: string;
-  required: boolean;
-  value_type: string;
-  label: string;
-  description: string;
-}[] {
-  const RAW_FRAMES_VALUE_TYPE = "raw_frames";
-  const out = [];
-  for (const dsId of datasourceIds) {
-    const displayName = datasourceNameById[dsId]?.trim() || dsId;
-    out.push({
-      name: dsId,
-      required: false,
-      value_type: RAW_FRAMES_VALUE_TYPE,
-      label: displayName,
-      description: `仅包含数据源 ${displayName} 的原始 frames 映射。`,
-    });
-  }
-  return out;
-}
-
-function syncFramesInputNodeOutputs(
-  workflow: WorkflowGraphPersisted,
-  datasourceIds: string[],
-  datasourceNameById: Record<string, string>,
-): WorkflowGraphPersisted {
-  const desiredOutputs = buildFramesInputOutputs(datasourceIds, datasourceNameById);
-  const desiredSocketNames = new Set(desiredOutputs.map((x) => x.name));
-  const currentFramesInputNode = workflow.nodes.find(
-    (n) => n.type === DATA_SET_FRAMES_INPUT_NODE_TYPE,
-  );
-  const framesInputNodeId = currentFramesInputNode?.id;
-  if (!framesInputNodeId) return workflow;
-  let hasChange = false;
-  const nodes = workflow.nodes.map((node) => {
-    if (node.type !== DATA_SET_FRAMES_INPUT_NODE_TYPE) return node;
-    const current = JSON.stringify(node.outputs ?? []);
-    const next = JSON.stringify(desiredOutputs);
-    if (current === next) return node;
-    hasChange = true;
-    return { ...node, outputs: desiredOutputs };
-  });
-
-  const validLinks = workflow.links.map((link) => {
-    if (link.from_node !== framesInputNodeId) return link;
-    if (desiredSocketNames.has(link.from_socket)) return link;
-    return null;
-  }).filter((x): x is WorkflowGraphPersisted["links"][number] => {
-    const keep = x !== null;
-    if (!keep) hasChange = true;
-    return keep;
-  });
-  let links = validLinks;
-
-  const collectNode = [...nodes]
-    .reverse()
-    .find((n) => n.type === COLLECT_FRAMES_NODE_TYPE);
-  if (collectNode && datasourceIds.length > 0) {
-    const existingDirectLinkSockets = new Set(
-      links
-        .filter(
-          (l) =>
-            l.from_node === framesInputNodeId &&
-            l.to_node === collectNode.id &&
-            l.to_socket === "frames",
-        )
-        .map((l) => l.from_socket),
-    );
-    const defaultLinks = datasourceIds
-      .filter((dsId) => !existingDirectLinkSockets.has(dsId))
-      .map((dsId) => ({
-        from_node: framesInputNodeId,
-        from_socket: dsId,
-        to_node: collectNode.id,
-        to_socket: "frames",
-        id: null,
-      }));
-    if (defaultLinks.length > 0) {
-      hasChange = true;
-      links = [...links, ...defaultLinks];
-    }
-  }
-
-  // CollectFrames uses appendable input; ReactFlow restores those edges from
-  // node.params.frames (not from links), so keep params in sync with links.
-  const nodesWithCollectParams = nodes.map((node) => {
-    if (!collectNode || node.id !== collectNode.id) return node;
-    const framesWires = links
-      .filter((l) => l.to_node === collectNode.id && l.to_socket === "frames")
-      .map((l) => ({
-        from_node: l.from_node,
-        from_socket: l.from_socket,
-      }));
-    const nodeParams = node.params ?? {};
-    const prevFramesWires = Array.isArray(nodeParams["frames"])
-      ? nodeParams["frames"]
-      : [];
-    if (JSON.stringify(prevFramesWires) === JSON.stringify(framesWires)) {
-      return node;
-    }
-    hasChange = true;
-    return {
-      ...node,
-      params: {
-        ...nodeParams,
-        frames: framesWires,
-      },
-    };
-  });
-
-  if (!hasChange) return workflow;
-  return { ...workflow, nodes: nodesWithCollectParams, links };
 }
 
 function sameWorkflowGraph(
@@ -267,7 +149,9 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     name: row.name,
     description: row.description,
     bindings,
-    preprocessing_workflow: row.preprocessing_workflow,
+    preprocessing_workflow: ensureSystemPreprocessingNodes(
+      row.preprocessing_workflow,
+    ),
     start: toDateInputValue(row.start),
     end: toDateInputValue(row.end),
     instrument_codes_text: row.instrument_codes.length
@@ -706,7 +590,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       // override graph edits made directly on the canvas.
       const liveGraph = canvasRef.current?.getGraph();
       const baseWorkflow = liveGraph ?? prev.preprocessing_workflow;
-      const syncedWorkflow = syncFramesInputNodeOutputs(
+      const syncedWorkflow = syncSystemPreprocessingWorkflow(
         baseWorkflow,
         datasourceIds,
         datasourceNameById,

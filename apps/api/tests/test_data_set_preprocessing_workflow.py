@@ -137,7 +137,7 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
                 "from_node": "pp_node",
                 "from_socket": "frames",
                 "to_node": "collect_frames",
-                "to_socket": "frames",
+                "to_socket": "dataframe",
             },
         ],
     }

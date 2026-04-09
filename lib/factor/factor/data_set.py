@@ -205,6 +205,7 @@ class DataSet:
     def _extract_collected_frames_from_workflow(
         workflow_json: str,
         node_results: dict[str, dict[str, Any]],
+        raw_frame_keys: list[str],
     ) -> dict[str, pd.DataFrame]:
         import json
 
@@ -228,9 +229,18 @@ class DataSet:
         # 取最后一个 CollectFrames 作为最终输出
         final_id = collect_ids[-1]
         collected = node_results.get(final_id)
-        if not collected or not isinstance(collected, dict):
-            raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回 frames")
-        return collected
+        if not isinstance(collected, tuple) or len(collected) != 1:
+            raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回有效 DataFrame")
+
+        frames_out = collected[0]
+        if isinstance(frames_out, pd.DataFrame):
+            if len(raw_frame_keys) != 1:
+                raise ValueError(
+                    f"CollectFrames 节点 {final_id!r} 返回单 DataFrame，"
+                    "但当前数据集包含多个 datasource，无法回填到 frames 映射",
+                )
+            return {raw_frame_keys[0]: frames_out}
+        raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回有效 DataFrame")
 
     def _load_raw_frames_for_panel(
         self,
@@ -294,6 +304,7 @@ class DataSet:
         return self._extract_collected_frames_from_workflow(
             workflow,
             node_results=node_results,  # type: ignore[arg-type]
+            raw_frame_keys=list(raw_frames.keys()),
         )
 
     def get_panel(

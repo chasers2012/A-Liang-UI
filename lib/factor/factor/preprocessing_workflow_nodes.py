@@ -4,7 +4,7 @@ from typing import Any
 
 from workflow import AppendableSocket, Socket, workflow_node
 
-_RAW_FRAMES_VALUE_TYPE = "raw_frames"
+_RAW_FRAMES_VALUE_TYPE = "dataframe"
 
 
 @workflow_node(
@@ -14,10 +14,10 @@ _RAW_FRAMES_VALUE_TYPE = "raw_frames"
     input_sockets=[],
     output_sockets=[
         Socket(
-            "frames",
+            "dataframe",
             required=True,
             value_type=_RAW_FRAMES_VALUE_TYPE,
-            label="raw frames",
+            label="数据源",
             description="dict[str, pd.DataFrame] 的 JSON 工作流值（运行时由后端注入）。",
         )
     ],
@@ -35,9 +35,9 @@ class DataSetFramesInput:
             if not name:
                 continue
             if name in frames:
-                out_values.append({name: frames[name]})
+                out_values.append(frames[name])
                 continue
-            out_values.append({})
+            out_values.append(None)
 
         if len(out_values) == 1:
             return out_values[0]
@@ -50,23 +50,34 @@ class DataSetFramesInput:
     category="data_set_preprocess",
     input_sockets=[
         AppendableSocket(
-            "frames",
+            "dataframe",
             required=True,
             value_type=_RAW_FRAMES_VALUE_TYPE,
-            label="输入 frames",
+            label="输入 DataFrame",
         )
     ],
     output_sockets=[],
 )
 class CollectFrames:
-    def execute(self, frames: dict[str, Any], **kwargs: Any) -> Any:
+    def execute(self, dataframe: dict[str, Any], **kwargs: Any) -> Any:
         _ = kwargs
-        if not isinstance(frames, dict):
-            raise ValueError("CollectFrames.frames 必须为 appendable 输入映射")
+        if not isinstance(dataframe, dict):
+            raise ValueError("CollectFrames.dataframe 必须为 appendable 输入映射")
 
-        merged: dict[str, Any] = {}
-        for item in frames.values():
-            if not isinstance(item, dict):
-                raise ValueError("CollectFrames appendable 输入项必须为 dict[str, DataFrame]")
-            merged.update(item)
-        return merged
+        import pandas as pd
+
+        frames: list[pd.DataFrame] = []
+        for item in dataframe.values():
+            if isinstance(item, dict):
+                for v in item.values():
+                    if not isinstance(v, pd.DataFrame):
+                        raise ValueError("CollectFrames appendable 输入项必须为 DataFrame")
+                    frames.append(v)
+                continue
+            if not isinstance(item, pd.DataFrame):
+                raise ValueError("CollectFrames appendable 输入项必须为 DataFrame")
+            frames.append(item)
+
+        if not frames:
+            raise ValueError("CollectFrames 至少需要一个 dataframe 输入")
+        return pd.concat(frames, axis=0)
