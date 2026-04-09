@@ -234,11 +234,7 @@ class DataSet:
         collected = node_results.get(final_id)
         if not collected or not isinstance(collected, dict):
             raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回 frames")
-
-        frames = collected.get("frames")
-        if not isinstance(frames, dict):
-            raise ValueError("CollectFrames.frames 必须为 dict[str, pd.DataFrame]")
-        return frames
+        return collected
 
     def _load_raw_frames_for_panel(
         self,

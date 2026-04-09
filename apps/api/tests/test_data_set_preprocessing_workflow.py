@@ -52,7 +52,7 @@ class MulClose(DataPreprocessorBase):
 """
 
 
-def _preprocessing_workflow(preprocessor_type: str) -> dict:
+def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> dict:
     INPUT_FRAMES_TYPE = "factor.preprocessing_workflow_nodes.DataSetFramesInput"
     COLLECT_FRAMES_TYPE = "factor.preprocessing_workflow_nodes.CollectFrames"
     RAW_FRAMES_VALUE_TYPE = "raw_frames"
@@ -68,8 +68,8 @@ def _preprocessing_workflow(preprocessor_type: str) -> dict:
                 "inputs": [],
                 "outputs": [
                     {
-                        "name": "frames",
-                        "required": True,
+                        "name": datasource_socket,
+                        "required": False,
                         "value_type": RAW_FRAMES_VALUE_TYPE,
                     }
                 ],
@@ -123,22 +123,17 @@ def _preprocessing_workflow(preprocessor_type: str) -> dict:
                         "name": "frames",
                         "required": True,
                         "value_type": RAW_FRAMES_VALUE_TYPE,
+                        "render_type": "appendable",
                     }
                 ],
-                "outputs": [
-                    {
-                        "name": "frames",
-                        "required": False,
-                        "value_type": RAW_FRAMES_VALUE_TYPE,
-                    }
-                ],
+                "outputs": [],
                 "params": {},
             },
         ],
         "links": [
             {
                 "from_node": "frames_input",
-                "from_socket": "frames",
+                "from_socket": datasource_socket,
                 "to_node": "pp_node",
                 "to_socket": "frames",
             },
@@ -184,7 +179,7 @@ def test_data_set_preprocessing_workflow_applies_to_panel(
         json={
             "name": "ds_pp",
             "datasource_bindings": [_ds_binding(ds_id)],
-            "preprocessing_workflow": _preprocessing_workflow(pp_id),
+            "preprocessing_workflow": _preprocessing_workflow(pp_id, ds_id),
             "start": "2023-01-01",
             "end": "2023-12-31",
             "instrument_codes": [],

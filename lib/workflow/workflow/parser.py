@@ -127,13 +127,13 @@ class Parser:
             if isinstance(v, str) and v.strip():
                 setattr(node_obj, k, v)
 
-        if not getattr(node_obj, "outputs", None) and isinstance(json_dict.get("outputs"), list):
+        if isinstance(json_dict.get("outputs"), list):
             node_obj.outputs = tuple(
                 Parser.parse_socket(s)
                 for s in json_dict.get("outputs", [])
                 if isinstance(s, dict) and s.get("name")
             )
-        if not getattr(node_obj, "inputs", None) and isinstance(json_dict.get("inputs"), list):
+        if isinstance(json_dict.get("inputs"), list):
             node_obj.inputs = tuple(
                 Parser.parse_socket(s)
                 for s in json_dict.get("inputs", [])

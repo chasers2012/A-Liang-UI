@@ -113,6 +113,8 @@ export function toReactFlowNodes(
 ): Node[] {
   return persisted.nodes.map((n) => {
     const def = catalog[n.type];
+    const persistedInputs = arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs);
+    const persistedOutputs = arrayOrEmpty<WorkflowSocketDefinition>(n.outputs);
     return {
       id: n.id,
       type: "workflowStep",
@@ -120,8 +122,11 @@ export function toReactFlowNodes(
       data: {
         backendType: n.type,
         label: def?.label ?? n.label ?? n.type,
-        inputs: def?.inputs ?? n.inputs,
-        outputs: def?.outputs ?? n.outputs,
+        // Prefer persisted sockets when available, so dynamic node sockets
+        // (e.g. DataSetFramesInput per-datasource outputs) are preserved.
+        inputs: persistedInputs.length > 0 ? persistedInputs : (def?.inputs ?? []),
+        outputs:
+          persistedOutputs.length > 0 ? persistedOutputs : (def?.outputs ?? []),
         params: { ...(n.params ?? {}) },
       },
     } satisfies Node;

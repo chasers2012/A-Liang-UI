@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from workflow import Socket, workflow_node
+from workflow import AppendableSocket, Socket, workflow_node
 
 _RAW_FRAMES_VALUE_TYPE = "raw_frames"
 
@@ -25,9 +25,23 @@ _RAW_FRAMES_VALUE_TYPE = "raw_frames"
 class DataSetFramesInput:
     def execute(self, **kwargs: Any) -> Any:
         frames = kwargs.get("frames")
-        if frames is None:
+        if not isinstance(frames, dict):
             raise ValueError("workflow context 缺少 frames")
-        return frames
+        outputs = tuple(getattr(self, "outputs", ()) or ())
+
+        out_values: list[Any] = []
+        for socket in outputs:
+            name = getattr(socket, "name", "")
+            if not name:
+                continue
+            if name in frames:
+                out_values.append({name: frames[name]})
+                continue
+            out_values.append({})
+
+        if len(out_values) == 1:
+            return out_values[0]
+        return tuple(out_values)
 
 
 @workflow_node(
@@ -35,22 +49,24 @@ class DataSetFramesInput:
     description="作为预处理工作流的终点：输出最终的 frames 供数据集后续标准化与合并使用。",
     category="data_set_preprocess",
     input_sockets=[
-        Socket(
+        AppendableSocket(
             "frames",
             required=True,
             value_type=_RAW_FRAMES_VALUE_TYPE,
             label="输入 frames",
         )
     ],
-    output_sockets=[
-        Socket(
-            "frames",
-            value_type=_RAW_FRAMES_VALUE_TYPE,
-            label="输出 frames",
-        )
-    ],
+    output_sockets=[],
 )
 class CollectFrames:
-    def execute(self, frames: Any, **kwargs: Any) -> Any:
+    def execute(self, frames: dict[str, Any], **kwargs: Any) -> Any:
         _ = kwargs
-        return frames
+        if not isinstance(frames, dict):
+            raise ValueError("CollectFrames.frames 必须为 appendable 输入映射")
+
+        merged: dict[str, Any] = {}
+        for item in frames.values():
+            if not isinstance(item, dict):
+                raise ValueError("CollectFrames appendable 输入项必须为 dict[str, DataFrame]")
+            merged.update(item)
+        return merged
