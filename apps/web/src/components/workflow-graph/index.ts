@@ -13,3 +13,8 @@ export {
   type WorkflowGraphCanvasHandle,
   type WorkflowGraphCanvasProps,
 } from "./workflow-graph-canvas";
+
+export {
+  WorkflowNodeTypeList,
+  type WorkflowNodeTypeListItem,
+} from "./workflow-node-type-list";
