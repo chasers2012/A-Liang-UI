@@ -2,34 +2,19 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from datasources import CsvDataSource, SqlDataSource
 from factor import FactorDataSource
 from workspace import get_workspace_root
 
+from app.datasource.plugin_registry import PluginRegistry
 from app.datasource.registry import DataSourceItemsRegistry
-from app.datasource.sql_url import build_sqlalchemy_url
 
 
 def get_datasource(id: str) -> FactorDataSource | None:
     rec = DataSourceItemsRegistry.get_item(id)
     if rec is None:
         return None
-    if rec.type == "sql":
-        if rec.sql is None:
-            raise ValueError("sql config missing for data source type=sql")
-        url = build_sqlalchemy_url(rec.sql)
-        if not url:
-            raise ValueError("sql config incomplete: need db_host and db_name")
-        return SqlDataSource(
-            engine=url,
-            table=rec.sql.table,
-        )
-    if rec.type == "csv":
-        return CsvDataSource(
-            path=rec.csv.path,
-            read_csv_kwargs=rec.csv.read_csv_kwargs,
-        )
-    raise ValueError(f"Unknown data source type: {rec.type}")
+    plugin = PluginRegistry.instance().get(rec.type)
+    return plugin.to_factor_datasource(dict(rec.config or {}))
 
 
 def resolve_csv_path(path_str: str) -> Path:

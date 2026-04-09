@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import select
 
-from app.datasource.schemas import CsvConfigStored, DataSourceRecord, SqlConfigStored
+from app.datasource.schemas import DataSourceRecord
 from app.persistence.models import DataSourceRow
 from app.persistence.sqlite_db import get_session
 
@@ -10,15 +10,13 @@ REGISTRY_FILENAME = "datasources/registry.json"
 
 
 def _row_to_record(row: DataSourceRow) -> DataSourceRecord:
-    sql = SqlConfigStored.model_validate(row.sql) if row.sql is not None else None
-    csv = CsvConfigStored.model_validate(row.csv) if row.csv is not None else None
+    cfg = dict(row.config or {})
     return DataSourceRecord(
         id=row.id,
         name=row.name,
-        type=row.type,  # type: ignore[arg-type]
+        type=row.type,
         enabled=row.enabled,
-        sql=sql,
-        csv=csv,
+        config=cfg,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -28,10 +26,9 @@ def _record_to_row(rec: DataSourceRecord) -> DataSourceRow:
     return DataSourceRow(
         id=rec.id,
         name=rec.name,
-        type=rec.type,
+        type=str(rec.type),
         enabled=rec.enabled,
-        sql=(rec.sql.model_dump(mode="json") if rec.sql is not None else None),
-        csv=(rec.csv.model_dump(mode="json") if rec.csv is not None else None),
+        config=dict(rec.config or {}),
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )

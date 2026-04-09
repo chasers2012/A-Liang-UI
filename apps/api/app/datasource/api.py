@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 
 from app.datasource.controller import get_datasource as get_datasource_instance
+from app.datasource.plugin_registry import PluginRegistry
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -12,72 +11,15 @@ from app.datasource.schemas import (
     DataSourcePatch,
     DataSourcePublic,
     DataSourceRecord,
-    SqlConfigStored,
-    SqlTableColumnsRequest,
-    SqlTableColumnsResponse,
+    InspectColumnsRequest,
+    InspectColumnsResponse,
     TestResult,
     record_to_public,
     utc_now_iso,
 )
-from app.datasource.table_columns import (
-    list_table_column_names,
-    sql_config_for_column_listing,
-)
 from app.datasource.verify import verify_datasource
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
-
-
-def _merge_sql_credentials(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
-    if "db_driver" in sp and sp["db_driver"] is not None:
-        sql.db_driver = str(sp["db_driver"])
-    if "db_host" in sp:
-        hv = sp["db_host"]
-        sql.db_host = "" if hv is None else str(hv)
-    if "db_port" in sp:
-        sql.db_port = sp["db_port"]
-    if "db_username" in sp:
-        uv = sp["db_username"]
-        sql.db_username = "" if uv is None else str(uv)
-    if "db_password" in sp:
-        pv = sp["db_password"]
-        sql.db_password = "" if pv is None else str(pv)
-    if "db_name" in sp:
-        nv = sp["db_name"]
-        sql.db_name = "" if nv is None else str(nv)
-
-
-def _merge_sql_table_mapping(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
-    if "table" in sp and sp["table"] is not None:
-        sql.table = str(sp["table"])
-    if "column_map" in sp and sp["column_map"] is not None:
-        sql.column_map = dict(sp["column_map"])
-
-
-def _merge_sql_subpatch(sql: SqlConfigStored, sp: dict[str, Any]) -> None:
-    _merge_sql_credentials(sql, sp)
-    _merge_sql_table_mapping(sql, sp)
-
-
-def _merge_csv_subpatch(rec: DataSourceRecord, cp: dict[str, Any]) -> None:
-    assert rec.csv is not None
-    if "path" in cp:
-        rec.csv.path = cp["path"]
-    if "read_csv_kwargs" in cp:
-        rec.csv.read_csv_kwargs = dict(cp["read_csv_kwargs"])
-
-
-def _merge_patch(rec: DataSourceRecord, patch: DataSourcePatch) -> None:
-    data = patch.model_dump(exclude_unset=True)
-    if "name" in data:
-        rec.name = data["name"]
-    if "enabled" in data:
-        rec.enabled = data["enabled"]
-
-    if rec.type == "sql" and rec.sql and "sql" in data:
-        _merge_sql_subpatch(rec.sql, data["sql"])
-    if rec.type == "csv" and rec.csv and "csv" in data:
-        _merge_csv_subpatch(rec, data["csv"])
 
 
 @router.get("", response_model=list[DataSourcePublic])
@@ -85,20 +27,40 @@ def list_datasources() -> list[DataSourcePublic]:
     return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
 
 
-@router.post("/sql-table-columns", response_model=SqlTableColumnsResponse)
-def sql_table_columns(body: SqlTableColumnsRequest) -> SqlTableColumnsResponse:
-    stored = None
+@router.post("/inspect-columns", response_model=InspectColumnsResponse)
+def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
+    """
+    Plugin-based column inspection.
+
+    For now this is implemented for `type=sql` using the built-in SQL plugin.
+    """
+    config: dict = {}
+    ds_type: str | None = body.type
     if body.datasource_id:
         rec = DataSourceItemsRegistry.get_item(body.datasource_id)
-        if rec is None or rec.type != "sql" or not rec.sql:
-            raise HTTPException(status_code=404, detail="数据源不存在或非 SQL 类型")
-        stored = rec.sql
+        if rec is None:
+            raise HTTPException(status_code=404, detail="数据源不存在")
+        ds_type = str(rec.type)
+        config = dict(rec.config or {})
+        if body.config is not None:
+            # replace semantics for overlay: if provided, it replaces saved config
+            config = dict(body.config)
+    else:
+        if not ds_type:
+            raise HTTPException(
+                status_code=400, detail="type is required when datasource_id is not provided"
+            )
+        config = dict(body.config or {})
+
     try:
-        cfg = sql_config_for_column_listing(body, stored)
-        cols = list_table_column_names(cfg)
-    except ValueError as e:
+        plugin = PluginRegistry.instance().get(str(ds_type))
+        validated = plugin.validate_config(config)
+        if not hasattr(plugin, "list_table_columns"):
+            raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
+        cols = plugin.list_table_columns(validated)
+    except (ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return SqlTableColumnsResponse(columns=cols)
+    return InspectColumnsResponse(columns=[str(c) for c in cols])
 
 
 @router.get(
@@ -130,21 +92,31 @@ def get_datasource(ds_id: str) -> DataSourcePublic:
 
 @router.post("", response_model=DataSourcePublic)
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
+    try:
+        plugin = PluginRegistry.instance().get(str(body.type))
+        validated = plugin.validate_config(dict(body.config or {}))
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     new_rec = body.to_record()
+    new_rec.config = validated
     DataSourceItemsRegistry.add_item(new_rec)
     return record_to_public(new_rec)
 
 
 @router.patch("/{ds_id}", response_model=DataSourcePublic)
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
-    unset = body.model_dump(exclude_unset=True)
-
     def _apply(rec: DataSourceRecord) -> None:
-        if rec.type == "csv" and "sql" in unset:
-            raise HTTPException(status_code=400, detail="CSV 数据源不能更新 sql 字段")
-        if rec.type == "sql" and "csv" in unset:
-            raise HTTPException(status_code=400, detail="SQL 数据源不能更新 csv 字段")
-        _merge_patch(rec, body)
+        data = body.model_dump(exclude_unset=True)
+        if "name" in data:
+            rec.name = data["name"]
+        if "enabled" in data:
+            rec.enabled = data["enabled"]
+        if "config" in data:
+            try:
+                plugin = PluginRegistry.instance().get(str(rec.type))
+                rec.config = plugin.validate_config(dict(data["config"] or {}))
+            except (ValueError, TypeError) as e:
+                raise HTTPException(status_code=400, detail=str(e)) from e
         rec.updated_at = utc_now_iso()
 
     rec = DataSourceItemsRegistry.update_item(ds_id, _apply)

@@ -16,8 +16,7 @@ class DataSourceRow(SQLModel, table=True):
     name: str
     type: str
     enabled: bool = True
-    sql: dict[str, Any] | None = Field(default=None, sa_column=Column(JsonText))
-    csv: dict[str, Any] | None = Field(default=None, sa_column=Column(JsonText))
+    config: dict[str, Any] | None = Field(default=None, sa_column=Column(JsonText))
     created_at: str
     updated_at: str
 
