@@ -9,8 +9,6 @@ from .graph_algo import topological_order
 from .node_decorator import collect_node_classes, workflow_node, workflow_node_type_key
 from .node_loader import WorkflowNodeLoader
 from .node_types import (
-    WORKFLOW_INPUT_NODE_ID,
-    WORKFLOW_OUTPUT_NODE_ID,
     AppendableSocket,
     BooleanNodeParam,
     Node,
@@ -25,8 +23,6 @@ from .node_types import (
 )
 
 __all__ = [
-    "WORKFLOW_INPUT_NODE_ID",
-    "WORKFLOW_OUTPUT_NODE_ID",
     "AppendableSocket",
     "BooleanNodeParam",
     "Node",

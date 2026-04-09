@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
-from workflow import WORKFLOW_OUTPUT_NODE_ID, WorkflowExecutor
+from workflow import WorkflowExecutor
 
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter
 from factor.panel import panel_load_start_date
@@ -253,8 +253,10 @@ class DataSet:
             workflow,
             context={"frames": raw_frames, **raw_frames},
         )
-        workflow_out = node_results.get(WORKFLOW_OUTPUT_NODE_ID, {})
-        frames_out = workflow_out.get("frames")
+        workflow_out = (
+            (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
+        )
+        frames_out = (workflow_out or {}).get("frames")
         if frames_out is None:
             return raw_frames
         if not isinstance(frames_out, dict):

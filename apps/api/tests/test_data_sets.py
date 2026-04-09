@@ -87,16 +87,12 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
         ],
         "links": [
             {
-                "from_node": "load",
-                "from_socket": "data_set",
-                "to_node": "calc",
-                "to_socket": "data_set",
+                "from": {"kind": "node", "node_id": "load", "socket": "data_set"},
+                "to": {"kind": "node", "node_id": "calc", "socket": "data_set"},
             },
             {
-                "from_node": "calc",
-                "from_socket": "clean_factor",
-                "to_node": "__workflow_output__",
-                "to_socket": "result",
+                "from": {"kind": "node", "node_id": "calc", "socket": "clean_factor"},
+                "to": {"kind": "workflow_output", "socket": "result"},
             },
         ],
     }

@@ -70,14 +70,53 @@ class Parser:
 
     @staticmethod
     def parse_workflow_link(config_dict: dict[str, Any]) -> WorkflowLink:
-        from .node_types import WorkflowLink
+        from .node_types import WorkflowEndpoint, WorkflowLink
+
+        raw_from = config_dict.get("from")
+        raw_to = config_dict.get("to")
+        if not isinstance(raw_from, dict) or not isinstance(raw_to, dict):
+            raise ValueError("link payload missing object fields 'from' and 'to'")
+
+        fk = raw_from.get("kind")
+        tk = raw_to.get("kind")
+        if fk not in {"node", "workflow_input"}:
+            raise ValueError("link.from.kind must be 'node' or 'workflow_input'")
+        if tk not in {"node", "workflow_output"}:
+            raise ValueError("link.to.kind must be 'node' or 'workflow_output'")
+
+        from_socket = raw_from.get("socket")
+        to_socket = raw_to.get("socket")
+        if not isinstance(from_socket, str) or not from_socket.strip():
+            raise ValueError("link.from.socket must be non-empty string")
+        if not isinstance(to_socket, str) or not to_socket.strip():
+            raise ValueError("link.to.socket must be non-empty string")
+
+        from_node_id = raw_from.get("node_id")
+        to_node_id = raw_to.get("node_id")
+        if fk == "node":
+            if not isinstance(from_node_id, str) or not from_node_id.strip():
+                raise ValueError("link.from.node_id must be non-empty string when kind='node'")
+        else:
+            from_node_id = None
+
+        if tk == "node":
+            if not isinstance(to_node_id, str) or not to_node_id.strip():
+                raise ValueError("link.to.node_id must be non-empty string when kind='node'")
+        else:
+            to_node_id = None
 
         return WorkflowLink(
             id=config_dict.get("id"),
-            from_node=config_dict.get("from_node", ""),
-            from_socket=config_dict.get("from_socket", ""),
-            to_node=config_dict.get("to_node", ""),
-            to_socket=config_dict.get("to_socket", ""),
+            from_=WorkflowEndpoint(
+                kind="node" if fk == "node" else "workflow_input",
+                node_id=from_node_id if fk == "node" else None,
+                socket=from_socket,
+            ),
+            to=WorkflowEndpoint(
+                kind="node" if tk == "node" else "workflow_output",
+                node_id=to_node_id if tk == "node" else None,
+                socket=to_socket,
+            ),
         )
 
     @staticmethod

@@ -17,6 +17,7 @@ from app.evaluation.profile.schemas import (
     EvaluationProfilePublic,
     EvaluationProfileRecord,
     WorkflowIOSpecPublic,
+    empty_workflow_template_dict,
     workflow_public_dict,
 )
 
@@ -58,6 +59,11 @@ def list_node_types() -> list[EvaluationNodeTypePublic]:
 @router.get("/workflow-io", response_model=WorkflowIOSpecPublic)
 def get_workflow_io() -> WorkflowIOSpecPublic:
     return get_evaluation_profile_workflow_io_spec()
+
+
+@router.get("/workflow-template", response_model=dict)
+def get_workflow_template() -> dict:
+    return empty_workflow_template_dict()
 
 
 @router.get("", response_model=list[EvaluationProfilePublic])

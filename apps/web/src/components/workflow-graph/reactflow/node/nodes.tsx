@@ -73,7 +73,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
   return (
     <div
       className={cn(
-        "min-w-[220px] max-w-[min(320px,92vw)] rounded-lg border bg-popover text-popover-foreground shadow-sm transform-gpu will-change-transform",
+        "min-w-[220px] max-w-[min(320px,92vw)] rounded-lg border/95 bg-popover/95 text-popover-foreground shadow-sm transform-gpu will-change-transform",
         selected ? "border-primary ring-2 ring-primary/30" : "border-border",
       )}
     >
@@ -142,8 +142,8 @@ export const WorkflowBoundaryNode = memo(function WorkflowBoundaryNode(
   const { readOnly } = useWorkflowGraphContext();
   const isInput = data.side === "input";
   return (
-    <div className="min-w-[140px] rounded-md border border-dashed border-border/60 bg-transparent py-1">
-      <div className="px-2 py-1 text-xs text-muted-foreground">{data.label}</div>
+    <div className="min-w-[140px] rounded-md border  border-border/30 bg-primary/30 py-1 text-popover-foreground">
+      <div className="px-2 py-1 text-sm font-medium leading-5">{data.label}</div>
       <div className="py-1">
         {data.sockets.map((s) => (
           <SocketRow

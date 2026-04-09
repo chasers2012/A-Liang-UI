@@ -114,16 +114,12 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
         ],
         "links": [
             {
-                "from_node": "__workflow_input__",
-                "from_socket": "frames",
-                "to_node": "pp_node",
-                "to_socket": "frames",
+                "from": {"kind": "workflow_input", "socket": "frames"},
+                "to": {"kind": "node", "node_id": "pp_node", "socket": "frames"},
             },
             {
-                "from_node": "pp_node",
-                "from_socket": "frames",
-                "to_node": "__workflow_output__",
-                "to_socket": "frames",
+                "from": {"kind": "node", "node_id": "pp_node", "socket": "frames"},
+                "to": {"kind": "workflow_output", "socket": "frames"},
             },
         ],
     }

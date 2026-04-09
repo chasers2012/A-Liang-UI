@@ -6,7 +6,7 @@ import traceback
 from datetime import datetime, timezone
 from typing import Any
 
-from workflow import WORKFLOW_OUTPUT_NODE_ID, WorkflowExecutor
+from workflow import WorkflowExecutor
 
 from app.evaluation.profile.schemas import EvaluationProfileRecord
 from app.factors.controller import get_factor
@@ -98,8 +98,10 @@ def run_evaluation_profile_workflow(
 
     try:
         node_results = executor.execute(profile.workflow, context=exec_ctx)
-        workflow_result = node_results.get(WORKFLOW_OUTPUT_NODE_ID, {})
-        final_result = _to_jsonable(workflow_result.get("result"))
+        workflow_result = (
+            (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
+        )
+        final_result = _to_jsonable((workflow_result or {}).get("result"))
     except ValueError as e:
         return EvaluationRunRecord(
             start_at=started_at,

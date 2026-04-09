@@ -48,7 +48,7 @@ def seed_evaluation_profile_examples() -> None:
             id=profile_id,
             name=_display_name_from_stem(path.stem),
             description=f"Seeded from {path.name}",
-            workflow=workflow_obj,
+            workflow=json.dumps(workflow_obj, ensure_ascii=False),
             created_at=(existing.created_at if existing is not None else now),
             updated_at=now,
         )

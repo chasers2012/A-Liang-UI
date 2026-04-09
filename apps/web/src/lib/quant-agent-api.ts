@@ -177,8 +177,7 @@ function parseAgentChatSsePayloadObject(
       payload: {
         name: sseStringField(p.name),
         id: sseStringField(p.id),
-        error:
-          typeof p.error === "string" ? p.error : String(p.error ?? ""),
+        error: typeof p.error === "string" ? p.error : String(p.error ?? ""),
       },
     };
   }
@@ -207,21 +206,13 @@ export type AgentChatStreamOptions = {
   /** 首包：本轮 user / assistant 消息在服务端持久化所用的 id（用于替换乐观 key）。 */
   onMessageIds?: (payload: { user: string; assistant: string }) => void;
   onDelta: (text: string) => void;
-  onToolStart?: (payload: {
-    name: string;
-    id: string;
-    args?: unknown;
-  }) => void;
+  onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
   onToolResult?: (payload: {
     name: string;
     id: string;
     result: unknown;
   }) => void;
-  onToolError?: (payload: {
-    name: string;
-    id: string;
-    error: string;
-  }) => void;
+  onToolError?: (payload: { name: string; id: string; error: string }) => void;
 };
 
 /**
@@ -293,7 +284,9 @@ export async function postAgentChatStream(
   }
 }
 
-export function listAgentChatSessions(): Promise<AgentChatSessionSummaryPublic[]> {
+export function listAgentChatSessions(): Promise<
+  AgentChatSessionSummaryPublic[]
+> {
   return apiFetchJson<AgentChatSessionSummaryPublic[]>("/agent/chat/sessions");
 }
 
@@ -573,7 +566,9 @@ export function getPreprocessorTemplate(): Promise<string> {
   return apiFetchJson<string>("/preprocessors/template");
 }
 
-export function createPreprocessor(body: unknown): Promise<PreprocessorDetailPublic> {
+export function createPreprocessor(
+  body: unknown,
+): Promise<PreprocessorDetailPublic> {
   return apiFetchJson<PreprocessorDetailPublic>("/preprocessors", {
     method: "POST",
     body: JSON.stringify(body),
@@ -708,6 +703,12 @@ export function listEvaluationNodeTypes(): Promise<
 
 export function getEvaluationWorkflowIO(): Promise<WorkflowIOSpecPublic> {
   return apiFetchJson<WorkflowIOSpecPublic>("/evaluation-profiles/workflow-io");
+}
+
+export function getEvaluationWorkflowTemplate(): Promise<Record<string, unknown>> {
+  return apiFetchJson<Record<string, unknown>>(
+    "/evaluation-profiles/workflow-template",
+  );
 }
 
 /** 领域 DTO：也可从 `@/models` 直接引用。 */

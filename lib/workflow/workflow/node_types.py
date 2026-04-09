@@ -8,7 +8,7 @@ graph instances (nodes + links; viewport is not persisted).
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 # --- Dataclasses (compile-time node metadata) ---------------------------------
 
@@ -283,40 +283,51 @@ class Node:
 
 # --- Graph instance models (nodes + links) ------------------------------------
 
-WORKFLOW_INPUT_NODE_ID = "__workflow_input__"
-WORKFLOW_OUTPUT_NODE_ID = "__workflow_output__"
+WorkflowEndpointKind = Literal["node", "workflow_input", "workflow_output"]
+
+
+class WorkflowEndpoint:
+    kind: WorkflowEndpointKind
+    node_id: str | None
+    socket: str
+
+    def __init__(
+        self,
+        *,
+        kind: WorkflowEndpointKind,
+        socket: str,
+        node_id: str | None = None,
+    ) -> None:
+        self.kind = kind
+        self.socket = socket
+        self.node_id = node_id
+
+    def serialize(self) -> dict[str, Any]:
+        if self.kind == "node":
+            return {"kind": "node", "node_id": self.node_id or "", "socket": self.socket}
+        if self.kind == "workflow_input":
+            return {"kind": "workflow_input", "socket": self.socket}
+        return {"kind": "workflow_output", "socket": self.socket}
 
 
 class WorkflowLink:
     id: str | None = None
-    from_node: str
-    from_socket: str
-    to_node: str
-    to_socket: str
+    from_: WorkflowEndpoint
+    to: WorkflowEndpoint
 
     def __init__(
         self,
         *,
         id: str | None = None,
-        from_node: str = "",
-        from_socket: str = "",
-        to_node: str = "",
-        to_socket: str = "",
+        from_: WorkflowEndpoint | None = None,
+        to: WorkflowEndpoint | None = None,
     ) -> None:
         self.id = id
-        self.from_node = from_node
-        self.from_socket = from_socket
-        self.to_node = to_node
-        self.to_socket = to_socket
+        self.from_ = from_ or WorkflowEndpoint(kind="node", node_id="", socket="")
+        self.to = to or WorkflowEndpoint(kind="node", node_id="", socket="")
 
-    def serialize(self) -> dict:
-        return {
-            "id": self.id,
-            "from_node": self.from_node,
-            "from_socket": self.from_socket,
-            "to_node": self.to_node,
-            "to_socket": self.to_socket,
-        }
+    def serialize(self) -> dict[str, Any]:
+        return {"id": self.id, "from": self.from_.serialize(), "to": self.to.serialize()}
 
 
 class WorkflowViewport:

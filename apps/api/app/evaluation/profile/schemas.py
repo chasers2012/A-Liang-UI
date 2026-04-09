@@ -28,6 +28,11 @@ _EMPTY_WORKFLOW: dict[str, Any] = {
 }
 
 
+def empty_workflow_template_dict() -> dict[str, Any]:
+    # Return a fresh dict instance for API/template consumers.
+    return dict(_EMPTY_WORKFLOW)
+
+
 def _validate_evaluation_workflow_dict(workflow: dict[str, Any]) -> None:
     if not isinstance(workflow.get("workflow_inputs"), list):
         raise ValueError("workflow 缺少 workflow_inputs")

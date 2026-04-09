@@ -19,7 +19,21 @@ from app.evaluation.profile.schemas import (
 )
 
 _EMPTY_WORKFLOW_JSON = json.dumps(
-    {"nodes": [], "links": []},
+    {
+        "nodes": [],
+        "links": [],
+        "workflow_inputs": [],
+        "workflow_outputs": [
+            {
+                "name": "result",
+                "required": False,
+                "label": "结果",
+                "description": "评价工作流最终输出。",
+                "value_type": "scalar_json",
+                "render_type": "appendable",
+            }
+        ],
+    },
     ensure_ascii=False,
 )
 
@@ -53,7 +67,7 @@ def _merge_evaluation_profile_patch(
 
 @tool(
     description=(
-        "获取空评价方案工作流 JSON 模板（nodes/links）。"
+        "获取空评价方案工作流 JSON 模板（nodes/links/workflow_inputs/workflow_outputs）。"
         "可先调用本工具拿到结构，再编辑节点与连线；"
         "最后用 create_evaluation_profile(body={name, description?, workflow?}) 保存。"
     )

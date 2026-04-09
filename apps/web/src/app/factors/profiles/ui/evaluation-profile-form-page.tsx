@@ -6,13 +6,18 @@ import { useRouter } from "next/navigation";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { createEvaluationProfile, getEvaluationProfile, patchEvaluationProfile } from "@/lib/quant-agent-api";
+import {
+  createEvaluationProfile,
+  getEvaluationProfile,
+  getEvaluationWorkflowTemplate,
+  patchEvaluationProfile,
+} from "@/lib/quant-agent-api";
 
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { Page } from "@/components/page";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
-import { EMPTY_EVALUATION_WORKFLOW } from "./profile-form-shared";
+import { EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT } from "./profile-form-shared";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 
@@ -31,9 +36,15 @@ export function EvaluationProfileFormPage(props: Props) {
     ? `/factors/profiles/${encodeURIComponent(id ?? "")}`
     : "/factors/profiles";
 
+  const [templateLoading, setTemplateLoading] = useState(!isEdit);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>(EMPTY_EVALUATION_WORKFLOW);
+  const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>({
+    nodes: [],
+    links: [],
+    workflow_inputs: [],
+    workflow_outputs: [],
+  });
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
 
@@ -62,6 +73,25 @@ export function EvaluationProfileFormPage(props: Props) {
   }, [id, isEdit]);
 
   useEffectMicrotask(() => void load(), [load]);
+
+  useEffectMicrotask(() => {
+    if (isEdit) return;
+    setTemplateLoading(true);
+    void getEvaluationWorkflowTemplate()
+      .then((tpl) => {
+        setWorkflow(tpl as unknown as WorkflowGraphPersisted);
+        setCanvasKey((k) => k + 1);
+      })
+      .catch(() => {
+        setWorkflow({
+          nodes: [],
+          links: [],
+          workflow_inputs: [],
+          workflow_outputs: [],
+        });
+      })
+      .finally(() => setTemplateLoading(false));
+  }, [isEdit]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -110,6 +140,16 @@ export function EvaluationProfileFormPage(props: Props) {
     return (
       <Page title={isEdit ? "编辑评价方案" : "新增评价方案"}>
         <p className="text-sm text-muted-foreground">加载中…</p>
+      </Page>
+    );
+  }
+
+  if (templateLoading) {
+    return (
+      <Page title="新增评价方案">
+        <p className="text-sm text-muted-foreground">
+          {EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT}
+        </p>
       </Page>
     );
   }

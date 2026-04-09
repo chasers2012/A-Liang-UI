@@ -6,12 +6,7 @@ import json
 from typing import Any
 
 from .graph_algo import topological_order
-from .node_types import (
-    WORKFLOW_INPUT_NODE_ID,
-    WORKFLOW_OUTPUT_NODE_ID,
-    Node,
-    WorkflowGraph,
-)
+from .node_types import Node, WorkflowGraph
 from .parser import Parser
 
 
@@ -27,6 +22,7 @@ class WorkflowUnknownNodeTypeError(LookupError):
 def gather_node_inputs(
     graph: WorkflowGraph,
     node: Node,
+    workflow_inputs: dict[str, Any],
     outputs: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     links = graph.links
@@ -34,17 +30,26 @@ def gather_node_inputs(
     """Build input socket values for ``to_node_id`` from upstream ``outputs``."""
     inputs: dict[str, dict[str, Any]] = {}
     for link in links:
-        if link.to_node != to_node_id:
+        if link.to.kind != "node" or link.to.node_id != to_node_id:
             continue
-        bucket = outputs.get(link.from_node)
-        if bucket is None:
-            raise KeyError(link.from_node)
-        if link.from_socket not in bucket:
-            raise KeyError(link.from_socket)
-        if not inputs.get(link.to_socket):
-            inputs[link.to_socket] = {}
+        upstream_value: Any
+        upstream_key: str
+        if link.from_.kind == "workflow_input":
+            upstream_key = f"workflow_input:{link.from_.socket}"
+            upstream_value = workflow_inputs.get(link.from_.socket)
+        else:
+            from_id = link.from_.node_id or ""
+            bucket = outputs.get(from_id)
+            if bucket is None:
+                raise KeyError(from_id)
+            if link.from_.socket not in bucket:
+                raise KeyError(link.from_.socket)
+            upstream_key = f"{from_id}:{link.from_.socket}"
+            upstream_value = bucket[link.from_.socket]
+        if not inputs.get(link.to.socket):
+            inputs[link.to.socket] = {}
 
-        inputs[link.to_socket][f"{link.from_node}:{link.from_socket}"] = bucket[link.from_socket]
+        inputs[link.to.socket][upstream_key] = upstream_value
 
     appendable_inputs = {
         getattr(s, "name", "")
@@ -78,21 +83,27 @@ def gather_workflow_outputs(
         matched = [
             link
             for link in graph.links
-            if link.to_node == WORKFLOW_OUTPUT_NODE_ID and link.to_socket == name
+            if link.to.kind == "workflow_output" and link.to.socket == name
         ]
         if not matched:
             continue
         if len(matched) == 1:
             link = matched[0]
-            bucket = outputs.get(link.from_node, {})
-            if link.from_socket in bucket:
-                ret[name] = bucket[link.from_socket]
+            if link.from_.kind == "workflow_input":
+                # For symmetry; rarely used.
+                ret[name] = None
+            else:
+                from_id = link.from_.node_id or ""
+                bucket = outputs.get(from_id, {})
+                if link.from_.socket in bucket:
+                    ret[name] = bucket[link.from_.socket]
             continue
         ret[name] = {
-            f"{link.from_node}:{link.from_socket}": outputs.get(link.from_node, {}).get(
-                link.from_socket
-            )
+            f"{(link.from_.node_id or '')}:{link.from_.socket}": outputs.get(
+                link.from_.node_id or "", {}
+            ).get(link.from_.socket)
             for link in matched
+            if link.from_.kind == "node"
         }
     return ret
 
@@ -113,8 +124,8 @@ class WorkflowExecutor:
         self,
         workflow: str,
         context: dict[str, Any] | None = None,
-    ) -> dict[str, dict[str, Any]]:
-        """Run the workflow from a JSON string; return ``node_id -> {output_socket: value}``.
+    ) -> dict[str, Any]:
+        """Run the workflow from a JSON string.
 
         *workflow* must decode to a dict accepted by :meth:`Parser.parse_workflow_graph`
         (same shape as :meth:`WorkflowGraph.serialize`: ``nodes`` + ``links``).
@@ -130,27 +141,42 @@ class WorkflowExecutor:
 
         graph = Parser.parse_workflow_graph(payload)
         if not graph.nodes:
-            return {}
-
-        ctx = dict(context or {})
-        out: dict[str, dict[str, Any]] = {
-            WORKFLOW_INPUT_NODE_ID: {
-                socket.name: ctx.get(socket.name)
+            workflow_inputs = {
+                socket.name: (context or {}).get(socket.name)
                 for socket in graph.workflow_inputs
                 if getattr(socket, "name", "")
             }
+            return {
+                "nodes": {},
+                "workflow_inputs": workflow_inputs,
+                "workflow_outputs": {},
+            }
+
+        ctx = dict(context or {})
+        workflow_inputs = {
+            socket.name: ctx.get(socket.name)
+            for socket in graph.workflow_inputs
+            if getattr(socket, "name", "")
         }
+        node_outputs: dict[str, dict[str, Any]] = {}
         order = topological_order(graph.nodes, graph.links)
         by_id = {n.id: n for n in graph.nodes}
         for nid in order:
             node = by_id[nid]
 
-            inputs = gather_node_inputs(graph, node, out)
+            inputs = gather_node_inputs(graph, node, workflow_inputs, node_outputs)
             node_inputs = {**ctx, **node.params, **inputs}
 
             # 调用节点类的entry方法
             node_out = getattr(node, node.entry or "execute")(**node_inputs)
 
-            out[nid] = format_output(node, node_out if isinstance(node_out, tuple) else (node_out,))
-        out[WORKFLOW_OUTPUT_NODE_ID] = gather_workflow_outputs(graph, out)
-        return out
+            node_outputs[nid] = format_output(
+                node, node_out if isinstance(node_out, tuple) else (node_out,)
+            )
+
+        workflow_outputs = gather_workflow_outputs(graph, node_outputs)
+        return {
+            "nodes": node_outputs,
+            "workflow_inputs": workflow_inputs,
+            "workflow_outputs": workflow_outputs,
+        }

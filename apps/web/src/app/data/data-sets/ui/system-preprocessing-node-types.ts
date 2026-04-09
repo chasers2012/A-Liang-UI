@@ -58,8 +58,8 @@ export function syncSystemPreprocessingWorkflow(
   const currentOutputs = workflow.workflow_outputs;
   const sameInputs = JSON.stringify(currentInputs) === JSON.stringify(desiredInputs);
   const validLinks = workflow.links.filter((link) => {
-    if (link.from_node !== "__workflow_input__") return true;
-    return desiredInputSocketNames.has(link.from_socket);
+    if (link.from.kind !== "workflow_input") return true;
+    return desiredInputSocketNames.has(link.from.socket);
   });
   const sameLinks = JSON.stringify(validLinks) === JSON.stringify(workflow.links);
   if (

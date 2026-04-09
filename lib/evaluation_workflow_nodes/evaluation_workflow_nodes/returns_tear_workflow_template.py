@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workflow import WORKFLOW_OUTPUT_NODE_ID, Node, Socket, WorkflowGraph, WorkflowLink
+from workflow import Node, Socket, WorkflowEndpoint, WorkflowGraph, WorkflowLink
 
 from evaluation_workflow_nodes.alphalens_performance_nodes.compute_mean_returns_spread_metric import (
     ComputeMeanReturnsSpreadMetric,
@@ -31,6 +31,12 @@ from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNod
 
 
 def build_returns_tear_workflow_template() -> dict:
+    def n(node_id: str, socket: str) -> WorkflowEndpoint:
+        return WorkflowEndpoint(kind="node", node_id=node_id, socket=socket)
+
+    def wo(socket: str) -> WorkflowEndpoint:
+        return WorkflowEndpoint(kind="workflow_output", socket=socket)
+
     load_type = LoadDataSet().type
     calc_type = CalculateFactorValueNode().type
     mean_return_type = MeanReturnByQuantileMetric().type
@@ -212,163 +218,112 @@ def build_returns_tear_workflow_template() -> dict:
         ],
         links=[
             WorkflowLink(
-                from_node="load", from_socket="data_set", to_node="calc", to_socket="data_set"
+                from_=n("load", "data_set"),
+                to=n("calc", "data_set"),
             ),
             WorkflowLink(
-                from_node="calc",
-                from_socket="clean_factor",
-                to_node="mean_return_pooled",
-                to_socket="clean_factor",
+                from_=n("calc", "clean_factor"),
+                to=n("mean_return_pooled", "clean_factor"),
             ),
             WorkflowLink(
-                from_node="calc",
-                from_socket="clean_factor",
-                to_node="mean_return_bydate",
-                to_socket="clean_factor",
+                from_=n("calc", "clean_factor"),
+                to=n("mean_return_bydate", "clean_factor"),
             ),
             WorkflowLink(
-                from_node="mean_return_pooled",
-                from_socket="mean_return_by_quantile",
-                to_node="rate_ret",
-                to_socket="returns",
+                from_=n("mean_return_pooled", "mean_return_by_quantile"),
+                to=n("rate_ret", "returns"),
             ),
             WorkflowLink(
-                from_node="mean_return_bydate",
-                from_socket="mean_return_by_quantile",
-                to_node="rate_ret_bydate",
-                to_socket="returns",
+                from_=n("mean_return_bydate", "mean_return_by_quantile"),
+                to=n("rate_ret_bydate", "returns"),
             ),
             WorkflowLink(
-                from_node="mean_return_bydate",
-                from_socket="mean_return_by_quantile_std_error",
-                to_node="std_conv",
-                to_socket="std",
+                from_=n("mean_return_bydate", "mean_return_by_quantile_std_error"),
+                to=n("std_conv", "std"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="spread",
-                to_socket="mean_returns",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("spread", "mean_returns"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="top_bottom_1d",
-                to_socket="mean_returns_bydate",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("top_bottom_1d", "mean_returns_bydate"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="top_bottom_5d",
-                to_socket="mean_returns_bydate",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("top_bottom_5d", "mean_returns_bydate"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="top_bottom_10d",
-                to_socket="mean_returns_bydate",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("top_bottom_10d", "mean_returns_bydate"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="top_bottom_20d",
-                to_socket="mean_returns_bydate",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("top_bottom_20d", "mean_returns_bydate"),
             ),
             WorkflowLink(
-                from_node="std_conv",
-                from_socket="std_converted",
-                to_node="spread",
-                to_socket="std_err",
+                from_=n("std_conv", "std_converted"),
+                to=n("spread", "std_err"),
             ),
             WorkflowLink(
-                from_node="calc",
-                from_socket="clean_factor",
-                to_node="factor_cumret_1d",
-                to_socket="clean_factor",
+                from_=n("calc", "clean_factor"),
+                to=n("factor_cumret_1d", "clean_factor"),
             ),
             WorkflowLink(
-                from_node="rate_ret",
-                from_socket="rate_of_return",
-                to_node="echarts_mean_q",
-                to_socket="data",
+                from_=n("rate_ret", "rate_of_return"),
+                to=n("echarts_mean_q", "data"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="echarts_bydate",
-                to_socket="data",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("echarts_bydate", "data"),
             ),
             WorkflowLink(
-                from_node="spread",
-                from_socket="mean_return_spread",
-                to_node="echarts_spread",
-                to_socket="data",
+                from_=n("spread", "mean_return_spread"),
+                to=n("echarts_spread", "data"),
             ),
             WorkflowLink(
-                from_node="factor_cumret_1d",
-                from_socket="cumulative_returns",
-                to_node="echarts_cumret",
-                to_socket="data",
+                from_=n("factor_cumret_1d", "cumulative_returns"),
+                to=n("echarts_cumret", "data"),
             ),
             WorkflowLink(
-                from_node="rate_ret_bydate",
-                from_socket="rate_of_return",
-                to_node="cumret_by_quantile_1d",
-                to_socket="mean_returns_bydate",
+                from_=n("rate_ret_bydate", "rate_of_return"),
+                to=n("cumret_by_quantile_1d", "mean_returns_bydate"),
             ),
             WorkflowLink(
-                from_node="cumret_by_quantile_1d",
-                from_socket="cumulative_returns_by_quantile",
-                to_node="echarts_cumret_byq_1d",
-                to_socket="data",
+                from_=n("cumret_by_quantile_1d", "cumulative_returns_by_quantile"),
+                to=n("echarts_cumret_byq_1d", "data"),
             ),
             WorkflowLink(
-                from_node="top_bottom_1d",
-                from_socket="spread_ts",
-                to_node="echarts_top_bottom_1d",
-                to_socket="data",
+                from_=n("top_bottom_1d", "spread_ts"),
+                to=n("echarts_top_bottom_1d", "data"),
             ),
             WorkflowLink(
-                from_node="top_bottom_5d",
-                from_socket="spread_ts",
-                to_node="echarts_top_bottom_5d",
-                to_socket="data",
+                from_=n("top_bottom_5d", "spread_ts"),
+                to=n("echarts_top_bottom_5d", "data"),
             ),
             WorkflowLink(
-                from_node="top_bottom_10d",
-                from_socket="spread_ts",
-                to_node="echarts_top_bottom_10d",
-                to_socket="data",
+                from_=n("top_bottom_10d", "spread_ts"),
+                to=n("echarts_top_bottom_10d", "data"),
             ),
             WorkflowLink(
-                from_node="top_bottom_20d",
-                from_socket="spread_ts",
-                to_node="echarts_top_bottom_20d",
-                to_socket="data",
+                from_=n("top_bottom_20d", "spread_ts"),
+                to=n("echarts_top_bottom_20d", "data"),
             ),
             WorkflowLink(
-                from_node="echarts_mean_q",
-                from_socket="option",
-                to_node=WORKFLOW_OUTPUT_NODE_ID,
-                to_socket="result",
+                from_=n("echarts_mean_q", "option"),
+                to=wo("result"),
             ),
             WorkflowLink(
-                from_node="echarts_bydate",
-                from_socket="option",
-                to_node=WORKFLOW_OUTPUT_NODE_ID,
-                to_socket="result",
+                from_=n("echarts_bydate", "option"),
+                to=wo("result"),
             ),
             WorkflowLink(
-                from_node="echarts_spread",
-                from_socket="option",
-                to_node=WORKFLOW_OUTPUT_NODE_ID,
-                to_socket="result",
+                from_=n("echarts_spread", "option"),
+                to=wo("result"),
             ),
             WorkflowLink(
-                from_node="echarts_cumret",
-                from_socket="option",
-                to_node=WORKFLOW_OUTPUT_NODE_ID,
-                to_socket="result",
+                from_=n("echarts_cumret", "option"),
+                to=wo("result"),
             ),
         ],
     )

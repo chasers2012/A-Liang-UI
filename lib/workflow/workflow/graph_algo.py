@@ -17,10 +17,14 @@ def topological_order(
     adj: dict[str, list[str]] = defaultdict(list)
     indeg: dict[str, int] = dict.fromkeys(by_id, 0)
     for link in links:
-        if link.from_node not in by_id or link.to_node not in by_id:
+        if link.from_.kind != "node" or link.to.kind != "node":
             continue
-        adj[link.from_node].append(link.to_node)
-        indeg[link.to_node] += 1
+        if not link.from_.node_id or not link.to.node_id:
+            continue
+        if link.from_.node_id not in by_id or link.to.node_id not in by_id:
+            continue
+        adj[link.from_.node_id].append(link.to.node_id)
+        indeg[link.to.node_id] += 1
     q = deque([nid for nid, d in indeg.items() if d == 0])
     out: list[str] = []
     while q:

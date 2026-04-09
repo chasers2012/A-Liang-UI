@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.data_set.redistry import DataSetsStore
 from app.data_set.schemas import (
+    _EMPTY_WORKFLOW,
     DataSetCreate,
     DataSetDatasourceBindingInput,
     DataSetDatasourceBindingPublic,
@@ -163,7 +164,7 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
     if "preprocessing_workflow" in data:
         wf = data["preprocessing_workflow"]
         rec.preprocessing_workflow = _stored_workflow_str(
-            {"nodes": [], "links": []} if wf is None else wf
+            dict(_EMPTY_WORKFLOW) if wf is None else wf
         )
     if "start" in data and data["start"] is not None:
         rec.start = str(data["start"]).strip()
