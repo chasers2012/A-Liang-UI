@@ -45,6 +45,25 @@ function arrayOrEmpty<T>(x: unknown): T[] {
   return Array.isArray(x) ? (x as T[]) : [];
 }
 
+function mergeInputsWithDynamicOptions(
+  persistedInputs: WorkflowNodeInputSpec[],
+  catalogInputs: WorkflowNodeInputSpec[],
+): WorkflowNodeInputSpec[] {
+  if (persistedInputs.length === 0) return catalogInputs;
+  if (catalogInputs.length === 0) return persistedInputs;
+
+  const catalogByName = new Map(catalogInputs.map((s) => [s.name, s] as const));
+  return persistedInputs.map((input) => {
+    if (input.render_type !== "select") return input;
+    const latest = catalogByName.get(input.name);
+    if (!latest || latest.render_type !== "select") return input;
+    return {
+      ...input,
+      options: Array.isArray(latest.options) ? latest.options : [],
+    };
+  });
+}
+
 export const EMPTY_WORKFLOW: WorkflowGraphPersisted = {
   nodes: [],
   links: [],
@@ -250,6 +269,7 @@ export function toReactFlowNodes(
     const def = catalog[n.type];
     const persistedInputs = arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs);
     const persistedOutputs = arrayOrEmpty<WorkflowSocketDefinition>(n.outputs);
+    const catalogInputs = def?.inputs ?? [];
     return {
       id: n.id,
       type: "workflowStep",
@@ -261,7 +281,9 @@ export function toReactFlowNodes(
         // Prefer persisted sockets when available, so dynamic node sockets
         // (e.g. DataSetFramesInput per-datasource outputs) are preserved.
         inputs:
-          persistedInputs.length > 0 ? persistedInputs : (def?.inputs ?? []),
+          persistedInputs.length > 0
+            ? mergeInputsWithDynamicOptions(persistedInputs, catalogInputs)
+            : catalogInputs,
         outputs:
           persistedOutputs.length > 0 ? persistedOutputs : (def?.outputs ?? []),
         params: { ...(n.params ?? {}) },
