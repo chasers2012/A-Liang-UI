@@ -3,92 +3,53 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from factor.preprocessing_workflow_nodes import CollectFrames, DataSetFramesInput
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from workflow.parser import Parser
 
 from app.common.id import create_id_generator
 from app.datasource.schemas import utc_now_iso
 
 generate_id = create_id_generator("data_sets")
 
-_EMPTY_WORKFLOW: dict[str, Any] = {"nodes": [], "links": []}
-_INPUT_FRAMES_TYPE = DataSetFramesInput.type
-_COLLECT_FRAMES_TYPE = CollectFrames.type
+_EMPTY_WORKFLOW: dict[str, Any] = {
+    "nodes": [],
+    "links": [],
+    "workflow_inputs": [
+        {
+            "name": "frames",
+            "required": True,
+            "label": "原始 frames",
+            "description": "由数据集加载原始数据后提供给预处理工作流。",
+            "value_type": "raw_frames",
+            "render_type": "socket",
+        }
+    ],
+    "workflow_outputs": [
+        {
+            "name": "frames",
+            "required": True,
+            "label": "预处理结果",
+            "description": "预处理工作流输出的 frames 映射。",
+            "value_type": "raw_frames",
+            "render_type": "appendable",
+        }
+    ],
+}
 
 
-def _system_node_payload(
-    *,
-    node_cls: type,
-    node_id: str,
-    position: list[int],
-) -> dict[str, Any]:
-    inputs = [Parser.serialize_socket(socket) for socket in getattr(node_cls, "inputs", [])]
-    outputs = [Parser.serialize_socket(socket) for socket in getattr(node_cls, "outputs", [])]
-    return {
-        "id": node_id,
-        "type": getattr(node_cls, "type", ""),
-        "label": getattr(node_cls, "label", ""),
-        "category": getattr(node_cls, "category", ""),
-        "inputs": inputs,
-        "outputs": outputs,
-        "pos": position,
-        "params": {},
-    }
-
-
-def _next_available_node_id(*, preferred: str, taken_ids: set[str]) -> str:
-    if preferred not in taken_ids:
-        return preferred
-    candidate_index = 1
-    while True:
-        candidate = f"{preferred}_{candidate_index}"
-        if candidate not in taken_ids:
-            return candidate
-        candidate_index += 1
-
-
-def _ensure_system_preprocessing_nodes(workflow: dict[str, Any]) -> dict[str, Any]:
-    nodes_payload = workflow.get("nodes", [])
-    links_payload = workflow.get("links", [])
-    nodes: list[dict[str, Any]] = [n for n in nodes_payload if isinstance(n, dict)]
-    links: list[dict[str, Any]] = [
-        link_item for link_item in links_payload if isinstance(link_item, dict)
-    ]
-    taken_ids = {
-        str(node_id).strip()
-        for node in nodes
-        if (node_id := node.get("id")) is not None and str(node_id).strip()
-    }
-
-    has_input_frames = any(node.get("type") == _INPUT_FRAMES_TYPE for node in nodes)
-    has_collect_frames = any(node.get("type") == _COLLECT_FRAMES_TYPE for node in nodes)
-
-    if not has_input_frames:
-        input_node_id = _next_available_node_id(preferred="frames_input", taken_ids=taken_ids)
-        taken_ids.add(input_node_id)
-        nodes.append(
-            _system_node_payload(
-                node_cls=DataSetFramesInput,
-                node_id=input_node_id,
-                position=[0, 0],
-            )
-        )
-
-    if not has_collect_frames:
-        collect_node_id = _next_available_node_id(
-            preferred="collect_frames",
-            taken_ids=taken_ids,
-        )
-        nodes.append(
-            _system_node_payload(
-                node_cls=CollectFrames,
-                node_id=collect_node_id,
-                position=[360, 0],
-            )
-        )
-
-    return {"nodes": nodes, "links": links}
+def _validate_preprocessing_workflow_dict(workflow: dict[str, Any]) -> None:
+    if not isinstance(workflow.get("workflow_inputs"), list):
+        raise ValueError("preprocessing_workflow 缺少 workflow_inputs")
+    if not isinstance(workflow.get("workflow_outputs"), list):
+        raise ValueError("preprocessing_workflow 缺少 workflow_outputs")
+    nodes = workflow.get("nodes", [])
+    if not isinstance(nodes, list):
+        raise ValueError("preprocessing_workflow.nodes 必须是数组")
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_type = str(node.get("type", "")).strip()
+        if not node_type:
+            raise ValueError("preprocessing_workflow.nodes[].type 不能为空")
 
 
 def _stored_workflow_str(v: object) -> str:
@@ -96,17 +57,13 @@ def _stored_workflow_str(v: object) -> str:
     if isinstance(v, str):
         s = v.strip()
         if not s:
-            normalized = _ensure_system_preprocessing_nodes(dict(_EMPTY_WORKFLOW))
-            return json.dumps(normalized, ensure_ascii=False)
+            return json.dumps(dict(_EMPTY_WORKFLOW), ensure_ascii=False)
         loaded = json.loads(s)
         if not isinstance(loaded, dict):
-            raise TypeError("workflow 必须是 JSON 字符串或对象")
-        normalized = _ensure_system_preprocessing_nodes(dict(loaded))
-        return json.dumps(normalized, ensure_ascii=False)
-    if isinstance(v, dict):
-        normalized = _ensure_system_preprocessing_nodes(dict(v))
-        return json.dumps(normalized, ensure_ascii=False)
-    raise TypeError("workflow 必须是 JSON 字符串或对象")
+            raise TypeError("workflow 必须是 JSON 字符串（对象）")
+        _validate_preprocessing_workflow_dict(loaded)
+        return json.dumps(dict(loaded), ensure_ascii=False)
+    raise TypeError("workflow 必须是 JSON 字符串（对象）")
 
 
 def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
@@ -210,6 +167,18 @@ class DataSetCreate(BaseModel):
             raise TypeError("instrument_codes must be a list")
         return [str(x).strip() for x in v if str(x).strip()]
 
+    @field_validator("preprocessing_workflow", mode="before")
+    @classmethod
+    def _workflow_create(cls, v: object) -> dict[str, Any]:
+        if v is None:
+            wf = dict(_EMPTY_WORKFLOW)
+            _validate_preprocessing_workflow_dict(wf)
+            return wf
+        if not isinstance(v, dict):
+            raise TypeError("preprocessing_workflow 必须是 JSON 对象")
+        _validate_preprocessing_workflow_dict(v)
+        return v
+
     def to_record(self) -> DataSetRecord:
         now = utc_now_iso()
         rid = str(generate_id())
@@ -223,12 +192,15 @@ class DataSetCreate(BaseModel):
             )
             for b in self.datasource_bindings
         ]
+        _validate_preprocessing_workflow_dict(self.preprocessing_workflow)
         return DataSetRecord(
             id=rid,
             name=self.name.strip(),
             description=(self.description or "").strip(),
             datasource_bindings=bindings,
-            preprocessing_workflow=_stored_workflow_str(self.preprocessing_workflow),
+            preprocessing_workflow=json.dumps(
+                dict(self.preprocessing_workflow), ensure_ascii=False
+            ),
             start=self.start.strip(),
             end=self.end.strip(),
             instrument_codes=[c.strip() for c in self.instrument_codes if str(c).strip()],

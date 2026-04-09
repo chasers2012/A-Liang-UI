@@ -6,7 +6,12 @@ import json
 from typing import Any
 
 from .graph_algo import topological_order
-from .node_types import Node, WorkflowGraph
+from .node_types import (
+    WORKFLOW_INPUT_NODE_ID,
+    WORKFLOW_OUTPUT_NODE_ID,
+    Node,
+    WorkflowGraph,
+)
 from .parser import Parser
 
 
@@ -61,6 +66,37 @@ def gather_node_inputs(
     return ret
 
 
+def gather_workflow_outputs(
+    graph: WorkflowGraph,
+    outputs: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    ret: dict[str, Any] = {}
+    for socket in graph.workflow_outputs:
+        name = getattr(socket, "name", "")
+        if not name:
+            continue
+        matched = [
+            link
+            for link in graph.links
+            if link.to_node == WORKFLOW_OUTPUT_NODE_ID and link.to_socket == name
+        ]
+        if not matched:
+            continue
+        if len(matched) == 1:
+            link = matched[0]
+            bucket = outputs.get(link.from_node, {})
+            if link.from_socket in bucket:
+                ret[name] = bucket[link.from_socket]
+            continue
+        ret[name] = {
+            f"{link.from_node}:{link.from_socket}": outputs.get(link.from_node, {}).get(
+                link.from_socket
+            )
+            for link in matched
+        }
+    return ret
+
+
 def format_output(node: Node, output: tuple[Any, ...]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     if output and len(node.outputs) == 0:
@@ -97,9 +133,15 @@ class WorkflowExecutor:
             return {}
 
         ctx = dict(context or {})
+        out: dict[str, dict[str, Any]] = {
+            WORKFLOW_INPUT_NODE_ID: {
+                socket.name: ctx.get(socket.name)
+                for socket in graph.workflow_inputs
+                if getattr(socket, "name", "")
+            }
+        }
         order = topological_order(graph.nodes, graph.links)
         by_id = {n.id: n for n in graph.nodes}
-        out: dict[str, dict[str, Any]] = {}
         for nid in order:
             node = by_id[nid]
 
@@ -110,4 +152,5 @@ class WorkflowExecutor:
             node_out = getattr(node, node.entry or "execute")(**node_inputs)
 
             out[nid] = format_output(node, node_out if isinstance(node_out, tuple) else (node_out,))
+        out[WORKFLOW_OUTPUT_NODE_ID] = gather_workflow_outputs(graph, out)
         return out

@@ -36,7 +36,7 @@ export interface FactorEvaluationRowPublic {
   error?: string | null;
   /**
    * Workflow collected results payload (来自后端 FactorEvaluationRowPublic#results).
-   * 具体结构取决于工作流中 CollectResult 节点的输入/连线配置。
+   * 具体结构取决于工作流 workflow_outputs.result 的连线配置。
    */
   results?: unknown;
   mean_ic?: Record<string, number>;

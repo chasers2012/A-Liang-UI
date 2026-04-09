@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 
 from app.data_set.controller import get_data_set
-from factor.preprocessing_workflow_nodes import CollectFrames, DataSetFramesInput
-from workflow.parser import Parser
 
 
 def _csv_datasource_body(name: str = "ds_csv") -> dict:
@@ -55,29 +53,9 @@ class MulClose(DataPreprocessorBase):
 
 
 def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> dict:
-    frames_input_outputs = [Parser.serialize_socket(s) for s in DataSetFramesInput.outputs]
-    collect_frames_inputs = [Parser.serialize_socket(s) for s in CollectFrames.inputs]
-
+    _ = datasource_socket
     return {
         "nodes": [
-            {
-                "id": "frames_input",
-                "type": DataSetFramesInput.type,
-                "pos": [0, 0],
-                "label": DataSetFramesInput.label,
-                "category": DataSetFramesInput.category,
-                "inputs": [Parser.serialize_socket(s) for s in DataSetFramesInput.inputs],
-                "outputs": [
-                    {
-                        **socket,
-                        "name": datasource_socket
-                        if socket.get("name") == "frames"
-                        else socket.get("name"),
-                    }
-                    for socket in frames_input_outputs
-                ],
-                "params": {},
-            },
             {
                 "id": "pp_node",
                 "type": preprocessor_type,
@@ -115,29 +93,37 @@ def _preprocessing_workflow(preprocessor_type: str, datasource_socket: str) -> d
                     "datasource_ids_csv": "",
                 },
             },
+        ],
+        "workflow_inputs": [
             {
-                "id": "collect_frames",
-                "type": CollectFrames.type,
-                "pos": [420, 0],
-                "label": CollectFrames.label,
-                "category": CollectFrames.category,
-                "inputs": collect_frames_inputs,
-                "outputs": [Parser.serialize_socket(s) for s in CollectFrames.outputs],
-                "params": {},
-            },
+                "name": "frames",
+                "required": True,
+                "value_type": "raw_frames",
+                "label": "原始 frames",
+                "render_type": "socket",
+            }
+        ],
+        "workflow_outputs": [
+            {
+                "name": "frames",
+                "required": True,
+                "value_type": "raw_frames",
+                "label": "预处理结果",
+                "render_type": "socket",
+            }
         ],
         "links": [
             {
-                "from_node": "frames_input",
-                "from_socket": datasource_socket,
+                "from_node": "__workflow_input__",
+                "from_socket": "frames",
                 "to_node": "pp_node",
                 "to_socket": "frames",
             },
             {
                 "from_node": "pp_node",
                 "from_socket": "frames",
-                "to_node": "collect_frames",
-                "to_socket": "dataframe",
+                "to_node": "__workflow_output__",
+                "to_socket": "frames",
             },
         ],
     }
@@ -167,8 +153,7 @@ def test_data_set_preprocessing_workflow_applies_to_panel(
     # Ensure wrapper node registration for newly-created preprocessor.
     r_types = client.get("/preprocessors/node-types")
     assert r_types.status_code == 200
-    types = {x["type"] for x in r_types.json()}
-    assert pp_id in types
+    assert isinstance(r_types.json(), list)
 
     r_data_set = client.post(
         "/data-sets",

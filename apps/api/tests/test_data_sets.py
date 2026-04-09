@@ -10,7 +10,6 @@ MIN_SOURCE = "x = 1\n"
 
 _CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
 _LOAD = "evaluation_workflow_nodes.load_data_set.LoadDataSet"
-_COLLECT = "evaluation_workflow_nodes.collect_result.CollectResult"
 
 
 def _factor_source_for_name(name: str) -> str:
@@ -34,6 +33,15 @@ class EvalWorkflowFactor(Factor):
 
 def _profile_workflow_missing_data_set() -> dict:
     return {
+        "workflow_inputs": [],
+        "workflow_outputs": [
+            {
+                "name": "result",
+                "required": False,
+                "value_type": "scalar_json",
+                "render_type": "appendable",
+            }
+        ],
         "nodes": [
             {
                 "id": "calc",
@@ -51,6 +59,15 @@ def _profile_workflow_missing_data_set() -> dict:
 
 def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
     return {
+        "workflow_inputs": [],
+        "workflow_outputs": [
+            {
+                "name": "result",
+                "required": False,
+                "value_type": "scalar_json",
+                "render_type": "appendable",
+            }
+        ],
         "nodes": [
             {
                 "id": "load",
@@ -67,12 +84,6 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
                     "max_loss": 1.0,
                 },
             },
-            {
-                "id": "collect",
-                "type": _COLLECT,
-                "pos": [400, 0],
-                "params": {"result": [{"from_node": "calc", "from_socket": "clean_factor"}]},
-            },
         ],
         "links": [
             {
@@ -84,7 +95,7 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
             {
                 "from_node": "calc",
                 "from_socket": "clean_factor",
-                "to_node": "collect",
+                "to_node": "__workflow_output__",
                 "to_socket": "result",
             },
         ],

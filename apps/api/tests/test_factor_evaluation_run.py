@@ -7,6 +7,15 @@ _CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNo
 
 def _profile_workflow_missing_data_set() -> dict:
     return {
+        "workflow_inputs": [],
+        "workflow_outputs": [
+            {
+                "name": "result",
+                "required": False,
+                "value_type": "scalar_json",
+                "render_type": "appendable",
+            }
+        ],
         "nodes": [
             {
                 "id": "calc",
@@ -41,6 +50,9 @@ def test_evaluation_run_no_datasource(client):
     assert r_p.status_code == 200
     pid = r_p.json()["id"]
 
-    r2 = client.post(f"/evaluation-profiles/{pid}/factors/{fid}/evaluations/run")
-    assert r2.status_code == 400
-    assert "数据集" in r2.json()["detail"]
+    r2 = client.post(
+        "/evaluation-profiles/evaluations/run",
+        json={"profile_id": pid, "factor_id": fid},
+    )
+    assert r2.status_code == 200
+    assert "数据集" in (r2.json().get("error") or "")

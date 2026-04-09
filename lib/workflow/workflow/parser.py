@@ -156,9 +156,21 @@ class Parser:
             for link_conf in config_dict.get("links", [])
             if isinstance(link_conf, dict)
         ]
+        workflow_inputs = [
+            Parser.parse_socket(socket_conf)
+            for socket_conf in config_dict.get("workflow_inputs", [])
+            if isinstance(socket_conf, dict) and socket_conf.get("name")
+        ]
+        workflow_outputs = [
+            Parser.parse_socket(socket_conf)
+            for socket_conf in config_dict.get("workflow_outputs", [])
+            if isinstance(socket_conf, dict) and socket_conf.get("name")
+        ]
         # viewport 不再参与执行与持久化；旧 JSON 中的字段忽略。
         return WorkflowGraph(
             nodes=nodes,
             links=links,
+            workflow_inputs=workflow_inputs,
+            workflow_outputs=workflow_outputs,
             viewport=None,
         )

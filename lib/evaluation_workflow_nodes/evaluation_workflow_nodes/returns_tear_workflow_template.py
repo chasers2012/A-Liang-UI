@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from workflow import Node, WorkflowGraph, WorkflowLink
+from workflow import WORKFLOW_OUTPUT_NODE_ID, Node, Socket, WorkflowGraph, WorkflowLink
 
 from evaluation_workflow_nodes.alphalens_performance_nodes.compute_mean_returns_spread_metric import (
     ComputeMeanReturnsSpreadMetric,
@@ -26,7 +26,6 @@ from evaluation_workflow_nodes.alphalens_performance_nodes.top_bottom_spread_tim
     TopBottomSpreadTimeSeriesMetric,
 )
 from evaluation_workflow_nodes.calculate_factor_value import CalculateFactorValueNode
-from evaluation_workflow_nodes.collect_result import CollectResult
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
 from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
 
@@ -42,7 +41,6 @@ def build_returns_tear_workflow_template() -> dict:
     spread_type = ComputeMeanReturnsSpreadMetric().type
     cumulative_type = FactorCumulativeReturnsMetric().type
     echarts_type = EchartsLineNode().type
-    collect_type = CollectResult().type
 
     graph = WorkflowGraph(
         nodes=[
@@ -208,24 +206,9 @@ def build_returns_tear_workflow_template() -> dict:
                     "show_tooltip": True,
                 },
             ),
-            Node(
-                id="collect",
-                type=collect_type,
-                pos=[1420, 420],
-                params={
-                    "result": [
-                        {"from_node": "echarts_mean_q", "from_socket": "option"},
-                        {"from_node": "echarts_bydate", "from_socket": "option"},
-                        {"from_node": "echarts_spread", "from_socket": "option"},
-                        {"from_node": "echarts_cumret", "from_socket": "option"},
-                        {"from_node": "echarts_cumret_byq_1d", "from_socket": "option"},
-                        {"from_node": "echarts_top_bottom_1d", "from_socket": "option"},
-                        {"from_node": "echarts_top_bottom_5d", "from_socket": "option"},
-                        {"from_node": "echarts_top_bottom_10d", "from_socket": "option"},
-                        {"from_node": "echarts_top_bottom_20d", "from_socket": "option"},
-                    ]
-                },
-            ),
+        ],
+        workflow_outputs=[
+            Socket(name="result", required=False, value_type="scalar_json", label="结果")
         ],
         links=[
             WorkflowLink(
@@ -366,25 +349,25 @@ def build_returns_tear_workflow_template() -> dict:
             WorkflowLink(
                 from_node="echarts_mean_q",
                 from_socket="option",
-                to_node="collect",
+                to_node=WORKFLOW_OUTPUT_NODE_ID,
                 to_socket="result",
             ),
             WorkflowLink(
                 from_node="echarts_bydate",
                 from_socket="option",
-                to_node="collect",
+                to_node=WORKFLOW_OUTPUT_NODE_ID,
                 to_socket="result",
             ),
             WorkflowLink(
                 from_node="echarts_spread",
                 from_socket="option",
-                to_node="collect",
+                to_node=WORKFLOW_OUTPUT_NODE_ID,
                 to_socket="result",
             ),
             WorkflowLink(
                 from_node="echarts_cumret",
                 from_socket="option",
-                to_node="collect",
+                to_node=WORKFLOW_OUTPUT_NODE_ID,
                 to_socket="result",
             ),
         ],

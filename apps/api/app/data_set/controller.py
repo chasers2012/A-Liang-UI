@@ -4,9 +4,13 @@ from factor.data_set import DataSet, DataSourceBinding
 
 from app.data_set.redistry import DataSetsStore
 from app.datasource.controller import get_datasource
+from app.preprocessors.workflow_node_types import (
+    ensure_preprocessor_workflow_nodes_registered,
+)
 
 
 def get_data_set(id: str) -> DataSet | None:
+    ensure_preprocessor_workflow_nodes_registered()
     rec = DataSetsStore.get_item(id)
     if rec is None:
         return None

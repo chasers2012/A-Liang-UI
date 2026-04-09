@@ -22,6 +22,7 @@ import type {
   PreprocessorDetailPublic,
   PreprocessorSummaryPublic,
   EvaluationNodeTypeCatalogItemPublic,
+  WorkflowIOSpecPublic,
   SqlTableColumnsRequestBody,
   SqlTableColumnsResponseBody,
   TestResult,
@@ -558,6 +559,10 @@ export function listPreprocessorNodeTypes(): Promise<
   );
 }
 
+export function getPreprocessorWorkflowIO(): Promise<WorkflowIOSpecPublic> {
+  return apiFetchJson<WorkflowIOSpecPublic>("/preprocessors/workflow-io");
+}
+
 export function getPreprocessor(id: string): Promise<PreprocessorDetailPublic> {
   return apiFetchJson<PreprocessorDetailPublic>(
     `/preprocessors/${encodeURIComponent(id)}`,
@@ -699,6 +704,10 @@ export function listEvaluationNodeTypes(): Promise<
   return apiFetchJson<EvaluationNodeTypeCatalogItemPublic[]>(
     "/evaluation-profiles/node-types",
   );
+}
+
+export function getEvaluationWorkflowIO(): Promise<WorkflowIOSpecPublic> {
+  return apiFetchJson<WorkflowIOSpecPublic>("/evaluation-profiles/workflow-io");
 }
 
 /** 领域 DTO：也可从 `@/models` 直接引用。 */

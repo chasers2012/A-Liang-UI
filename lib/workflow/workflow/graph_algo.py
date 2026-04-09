@@ -17,6 +17,8 @@ def topological_order(
     adj: dict[str, list[str]] = defaultdict(list)
     indeg: dict[str, int] = dict.fromkeys(by_id, 0)
     for link in links:
+        if link.from_node not in by_id or link.to_node not in by_id:
+            continue
         adj[link.from_node].append(link.to_node)
         indeg[link.to_node] += 1
     q = deque([nid for nid, d in indeg.items() if d == 0])

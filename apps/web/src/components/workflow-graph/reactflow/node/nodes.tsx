@@ -27,6 +27,15 @@ export type WorkflowStepNodeData = {
   params: Record<string, unknown>;
 };
 
+export type WorkflowBoundaryNodeData = {
+  label: string;
+  side: "input" | "output";
+  sockets: WorkflowSocketDefinition[];
+  // keep these fields for connection validation selector compatibility
+  inputs: WorkflowNodeInputSpec[];
+  outputs: WorkflowSocketDefinition[];
+};
+
 
 
 
@@ -122,6 +131,30 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
           })}
         </div>
       ) : null}
+    </div>
+  );
+});
+
+export const WorkflowBoundaryNode = memo(function WorkflowBoundaryNode(
+  props: NodeProps<WorkflowBoundaryNodeData>,
+) {
+  const { id, data } = props;
+  const { readOnly } = useWorkflowGraphContext();
+  const isInput = data.side === "input";
+  return (
+    <div className="min-w-[140px] rounded-md border border-dashed border-border/60 bg-transparent py-1">
+      <div className="px-2 py-1 text-xs text-muted-foreground">{data.label}</div>
+      <div className="py-1">
+        {data.sockets.map((s) => (
+          <SocketRow
+            key={s.name}
+            nodeId={id}
+            side={isInput ? "output" : "input"}
+            socket={s}
+            readOnly={readOnly}
+          />
+        ))}
+      </div>
     </div>
   );
 });

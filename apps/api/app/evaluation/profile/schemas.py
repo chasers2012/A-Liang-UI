@@ -11,7 +11,37 @@ from app.datasource.schemas import utc_now_iso
 
 EvaluationWorkflow = WorkflowGraph
 
-_EMPTY_WORKFLOW: dict[str, Any] = {"nodes": [], "links": []}
+_EMPTY_WORKFLOW: dict[str, Any] = {
+    "nodes": [],
+    "links": [],
+    "workflow_inputs": [],
+    "workflow_outputs": [
+        {
+            "name": "result",
+            "required": False,
+            "label": "结果",
+            "description": "评价工作流最终输出。",
+            "value_type": "scalar_json",
+            "render_type": "appendable",
+        }
+    ],
+}
+
+
+def _validate_evaluation_workflow_dict(workflow: dict[str, Any]) -> None:
+    if not isinstance(workflow.get("workflow_inputs"), list):
+        raise ValueError("workflow 缺少 workflow_inputs")
+    if not isinstance(workflow.get("workflow_outputs"), list):
+        raise ValueError("workflow 缺少 workflow_outputs")
+    nodes = workflow.get("nodes", [])
+    if not isinstance(nodes, list):
+        raise ValueError("workflow.nodes 必须是数组")
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_type = str(node.get("type", "")).strip()
+        if not node_type:
+            raise ValueError("workflow.nodes[].type 不能为空")
 
 
 def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
@@ -28,26 +58,24 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
 def _stored_workflow_str(v: object) -> str:
     """Normalize workflow for :class:`EvaluationProfileRecord` (disk / in-memory record)."""
     if isinstance(v, str):
-        return v
-    if isinstance(v, dict):
-        return json.dumps(v, ensure_ascii=False)
-    raise TypeError("workflow 须为 JSON 字符串或对象")
+        s = v.strip()
+        if not s:
+            return json.dumps(dict(_EMPTY_WORKFLOW), ensure_ascii=False)
+        loaded = json.loads(s)
+        if not isinstance(loaded, dict):
+            raise TypeError("workflow 须为 JSON 字符串（对象）")
+        _validate_evaluation_workflow_dict(loaded)
+        return json.dumps(loaded, ensure_ascii=False)
+    raise TypeError("workflow 须为 JSON 字符串（对象）")
 
 
 def _coerce_workflow_dict(v: object, *, allow_none: bool) -> dict[str, Any] | None:
     if v is None:
         return None if allow_none else dict(_EMPTY_WORKFLOW)
     if isinstance(v, dict):
+        _validate_evaluation_workflow_dict(v)
         return v
-    if isinstance(v, str):
-        s = v.strip()
-        if not s:
-            return dict(_EMPTY_WORKFLOW) if not allow_none else None
-        data = json.loads(s)
-        if not isinstance(data, dict):
-            raise ValueError("workflow 须为 JSON 对象")
-        return data
-    raise TypeError("workflow 须为 JSON 对象或序列化字符串")
+    raise TypeError("workflow 须为 JSON 对象")
 
 
 class EvaluationProfileRecord(BaseModel):
@@ -90,7 +118,7 @@ class EvaluationProfileCreate(BaseModel):
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),
-            workflow=json.dumps(wf, ensure_ascii=False),
+            workflow=json.dumps(dict(wf), ensure_ascii=False),
             created_at=now,
             updated_at=now,
         )
@@ -123,3 +151,8 @@ class EvaluationNodeTypePublic(BaseModel):
     category: str | None = None
     inputs: list[dict]
     outputs: list[dict]
+
+
+class WorkflowIOSpecPublic(BaseModel):
+    workflow_inputs: list[dict]
+    workflow_outputs: list[dict]

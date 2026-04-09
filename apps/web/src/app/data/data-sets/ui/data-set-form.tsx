@@ -51,8 +51,9 @@ import {
 import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
 import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 import {
-  ensureSystemPreprocessingNodes,
   syncSystemPreprocessingWorkflow,
+  PREPROCESSING_WORKFLOW_DEFAULT_INPUTS,
+  PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS,
 } from "./system-preprocessing-node-types";
 import { PreprocessingWorkflowEditorBlock } from "./preprocessing-workflow-editor-block";
 
@@ -85,7 +86,12 @@ export function emptyDataSetForm(): DataSetFormState {
         asset_column: "",
       },
     ],
-    preprocessing_workflow: ensureSystemPreprocessingNodes({ nodes: [], links: [] }),
+    preprocessing_workflow: {
+      nodes: [],
+      links: [],
+      workflow_inputs: PREPROCESSING_WORKFLOW_DEFAULT_INPUTS,
+      workflow_outputs: PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS,
+    },
     start: "2023-01-01",
     end: "2024-12-31",
     instrument_codes_text: "",
@@ -149,9 +155,7 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     name: row.name,
     description: row.description,
     bindings,
-    preprocessing_workflow: ensureSystemPreprocessingNodes(
-      row.preprocessing_workflow,
-    ),
+    preprocessing_workflow: row.preprocessing_workflow,
     start: toDateInputValue(row.start),
     end: toDateInputValue(row.end),
     instrument_codes_text: row.instrument_codes.length

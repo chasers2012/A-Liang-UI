@@ -1,4 +1,5 @@
 import { WorkflowGraphNode } from "..";
+import { WorkflowSocketDefinition } from "../types";
 
 export type WorkflowGraphLink = {
   id?: string | null;
@@ -11,4 +12,6 @@ export type WorkflowGraphLink = {
 export type WorkflowGraphPersisted = {
   nodes: WorkflowGraphNode[];
   links: WorkflowGraphLink[];
+  workflow_inputs: WorkflowSocketDefinition[];
+  workflow_outputs: WorkflowSocketDefinition[];
 };

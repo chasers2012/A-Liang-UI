@@ -40,9 +40,10 @@ import {
   toPersistedWorkflowGraph,
   toReactFlowEdges,
   toReactFlowNodes,
+  WORKFLOW_INPUT_NODE_ID,
+  WORKFLOW_OUTPUT_NODE_ID,
 } from "./reactflow/serialize";
 import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
-import { SYSTEM_PREPROCESSING_NODE_TYPES } from "@/app/data/data-sets/ui/system-preprocessing-node-types";
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
 import { WorkflowGraphPersisted } from "./reactflow/types";
@@ -54,8 +55,7 @@ export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
   "application/x-workflow-graph-node-type";
 
 function isProtectedPreprocessingNode(node: Node): boolean {
-  const nodeData = (node.data ?? {}) as { backendType?: unknown };
-  return SYSTEM_PREPROCESSING_NODE_TYPES.has(String(nodeData.backendType ?? ""));
+  return node.id === WORKFLOW_INPUT_NODE_ID || node.id === WORKFLOW_OUTPUT_NODE_ID;
 }
 
 

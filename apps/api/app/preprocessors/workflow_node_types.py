@@ -6,11 +6,33 @@ from typing import Any
 from workflow import Node, WorkflowNodeLoader
 from workflow.parser import Parser
 
-from app.evaluation.profile.schemas import EvaluationNodeTypePublic
+from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
 from app.preprocessors.controller import list_preprocessor_records, resolve_preprocessor_class
 from app.startup_jobs import register_startup_job
 
 _REGISTERED_PREPROCESSOR_IDS: set[str] = set()
+_PREPROCESSING_WORKFLOW_IO_SPEC = WorkflowIOSpecPublic(
+    workflow_inputs=[
+        {
+            "name": "frames",
+            "required": True,
+            "label": "原始 frames",
+            "description": "由数据集加载原始数据后提供给预处理工作流。",
+            "value_type": "raw_frames",
+            "render_type": "socket",
+        }
+    ],
+    workflow_outputs=[
+        {
+            "name": "frames",
+            "required": True,
+            "label": "预处理结果",
+            "description": "预处理工作流输出的 frames 映射。",
+            "value_type": "raw_frames",
+            "render_type": "appendable",
+        }
+    ],
+)
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:
@@ -32,7 +54,7 @@ def _parse_datasource_ids_csv(text: str) -> list[str]:
 
 
 def _make_preprocessor_apply_node_cls(
-    *, preprocessor_id: str, preprocessor_cls: type[Node]
+    *, preprocessor_id: str, preprocessor_cls: type
 ) -> type[Node]:
     """Create an executable wrapper for one concrete preprocessor id.
 
@@ -72,23 +94,6 @@ def _make_preprocessor_apply_node_cls(
     return PreprocessorApplyNode
 
 
-def _system_node_types() -> list[EvaluationNodeTypePublic]:
-    # Imported lazily to avoid import-time side-effects.
-    from factor.preprocessing_workflow_nodes import CollectFrames, DataSetFramesInput
-
-    def _to_type(item) -> EvaluationNodeTypePublic:
-        return EvaluationNodeTypePublic(
-            type=item.type,
-            label=item.label,
-            description=item.description,
-            category=getattr(item, "category", None),
-            inputs=[Parser.serialize_socket(s) for s in item.inputs],
-            outputs=[Parser.serialize_socket(s) for s in item.outputs],
-        )
-
-    return [_to_type(DataSetFramesInput), _to_type(CollectFrames)]
-
-
 def ensure_preprocessor_workflow_nodes_registered() -> None:
     """Ensure wrapper Node classes are registered for all existing preprocessors.
 
@@ -115,7 +120,6 @@ def list_preprocessor_node_types_public() -> list[EvaluationNodeTypePublic]:
     ensure_preprocessor_workflow_nodes_registered()
 
     out: list[EvaluationNodeTypePublic] = []
-    out.extend(_system_node_types())
 
     loader = WorkflowNodeLoader.instance()
 
@@ -137,6 +141,10 @@ def list_preprocessor_node_types_public() -> list[EvaluationNodeTypePublic]:
         )
 
     return out
+
+
+def get_preprocessor_workflow_io_spec() -> WorkflowIOSpecPublic:
+    return _PREPROCESSING_WORKFLOW_IO_SPEC
 
 
 @register_startup_job

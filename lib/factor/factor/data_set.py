@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pandas as pd
-from workflow import WorkflowExecutor
+from workflow import WORKFLOW_OUTPUT_NODE_ID, WorkflowExecutor
 
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter
 from factor.panel import panel_load_start_date
-from factor.preprocessing_workflow_nodes import CollectFrames
 
 
 class DataSourceBinding:
@@ -201,47 +198,6 @@ class DataSet:
             renamed[c] = pd.to_numeric(renamed[c], errors="coerce")
         return renamed[["date", "asset", *requested]].set_index(["date", "asset"]).sort_index()
 
-    @staticmethod
-    def _extract_collected_frames_from_workflow(
-        workflow_json: str,
-        node_results: dict[str, dict[str, Any]],
-        raw_frame_keys: list[str],
-    ) -> dict[str, pd.DataFrame]:
-        import json
-
-        payload = json.loads(workflow_json)
-        if not isinstance(payload, dict):
-            raise TypeError("preprocessing_workflow 须为 JSON 对象")
-        nodes_payload = payload.get("nodes", [])
-        if not isinstance(nodes_payload, list):
-            raise TypeError("workflow.nodes 须为 list")
-
-        collect_ids = [
-            n.get("id")
-            for n in nodes_payload
-            if isinstance(n, dict) and n.get("type") == CollectFrames.type
-        ]
-        collect_ids = [str(i) for i in collect_ids if isinstance(i, str) and i]
-
-        if not collect_ids:
-            raise ValueError("preprocessing_workflow 未找到 CollectFrames 节点")
-
-        # 取最后一个 CollectFrames 作为最终输出
-        final_id = collect_ids[-1]
-        collected = node_results.get(final_id)
-        if not isinstance(collected, tuple) or len(collected) != 1:
-            raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回有效 DataFrame")
-
-        frames_out = collected[0]
-        if isinstance(frames_out, pd.DataFrame):
-            if len(raw_frame_keys) != 1:
-                raise ValueError(
-                    f"CollectFrames 节点 {final_id!r} 返回单 DataFrame，"
-                    "但当前数据集包含多个 datasource，无法回填到 frames 映射",
-                )
-            return {raw_frame_keys[0]: frames_out}
-        raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回有效 DataFrame")
-
     def _load_raw_frames_for_panel(
         self,
         *,
@@ -285,27 +241,27 @@ class DataSet:
         workflow = self.preprocessing_workflow
         if not workflow or not str(workflow).strip():
             return raw_frames
-
         import json
 
         payload = json.loads(workflow)
-        nodes_payload = payload.get("nodes", [])
-        has_collect = isinstance(nodes_payload, list) and any(
-            isinstance(n, dict) and n.get("type") == CollectFrames.type for n in nodes_payload
-        )
-        if not has_collect:
+        nodes = payload.get("nodes", []) if isinstance(payload, dict) else []
+        if not isinstance(nodes, list) or len(nodes) == 0:
             return raw_frames
 
         executor = WorkflowExecutor()
         node_results = executor.execute(
             workflow,
-            context={"frames": raw_frames},
+            context={"frames": raw_frames, **raw_frames},
         )
-        return self._extract_collected_frames_from_workflow(
-            workflow,
-            node_results=node_results,  # type: ignore[arg-type]
-            raw_frame_keys=list(raw_frames.keys()),
-        )
+        workflow_out = node_results.get(WORKFLOW_OUTPUT_NODE_ID, {})
+        frames_out = workflow_out.get("frames")
+        if frames_out is None:
+            return raw_frames
+        if not isinstance(frames_out, dict):
+            raise ValueError(
+                "preprocessing_workflow 必须通过 workflow_outputs.frames 输出 frames 映射"
+            )
+        return frames_out
 
     def get_panel(
         self,

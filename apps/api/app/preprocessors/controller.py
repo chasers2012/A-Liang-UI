@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from custom_code import SourceFiles, validate_source_syntax
-from workflow import Node, WorkflowNodeLoader
+from factor import DataPreprocessorBase
 
 from app.common.datetime_utils import utc_now_iso
 from app.preprocessors.package_manager import PreprocessorPackageManager
@@ -15,20 +15,29 @@ from app.preprocessors.schemas import (
 )
 
 
-def _load_preprocessor_from_file(source_path: str) -> type[Node] | None:
+def _load_preprocessor_from_file(source_path: str) -> type[DataPreprocessorBase] | None:
     source_file = SourceFiles.resolve_source_path(source_path)
     if not source_file.is_file():
         return None
 
     source = SourceFiles.read_source_text(source_path)
     try:
-        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+        code = compile(source, source_path, "exec")
     except Exception:
         return None
-
-    if not issubclass(node_cls, Node) or node_cls is Node:
+    env: dict[str, object] = {}
+    try:
+        exec(code, env, env)
+    except Exception:
         return None
-    return node_cls
+    for obj in env.values():
+        if not isinstance(obj, type):
+            continue
+        if obj is DataPreprocessorBase:
+            continue
+        if issubclass(obj, DataPreprocessorBase):
+            return obj
+    return None
 
 
 def create_preprocessor(
@@ -141,7 +150,7 @@ def delete_preprocessor(pid: str) -> PreprocessorRecord | None:
     return PreprocessorsRegistry.delete_item(pid)
 
 
-def resolve_preprocessor_class(pid: str) -> type[Node] | None:
+def resolve_preprocessor_class(pid: str) -> type[DataPreprocessorBase] | None:
     rec = PreprocessorsRegistry.get_item(pid)
     if rec is None:
         return None

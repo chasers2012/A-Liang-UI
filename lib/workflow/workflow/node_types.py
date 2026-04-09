@@ -283,6 +283,9 @@ class Node:
 
 # --- Graph instance models (nodes + links) ------------------------------------
 
+WORKFLOW_INPUT_NODE_ID = "__workflow_input__"
+WORKFLOW_OUTPUT_NODE_ID = "__workflow_output__"
+
 
 class WorkflowLink:
     id: str | None = None
@@ -337,6 +340,8 @@ class WorkflowViewport:
 class WorkflowGraph:
     nodes: list[Node]
     links: list[WorkflowLink]
+    workflow_inputs: list[Socket]
+    workflow_outputs: list[Socket]
     viewport: WorkflowViewport | None
 
     def __init__(
@@ -344,10 +349,14 @@ class WorkflowGraph:
         *,
         nodes: list[Node] | None = None,
         links: list[WorkflowLink] | None = None,
+        workflow_inputs: list[Socket] | None = None,
+        workflow_outputs: list[Socket] | None = None,
         viewport: WorkflowViewport | None = None,
     ) -> None:
         self.nodes = list(nodes or [])
         self.links = list(links or [])
+        self.workflow_inputs = list(workflow_inputs or [])
+        self.workflow_outputs = list(workflow_outputs or [])
         self.viewport = viewport
 
     def serialize(self) -> dict:
@@ -359,4 +368,6 @@ class WorkflowGraph:
         return {
             "nodes": nodes_payload,
             "links": [link.serialize() for link in self.links],
+            "workflow_inputs": [Parser.serialize_socket(s) for s in self.workflow_inputs],
+            "workflow_outputs": [Parser.serialize_socket(s) for s in self.workflow_outputs],
         }

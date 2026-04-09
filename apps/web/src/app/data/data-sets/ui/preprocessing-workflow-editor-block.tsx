@@ -16,7 +16,6 @@ import {
   type WorkflowNodeTypeDefinition,
 } from "@/components/workflow-graph";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
-import { SYSTEM_PREPROCESSING_NODE_TYPES } from "./system-preprocessing-node-types";
 
 function toWorkflowNodeTypes(
   catalog: EvaluationNodeTypeCatalogItemPublic[],
@@ -57,10 +56,7 @@ export function PreprocessingWorkflowEditorBlock(props: {
     () => toWorkflowNodeTypes(catalog),
     [catalog],
   );
-  const listCatalog = useMemo(
-    () => catalog.filter((item) => !SYSTEM_PREPROCESSING_NODE_TYPES.has(item.type)),
-    [catalog],
-  );
+  const listCatalog = useMemo(() => catalog, [catalog]);
 
   return (
     <div className={cn("flex h-full min-h-0 flex-1 flex-col gap-3", className)}>

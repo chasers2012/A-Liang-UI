@@ -5,7 +5,10 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasource.schemas import utc_now_iso
-from app.evaluation.profile.controller import list_evaluation_profile_node_types_public
+from app.evaluation.profile.controller import (
+    get_evaluation_profile_workflow_io_spec,
+    list_evaluation_profile_node_types_public,
+)
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationNodeTypePublic,
@@ -13,6 +16,7 @@ from app.evaluation.profile.schemas import (
     EvaluationProfilePatch,
     EvaluationProfilePublic,
     EvaluationProfileRecord,
+    WorkflowIOSpecPublic,
     workflow_public_dict,
 )
 
@@ -49,6 +53,11 @@ def _merge_evaluation_profile_patch(
 @router.get("/node-types", response_model=list[EvaluationNodeTypePublic])
 def list_node_types() -> list[EvaluationNodeTypePublic]:
     return list_evaluation_profile_node_types_public()
+
+
+@router.get("/workflow-io", response_model=WorkflowIOSpecPublic)
+def get_workflow_io() -> WorkflowIOSpecPublic:
+    return get_evaluation_profile_workflow_io_spec()
 
 
 @router.get("", response_model=list[EvaluationProfilePublic])

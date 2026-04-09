@@ -5,7 +5,7 @@ from workflow.parser import Parser
 
 from app.evaluation.metrics.controller import list_metric_records, read_metric_source
 from app.evaluation.profile.internal_nodes import get_internal_nodes
-from app.evaluation.profile.schemas import EvaluationNodeTypePublic
+from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
 
 
 class ProfileNotFoundError(LookupError):
@@ -49,3 +49,19 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
             )
         )
     return out
+
+
+def get_evaluation_profile_workflow_io_spec() -> WorkflowIOSpecPublic:
+    return WorkflowIOSpecPublic(
+        workflow_inputs=[],
+        workflow_outputs=[
+            {
+                "name": "result",
+                "required": False,
+                "label": "结果",
+                "description": "评价工作流最终输出。",
+                "value_type": "scalar_json",
+                "render_type": "appendable",
+            }
+        ],
+    )

@@ -47,3 +47,8 @@ export interface EvaluationNodeTypeCatalogItemPublic {
   socket_labels?: Record<string, string>;
   period_day_style_sockets?: string[];
 }
+
+export interface WorkflowIOSpecPublic {
+  workflow_inputs: NodeTypeSocketPublic[];
+  workflow_outputs: NodeTypeSocketPublic[];
+}
