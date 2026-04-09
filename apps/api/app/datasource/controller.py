@@ -23,15 +23,10 @@ def get_datasource(id: str) -> FactorDataSource | None:
         return SqlDataSource(
             engine=url,
             table=rec.sql.table,
-            date_column=rec.sql.date_column,
-            asset_column=rec.sql.asset_column,
-            column_map=rec.sql.column_map,
         )
     if rec.type == "csv":
         return CsvDataSource(
             path=rec.csv.path,
-            date_column=rec.csv.date_column,
-            asset_column=rec.csv.asset_column,
             read_csv_kwargs=rec.csv.read_csv_kwargs,
         )
     raise ValueError(f"Unknown data source type: {rec.type}")

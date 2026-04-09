@@ -16,7 +16,7 @@ if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
 from datasources import CsvDataSource  # noqa: E402
-from factor import DependencyResolver  # noqa: E402
+from factor import DataSet, DataSourceBinding, DependencyResolver  # noqa: E402
 from price_factor import PriceFactor  # noqa: E402
 
 
@@ -63,14 +63,20 @@ def main() -> None:
     )
     args = p.parse_args()
 
-    ds = CsvDataSource(
-        args.input,
-        date_column=args.date_column,
-        asset_column=args.asset_column,
-    )
-    resolver = DependencyResolver()
     close_alias = {"close": args.close_column} if args.close_column != "close" else None
-    resolver.register_datasource(ds, ["close"], alias=close_alias)
+    ds = CsvDataSource(args.input)
+    dataset = DataSet(
+        [
+            DataSourceBinding(
+                ds,
+                dependencies=["close"],
+                alias=close_alias,
+                date_column=args.date_column,
+                asset_column=args.asset_column,
+            )
+        ]
+    )
+    resolver = DependencyResolver(dataset)
 
     factor = PriceFactor(dependency_resolver=resolver)
     out = factor.calculate(args.start_date, args.end_date)

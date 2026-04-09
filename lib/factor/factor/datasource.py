@@ -1,54 +1,50 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Literal
 
 import pandas as pd
 
 
+@dataclass(frozen=True, slots=True)
+class BetweenFilter:
+    column: str
+    start: str
+    end: str
+    inclusive: Literal["both", "left", "right", "neither"] = "both"
+
+
+@dataclass(frozen=True, slots=True)
+class InFilter:
+    column: str
+    values: list[str]
+
+
+LoadFilter = BetweenFilter | InFilter
+
+
 class FactorDataSource(ABC):
-    """
-    Abstract panel data provider for factors.
+    """中性的 DataFrame 读取接口（不承载任何因子业务语义）。
 
-    Implementations should return a DataFrame indexed by MultiIndex (date, asset)
-    with columns containing at least the requested ``fields``.
-
-    :meth:`get_panel` receives an inclusive ``start_date`` that already includes
-    any lookback history; typically :class:`DependencyResolver` or
-    :func:`factor.dependency_resolver.panel_load_start_date` computes it from the
-    user range and ``window``.
+    该接口只负责“从某个后端读取指定列，并应用通用过滤条件”，不出现
+    ``date`` / ``asset`` / ``codes`` / ``column_map`` 等业务字段概念。
+    业务侧的索引列语义（逻辑 date/asset）与字段映射（alias/column_map）
+    由 :class:`factor.data_set.DataSet` / :class:`factor.data_set.DataSourceBinding`
+    统一处理。
     """
 
     @abstractmethod
     def list_columns(self) -> list[str]:
-        """
-        Logical factor dependency names this source can supply (e.g. for dataset bindings).
-
-        For SQL sources these are typically keys of the column map; for CSV, data column
-        names from the file header (excluding date/asset index columns). Sorted for stable UI.
-        """
+        """返回数据源可见的物理列名（用于绑定/校验）。"""
         raise NotImplementedError
 
     @abstractmethod
-    def get_panel(
+    def load_frame(
         self,
         *,
-        fields: list[str],
-        start_date: str,
-        end_date: str,
-        stock_codes: list[str] | None,
+        columns: list[str],
+        filters: list[LoadFilter] | None = None,
     ) -> pd.DataFrame:
-        """
-        Load OHLCV / feature columns for the given range and universe.
-
-        Args:
-            fields: Column names required by the factor (e.g. ``close``, ``turn``).
-            start_date: First calendar date inclusive (``YYYY-MM-DD``), including
-                history needed upstream for rolling windows.
-            end_date: Last calendar date inclusive (``YYYY-MM-DD``).
-            stock_codes: Asset identifiers, or None for full universe.
-
-        Returns:
-            DataFrame with MultiIndex named ``date`` and ``asset`` (in any order
-            of levels; ``Factor`` validates names) and columns covering ``fields``.
-        """
+        """读取一个普通 DataFrame（不设 index，不做列重命名）。"""
         raise NotImplementedError

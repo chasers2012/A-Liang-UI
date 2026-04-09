@@ -9,34 +9,28 @@ from evaluate import (
     close_prices_wide,
     compute_forward_return_from_wide,
 )
-from factor import DependencyResolver, Factor, FactorDataSource
+from factor import DataSet, DataSourceBinding, DependencyResolver, Factor, FactorDataSource
 
 
 class _StaticPanelSource(FactorDataSource):
     """Test helper: return a fixed panel slice by date range and fields."""
 
     def __init__(self, panel: pd.DataFrame) -> None:
-        self._panel = panel
+        self._panel = panel.reset_index()
 
     def list_columns(self) -> list[str]:
-        return sorted(self._panel.columns, key=lambda x: (str(x).lower(), str(x)))
+        return sorted([str(c) for c in self._panel.columns], key=lambda x: (x.lower(), x))
 
-    def get_panel(
+    def load_frame(
         self,
         *,
-        fields: list[str],
-        start_date: str,
-        end_date: str,
-        stock_codes: list[str] | None,
+        columns: list[str],
+        filters=None,
     ) -> pd.DataFrame:
-        df = self._panel
-        d = df.index.get_level_values("date")
-        ed = pd.Timestamp(end_date)
-        sd = pd.Timestamp(start_date)
-        mask = np.asarray((d >= sd) & (d <= ed), dtype=bool)
-        if stock_codes is not None:
-            mask &= df.index.get_level_values("asset").isin(stock_codes)
-        return df.loc[mask, list(fields)]
+        missing = [c for c in columns if c not in self._panel.columns]
+        if missing:
+            raise KeyError(missing)
+        return self._panel[list(columns)].copy()
 
 
 class _RankFactor(Factor):
@@ -67,8 +61,17 @@ def _panel_and_factor(
 
 
 def _evaluator_for_panel(panel: pd.DataFrame) -> AlphalensFactorEvaluator:
-    r = DependencyResolver()
-    r.register_datasource(_StaticPanelSource(panel), ["close"])
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _StaticPanelSource(panel),
+                dependencies=["close"],
+                date_column="date",
+                asset_column="asset",
+            )
+        ]
+    )
+    r = DependencyResolver(ds)
     f = _RankFactor(dependency_resolver=r)
     dates = panel.index.get_level_values("date")
     start = dates.min().strftime("%Y-%m-%d")

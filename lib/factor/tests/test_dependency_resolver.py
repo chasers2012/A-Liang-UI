@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-from factor import DependencyResolver
+from factor import DataSet, DataSourceBinding, DependencyResolver
 from factor.datasource import FactorDataSource
 
 
 def _panel(rows: list[tuple], cols: list[str]) -> pd.DataFrame:
     """Each row is (date, asset, *column_values)."""
-    idx = pd.MultiIndex.from_tuples([(r[0], r[1]) for r in rows], names=["date", "asset"])
-    data = {c: [r[i + 2] for r in rows] for i, c in enumerate(cols)}
-    return pd.DataFrame(data, index=idx)
+    data = {
+        "date": [r[0] for r in rows],
+        "asset": [r[1] for r in rows],
+    }
+    for i, c in enumerate(cols):
+        data[c] = [r[i + 2] for r in rows]
+    return pd.DataFrame(data)
 
 
 class _FixedSource(FactorDataSource):
@@ -18,29 +22,18 @@ class _FixedSource(FactorDataSource):
         self._df = df
 
     def list_columns(self) -> list[str]:
-        return sorted(self._df.columns, key=lambda x: (str(x).lower(), str(x)))
+        return sorted([str(c) for c in self._df.columns], key=lambda x: (x.lower(), x))
 
-    def get_panel(
+    def load_frame(
         self,
         *,
-        fields: list[str],
-        start_date: str,
-        end_date: str,
-        stock_codes: list[str] | None,
+        columns: list[str],
+        filters=None,
     ) -> pd.DataFrame:
-        missing = [f for f in fields if f not in self._df.columns]
+        missing = [c for c in columns if c not in self._df.columns]
         if missing:
             raise KeyError(missing)
-        df = self._df[list(fields)]
-        if df.empty:
-            return df
-        d = df.index.get_level_values("date")
-        sd = pd.Timestamp(start_date)
-        ed = pd.Timestamp(end_date)
-        mask = (d >= sd) & (d <= ed)
-        if stock_codes is not None:
-            mask &= df.index.get_level_values("asset").isin(stock_codes)
-        return df.loc[mask]
+        return self._df[list(columns)].copy()
 
 
 def test_resolver_merges_two_sources_inner_join() -> None:
@@ -55,9 +48,17 @@ def test_resolver_merges_two_sources_inner_join() -> None:
     ]
     basic = _panel(basic_rows, ["pe"])
 
-    r = DependencyResolver()
-    r.register_datasource(_FixedSource(ohlc), ["close", "volume"])
-    r.register_datasource(_FixedSource(basic), ["pe"])
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(ohlc), ["close", "volume"], date_column="date", asset_column="asset"
+            ),
+            DataSourceBinding(
+                _FixedSource(basic), ["pe"], date_column="date", asset_column="asset"
+            ),
+        ]
+    )
+    r = DependencyResolver(ds)
 
     out = r.get_panel(
         fields=["close", "pe"],
@@ -75,8 +76,18 @@ def test_resolver_merges_two_sources_inner_join() -> None:
 def test_register_datasource_alias_maps_physical_columns() -> None:
     """Logical dependency names differ from column names on the underlying source."""
     df = _panel([(pd.Timestamp("2024-01-02"), "A", 99.0)], ["raw_close"])
-    r = DependencyResolver()
-    r.register_datasource(_FixedSource(df), ["close"], alias={"close": "raw_close"})
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(df),
+                ["close"],
+                alias={"close": "raw_close"},
+                date_column="date",
+                asset_column="asset",
+            )
+        ]
+    )
+    r = DependencyResolver(ds)
     out = r.get_panel(
         fields=["close"],
         start_date="2024-01-01",
@@ -90,12 +101,18 @@ def test_register_datasource_alias_maps_physical_columns() -> None:
 
 def test_alias_conflict_same_physical_two_logical_raises() -> None:
     df = _panel([(pd.Timestamp("2024-01-02"), "A", 1.0, 2.0)], ["x", "y"])
-    r = DependencyResolver()
-    r.register_datasource(
-        _FixedSource(df),
-        ["close", "open"],
-        alias={"close": "x", "open": "x"},
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(df),
+                ["close", "open"],
+                alias={"close": "x", "open": "x"},
+                date_column="date",
+                asset_column="asset",
+            )
+        ]
     )
+    r = DependencyResolver(ds)
     with pytest.raises(ValueError, match="same datasource column"):
         r.get_panel(
             fields=["close", "open"],
@@ -106,26 +123,30 @@ def test_alias_conflict_same_physical_two_logical_raises() -> None:
         )
 
 
-def test_source_for_field_first_registration_wins() -> None:
-    df = _panel([(pd.Timestamp("2024-01-02"), "A", 1.0)], ["close"])
-    s1 = _FixedSource(df)
-    s2 = _FixedSource(df)
-    r = DependencyResolver()
-    r.register_datasource(s1, ["close"])
-    r.register_datasource(s2, ["close"])
-    assert r.source_for_field("close") is s1
-
-
 def test_list_registered_fields() -> None:
-    r = DependencyResolver()
-    r.register_datasource(_FixedSource(_panel([], [])), ["a", "b"])
-    r.register_datasource(_FixedSource(_panel([], [])), ["b", "c"])
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(_panel([], [])), ["a", "b"], date_column="date", asset_column="asset"
+            ),
+            DataSourceBinding(
+                _FixedSource(_panel([], [])), ["b", "c"], date_column="date", asset_column="asset"
+            ),
+        ]
+    )
+    r = DependencyResolver(ds)
     assert r.list_registered_fields() == ["a", "b", "c"]
 
 
 def test_unknown_field_raises() -> None:
-    r = DependencyResolver()
-    r.register_datasource(_FixedSource(_panel([], [])), ["close"])
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(_panel([], [])), ["close"], date_column="date", asset_column="asset"
+            ),
+        ]
+    )
+    r = DependencyResolver(ds)
     with pytest.raises(ValueError, match="Unknown dependency field"):
         r.get_panel(
             fields=["nope"],
@@ -137,8 +158,9 @@ def test_unknown_field_raises() -> None:
 
 
 def test_no_registration_raises() -> None:
-    r = DependencyResolver()
-    with pytest.raises(ValueError, match="No FactorDataSource registered"):
+    ds = DataSet([])
+    r = DependencyResolver(ds)
+    with pytest.raises(ValueError, match="No DataSourceBinding configured"):
         r.get_panel(
             fields=["close"],
             start_date=None,

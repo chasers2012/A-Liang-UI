@@ -3,34 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
-from factor.datasource import FactorDataSource
+from factor.datasource import BetweenFilter, FactorDataSource, InFilter, LoadFilter
 from workspace import get_workspace_root
 
 
 class CsvDataSource(FactorDataSource):
-    """
-    Load a long-format CSV into a MultiIndex (date, asset) panel.
-
-    Expects one row per (date, asset). Column names in the file must match the
-    ``fields`` passed to :meth:`get_panel` (after date/asset renaming to index).
-    To map logical factor fields to different CSV headers, use
-    :class:`factor.DependencyResolver` ``alias`` when registering this source.
-
-    ``start_date`` / ``end_date`` are inclusive bounds; include any lookback history
-    in ``start_date`` (e.g. via :func:`factor.panel_load_start_date`).
-    """
+    """从 CSV 读取普通 DataFrame（中性接口，不承载业务语义）。"""
 
     def __init__(
         self,
         path: str | Path,
         *,
-        date_column: str,
-        asset_column: str,
         read_csv_kwargs: dict | None = None,
     ) -> None:
         self._path = Path(path)
-        self._date_column = date_column
-        self._asset_column = asset_column
         self._read_csv_kwargs = dict(read_csv_kwargs) if read_csv_kwargs else {}
 
     def _resolved_file_path(self) -> Path:
@@ -52,60 +38,54 @@ class CsvDataSource(FactorDataSource):
         peek_kw = {k: v for k, v in read_kw.items() if k != "usecols"}
         header = pd.read_csv(path, nrows=0, **peek_kw)
         cols = [str(c) for c in header.columns]
-        dc = self._date_column.strip()
-        ac = self._asset_column.strip()
-        data_cols = [c for c in cols if c != dc and c != ac]
-        return sorted(set(data_cols), key=lambda x: (x.lower(), x))
+        return sorted(set(cols), key=lambda x: (x.lower(), x))
 
-    def get_panel(
+    def load_frame(
         self,
         *,
-        fields: list[str],
-        start_date: str,
-        end_date: str,
-        stock_codes: list[str] | None,
+        columns: list[str],
+        filters: list[LoadFilter] | None = None,
     ) -> pd.DataFrame:
-        load_start = pd.Timestamp(start_date).normalize()
-        end_ts = pd.Timestamp(end_date).normalize()
-
-        usecols = {self._date_column, self._asset_column}
-        for f in fields:
-            usecols.add(f)
         read_kw = self._read_csv_kwargs_effective()
+        usecols = sorted({str(c) for c in columns})
         peek_kw = {k: v for k, v in read_kw.items() if k != "usecols"}
         header = pd.read_csv(self._resolved_file_path(), nrows=0, **peek_kw)
         present = set(header.columns)
-        needed = set(usecols)
-        missing = sorted(needed - present)
+        missing = sorted(set(usecols) - present)
         if missing:
             raise ValueError(
-                "CSV column names do not match the configured date/asset/field "
-                f"columns. Missing in file: {missing}. "
-                f"Columns present: {sorted(present)}."
+                f"CSV 缺少所需列. Missing in file: {missing}. Columns present: {sorted(present)}."
             )
         df = pd.read_csv(
             self._resolved_file_path(),
-            usecols=sorted(usecols),
+            usecols=usecols,
             **read_kw,
         )
-        df = df.rename(
-            columns={
-                self._date_column: "date",
-                self._asset_column: "asset",
-            }
-        )
+        if not filters:
+            return df
 
-        df["date"] = pd.to_datetime(df["date"])
-        df["asset"] = df["asset"].astype(str)
+        mask = pd.Series(True, index=df.index)
+        for flt in filters:
+            if isinstance(flt, BetweenFilter):
+                if flt.column not in df.columns:
+                    raise ValueError(f"CSV 缺少过滤列: {flt.column!r}")
+                s = df[flt.column]
+                if pd.api.types.is_datetime64_any_dtype(s) or pd.api.types.is_datetime64tz_dtype(s):
+                    ser = s
+                    start = pd.Timestamp(flt.start)
+                    end = pd.Timestamp(flt.end)
+                else:
+                    ser = pd.to_datetime(s, errors="coerce")
+                    start = pd.Timestamp(flt.start)
+                    end = pd.Timestamp(flt.end)
+                m = (ser >= start) & (ser <= end)
+                mask &= m.fillna(False)
+            elif isinstance(flt, InFilter):
+                if flt.column not in df.columns:
+                    raise ValueError(f"CSV 缺少过滤列: {flt.column!r}")
+                values = {str(v) for v in (flt.values or [])}
+                mask &= df[flt.column].astype(str).isin(values)
+            else:
+                raise TypeError(f"Unsupported filter: {type(flt)!r}")
 
-        mask = (df["date"] >= load_start) & (df["date"] <= end_ts)
-        if stock_codes is not None:
-            codes = {str(c) for c in stock_codes}
-            mask &= df["asset"].isin(codes)
-        df = df.loc[mask, ["date", "asset", *fields]]
-
-        if df.empty:
-            empty_idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
-            return pd.DataFrame(columns=fields, index=empty_idx)
-
-        return df.set_index(["date", "asset"]).sort_index()
+        return df.loc[mask].reset_index(drop=True)

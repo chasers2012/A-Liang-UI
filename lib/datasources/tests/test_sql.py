@@ -1,4 +1,5 @@
 from datasources import SqlDataSource
+from factor import DataSet, DataSourceBinding
 from sqlalchemy import create_engine, text
 
 
@@ -14,15 +15,24 @@ def test_sql_data_source_sqlite_panel():
     ds = SqlDataSource(
         engine,
         table="bars",
-        date_column="d",
-        asset_column="sym",
-        column_map={"close": "c"},
     )
-    df = ds.get_panel(
+    dataset = DataSet(
+        [
+            DataSourceBinding(
+                ds,
+                dependencies=["close"],
+                alias={"close": "c"},
+                date_column="d",
+                asset_column="sym",
+            )
+        ]
+    )
+    df = dataset.get_panel(
         fields=["close"],
         start_date="2025-01-02",
         end_date="2025-01-03",
         stock_codes=None,
+        window=0,
     )
     assert df.index.names == ("date", "asset")
     assert list(df.columns) == ["close"]
@@ -32,11 +42,11 @@ def test_sql_data_source_sqlite_panel():
 
 def test_sql_data_source_list_columns():
     engine = create_engine("sqlite:///:memory:")
+    with engine.connect() as conn:
+        conn.execute(text("CREATE TABLE bars (d TEXT, sym TEXT, c REAL, v REAL)"))
+        conn.commit()
     ds = SqlDataSource(
         engine,
         table="bars",
-        date_column="d",
-        asset_column="sym",
-        column_map={"close": "c", "volume": "v"},
     )
-    assert ds.list_columns() == ["close", "volume"]
+    assert ds.list_columns() == ["c", "d", "sym", "v"]
