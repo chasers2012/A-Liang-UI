@@ -143,6 +143,7 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
 
 @router.patch("/{ds_id}", response_model=DataSourcePublic)
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
+
     def _apply(rec: DataSourceRecord) -> None:
         data = body.model_dump(exclude_unset=True)
         if "name" in data:

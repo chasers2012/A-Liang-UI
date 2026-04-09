@@ -37,13 +37,3 @@ function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
   if (!v || typeof v !== "object" || Array.isArray(v)) return {};
   return v as Record<string, unknown>;
 }
-
-export function parseOptionalPort(s: string): number | undefined {
-  const t = s.trim();
-  if (!t) return undefined;
-  const n = parseInt(t, 10);
-  if (Number.isNaN(n) || n < 1 || n > 65535) {
-    throw new Error("端口须为 1–65535 的整数");
-  }
-  return n;
-}

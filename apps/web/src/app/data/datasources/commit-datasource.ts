@@ -1,8 +1,5 @@
 import type { DataSourcePublic } from "@/lib/quant-agent-api";
-import {
-  createDatasource,
-  patchDatasource,
-} from "@/lib/quant-agent-api";
+import { createDatasource, patchDatasource } from "@/lib/quant-agent-api";
 
 import type { EditorMode, FormState } from "./form-model";
 
