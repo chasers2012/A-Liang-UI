@@ -196,7 +196,7 @@ type DataSetBindingRowBlockProps = {
   datasources: DataSourcePublic[];
   dependencyFieldsByDsId: Record<string, string[]>;
   dsItems: Record<string, string>;
-  enabledDs: DataSourcePublic[];
+  bindingDatasources: DataSourcePublic[];
   updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
   removeBinding: (i: number) => void;
 };
@@ -208,7 +208,7 @@ function DataSetBindingRowBlock({
   datasources,
   dependencyFieldsByDsId,
   dsItems,
-  enabledDs,
+  bindingDatasources,
   updateBinding,
   removeBinding,
 }: DataSetBindingRowBlockProps) {
@@ -270,13 +270,13 @@ function DataSetBindingRowBlock({
               date_column: "",
               asset_column: "",
             })}
-          disabled={enabledDs.length === 0}
+          disabled={bindingDatasources.length === 0}
         >
           <SelectTrigger className="w-full min-w-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {enabledDs.map((d) => (
+            {bindingDatasources.map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.name} ({d.type})
               </SelectItem>
@@ -457,13 +457,12 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           if (cancelled) return;
           setForm(hydrateDataSetForm(row));
         } else if (mode === "create") {
-          const enabled = ds.filter((d) => d.enabled);
-          if (enabled.length === 1) {
+          if (ds.length === 1) {
             setForm((prev) => ({
               ...prev,
               bindings: [
                 {
-                  datasource_id: enabled[0].id,
+                  datasource_id: ds[0].id,
                   alias_rows: [{ factor: "", column: "", enabled: true }],
                   date_column: "",
                   asset_column: "",
@@ -512,9 +511,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     }
   }, [form.bindings, datasources]);
 
-  const enabledDs = datasources.filter((d) => d.enabled);
+  const bindingDatasources = datasources;
   const dsItems: Record<string, string> = {};
-  for (const d of enabledDs) {
+  for (const d of bindingDatasources) {
     dsItems[d.id] = `${d.name} (${d.type})`;
   }
 
@@ -634,7 +633,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         <PageFormHeaderActions
           formId={DATA_SET_MAIN_FORM_ID}
           submitting={submitting}
-          submitDisabled={enabledDs.length === 0 || !form.name.trim()}
+          submitDisabled={bindingDatasources.length === 0 || !form.name.trim()}
           cancelHref={
             mode === "edit" && dataSetId
               ? `/data/data-sets/${encodeURIComponent(dataSetId)}`
@@ -648,11 +647,11 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         onSubmit={(e) => void onSubmit(e)}
         className="space-y-8"
       >
-        {enabledDs.length === 0 ? (
+        {bindingDatasources.length === 0 ? (
           <Alert variant="destructive">
             <AlertTitle>无可用数据源</AlertTitle>
             <AlertDescription>
-              请先在「数据源」中启用至少一个数据源。
+              请先在「数据源」中新建至少一个数据源。
             </AlertDescription>
           </Alert>
         ) : null}
@@ -674,7 +673,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
               <div>
                 <CardTitle>数据源绑定</CardTitle>
                 <CardDescription>
-                  每条绑定对应一个已启用数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
+                  每条绑定对应一个数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
                 </CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={addBinding}>
@@ -693,7 +692,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 datasources={datasources}
                 dependencyFieldsByDsId={dependencyFieldsByDsId}
                 dsItems={dsItems}
-                enabledDs={enabledDs}
+                bindingDatasources={bindingDatasources}
                 updateBinding={updateBinding}
                 removeBinding={removeBinding}
               />

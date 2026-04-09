@@ -148,8 +148,6 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
         data = body.model_dump(exclude_unset=True)
         if "name" in data:
             rec.name = data["name"]
-        if "enabled" in data:
-            rec.enabled = data["enabled"]
         if "config" in data:
             try:
                 plugin = PluginRegistry.instance().get(str(rec.type))

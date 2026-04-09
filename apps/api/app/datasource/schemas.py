@@ -19,7 +19,6 @@ class DataSourceRecord(BaseModel):
     id: str
     name: str
     type: DataSourceType
-    enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
     created_at: str
     updated_at: str
@@ -38,7 +37,6 @@ class DataSourceCreate(BaseModel):
 
     name: str
     type: DataSourceType
-    enabled: bool = True
     config: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -56,7 +54,6 @@ class DataSourceCreate(BaseModel):
             id=rid,
             name=self.name,
             type=str(self.type).strip(),
-            enabled=self.enabled,
             config=dict(self.config or {}),
             created_at=now,
             updated_at=now,
@@ -67,7 +64,6 @@ class DataSourcePatch(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str | None = None
-    enabled: bool | None = None
     # replace semantics: when present, overwrite record.config
     config: dict[str, Any] | None = None
 
@@ -76,7 +72,6 @@ class DataSourcePublic(BaseModel):
     id: str
     name: str
     type: DataSourceType
-    enabled: bool
     config: dict[str, Any]
     created_at: str
     updated_at: str
@@ -87,7 +82,6 @@ def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
         id=rec.id,
         name=rec.name,
         type=str(rec.type),
-        enabled=rec.enabled,
         config=redact_config(dict(rec.config or {})),
         created_at=rec.created_at,
         updated_at=rec.updated_at,

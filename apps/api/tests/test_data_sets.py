@@ -95,7 +95,6 @@ def _csv_datasource_body(name: str = "ds_csv") -> dict:
     return {
         "name": name,
         "type": "csv",
-        "enabled": True,
         "config": {
             "path": "eval_test_panel.csv",
             "read_csv_kwargs": {},

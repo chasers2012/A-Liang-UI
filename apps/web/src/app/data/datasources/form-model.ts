@@ -11,7 +11,6 @@ export type ColumnMapRow = {
 export type FormState = {
   name: string;
   type: string;
-  enabled: boolean;
   config: Record<string, unknown>;
 };
 
@@ -19,7 +18,6 @@ export function emptyForm(): FormState {
   return {
     name: "",
     type: "",
-    enabled: true,
     config: {},
   };
 }
@@ -28,7 +26,6 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
   return {
     name: ds.name,
     type: String(ds.type),
-    enabled: ds.enabled,
     config: dictLikeOrEmpty(ds.config),
   };
 }

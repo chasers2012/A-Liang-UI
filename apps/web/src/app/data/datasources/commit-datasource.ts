@@ -15,7 +15,6 @@ async function createDatasourceFromForm(
   return await createDatasource({
     name: form.name.trim(),
     type: form.type,
-    enabled: form.enabled,
     config: form.config,
   });
 }
@@ -27,7 +26,6 @@ function buildEditPatch(
   const patch: Record<string, unknown> = {};
 
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
-  if (form.enabled !== orig.enabled) patch.enabled = form.enabled;
 
   if (JSON.stringify(form.config) !== JSON.stringify(orig.config ?? {})) {
     patch.config = form.config;

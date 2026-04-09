@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback } from "react";
 import Link from "next/link";
 import { useAtom, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
@@ -21,7 +20,6 @@ import {
   ApiError,
   deleteDatasource,
   getQuantAgentApiBase,
-  patchDatasource,
   testDatasource,
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
@@ -43,27 +41,6 @@ export function DatasourcesPanel() {
   }, [refresh]);
 
   const { items, loadError, busyId, testHint, deleteTarget, deleting } = panel;
-
-  const withBusy = useCallback(
-    async (id: string, fn: () => Promise<unknown>) => {
-      setPanel((p) => ({ ...p, busyId: id, testHint: null }));
-      try {
-        await fn();
-        await refresh();
-      } catch (e) {
-        setPanel((p) => ({
-          ...p,
-          loadError: e instanceof Error ? e.message : String(e),
-        }));
-      } finally {
-        setPanel((p) => ({ ...p, busyId: null }));
-      }
-    },
-    [refresh, setPanel],
-  );
-
-  const toggleEnabled = (ds: DataSourcePublic, enabled: boolean) =>
-    void withBusy(ds.id, () => patchDatasource(ds.id, { enabled }));
 
   const runTest = async (ds: DataSourcePublic) => {
     setPanel((p) => ({ ...p, busyId: ds.id, testHint: null }));
@@ -147,7 +124,7 @@ export function DatasourcesPanel() {
         <CardHeader>
           <CardTitle>已配置的数据源</CardTitle>
           <CardDescription>
-            共 {count} 条；可在列表中快速启用、设默认或测试连接。
+            共 {count} 条；可测试连接或编辑配置。
           </CardDescription>
           <CardAction>
             <Link
@@ -172,7 +149,6 @@ export function DatasourcesPanel() {
             <DatasourceTable
               items={items}
               busyId={busyId}
-              onToggleEnabled={toggleEnabled}
               onTest={runTest}
               onDelete={(ds) => setPanel((p) => ({ ...p, deleteTarget: ds }))}
             />

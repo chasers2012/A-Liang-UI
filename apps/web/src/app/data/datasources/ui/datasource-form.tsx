@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 
@@ -20,7 +19,6 @@ import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-titl
 import type { DatasourcePluginPublic } from "@/lib/quant-agent-api";
 import type { EditorMode, FormState } from "../form-model";
 import { DatasourceFormPluginConfig } from "./datasource-form-plugin-config";
-import { FormSection } from "./form-section";
 
 export const DATASOURCE_MAIN_FORM_ID = "datasource-main-form";
 
@@ -115,22 +113,6 @@ export function DatasourceForm({
               </Select>
             </div>
           )}
-
-          <FormSection title="基本设置">
-            <div className="flex flex-wrap gap-8 pt-1">
-              <Label
-                htmlFor="ds-enabled"
-                className="flex cursor-pointer items-center gap-2 font-normal"
-              >
-                <Switch
-                  id="ds-enabled"
-                  checked={form.enabled}
-                  onCheckedChange={(v) => set({ enabled: v })}
-                />
-                <span className="text-sm font-medium">启用</span>
-              </Label>
-            </div>
-          </FormSection>
 
           <DatasourceFormPluginConfig
             form={form}

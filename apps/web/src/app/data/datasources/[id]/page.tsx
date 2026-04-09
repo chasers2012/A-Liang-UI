@@ -80,7 +80,6 @@ export default function DatasourceDetailPage() {
       deleteOpen={deleteOpen}
       deleting={deleting}
       setState={setState}
-      load={load}
       onRunTest={runTest}
       onConfirmDelete={confirmDelete}
     />

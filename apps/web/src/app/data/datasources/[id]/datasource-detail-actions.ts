@@ -1,9 +1,4 @@
-import {
-  ApiError,
-  deleteDatasource,
-  patchDatasource,
-  testDatasource,
-} from "@/lib/quant-agent-api";
+import { ApiError, deleteDatasource, testDatasource } from "@/lib/quant-agent-api";
 import type { DatasourceDetailState } from "@/models/datasource/detail.atom";
 import type { DataSourcePublic } from "@/models/datasource/dto";
 
@@ -20,25 +15,6 @@ function messageFromUnknown(e: unknown): string {
 function testConnectionErrorMessage(e: unknown): string {
   if (e instanceof ApiError) return e.message;
   return messageFromUnknown(e);
-}
-
-export async function withBusyReload(
-  load: () => Promise<void>,
-  setState: SetDetailState,
-  fn: () => Promise<unknown>,
-): Promise<void> {
-  setState((s) => ({ ...s, busy: true, testHint: null }));
-  try {
-    await fn();
-    await load();
-  } catch (e) {
-    setState((s) => ({
-      ...s,
-      error: messageFromUnknown(e),
-    }));
-  } finally {
-    setState((s) => ({ ...s, busy: false }));
-  }
 }
 
 export async function runDatasourceConnectionTest(
@@ -80,13 +56,3 @@ export async function confirmDeleteDatasource(
   }
 }
 
-export async function patchDatasourceEnabled(
-  datasourceId: string,
-  enabled: boolean,
-  load: () => Promise<void>,
-  setState: SetDetailState,
-): Promise<void> {
-  await withBusyReload(load, setState, () =>
-    patchDatasource(datasourceId, { enabled }),
-  );
-}

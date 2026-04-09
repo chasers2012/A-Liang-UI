@@ -62,7 +62,6 @@ def test_create_datasource_rejects_invalid_sql_config(client):
         json={
             "name": "bad",
             "type": "sql",
-            "enabled": True,
             "config": {},
         },
     )

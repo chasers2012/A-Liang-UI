@@ -59,12 +59,10 @@ def _to_public(rec: DataSetRecord) -> DataSetPublic:
     )
 
 
-def _validate_datasource_enabled(ds_id: str) -> DataSourceRecord:
+def _validate_datasource_exists(ds_id: str) -> DataSourceRecord:
     rec = DataSourceItemsRegistry.get_item(ds_id)
     if rec is None:
         raise HTTPException(status_code=400, detail="数据源不存在")
-    if not rec.enabled:
-        raise HTTPException(status_code=400, detail="数据源未启用，无法绑定到数据集")
     return rec
 
 
@@ -146,7 +144,7 @@ def _validate_and_touch_datasources(
 ) -> None:
     _validate_bindings_inputs(bindings)
     for b in bindings:
-        _validate_datasource_enabled(b.datasource_id.strip())
+        _validate_datasource_exists(b.datasource_id.strip())
 
 
 def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
@@ -215,7 +213,7 @@ def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
             ]
         )
         for b in rec.datasource_bindings:
-            _validate_datasource_enabled(b.datasource_id)
+            _validate_datasource_exists(b.datasource_id)
         rec.updated_at = utc_now_iso()
 
     rec = DataSetsStore.update_item(data_set_id, _apply)

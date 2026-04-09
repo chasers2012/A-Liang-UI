@@ -12,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Page } from "@/components/page";
 import { cn } from "@/lib/utils";
 import type { DatasourceDetailState } from "@/models/datasource/detail.atom";
@@ -20,8 +19,6 @@ import type { DataSourcePublic } from "@/models/datasource/dto";
 
 import { datasourceSummary } from "../datasource-summary";
 import { DeleteDatasourceDialog } from "../ui/delete-datasource-dialog";
-
-import { patchDatasourceEnabled } from "./datasource-detail-actions";
 
 function formatIso(iso: string): string {
   return iso.replace("T", " ").replace("+00:00", " UTC");
@@ -39,7 +36,6 @@ type Props = {
   deleteOpen: boolean;
   deleting: boolean;
   setState: SetDetailState;
-  load: () => Promise<void>;
   onRunTest: () => void;
   onConfirmDelete: () => void | Promise<void>;
 };
@@ -52,7 +48,6 @@ export function DatasourceDetailLoaded({
   deleteOpen,
   deleting,
   setState,
-  load,
   onRunTest,
   onConfirmDelete,
 }: Props) {
@@ -114,26 +109,14 @@ export function DatasourceDetailLoaded({
 
       <Card>
         <CardHeader>
-          <CardTitle>状态与标识</CardTitle>
-          <CardDescription>与列表中开关一致，修改后立即保存</CardDescription>
+          <CardTitle>标识与时间戳</CardTitle>
+          <CardDescription>只读信息</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">id</dt>
               <dd className="break-all font-mono text-xs">{ds.id}</dd>
-            </div>
-            <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:items-center sm:gap-x-4">
-              <dt className="text-muted-foreground">enabled</dt>
-              <dd>
-                <Switch
-                  checked={ds.enabled}
-                  disabled={busy}
-                  onCheckedChange={(v) =>
-                    void patchDatasourceEnabled(ds.id, v, load, setState)
-                  }
-                />
-              </dd>
             </div>
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">created_at</dt>

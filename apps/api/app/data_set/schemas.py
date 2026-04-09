@@ -9,7 +9,7 @@ generate_id = create_id_generator("data_sets")
 
 
 class DataSetDatasourceBindingStored(BaseModel):
-    """Maps one enabled datasource to the logical dependency fields it provides."""
+    """Maps one datasource to the logical dependency fields it provides."""
 
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Pencil, Trash2, Zap } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -21,7 +20,6 @@ import { datasourceSummary } from "../datasource-summary";
 type Props = {
   items: DataSourcePublic[];
   busyId: string | null;
-  onToggleEnabled: (ds: DataSourcePublic, enabled: boolean) => void;
   onTest: (ds: DataSourcePublic) => void;
   onDelete: (ds: DataSourcePublic) => void;
 };
@@ -33,7 +31,6 @@ function formatUpdatedAt(iso: string): string {
 export function DatasourceTable({
   items,
   busyId,
-  onToggleEnabled,
   onTest,
   onDelete,
 }: Props) {
@@ -44,7 +41,6 @@ export function DatasourceTable({
           <TableHead className="w-[18%]">名称</TableHead>
           <TableHead className="w-20">类型</TableHead>
           <TableHead>摘要</TableHead>
-          <TableHead className="w-24 text-center">启用</TableHead>
           <TableHead className="w-44">更新时间</TableHead>
           <TableHead className="w-44 text-right">操作</TableHead>
         </TableRow>
@@ -65,15 +61,6 @@ export function DatasourceTable({
                 title={summary}
               >
                 {summary}
-              </TableCell>
-              <TableCell className="text-center">
-                <div className="flex justify-center">
-                  <Switch
-                    checked={ds.enabled}
-                    disabled={busyId === ds.id}
-                    onCheckedChange={(v) => onToggleEnabled(ds, v)}
-                  />
-                </div>
               </TableCell>
               <TableCell className="text-xs text-muted-foreground tabular-nums">
                 {formatUpdatedAt(ds.updated_at)}

@@ -15,7 +15,6 @@ class DataSourceRow(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
     type: str
-    enabled: bool = True
     config: dict[str, Any] | None = Field(default=None, sa_column=Column(JsonText))
     created_at: str
     updated_at: str

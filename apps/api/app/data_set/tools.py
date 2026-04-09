@@ -10,7 +10,7 @@ from app.data_set.api import (
     _to_public,
     _validate_and_touch_datasources,
     _validate_bindings_inputs,
-    _validate_datasource_enabled,
+    _validate_datasource_exists,
     list_data_sets,
 )
 from app.data_set.redistry import DataSetsStore
@@ -30,7 +30,7 @@ def _http_error_detail(exc: HTTPException) -> str:
 
 @tool(
     description=(
-        "创建并保存一个数据集：名称、描述、日期区间、标的代码列表，以及至少一条已启用数据源的绑定。"
+        "创建并保存一个数据集：名称、描述、日期区间、标的代码列表，以及至少一条数据源绑定。"
         "多数据源时每条绑定需填写 dependencies（因子依赖字段名，如 close、volume），且同一字段不能重复出现在多条绑定中。"
     )
 )
@@ -91,7 +91,7 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
             raise ValueError(_http_error_detail(e)) from e
         for b in rec.datasource_bindings:
             try:
-                _validate_datasource_enabled(b.datasource_id)
+                _validate_datasource_exists(b.datasource_id)
             except HTTPException as e:
                 raise ValueError(_http_error_detail(e)) from e
         rec.updated_at = utc_now_iso()

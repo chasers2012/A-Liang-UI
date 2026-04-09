@@ -21,7 +21,7 @@ from app.datasource.verify import verify_datasource
 @tool(
     description=(
         "创建并保存一个数据源（插件化），返回创建后的数据源详情（对外展示结构，敏感字段会脱敏）。"
-        "入参 body：name、type（如 sql/csv）、enabled、config（插件定义的 JSON）。"
+        "入参 body：name、type（如 sql/csv）、config（插件定义的 JSON）。"
     )
 )
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
@@ -48,7 +48,7 @@ def get_datasource_list() -> list[dict[str, Any]]:
 
 @tool(
     description=(
-        "更新数据源字段（名称、启用状态、config），返回更新后的详情。"
+        "更新数据源字段（名称、config），返回更新后的详情。"
         "入参 datasource_id 与 body（DataSourcePatch，按需填写字段；config 为 replace 语义）。"
     )
 )
@@ -57,8 +57,6 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
         data = body.model_dump(exclude_unset=True)
         if "name" in data:
             rec.name = data["name"]
-        if "enabled" in data:
-            rec.enabled = data["enabled"]
         if "config" in data:
             plugin = PluginRegistry.instance().get(str(rec.type))
             rec.config = plugin.validate_config(dict(data["config"] or {}))

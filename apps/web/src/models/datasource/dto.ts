@@ -6,7 +6,6 @@ export interface DataSourcePublic {
   id: string;
   name: string;
   type: DataSourceType;
-  enabled: boolean;
   config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
