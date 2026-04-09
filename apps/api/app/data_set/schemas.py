@@ -32,11 +32,6 @@ class DataSetRecord(BaseModel):
     updated_at: str
 
 
-class DataSetsFile(BaseModel):
-    version: int = 2
-    items: list[DataSetRecord] = Field(default_factory=list)
-
-
 class DataSetDatasourceBindingInput(BaseModel):
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)

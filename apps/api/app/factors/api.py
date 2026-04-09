@@ -5,7 +5,9 @@ import contextlib
 from fastapi import APIRouter, HTTPException
 
 from app.evaluation.run.controller import delete_evaluation_runs_for_factor
+from app.evaluation.run.redistry import EvaluationRunsStore
 from app.evaluation.run.schemas import (
+    EvaluationRunRecord,
     EvaluationRunRowPublic,
     EvaluationRunsAggregatePublic,
     EvaluationRunsSummaryPublic,
@@ -27,7 +29,7 @@ from app.factors.schemas import (
     FactorPatch,
     FactorSummaryPublic,
 )
-from app.http_errors import http_bad_request, http_internal_server_error
+from app.http_errors import http_bad_request
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 
@@ -41,19 +43,12 @@ def get_factor_list() -> list[FactorSummaryPublic]:
 
 @router.get("/evaluations/summary", response_model=EvaluationRunsSummaryPublic)
 def evaluation_runs_summary() -> EvaluationRunsSummaryPublic:
-    from app.evaluation.run.redistry import load_evaluations_file
-
-    try:
-        ev_file = load_evaluations_file()
-    except ValueError as e:
-        http_internal_server_error(e)
-
     items = FactorItemsRegistry.list_items()
     rows: list[EvaluationRunRowPublic] = []
     ic_for_avg: list[float] = []
     evaluated_ok = 0
-    latest_eval_runs_by_factor_id = {}
-    for run in ev_file.items:
+    latest_eval_runs_by_factor_id: dict[str, EvaluationRunRecord] = {}
+    for run in EvaluationRunsStore.list_items():
         current = latest_eval_runs_by_factor_id.get(run.factor_id)
         if current is None or run.end_at > current.end_at:
             latest_eval_runs_by_factor_id[run.factor_id] = run

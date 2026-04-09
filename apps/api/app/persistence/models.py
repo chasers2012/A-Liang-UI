@@ -103,4 +103,20 @@ class ChatMessageRow(SQLModel, table=True):
     created_at: str | None = Field(default=None, index=True)
 
 
+class DataSetRow(SQLModel, table=True):
+    __tablename__ = "data_sets"
+
+    id: str = Field(primary_key=True)
+    name: str
+    description: str = ""
+    datasource_bindings: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JsonText)
+    )
+    start: str
+    end: str
+    stock_codes: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
+    created_at: str
+    updated_at: str
+
+
 Index("ix_chat_messages_session_created", ChatMessageRow.session_id, ChatMessageRow.created_at)

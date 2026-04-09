@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-import json
 from datetime import date, timedelta
+
+from app.persistence.models import DataSetRow
+from app.persistence.sqlite_db import get_session
+from sqlmodel import select
 
 MIN_SOURCE = "x = 1\n"
 
@@ -99,12 +102,19 @@ def _csv_datasource_body(name: str = "ds_csv") -> dict:
         "name": name,
         "type": "csv",
         "enabled": True,
-        "csv": {
+        "config": {
             "path": "eval_test_panel.csv",
-            "date_column": "date",
-            "asset_column": "asset",
             "read_csv_kwargs": {},
         },
+    }
+
+
+def _ds_binding(datasource_id: str, dependencies: list[str] | None = None) -> dict:
+    return {
+        "datasource_id": datasource_id,
+        "dependencies": list(dependencies or []),
+        "date_column": "date",
+        "asset_column": "asset",
     }
 
 
@@ -124,9 +134,7 @@ def test_data_sets_crud(client, workspace_tmp):
         "/data-sets",
         json={
             "name": "t1",
-            "datasource_bindings": [
-                {"datasource_id": "nonexistent", "dependencies": ["close"]},
-            ],
+            "datasource_bindings": [_ds_binding("nonexistent", ["close"])],
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": [],
@@ -139,7 +147,7 @@ def test_data_sets_crud(client, workspace_tmp):
         json={
             "name": "t1",
             "description": "d",
-            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
+            "datasource_bindings": [_ds_binding(ds_id, [])],
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": ["A", "B"],
@@ -162,11 +170,10 @@ def test_data_sets_crud(client, workspace_tmp):
     assert r3.status_code == 200
     assert r3.json()["name"] == "t1x"
 
-    cfg = workspace_tmp / "data_sets" / "registry.json"
-    assert cfg.is_file()
-    data = json.loads(cfg.read_text(encoding="utf-8"))
-    assert data["version"] == 2
-    assert len(data["items"]) == 1
+    with get_session() as session:
+        rows = list(session.exec(select(DataSetRow)))
+    assert len(rows) == 1
+    assert rows[0].id == row_id
 
     r4 = client.delete(f"/data-sets/{row_id}")
     assert r4.status_code == 204
@@ -193,12 +200,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
         "/data-sets",
         json={
             "name": "ts_run",
-            "datasource_bindings": [
-                {
-                    "datasource_id": ds_id,
-                    "dependencies": ["close"],
-                }
-            ],
+            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": [],
@@ -253,12 +255,7 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
         "/data-sets",
         json={
             "name": "ts_only",
-            "datasource_bindings": [
-                {
-                    "datasource_id": ds_id,
-                    "dependencies": ["close"],
-                }
-            ],
+            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
             "start": "2023-01-01",
             "end": "2024-12-31",
             "stock_codes": [],
