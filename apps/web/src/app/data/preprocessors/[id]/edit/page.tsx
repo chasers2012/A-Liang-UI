@@ -103,17 +103,19 @@ export default function EditPreprocessorPage() {
 
   if (!id) {
     return (
-      <div className="p-6 md:p-8">
-        <p className="text-sm text-muted-foreground">无效的 id</p>
-      </div>
+      <Page>
+        <Alert variant="destructive">
+          <AlertTitle>无效 id</AlertTitle>
+        </Alert>
+      </Page>
     );
   }
 
   if (loading) {
     return (
-      <div className="p-6 md:p-8">
+      <Page title="编辑预处理器">
         <p className="text-sm text-muted-foreground">加载中…</p>
-      </div>
+      </Page>
     );
   }
 
@@ -143,6 +145,8 @@ export default function EditPreprocessorPage() {
       submitting={submitting}
       onSubmit={onSubmit}
       cancelHref={`/data/preprocessors/${encodeURIComponent(id)}`}
+      templateLoading={false}
+      templateError={null}
     />
   );
 }

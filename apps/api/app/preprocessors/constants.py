@@ -6,8 +6,16 @@ from typing import Any
 import pandas as pd
 
 from factor import DataPreprocessorBase
+from workflow import workflow_node
 
 
+@workflow_node(
+    label="NewPreprocessor",
+    description="新预处理器（模板）",
+    category="data_set_preprocess",
+    input_sockets=[],
+    output_sockets=[],
+)
 class NewPreprocessor(DataPreprocessorBase):
     \"""新预处理器（模板）
 
@@ -22,9 +30,8 @@ class NewPreprocessor(DataPreprocessorBase):
         config: dict[str, Any],
     ) -> dict[str, pd.DataFrame]:
         _ = config
-        # 示例：对所有数据源去重
-        out: dict[str, pd.DataFrame] = {}
-        for k, df in frames.items():
-            out[k] = df.drop_duplicates()
-        return out
+        # 示例：打印每个输入 dataframe 的所有列名
+        for datasource_id, df in frames.items():
+            print(f"[{datasource_id}] columns: {list(df.columns)}")
+        return frames
 """.lstrip()

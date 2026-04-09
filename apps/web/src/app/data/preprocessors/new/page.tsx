@@ -26,22 +26,30 @@ export default function NewPreprocessorPage() {
   const [form, setForm] = useState<PreprocessorFormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [templateLoading, setTemplateLoading] = useState(true);
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
   useEffect(() => {
-    void getPreprocessorTemplate()
-      .then((t) => setForm((f) => ({ ...f, source: t })))
-      .catch(() => {
-        /* ignore */
-      });
-  }, []);
-
-  const onLoadTemplate = useCallback(() => {
-    setFormError(null);
-    void getPreprocessorTemplate()
-      .then((t) => setForm((f) => ({ ...f, source: t })))
-      .catch((e) =>
-        setFormError(e instanceof Error ? e.message : String(e)),
-      );
+    let cancelled = false;
+    (async () => {
+      try {
+        const template = await getPreprocessorTemplate();
+        if (!cancelled) {
+          setForm((f) => ({ ...f, source: template }));
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setTemplateError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        if (!cancelled) {
+          setTemplateLoading(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const onSubmit = useCallback(
@@ -81,7 +89,8 @@ export default function NewPreprocessorPage() {
       submitting={submitting}
       onSubmit={onSubmit}
       cancelHref="/data/preprocessors"
-      onLoadTemplate={onLoadTemplate}
+      templateLoading={templateLoading}
+      templateError={templateError}
     />
   );
 }

@@ -3,18 +3,12 @@
 import type { Dispatch, FormEvent, SetStateAction } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
+import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
+import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 
 export const PREPROCESSOR_MAIN_FORM_ID = "preprocessor-main-form";
 
@@ -34,8 +28,19 @@ type Props = {
   submitting: boolean;
   onSubmit: (e: FormEvent) => void;
   cancelHref: string;
-  onLoadTemplate?: () => void;
+  templateLoading?: boolean;
+  templateError?: string | null;
 };
+
+function applyNameToWorkflowNodeLabel(src: string, label: string) {
+  const escaped = label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return src.replace(
+    /(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/,
+    (_, prefix: string, _oldLabel: string, suffix: string) => {
+      return `${prefix}${escaped}${suffix}`;
+    },
+  );
+}
 
 export function PreprocessorForm({
   editorMode,
@@ -45,108 +50,82 @@ export function PreprocessorForm({
   submitting,
   onSubmit,
   cancelHref,
-  onLoadTemplate,
+  templateLoading = false,
+  templateError = null,
 }: Props) {
   const set = (patch: Partial<PreprocessorFormState>) =>
     setForm((f) => ({ ...f, ...patch }));
 
   return (
     <Page
-      gap="none"
-      title={editorMode === "create" ? "新建预处理器" : form.name || "编辑预处理器"}
-      description={
-        editorMode === "create"
-          ? "编写并提交 source 创建预处理器。"
-          : form.description || "修改说明与源码；名称为只读。"
+      title={
+        <FactorEditPageTitle
+          name={form.name}
+          onNameChange={(name) => {
+            const trimmed = name.trim();
+            setForm((f) => ({
+              ...f,
+              name,
+              source: trimmed
+                ? applyNameToWorkflowNodeLabel(f.source, trimmed)
+                : f.source,
+            }));
+          }}
+          nameAriaLabel="预处理器名称"
+        />
       }
-      headerClassName="mb-8"
+      description={
+        <FactorEditPageDescription
+          description={form.description}
+          onDescriptionChange={(description) => set({ description })}
+          descriptionAriaLabel="预处理器描述"
+        />
+      }
       action={
         <PageFormHeaderActions
           formId={PREPROCESSOR_MAIN_FORM_ID}
           submitting={submitting}
           submitDisabled={!form.source.trim()}
+          submitLabel={editorMode === "create" ? "创建" : "保存"}
+          submittingLabel={editorMode === "create" ? "创建中…" : "保存中…"}
           cancelHref={cancelHref}
         />
       }
     >
       <form
         id={PREPROCESSOR_MAIN_FORM_ID}
-        className="space-y-8"
+        className="flex flex-col gap-6"
         onSubmit={(e) => void onSubmit(e)}
       >
-        {editorMode === "create" ? (
-          <Alert>
-            <AlertTitle>创建提示</AlertTitle>
-            <AlertDescription>
-              创建接口仅接收 <code className="font-mono">source</code>。
-            </AlertDescription>
-          </Alert>
-        ) : null}
-
-        {formError ? (
+        {templateError && (
           <Alert variant="destructive">
-            <AlertTitle>提交失败</AlertTitle>
+            <AlertTitle>无法加载模板</AlertTitle>
+            <AlertDescription>{templateError}</AlertDescription>
+          </Alert>
+        )}
+
+        {formError && (
+          <Alert variant="destructive">
+            <AlertTitle>无法保存</AlertTitle>
             <AlertDescription>{formError}</AlertDescription>
           </Alert>
-        ) : null}
+        )}
 
-        {editorMode === "edit" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>元信息</CardTitle>
-              <CardDescription>名称为只读；说明可修改。</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label>名称</Label>
-                <p className="break-all rounded-md border bg-muted/20 px-3 py-2 font-mono text-xs">
-                  {form.name}
-                </p>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="pre-desc">说明</Label>
-                <Textarea
-                  id="pre-desc"
-                  value={form.description}
-                  onChange={(e) => set({ description: e.target.value })}
-                  placeholder="（可选）一句话描述用途与输入输出"
-                  rows={4}
-                  className="min-h-0 resize-y text-sm"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <CardTitle>源码</CardTitle>
-                <CardDescription>保存后服务端会校验语法与可加载性。</CardDescription>
-              </div>
-              {onLoadTemplate ? (
-                <Button type="button" variant="outline" size="sm" onClick={onLoadTemplate}>
-                  插入模板
-                </Button>
-              ) : null}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="pre-src">source</Label>
-              <Textarea
-                id="pre-src"
-                value={form.source}
-                onChange={(e) => set({ source: e.target.value })}
-                placeholder="粘贴或编写预处理器源码"
-                rows={18}
-                className="min-h-0 resize-y font-mono text-xs"
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+        <div className="space-y-2">
+          <Label>源码</Label>
+          {templateLoading && (
+            <div className="text-sm text-muted-foreground">正在加载源码模板…</div>
+          )}
+          <FactorCodeJar
+            id={
+              editorMode === "create"
+                ? "new-preprocessor-source"
+                : "edit-preprocessor-source"
+            }
+            value={form.source}
+            onChange={(source) => set({ source })}
+          />
+        </div>
       </form>
     </Page>
   );
