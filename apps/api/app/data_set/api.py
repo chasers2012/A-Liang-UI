@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from fastapi import APIRouter, HTTPException
 
 from app.data_set.redistry import DataSetsStore
@@ -177,6 +179,11 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
 @router.get("", response_model=list[DataSetPublic])
 def list_data_sets() -> list[DataSetPublic]:
     return [_to_public(i) for i in DataSetsStore.list_items()]
+
+
+@router.get("/workflow-template", response_model=dict)
+def get_data_set_workflow_template() -> dict:
+    return deepcopy(_EMPTY_WORKFLOW)
 
 
 @router.get("/{data_set_id}", response_model=DataSetPublic)

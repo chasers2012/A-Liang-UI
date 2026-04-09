@@ -4,27 +4,6 @@ import type { WorkflowSocketDefinition } from "@/components/workflow-graph/types
 export const PREPROCESSING_DATAFRAME_VALUE_TYPE = "raw_frames";
 export const SYSTEM_PREPROCESSING_NODE_TYPES = new Set<string>([]);
 
-export const PREPROCESSING_WORKFLOW_DEFAULT_INPUTS: WorkflowSocketDefinition[] = [
-  {
-    name: "frames",
-    required: true,
-    value_type: PREPROCESSING_DATAFRAME_VALUE_TYPE,
-    label: "原始 frames",
-    description: "由数据集加载原始数据后提供给预处理工作流。",
-    render_type: "socket",
-  },
-];
-export const PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS: WorkflowSocketDefinition[] = [
-  {
-    name: "frames",
-    required: true,
-    value_type: PREPROCESSING_DATAFRAME_VALUE_TYPE,
-    label: "预处理结果",
-    description: "预处理工作流输出的 frames 映射。",
-    render_type: "appendable",
-  },
-];
-
 export function buildFramesInputOutputs(
   datasourceIds: string[],
   datasourceNameById: Record<string, string>,
@@ -41,27 +20,82 @@ export function buildFramesInputOutputs(
       render_type: "socket",
     });
   }
-  return out.length > 0 ? out : PREPROCESSING_WORKFLOW_DEFAULT_INPUTS;
+  return out;
+}
+
+function removeInvalidWorkflowInputLinks(
+  links: WorkflowGraphPersisted["links"],
+  allowedInputSockets: Set<string>,
+): WorkflowGraphPersisted["links"] {
+  return links.filter((link) => {
+    if (link.from.kind !== "workflow_input") return true;
+    return allowedInputSockets.has(link.from.socket);
+  });
+}
+
+function hasWorkflowBoundaryDirectLink(
+  links: WorkflowGraphPersisted["links"],
+): boolean {
+  return links.some(
+    (link) =>
+      link.from.kind === "workflow_input" &&
+      link.to.kind === "workflow_output",
+  );
+}
+
+function appendMissingBoundaryDirectLinks(
+  links: WorkflowGraphPersisted["links"],
+  inputSocketNames: Set<string>,
+  outputSocketName: string,
+): WorkflowGraphPersisted["links"] {
+  if (!outputSocketName) return links;
+  if (hasWorkflowBoundaryDirectLink(links)) return links;
+  const out = [...links];
+  for (const socketName of inputSocketNames) {
+    out.push({
+      id: `auto:${socketName}->workflow-output:${outputSocketName}`,
+      from: { kind: "workflow_input", socket: socketName },
+      to: {
+        kind: "workflow_output",
+        socket: outputSocketName,
+      },
+    });
+  }
+  return out;
 }
 
 export function syncSystemPreprocessingWorkflow(
   workflow: WorkflowGraphPersisted,
   datasourceIds: string[],
   datasourceNameById: Record<string, string>,
+  workflowTemplate?: WorkflowGraphPersisted | null,
 ): WorkflowGraphPersisted {
-  const desiredInputs = buildFramesInputOutputs(
-    datasourceIds,
-    datasourceNameById,
-  );
+  const datasourceInputs = buildFramesInputOutputs(datasourceIds, datasourceNameById);
+  const templateInputs = workflowTemplate?.workflow_inputs ?? [];
+  const templateOutputs = workflowTemplate?.workflow_outputs ?? [];
+  const desiredInputs =
+    datasourceInputs.length > 0
+      ? datasourceInputs
+      : (templateInputs.length > 0 ? templateInputs : workflow.workflow_inputs);
   const desiredInputSocketNames = new Set(desiredInputs.map((x) => x.name));
   const currentInputs = workflow.workflow_inputs;
   const currentOutputs = workflow.workflow_outputs;
+  const nextOutputs =
+    currentOutputs.length > 0
+      ? currentOutputs
+      : (templateOutputs.length > 0 ? templateOutputs : workflow.workflow_outputs);
+  const targetOutputSocketName = nextOutputs[0]?.name ?? "";
   const sameInputs = JSON.stringify(currentInputs) === JSON.stringify(desiredInputs);
-  const validLinks = workflow.links.filter((link) => {
-    if (link.from.kind !== "workflow_input") return true;
-    return desiredInputSocketNames.has(link.from.socket);
-  });
-  const sameLinks = JSON.stringify(validLinks) === JSON.stringify(workflow.links);
+  const validLinks = removeInvalidWorkflowInputLinks(
+    workflow.links,
+    desiredInputSocketNames,
+  );
+  const autoPatchedLinks = appendMissingBoundaryDirectLinks(
+    validLinks,
+    desiredInputSocketNames,
+    targetOutputSocketName,
+  );
+  const sameLinks = JSON.stringify(autoPatchedLinks) === JSON.stringify(workflow.links);
   if (
     sameInputs &&
     sameLinks &&
@@ -72,10 +106,7 @@ export function syncSystemPreprocessingWorkflow(
   return {
     ...workflow,
     workflow_inputs: desiredInputs,
-    workflow_outputs:
-      currentOutputs.length > 0
-        ? currentOutputs
-        : PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS,
-    links: validLinks,
+    workflow_outputs: nextOutputs,
+    links: autoPatchedLinks,
   };
 }

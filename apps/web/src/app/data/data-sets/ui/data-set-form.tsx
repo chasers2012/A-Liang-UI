@@ -41,6 +41,7 @@ import {
   ApiError,
   createDataSet,
   getDataSet,
+  getDataSetWorkflowTemplate,
   getDatasourceDependencyFields,
   listDatasources,
   patchDataSet,
@@ -48,12 +49,13 @@ import {
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
 
-import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
+import {
+  parsePersistedWorkflowGraphPayload,
+  type WorkflowGraphCanvasHandle,
+} from "@/components/workflow-graph";
 import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 import {
   syncSystemPreprocessingWorkflow,
-  PREPROCESSING_WORKFLOW_DEFAULT_INPUTS,
-  PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS,
 } from "./system-preprocessing-node-types";
 import { PreprocessingWorkflowEditorBlock } from "./preprocessing-workflow-editor-block";
 
@@ -74,7 +76,10 @@ export type DataSetFormState = {
   instrument_codes_text: string;
 };
 
-export function emptyDataSetForm(): DataSetFormState {
+export function emptyDataSetForm(
+  template?: WorkflowGraphPersisted,
+): DataSetFormState {
+  const preprocessingWorkflow = template ?? parsePersistedWorkflowGraphPayload({});
   return {
     name: "",
     description: "",
@@ -86,12 +91,7 @@ export function emptyDataSetForm(): DataSetFormState {
         asset_column: "",
       },
     ],
-    preprocessing_workflow: {
-      nodes: [],
-      links: [],
-      workflow_inputs: PREPROCESSING_WORKFLOW_DEFAULT_INPUTS,
-      workflow_outputs: PREPROCESSING_WORKFLOW_DEFAULT_OUTPUTS,
-    },
+    preprocessing_workflow: preprocessingWorkflow,
     start: "2023-01-01",
     end: "2024-12-31",
     instrument_codes_text: "",
@@ -462,6 +462,8 @@ type Props = {
 export function DataSetForm({ mode, dataSetId }: Props) {
   const router = useRouter();
   const [datasources, setDatasources] = useState<DataSourcePublic[]>([]);
+  const [preprocessingWorkflowTemplate, setPreprocessingWorkflowTemplate] =
+    useState<WorkflowGraphPersisted | null>(null);
   const [form, setForm] = useState<DataSetFormState>(emptyDataSetForm);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(mode === "edit");
@@ -519,15 +521,29 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     async function run() {
       setLoadError(null);
       try {
-        const ds = await listDatasources();
+        const [ds, workflowTemplateRaw] = await Promise.all([
+          listDatasources(),
+          getDataSetWorkflowTemplate(),
+        ]);
+        const workflowTemplate =
+          parsePersistedWorkflowGraphPayload(workflowTemplateRaw);
         if (cancelled) return;
         setDatasources(ds);
+        setPreprocessingWorkflowTemplate(workflowTemplate);
         if (mode === "edit" && dataSetId) {
           const row = await getDataSet(dataSetId);
           if (cancelled) return;
           setForm(hydrateDataSetForm(row));
           setCanvasKey((k) => k + 1);
         } else if (mode === "create") {
+          setForm((prev) => ({
+            ...emptyDataSetForm(workflowTemplate),
+            name: prev.name,
+            description: prev.description,
+            start: prev.start,
+            end: prev.end,
+            instrument_codes_text: prev.instrument_codes_text,
+          }));
           if (ds.length === 1) {
             setForm((prev) => ({
               ...prev,
@@ -598,6 +614,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         baseWorkflow,
         datasourceIds,
         datasourceNameById,
+        preprocessingWorkflowTemplate,
       );
       if (
         sameWorkflowGraph(prev.preprocessing_workflow, syncedWorkflow) &&
@@ -610,7 +627,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         preprocessing_workflow: syncedWorkflow,
       };
     });
-  }, [form.bindings, datasources]);
+  }, [form.bindings, datasources, preprocessingWorkflowTemplate]);
 
   const bindingDatasources = datasources;
   const dsItems: Record<string, string> = {};
