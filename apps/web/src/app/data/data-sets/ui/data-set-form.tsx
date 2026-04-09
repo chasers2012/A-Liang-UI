@@ -194,7 +194,7 @@ type DataSetBindingRowBlockProps = {
   row: DataSetBindingFormRow;
   bindingsLength: number;
   datasources: DataSourcePublic[];
-  csvDepFields: Record<string, string[]>;
+  dependencyFieldsByDsId: Record<string, string[]>;
   dsItems: Record<string, string>;
   enabledDs: DataSourcePublic[];
   updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
@@ -206,7 +206,7 @@ function DataSetBindingRowBlock({
   row,
   bindingsLength,
   datasources,
-  csvDepFields,
+  dependencyFieldsByDsId,
   dsItems,
   enabledDs,
   updateBinding,
@@ -215,8 +215,10 @@ function DataSetBindingRowBlock({
   const ds = datasources.find((d) => d.id === row.datasource_id.trim());
   const trimmedId = row.datasource_id.trim();
   const loading =
-    !!ds && !!trimmedId && !Object.prototype.hasOwnProperty.call(csvDepFields, trimmedId);
-  const physicalColumns = csvDepFields[trimmedId] ?? [];
+    !!ds &&
+    !!trimmedId &&
+    !Object.prototype.hasOwnProperty.call(dependencyFieldsByDsId, trimmedId);
+  const physicalColumns = dependencyFieldsByDsId[trimmedId] ?? [];
   const columnOptions = (() => {
     const set = new Set<string>();
     for (const c of physicalColumns) {
@@ -398,8 +400,10 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   /** 数据源可用字段（用于勾选），按数据源 id 缓存 */
-  const [csvDepFields, setCsvDepFields] = useState<Record<string, string[]>>({});
-  const csvDepLoadedRef = useRef(new Set<string>());
+  const [dependencyFieldsByDsId, setDependencyFieldsByDsId] = useState<
+    Record<string, string[]>
+  >({});
+  const depFieldsLoadedRef = useRef(new Set<string>());
 
   const set = useCallback((patch: Partial<DataSetFormState>) => {
     setForm((f) => ({ ...f, ...patch }));
@@ -493,16 +497,16 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     for (const id of ids) {
       const ds = datasources.find((d) => d.id === id);
       if (!ds) continue;
-      if (csvDepLoadedRef.current.has(id)) continue;
-      csvDepLoadedRef.current.add(id);
+      if (depFieldsLoadedRef.current.has(id)) continue;
+      depFieldsLoadedRef.current.add(id);
       void getDatasourceDependencyFields(id).then(
         (r) =>
-          setCsvDepFields((prev) => ({
+          setDependencyFieldsByDsId((prev) => ({
             ...prev,
             [id]: r.fields,
           })),
         () => {
-          setCsvDepFields((prev) => ({ ...prev, [id]: [] }));
+          setDependencyFieldsByDsId((prev) => ({ ...prev, [id]: [] }));
         },
       );
     }
@@ -687,7 +691,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 row={row}
                 bindingsLength={form.bindings.length}
                 datasources={datasources}
-                csvDepFields={csvDepFields}
+                dependencyFieldsByDsId={dependencyFieldsByDsId}
                 dsItems={dsItems}
                 enabledDs={enabledDs}
                 updateBinding={updateBinding}

@@ -24,11 +24,6 @@ import { FormSection } from "./form-section";
 
 export const DATASOURCE_MAIN_FORM_ID = "datasource-main-form";
 
-const DATASOURCE_TYPE_ITEMS: Record<string, string> = {
-  sql: "SQL 表",
-  csv: "CSV 文件",
-};
-
 type Props = {
   editorMode: EditorMode;
   form: FormState;
@@ -55,7 +50,7 @@ export function DatasourceForm({
   const typeItems = useMemo(
     () =>
       Object.fromEntries(
-        plugins.map((p) => [p.type, p.title || DATASOURCE_TYPE_ITEMS[p.type] || p.type]),
+        plugins.map((p) => [p.type, p.title?.trim() || p.type]),
       ),
     [plugins],
   );
@@ -81,7 +76,10 @@ export function DatasourceForm({
         <PageFormHeaderActions
           formId={DATASOURCE_MAIN_FORM_ID}
           submitting={submitting}
-          submitDisabled={!form.name.trim()}
+          submitDisabled={
+            !form.name.trim() ||
+            (editorMode === "create" && !form.type.trim())
+          }
           cancelHref={cancelHref}
         />
       }
@@ -99,12 +97,10 @@ export function DatasourceForm({
                 modal={false}
                 items={typeItems}
                 value={form.type}
-                onValueChange={(v) =>
-                  set({
-                    type: v,
-                    config: {},
-                  })
-                }
+                onValueChange={(v) => {
+                  if (v == null || v === "") return;
+                  set({ type: v, config: {} });
+                }}
               >
                 <SelectTrigger id="ds-type" className="w-full">
                   <SelectValue />
@@ -112,7 +108,7 @@ export function DatasourceForm({
                 <SelectContent>
                   {plugins.map((p) => (
                     <SelectItem key={p.type} value={p.type}>
-                      {p.title}
+                      {p.title?.trim() || p.type}
                     </SelectItem>
                   ))}
                 </SelectContent>

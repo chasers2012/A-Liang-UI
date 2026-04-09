@@ -28,6 +28,11 @@ export default function NewDatasourcePage() {
     void listDatasourcePlugins().then(setPlugins).catch(() => setPlugins([]));
   }, []);
 
+  useEffect(() => {
+    if (plugins.length === 0) return;
+    setForm((f) => (f.type.trim() ? f : { ...f, type: plugins[0].type }));
+  }, [plugins]);
+
   const onSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();

@@ -18,7 +18,7 @@ export type FormState = {
 export function emptyForm(): FormState {
   return {
     name: "",
-    type: "sql",
+    type: "",
     enabled: true,
     config: {},
   };
