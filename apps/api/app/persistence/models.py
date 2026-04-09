@@ -57,6 +57,17 @@ class EvaluationMetricRow(SQLModel, table=True):
     updated_at: str
 
 
+class PreprocessorRow(SQLModel, table=True):
+    __tablename__ = "preprocessors"
+
+    id: str = Field(primary_key=True)
+    name: str
+    description: str = ""
+    source_path: str
+    created_at: str
+    updated_at: str
+
+
 class AgentWorkflowRow(SQLModel, table=True):
     __tablename__ = "agent_workflows"
 
@@ -111,6 +122,9 @@ class DataSetRow(SQLModel, table=True):
     datasource_bindings: list[dict[str, Any]] = Field(
         default_factory=list, sa_column=Column(JsonText)
     )
+    # Stored as a serialized workflow graph JSON string:
+    # { "nodes": [...], "links": [...] }
+    preprocessing_workflow: str = ""
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list, sa_column=Column(JsonText))

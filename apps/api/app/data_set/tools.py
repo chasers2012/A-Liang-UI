@@ -83,6 +83,9 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
                     DataSetDatasourceBindingInput(
                         datasource_id=b.datasource_id,
                         dependencies=list(b.dependencies),
+                        alias=(dict(b.alias) if b.alias else None),
+                        date_column=b.date_column,
+                        asset_column=b.asset_column,
                     )
                     for b in rec.datasource_bindings
                 ]

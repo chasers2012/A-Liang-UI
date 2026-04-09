@@ -40,14 +40,23 @@ def gather_node_inputs(
             inputs[link.to_socket] = {}
 
         inputs[link.to_socket][f"{link.from_node}:{link.from_socket}"] = bucket[link.from_socket]
-    ret = {}
-    for key in inputs:
-        input = inputs[key]
-        # 对于只有一个from_socket的，直接返回
-        if len(input.keys()) == 1:
-            ret[key] = input[next(iter(input.keys()))]
-        else:
-            ret[key] = input
+
+    appendable_inputs = {
+        getattr(s, "name", "")
+        for s in (getattr(node, "inputs", ()) or ())
+        if getattr(s, "render_type", "") == "appendable" and getattr(s, "name", "")
+    }
+
+    ret: dict[str, Any] = {}
+    for key, bucket in inputs.items():
+        # Appendable sockets must keep the upstream mapping shape even when there is
+        # only one link; they are ordered/selected by link identity.
+        if key in appendable_inputs or len(bucket) != 1:
+            ret[key] = bucket
+            continue
+
+        # Normal sockets: keep the original convenience unwrap for single input.
+        ret[key] = next(iter(bucket.values()))
 
     return ret
 

@@ -17,6 +17,7 @@ from app.evaluation.metrics import api as evaluation_metrics_router
 from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
+from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
 
 
@@ -77,6 +78,7 @@ app.include_router(evaluation_profiles_router.router)
 app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
+app.include_router(preprocessors_router.router)
 
 _origins = os.getenv("CORS_ORIGINS", "*")
 _origins_list = [o.strip() for o in _origins.split(",") if o.strip()]

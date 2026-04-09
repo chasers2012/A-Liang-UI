@@ -7,3 +7,4 @@ export type * from "./evaluation-metric/dto";
 export type * from "./evaluation-profile/dto";
 export type * from "./data-set/dto";
 export type * from "./factor/dto";
+export type * from "./preprocessor/dto";

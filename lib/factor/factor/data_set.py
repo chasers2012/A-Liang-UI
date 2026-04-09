@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
+from workflow import WorkflowExecutor
 
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter
 from factor.panel import panel_load_start_date
+from factor.preprocess import DataSetPreprocessorBinding
+from factor.preprocessing_workflow_nodes import CollectFrames
 
 
 class DataSourceBinding:
@@ -63,6 +68,9 @@ def _merge_instrument_codes(arg: list[str] | None, fallback: list[str] | None) -
 
 class DataSet:
     data_source_bindings: list[DataSourceBinding]
+    preprocessors: list[DataSetPreprocessorBinding]
+    # Serialized DAG JSON (see dataset preprocessing workflow).
+    preprocessing_workflow: str | None
     start_date: str | None
     end_date: str | None
     instrument_codes: list[str] | None
@@ -71,11 +79,15 @@ class DataSet:
         self,
         data_source_bindings: list[DataSourceBinding],
         *,
+        preprocessors: list[DataSetPreprocessorBinding] | None = None,
+        preprocessing_workflow: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         instrument_codes: list[str] | None = None,
     ):
         self.data_source_bindings = data_source_bindings
+        self.preprocessors = list(preprocessors or [])
+        self.preprocessing_workflow = preprocessing_workflow
         self.start_date = _norm_opt_date(start_date)
         self.end_date = _norm_opt_date(end_date)
         self.instrument_codes = _norm_instrument_codes(instrument_codes)
@@ -160,8 +172,13 @@ class DataSet:
         cols: list[str],
         phys_to_logical: dict[str, str],
         filters: list,
+        raw_override: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
-        raw = binding.datasource.load_frame(columns=cols, filters=filters)
+        raw = (
+            raw_override
+            if raw_override is not None
+            else binding.datasource.load_frame(columns=cols, filters=filters)
+        )
         if raw.empty:
             return self._empty_panel(columns=requested)
 
@@ -188,6 +205,105 @@ class DataSet:
             renamed[c] = pd.to_numeric(renamed[c], errors="coerce")
         return renamed[["date", "asset", *requested]].set_index(["date", "asset"]).sort_index()
 
+    @staticmethod
+    def _extract_collected_frames_from_workflow(
+        workflow_json: str,
+        node_results: dict[str, dict[str, Any]],
+    ) -> dict[str, pd.DataFrame]:
+        import json
+
+        payload = json.loads(workflow_json)
+        if not isinstance(payload, dict):
+            raise TypeError("preprocessing_workflow 须为 JSON 对象")
+        nodes_payload = payload.get("nodes", [])
+        if not isinstance(nodes_payload, list):
+            raise TypeError("workflow.nodes 须为 list")
+
+        collect_ids = [
+            n.get("id")
+            for n in nodes_payload
+            if isinstance(n, dict) and n.get("type") == CollectFrames.type
+        ]
+        collect_ids = [str(i) for i in collect_ids if isinstance(i, str) and i]
+
+        if not collect_ids:
+            raise ValueError("preprocessing_workflow 未找到 CollectFrames 节点")
+
+        # 取最后一个 CollectFrames 作为最终输出
+        final_id = collect_ids[-1]
+        collected = node_results.get(final_id)
+        if not collected or not isinstance(collected, dict):
+            raise ValueError(f"CollectFrames 节点 {final_id!r} 未返回 frames")
+
+        frames = collected.get("frames")
+        if not isinstance(frames, dict):
+            raise ValueError("CollectFrames.frames 必须为 dict[str, pd.DataFrame]")
+        return frames
+
+    def _load_raw_frames_for_panel(
+        self,
+        *,
+        fields: list[str],
+        load_start: str | None,
+        end_date: str,
+        instrument_codes: list[str] | None,
+    ) -> tuple[
+        dict[str, pd.DataFrame],
+        dict[str, tuple[DataSourceBinding, list[str], list[str], dict[str, str], list]],
+    ]:
+        raw_frames: dict[str, pd.DataFrame] = {}
+        binding_meta: dict[
+            str, tuple[DataSourceBinding, list[str], list[str], dict[str, str], list]
+        ] = {}
+
+        for b in self.data_source_bindings:
+            requested = self._requested_fields_for_binding(b, fields=fields)
+            if not requested:
+                continue
+
+            cols, phys_to_logical = self._physical_plan_for_binding(b, requested=requested)
+            filters = self._filters_for_binding(
+                b,
+                load_start=load_start,
+                end_date=end_date,
+                instrument_codes=instrument_codes,
+            )
+            key = getattr(b.datasource, "id", None)
+            ds_key = str(key) if key is not None else str(id(b.datasource))
+            raw_frames[ds_key] = b.datasource.load_frame(columns=cols, filters=filters)
+            binding_meta[ds_key] = (b, requested, cols, phys_to_logical, filters)
+
+        return raw_frames, binding_meta
+
+    def _apply_preprocessing_workflow(
+        self,
+        *,
+        raw_frames: dict[str, pd.DataFrame],
+    ) -> dict[str, pd.DataFrame]:
+        workflow = self.preprocessing_workflow
+        if not workflow or not str(workflow).strip():
+            return raw_frames
+
+        import json
+
+        payload = json.loads(workflow)
+        nodes_payload = payload.get("nodes", [])
+        has_collect = isinstance(nodes_payload, list) and any(
+            isinstance(n, dict) and n.get("type") == CollectFrames.type for n in nodes_payload
+        )
+        if not has_collect:
+            return raw_frames
+
+        executor = WorkflowExecutor()
+        node_results = executor.execute(
+            workflow,
+            context={"frames": raw_frames},
+        )
+        return self._extract_collected_frames_from_workflow(
+            workflow,
+            node_results=node_results,  # type: ignore[arg-type]
+        )
+
     def get_panel(
         self,
         *,
@@ -212,21 +328,21 @@ class DataSet:
 
         load_start = panel_load_start_date(eff_start, eff_end, window)
 
+        raw_frames, binding_meta = self._load_raw_frames_for_panel(
+            fields=fields,
+            load_start=load_start,
+            end_date=eff_end,
+            instrument_codes=eff_codes,
+        )
+
+        if not raw_frames:
+            return self._empty_panel(columns=fields)
+
+        raw_frames = self._apply_preprocessing_workflow(raw_frames=raw_frames)
+
+        # 3) standardize each binding and join
         parts: list[pd.DataFrame] = []
-
-        # stable order: bindings as provided
-        for b in self.data_source_bindings:
-            requested = self._requested_fields_for_binding(b, fields=fields)
-            if not requested:
-                continue
-
-            cols, phys_to_logical = self._physical_plan_for_binding(b, requested=requested)
-            filters = self._filters_for_binding(
-                b,
-                load_start=load_start,
-                end_date=eff_end,
-                instrument_codes=eff_codes,
-            )
+        for ds_key, (b, requested, cols, phys_to_logical, filters) in binding_meta.items():
             parts.append(
                 self._load_binding_panel(
                     b,
@@ -234,11 +350,9 @@ class DataSet:
                     cols=cols,
                     phys_to_logical=phys_to_logical,
                     filters=filters,
+                    raw_override=raw_frames.get(ds_key),
                 )
             )
-
-        if not parts:
-            return self._empty_panel(columns=fields)
 
         merged = parts[0].sort_index()
         for part in parts[1:]:

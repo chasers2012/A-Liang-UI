@@ -35,6 +35,7 @@ def get_data_set(id: str) -> DataSet | None:
     codes = [c.strip() for c in (rec.instrument_codes or []) if str(c).strip()]
     return DataSet(
         data_source_bindings=bindings,
+        preprocessing_workflow=rec.preprocessing_workflow,
         start_date=start,
         end_date=end,
         instrument_codes=codes or None,

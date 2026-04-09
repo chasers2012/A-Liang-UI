@@ -10,6 +10,7 @@ import {
   Settings,
   Table2,
   TableProperties,
+  Wand2,
   MessageCircle,
 } from "lucide-react";
 
@@ -52,6 +53,7 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       items: [
         { title: "数据源", url: "/data/datasources", icon: Database },
         { title: "数据集", url: "/data/data-sets", icon: Table2 },
+        { title: "预处理器", url: "/data/preprocessors", icon: Wand2 },
       ],
     },
     { title: "策略", url: "/strategies", icon: GitBranch },

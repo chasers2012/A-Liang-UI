@@ -48,6 +48,10 @@ import {
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
 
+import type { WorkflowGraphCanvasHandle } from "@/components/workflow-graph";
+import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import { PreprocessingWorkflowEditorBlock } from "./preprocessing-workflow-editor-block";
+
 export type DataSetBindingFormRow = {
   datasource_id: string;
   alias_rows: AliasMapRow[];
@@ -59,12 +63,73 @@ export type DataSetFormState = {
   name: string;
   description: string;
   bindings: DataSetBindingFormRow[];
+  preprocessing_workflow: WorkflowGraphPersisted;
   start: string;
   end: string;
   instrument_codes_text: string;
 };
 
 export function emptyDataSetForm(): DataSetFormState {
+  const COLLECT_FRAMES_TYPE =
+    "factor.preprocessing_workflow_nodes.CollectFrames";
+  const INPUT_FRAMES_TYPE =
+    "factor.preprocessing_workflow_nodes.DataSetFramesInput";
+  const defaultWorkflow: WorkflowGraphPersisted = {
+    nodes: [
+      {
+        id: "frames_input",
+        type: INPUT_FRAMES_TYPE,
+        label: "原始 frames 输入",
+        category: "data_set_preprocess",
+        inputs: [],
+        outputs: [
+          {
+            name: "frames",
+            required: true,
+            value_type: "raw_frames",
+            label: "raw frames",
+            description:
+              "dict[str, pd.DataFrame] 的 JSON 工作流值（运行时由后端注入）。",
+          },
+        ],
+        pos: [0, 0],
+        params: {},
+      },
+      {
+        id: "collect_frames",
+        type: COLLECT_FRAMES_TYPE,
+        label: "预处理结果收集",
+        category: "data_set_preprocess",
+        inputs: [
+          {
+            name: "frames",
+            required: true,
+            value_type: "raw_frames",
+            label: "输入 frames",
+          },
+        ],
+        outputs: [
+          {
+            name: "frames",
+            required: false,
+            value_type: "raw_frames",
+            label: "输出 frames",
+          },
+        ],
+        pos: [360, 0],
+        params: {},
+      },
+    ],
+    links: [
+      {
+        from_node: "frames_input",
+        from_socket: "frames",
+        to_node: "collect_frames",
+        to_socket: "frames",
+        id: null,
+      },
+    ],
+  };
   return {
     name: "",
     description: "",
@@ -76,6 +141,7 @@ export function emptyDataSetForm(): DataSetFormState {
         asset_column: "",
       },
     ],
+    preprocessing_workflow: defaultWorkflow,
     start: "2023-01-01",
     end: "2024-12-31",
     instrument_codes_text: "",
@@ -132,6 +198,7 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     name: row.name,
     description: row.description,
     bindings,
+    preprocessing_workflow: row.preprocessing_workflow,
     start: toDateInputValue(row.start),
     end: toDateInputValue(row.end),
     instrument_codes_text: row.instrument_codes.length
@@ -151,6 +218,64 @@ export function parseInstrumentCodesFromText(text: string): string[] {
     out.push(c);
   }
   return out;
+}
+
+function safeParseJsonObject(text: string): Record<string, unknown> {
+  const raw = text.trim();
+  if (!raw) return {};
+  const parsed: unknown = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("config 必须是 JSON object（形如 { ... }）");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function validateDataSetBindings(bindings: DataSetBindingFormRow[]): string | null {
+  if (!bindings.length) return "至少保留一条数据源绑定";
+  for (const b of bindings) {
+    if (!b.datasource_id.trim()) return "每条绑定须选择数据源";
+    if (!b.date_column.trim() || !b.asset_column.trim()) {
+      return "每条绑定须选择 date 列与 asset 列";
+    }
+  }
+  if (bindings.length > 1) {
+    for (const b of bindings) {
+      if (depsFromAliasRows(b.alias_rows).length === 0) {
+        return "多个数据源时，每条绑定须至少勾选一个依赖字段";
+      }
+    }
+  }
+  return null;
+}
+
+function validatePreprocessingWorkflow(
+  workflow: WorkflowGraphPersisted,
+): string | null {
+  const COLLECT_FRAMES_TYPE =
+    "factor.preprocessing_workflow_nodes.CollectFrames";
+
+  if (!workflow?.nodes?.length) {
+    return "请配置预处理工作流（需要至少包含 CollectFrames 节点）";
+  }
+
+  const hasCollect = workflow.nodes.some((n) => n.type === COLLECT_FRAMES_TYPE);
+  if (!hasCollect) {
+    return "预处理工作流缺少结果收集节点 CollectFrames";
+  }
+
+  for (const node of workflow.nodes) {
+    const params = node.params ?? {};
+    const cfg = params["config_json"];
+    if (typeof cfg === "string" && cfg.trim()) {
+      try {
+        safeParseJsonObject(cfg);
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+    }
+  }
+
+  return null;
 }
 
 const DATA_SET_MAIN_FORM_ID = "data-set-main-form";
@@ -399,6 +524,8 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [loading, setLoading] = useState(mode === "edit");
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
+  const canvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
   /** 数据源可用字段（用于勾选），按数据源 id 缓存 */
   const [dependencyFieldsByDsId, setDependencyFieldsByDsId] = useState<
     Record<string, string[]>
@@ -456,6 +583,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           const row = await getDataSet(dataSetId);
           if (cancelled) return;
           setForm(hydrateDataSetForm(row));
+          setCanvasKey((k) => k + 1);
         } else if (mode === "create") {
           if (ds.length === 1) {
             setForm((prev) => ({
@@ -525,27 +653,17 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       setFormError("名称不能为空");
       return;
     }
-    if (!form.bindings.length) {
-      setFormError("至少保留一条数据源绑定");
+    const bindingsError = validateDataSetBindings(form.bindings);
+    if (bindingsError) {
+      setFormError(bindingsError);
       return;
     }
-    for (const b of form.bindings) {
-      if (!b.datasource_id.trim()) {
-        setFormError("每条绑定须选择数据源");
-        return;
-      }
-      if (!b.date_column.trim() || !b.asset_column.trim()) {
-        setFormError("每条绑定须选择 date 列与 asset 列");
-        return;
-      }
-    }
-    if (form.bindings.length > 1) {
-      for (const b of form.bindings) {
-        if (depsFromAliasRows(b.alias_rows).length === 0) {
-          setFormError("多个数据源时，每条绑定须至少勾选一个依赖字段");
-          return;
-        }
-      }
+    const wf =
+      canvasRef.current?.getGraph() ?? form.preprocessing_workflow;
+    const wfError = validatePreprocessingWorkflow(wf);
+    if (wfError) {
+      setFormError(wfError);
+      return;
     }
     const instrument_codes = parseInstrumentCodesFromText(form.instrument_codes_text);
     const datasource_bindings = form.bindings.map((b) => {
@@ -563,6 +681,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       name,
       description: form.description.trim(),
       datasource_bindings,
+      preprocessing_workflow: wf,
       start: form.start.trim(),
       end: form.end.trim(),
       instrument_codes,
@@ -697,6 +816,28 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 removeBinding={removeBinding}
               />
             ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <CardTitle>预处理工作流</CardTitle>
+                <CardDescription>
+                  把每个预处理器作为工作流节点，通过连线串联并输出最终 frames。
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="min-h-[420px] h-[520px]">
+              <PreprocessingWorkflowEditorBlock
+                workflow={form.preprocessing_workflow}
+                canvasKey={canvasKey}
+                canvasRef={canvasRef}
+              />
+            </div>
           </CardContent>
         </Card>
 

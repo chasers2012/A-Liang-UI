@@ -1,11 +1,37 @@
 from __future__ import annotations
 
+import json
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.common.id import create_id_generator
 from app.datasource.schemas import utc_now_iso
 
 generate_id = create_id_generator("data_sets")
+
+_EMPTY_WORKFLOW: dict[str, Any] = {"nodes": [], "links": []}
+
+
+def _stored_workflow_str(v: object) -> str:
+    """Normalize workflow for :class:`DataSetRecord` (disk / in-memory record)."""
+    if isinstance(v, str):
+        s = v.strip()
+        return s if s else json.dumps(_EMPTY_WORKFLOW, ensure_ascii=False)
+    if isinstance(v, dict):
+        return json.dumps(v, ensure_ascii=False)
+    raise TypeError("workflow 必须是 JSON 字符串或对象")
+
+
+def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
+    """Parse stored workflow JSON string into an object for API responses."""
+    raw = (workflow_json or "").strip()
+    if not raw:
+        return dict(_EMPTY_WORKFLOW)
+    data = json.loads(raw)
+    if not isinstance(data, dict):
+        raise ValueError("workflow 须为 JSON 对象")
+    return data
 
 
 class DataSetDatasourceBindingStored(BaseModel):
@@ -25,11 +51,17 @@ class DataSetRecord(BaseModel):
     name: str
     description: str = ""
     datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
+    preprocessing_workflow: str = ""
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
+
+    @field_validator("preprocessing_workflow", mode="before")
+    @classmethod
+    def _workflow_record(cls, v: object) -> str:
+        return _stored_workflow_str(v)
 
 
 class DataSetDatasourceBindingInput(BaseModel):
@@ -78,6 +110,7 @@ class DataSetCreate(BaseModel):
     name: str
     description: str = ""
     datasource_bindings: list[DataSetDatasourceBindingInput]
+    preprocessing_workflow: dict[str, Any] = Field(default_factory=lambda: dict(_EMPTY_WORKFLOW))
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list)
@@ -109,6 +142,7 @@ class DataSetCreate(BaseModel):
             name=self.name.strip(),
             description=(self.description or "").strip(),
             datasource_bindings=bindings,
+            preprocessing_workflow=_stored_workflow_str(self.preprocessing_workflow),
             start=self.start.strip(),
             end=self.end.strip(),
             instrument_codes=[c.strip() for c in self.instrument_codes if str(c).strip()],
@@ -123,6 +157,7 @@ class DataSetPatch(BaseModel):
     name: str | None = None
     description: str | None = None
     datasource_bindings: list[DataSetDatasourceBindingInput] | None = None
+    preprocessing_workflow: dict[str, Any] | None = None
     start: str | None = None
     end: str | None = None
     instrument_codes: list[str] | None = None
@@ -143,6 +178,7 @@ class DataSetPublic(BaseModel):
     name: str
     description: str
     datasource_bindings: list[DataSetDatasourceBindingPublic]
+    preprocessing_workflow: dict[str, Any]
     start: str
     end: str
     instrument_codes: list[str]

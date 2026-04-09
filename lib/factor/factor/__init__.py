@@ -10,10 +10,14 @@ from factor.dependency_resolver import DependencyResolver
 from factor.factor import Factor
 from factor.loader import FACTOR_GLOBALS, is_valid_factor_class
 from factor.panel import panel_load_start_date
+from factor.preprocess import DataPreprocessor, DataPreprocessorBase, DataSetPreprocessorBinding
 
 __all__ = [
     "FACTOR_GLOBALS",
+    "DataPreprocessor",
+    "DataPreprocessorBase",
     "DataSet",
+    "DataSetPreprocessorBinding",
     "DataSourceBinding",
     "DependencyResolver",
     "Factor",

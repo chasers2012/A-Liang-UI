@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from app.data_set.redistry import DataSetsStore
@@ -11,6 +13,7 @@ from app.data_set.schemas import (
     DataSetPatch,
     DataSetPublic,
     DataSetRecord,
+    workflow_public_dict,
 )
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import DataSourceRecord, utc_now_iso
@@ -51,6 +54,7 @@ def _to_public(rec: DataSetRecord) -> DataSetPublic:
         name=rec.name,
         description=rec.description,
         datasource_bindings=_bindings_to_public(rec.datasource_bindings),
+        preprocessing_workflow=workflow_public_dict(rec.preprocessing_workflow),
         start=rec.start,
         end=rec.end,
         instrument_codes=list(rec.instrument_codes),
@@ -157,6 +161,12 @@ def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
         raw = data["datasource_bindings"]
         inputs = [DataSetDatasourceBindingInput.model_validate(x) for x in raw]
         rec.datasource_bindings = _inputs_to_stored(inputs)
+    if "preprocessing_workflow" in data:
+        wf = data["preprocessing_workflow"]
+        if wf is None:
+            rec.preprocessing_workflow = json.dumps({"nodes": [], "links": []}, ensure_ascii=False)
+        else:
+            rec.preprocessing_workflow = json.dumps(wf, ensure_ascii=False)
     if "start" in data and data["start"] is not None:
         rec.start = str(data["start"]).strip()
     if "end" in data and data["end"] is not None:
