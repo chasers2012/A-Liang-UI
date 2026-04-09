@@ -235,7 +235,16 @@
       }
     }
   ],
-  "workflow_inputs": [],
+  "workflow_inputs": [
+    {
+      "name": "factor",
+      "required": true,
+      "value_type": "factor",
+      "label": "因子",
+      "description": "评价目标因子（运行时由 factor_id 注入）",
+      "render_type": "socket"
+    }
+  ],
   "workflow_outputs": [
     {
       "name": "result",
@@ -247,6 +256,7 @@
     }
   ],
   "links": [
+    { "from": { "kind": "workflow_input", "socket": "factor" }, "to": { "kind": "node", "node_id": "calc", "socket": "factor" } },
     { "from": { "kind": "node", "node_id": "load", "socket": "data_set" }, "to": { "kind": "node", "node_id": "calc", "socket": "data_set" } },
 
     { "from": { "kind": "node", "node_id": "calc", "socket": "clean_factor" }, "to": { "kind": "node", "node_id": "mean_ret", "socket": "clean_factor" } },

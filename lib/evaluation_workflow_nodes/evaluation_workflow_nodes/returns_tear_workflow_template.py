@@ -34,6 +34,9 @@ def build_returns_tear_workflow_template() -> dict:
     def n(node_id: str, socket: str) -> WorkflowEndpoint:
         return WorkflowEndpoint(kind="node", node_id=node_id, socket=socket)
 
+    def wi(socket: str) -> WorkflowEndpoint:
+        return WorkflowEndpoint(kind="workflow_input", socket=socket)
+
     def wo(socket: str) -> WorkflowEndpoint:
         return WorkflowEndpoint(kind="workflow_output", socket=socket)
 
@@ -213,10 +216,23 @@ def build_returns_tear_workflow_template() -> dict:
                 },
             ),
         ],
+        workflow_inputs=[
+            Socket(
+                name="factor",
+                required=True,
+                value_type="factor",
+                label="因子",
+                description="评价目标因子（运行时由 factor_id 注入）",
+            )
+        ],
         workflow_outputs=[
             Socket(name="result", required=False, value_type="scalar_json", label="结果")
         ],
         links=[
+            WorkflowLink(
+                from_=wi("factor"),
+                to=n("calc", "factor"),
+            ),
             WorkflowLink(
                 from_=n("load", "data_set"),
                 to=n("calc", "data_set"),

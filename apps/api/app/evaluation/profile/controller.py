@@ -53,7 +53,16 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
 
 def get_evaluation_profile_workflow_io_spec() -> WorkflowIOSpecPublic:
     return WorkflowIOSpecPublic(
-        workflow_inputs=[],
+        workflow_inputs=[
+            {
+                "name": "factor",
+                "required": True,
+                "label": "因子",
+                "description": "评价目标因子（运行时由 factor_id 注入）",
+                "value_type": "factor",
+                "render_type": "socket",
+            }
+        ],
         workflow_outputs=[
             {
                 "name": "result",

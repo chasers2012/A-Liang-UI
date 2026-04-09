@@ -14,7 +14,16 @@ EvaluationWorkflow = WorkflowGraph
 _EMPTY_WORKFLOW: dict[str, Any] = {
     "nodes": [],
     "links": [],
-    "workflow_inputs": [],
+    "workflow_inputs": [
+        {
+            "name": "factor",
+            "required": True,
+            "label": "因子",
+            "description": "评价目标因子（运行时由 factor_id 注入）",
+            "value_type": "factor",
+            "render_type": "socket",
+        }
+    ],
     "workflow_outputs": [
         {
             "name": "result",

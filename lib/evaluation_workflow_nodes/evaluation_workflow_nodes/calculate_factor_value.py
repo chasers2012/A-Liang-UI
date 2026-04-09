@@ -20,6 +20,13 @@ from workflow import (
     category="factor_evaluation",
     input_sockets=[
         Socket(
+            "factor",
+            required=True,
+            value_type="factor",
+            label="因子",
+            description="待评价的 Factor 类输入",
+        ),
+        Socket(
             "data_set",
             required=True,
             value_type="data_set",
