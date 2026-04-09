@@ -141,6 +141,9 @@ class DataSet:
         )
         renamed["date"] = pd.to_datetime(renamed["date"])
         renamed["asset"] = renamed["asset"].astype(str)
+        # CSV/SQL often yield object columns (strings); factors assume numeric deps.
+        for c in requested:
+            renamed[c] = pd.to_numeric(renamed[c], errors="coerce")
         return renamed[["date", "asset", *requested]].set_index(["date", "asset"]).sort_index()
 
     def get_panel(

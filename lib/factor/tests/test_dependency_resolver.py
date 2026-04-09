@@ -73,6 +73,34 @@ def test_resolver_merges_two_sources_inner_join() -> None:
     assert float(out.iloc[0]["pe"]) == 100.0
 
 
+def test_dependency_columns_read_as_strings_are_coerced_to_numeric() -> None:
+    """CSV/read_csv often leaves price columns as object dtype; panel must be numeric."""
+    df = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2024-01-02")],
+            "asset": ["A"],
+            "close": ["10.5"],
+        }
+    )
+    ds = DataSet(
+        [
+            DataSourceBinding(
+                _FixedSource(df), ["close"], date_column="date", asset_column="asset"
+            ),
+        ]
+    )
+    r = DependencyResolver(ds)
+    out = r.get_panel(
+        fields=["close"],
+        start_date="2024-01-01",
+        end_date="2024-01-31",
+        stock_codes=None,
+        window=0,
+    )
+    assert out["close"].dtype == "float64"
+    assert float(out.iloc[0]["close"]) == 10.5
+
+
 def test_register_datasource_alias_maps_physical_columns() -> None:
     """Logical dependency names differ from column names on the underlying source."""
     df = _panel([(pd.Timestamp("2024-01-02"), "A", 99.0)], ["raw_close"])
