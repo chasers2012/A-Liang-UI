@@ -156,10 +156,6 @@ export default function PreprocessorDetailPage() {
         <CardContent>
           <dl className="grid gap-3 text-sm">
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-              <dt className="text-muted-foreground">id</dt>
-              <dd className="break-all font-mono text-xs">{row.id}</dd>
-            </div>
-            <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">source_path</dt>
               <dd className="break-all font-mono text-xs">{row.source_path}</dd>
             </div>
@@ -185,7 +181,7 @@ export default function PreprocessorDetailPage() {
           <CardDescription>用于调试与复制；编辑请进入编辑页。</CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="max-h-[28rem] overflow-auto rounded-md border bg-muted/30 p-3 text-xs">
+          <pre className="max-h-112 overflow-auto rounded-md border bg-muted/30 p-3 text-xs">
             <code className="font-mono">{row.source}</code>
           </pre>
         </CardContent>

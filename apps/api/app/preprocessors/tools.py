@@ -12,6 +12,7 @@ from app.preprocessors.controller import (
     list_preprocessor_records,
     load_preprocessor,
     load_preprocessor_detail,
+    sync_preprocessor_metadata_from_source,
     update_preprocessor_record,
     write_preprocessor_source,
 )
@@ -76,6 +77,7 @@ def update_preprocessor(preprocessor_id: str, body: PreprocessorPatch) -> dict[s
         apply_preprocessor_patch(rec, body)
         if "source" in unset and body.source is not None:
             write_preprocessor_source(rec, body.source)
+            sync_preprocessor_metadata_from_source(rec)
         rec.updated_at = utc_now_iso()
 
     rec = update_preprocessor_record(preprocessor_id, _apply)

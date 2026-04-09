@@ -39,10 +39,7 @@ export function PreprocessorTable({ items, onDelete }: Props) {
         {items.map((p) => (
           <TableRow key={p.id}>
             <TableCell className="max-w-56 whitespace-normal">
-              <span className="font-mono text-sm">{p.name}</span>
-              <p className="mt-0.5 break-all font-mono text-[0.7rem] text-muted-foreground">
-                {p.id}
-              </p>
+              <span className="font-mono text-sm">{p.name || "未命名预处理器"}</span>
             </TableCell>
             <TableCell className="max-w-md truncate text-muted-foreground" title={p.description}>
               {p.description || "—"}

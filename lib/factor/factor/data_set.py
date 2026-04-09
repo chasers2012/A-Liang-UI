@@ -7,7 +7,6 @@ from workflow import WorkflowExecutor
 
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter
 from factor.panel import panel_load_start_date
-from factor.preprocess import DataSetPreprocessorBinding
 from factor.preprocessing_workflow_nodes import CollectFrames
 
 
@@ -68,7 +67,6 @@ def _merge_instrument_codes(arg: list[str] | None, fallback: list[str] | None) -
 
 class DataSet:
     data_source_bindings: list[DataSourceBinding]
-    preprocessors: list[DataSetPreprocessorBinding]
     # Serialized DAG JSON (see dataset preprocessing workflow).
     preprocessing_workflow: str | None
     start_date: str | None
@@ -79,14 +77,12 @@ class DataSet:
         self,
         data_source_bindings: list[DataSourceBinding],
         *,
-        preprocessors: list[DataSetPreprocessorBinding] | None = None,
         preprocessing_workflow: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         instrument_codes: list[str] | None = None,
     ):
         self.data_source_bindings = data_source_bindings
-        self.preprocessors = list(preprocessors or [])
         self.preprocessing_workflow = preprocessing_workflow
         self.start_date = _norm_opt_date(start_date)
         self.end_date = _norm_opt_date(end_date)

@@ -11,6 +11,7 @@ from app.preprocessors.controller import (
     list_preprocessor_records,
     load_preprocessor,
     load_preprocessor_detail,
+    sync_preprocessor_metadata_from_source,
     update_preprocessor_record,
     write_preprocessor_source,
 )
@@ -77,6 +78,7 @@ def patch_preprocessor(preprocessor_id: str, body: PreprocessorPatch) -> Preproc
         if "source" in unset and body.source is not None:
             try:
                 write_preprocessor_source(rec, body.source)
+                sync_preprocessor_metadata_from_source(rec)
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=str(e)) from e
         rec.updated_at = utc_now_iso()
