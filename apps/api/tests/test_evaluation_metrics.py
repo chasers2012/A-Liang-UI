@@ -80,7 +80,7 @@ def test_evaluation_profiles_node_types(client):
     echarts_types = [x for x in types if "echarts_" in x]
     assert len(echarts_types) == 2
     prep_row = next(x for x in rows if "CalculateFactorValueNode" in x["type"])
-    assert len(prep_row["inputs"]) >= 4
+    assert len(prep_row["inputs"]) >= 2
     assert "node_category" not in prep_row
     assert "viz_mode" not in prep_row
     for row in rows:

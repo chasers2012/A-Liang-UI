@@ -40,10 +40,7 @@ def _profile_workflow_missing_data_set() -> dict:
                 "type": _CALC,
                 "pos": [0, 0],
                 "params": {
-                    "start_date": "2023-01-01",
-                    "end_date": "2024-12-31",
                     "quantiles": 5,
-                    "stock_codes": "A",
                     "max_loss": 1.0,
                 },
             }
@@ -66,10 +63,7 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
                 "type": _CALC,
                 "pos": [200, 0],
                 "params": {
-                    "start_date": "2023-01-01",
-                    "end_date": "2023-12-31",
                     "quantiles": 5,
-                    "stock_codes": "A",
                     "max_loss": 1.0,
                 },
             },
@@ -203,7 +197,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
             "datasource_bindings": [_ds_binding(ds_id, ["close"])],
             "start": "2023-01-01",
             "end": "2023-12-31",
-            "stock_codes": [],
+            "stock_codes": ["A"],
         },
     )
     assert r_ts.status_code == 200

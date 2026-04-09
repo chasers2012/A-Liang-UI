@@ -10,15 +10,13 @@ from factor.data_set import DataSet
 from workflow import (
     NumberNodeParam,
     Socket,
-    StringNodeParam,
     workflow_node,
 )
-from workflow.node_types import DateNodeParam
 
 
 @workflow_node(
     label="计算因子",
-    description="根据 Factor 实例与评价窗口计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
+    description="根据 Factor 实例与数据集上的评价区间、股票范围计算 factor_data_clean；持有期、分位数等请在节点参数中配置",
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -26,23 +24,14 @@ from workflow.node_types import DateNodeParam
             required=True,
             value_type="data_set",
             label="数据集",
-            description="计算节点使用的数据集",
+            description="计算节点使用的数据集；评价区间与股票代码范围在数据集上配置",
         ),
-        DateNodeParam("start_date", required=True, label="开始日期"),
-        DateNodeParam("end_date", required=True, label="结束日期", description="评价区间结束日期"),
         NumberNodeParam(
             "quantiles",
             required=True,
             default=5,
             label="分位数",
             description="将因子分组的分位桶数量",
-        ),
-        StringNodeParam(
-            "stock_codes",
-            required=False,
-            default="",
-            label="股票代码",
-            description="可选，逗号分隔；为空表示全市场",
         ),
     ],
     output_sockets=[
@@ -62,11 +51,15 @@ class CalculateFactorValueNode:
             raise ValueError("数据集不能为空")
 
         factor = FactorClass(dependency_resolver=data_set.create_resolver())
+        end = data_set.end_date
+        if not end:
+            raise ValueError("数据集未配置评价结束日期，请在数据集中设置结束日期")
+        start = data_set.start_date
         ev = AlphalensFactorEvaluator(
             factor,
-            start_date=kwargs.get("start_date"),
-            end_date=str(kwargs["end_date"]),
-            stock_codes=kwargs.get("stock_codes"),
+            start_date=start,
+            end_date=end,
+            stock_codes=data_set.stock_codes,
             long_short=bool(kwargs.get("long_short", True)),
         )
         quantiles = kwargs.get("quantiles", 5)

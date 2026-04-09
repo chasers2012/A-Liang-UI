@@ -13,10 +13,7 @@ def _profile_workflow_missing_data_set() -> dict:
                 "type": _CALC,
                 "pos": [0, 0],
                 "params": {
-                    "start_date": "2023-01-01",
-                    "end_date": "2024-12-31",
                     "quantiles": 5,
-                    "stock_codes": "",
                 },
             }
         ],

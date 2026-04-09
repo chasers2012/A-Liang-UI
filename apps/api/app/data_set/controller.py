@@ -30,4 +30,12 @@ def get_data_set(id: str) -> DataSet | None:
             )
         )
 
-    return DataSet(data_source_bindings=bindings)
+    start = (rec.start or "").strip() or None
+    end = (rec.end or "").strip() or None
+    codes = [c.strip() for c in (rec.stock_codes or []) if str(c).strip()]
+    return DataSet(
+        data_source_bindings=bindings,
+        start_date=start,
+        end_date=end,
+        stock_codes=codes or None,
+    )
