@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from sqlalchemy import event
+from sqlalchemy import event, text
 from sqlmodel import Session, SQLModel, create_engine
 from workspace import workspace_path
 
@@ -42,7 +42,17 @@ def create_db_and_tables() -> None:
     # Ensure all SQLModel table classes are imported and registered.
     from app.persistence import models as _models  # noqa: F401
 
-    SQLModel.metadata.create_all(get_engine())
+    engine = get_engine()
+    SQLModel.metadata.create_all(engine)
+
+    # Lightweight schema migration for old local DBs.
+    with engine.begin() as conn:
+        cols = conn.execute(text("PRAGMA table_info(data_sets)")).all()
+        col_names = {str(row[1]) for row in cols}
+        if "preprocessors" not in col_names:
+            conn.execute(
+                text("ALTER TABLE data_sets ADD COLUMN preprocessors TEXT NOT NULL DEFAULT '[]'")
+            )
 
 
 @contextmanager

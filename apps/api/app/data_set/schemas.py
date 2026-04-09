@@ -76,6 +76,7 @@ class DataSetRecord(BaseModel):
     description: str = ""
     datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
     preprocessing_workflow: str = ""
+    preprocessors: list[str] = Field(default_factory=list)
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list)
@@ -86,6 +87,23 @@ class DataSetRecord(BaseModel):
     @classmethod
     def _workflow_record(cls, v: object) -> str:
         return _stored_workflow_str(v)
+
+    @field_validator("preprocessors", mode="before")
+    @classmethod
+    def _normalize_preprocessors(cls, v: object) -> list[str]:
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise TypeError("preprocessors must be a list")
+        out: list[str] = []
+        seen: set[str] = set()
+        for x in v:
+            pid = str(x).strip()
+            if not pid or pid in seen:
+                continue
+            seen.add(pid)
+            out.append(pid)
+        return out
 
 
 class DataSetDatasourceBindingInput(BaseModel):
@@ -184,6 +202,7 @@ class DataSetCreate(BaseModel):
             preprocessing_workflow=json.dumps(
                 dict(self.preprocessing_workflow), ensure_ascii=False
             ),
+            preprocessors=[],
             start=self.start.strip(),
             end=self.end.strip(),
             instrument_codes=[c.strip() for c in self.instrument_codes if str(c).strip()],
@@ -220,6 +239,7 @@ class DataSetPublic(BaseModel):
     description: str
     datasource_bindings: list[DataSetDatasourceBindingPublic]
     preprocessing_workflow: dict[str, Any]
+    preprocessors: list[str]
     start: str
     end: str
     instrument_codes: list[str]

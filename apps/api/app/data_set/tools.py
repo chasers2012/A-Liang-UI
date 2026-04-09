@@ -5,22 +5,22 @@ from typing import Any
 from fastapi import HTTPException
 from langchain_core.tools import tool
 
-from app.data_set.api import (
-    _merge_patch,
-    _to_public,
-    _validate_and_touch_datasources,
-    _validate_bindings_inputs,
-    _validate_datasource_exists,
-    list_data_sets,
+from app.data_set.controller import (
+    create_data_set as create_data_set_controller,
 )
-from app.data_set.redistry import DataSetsStore
-from app.data_set.schemas import (
-    DataSetCreate,
-    DataSetDatasourceBindingInput,
-    DataSetPatch,
-    DataSetRecord,
+from app.data_set.controller import (
+    delete_data_set as delete_data_set_controller,
 )
-from app.datasource.schemas import utc_now_iso
+from app.data_set.controller import (
+    get_data_set_detail as get_data_set_detail_controller,
+)
+from app.data_set.controller import (
+    list_data_sets as list_data_sets_controller,
+)
+from app.data_set.controller import (
+    update_data_set as update_data_set_controller,
+)
+from app.data_set.schemas import DataSetCreate, DataSetPatch
 
 
 def _http_error_detail(exc: HTTPException) -> str:
@@ -35,28 +35,24 @@ def _http_error_detail(exc: HTTPException) -> str:
     )
 )
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
-    if not body.name.strip():
-        raise ValueError("名称不能为空")
     try:
-        _validate_and_touch_datasources(list(body.datasource_bindings))
+        created = create_data_set_controller(body)
     except HTTPException as e:
         raise ValueError(_http_error_detail(e)) from e
-    new_rec = body.to_record()
-    DataSetsStore.add_item(new_rec)
-    return _to_public(new_rec).model_dump()
+    return created.model_dump()
 
 
 @tool(description="获取单个数据集详情，入参 data_set_id 为数据集 id")
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
-    rec = DataSetsStore.get_item(data_set_id)
+    rec = get_data_set_detail_controller(data_set_id)
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
 @tool(description="获取工作区内全部数据集列表")
 def get_data_set_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_data_sets()]
+    return [f.model_dump() for f in list_data_sets_controller()]
 
 
 @tool(
@@ -65,52 +61,21 @@ def get_data_set_list() -> list[dict[str, Any]]:
     )
 )
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
-
-    def _apply(rec: DataSetRecord) -> None:
-        try:
-            if body.datasource_bindings is not None:
-                _validate_and_touch_datasources(list(body.datasource_bindings))
-        except HTTPException as e:
-            raise ValueError(_http_error_detail(e)) from e
-        _merge_patch(rec, body)
-        if not rec.name:
-            raise ValueError("名称不能为空")
-        if not rec.datasource_bindings:
-            raise ValueError("至少保留一条数据源绑定")
-        try:
-            _validate_bindings_inputs(
-                [
-                    DataSetDatasourceBindingInput(
-                        datasource_id=b.datasource_id,
-                        dependencies=list(b.dependencies),
-                        alias=(dict(b.alias) if b.alias else None),
-                        date_column=b.date_column,
-                        asset_column=b.asset_column,
-                    )
-                    for b in rec.datasource_bindings
-                ]
-            )
-        except HTTPException as e:
-            raise ValueError(_http_error_detail(e)) from e
-        for b in rec.datasource_bindings:
-            try:
-                _validate_datasource_exists(b.datasource_id)
-            except HTTPException as e:
-                raise ValueError(_http_error_detail(e)) from e
-        rec.updated_at = utc_now_iso()
-
-    rec = DataSetsStore.update_item(data_set_id, _apply)
+    try:
+        rec = update_data_set_controller(data_set_id, body)
+    except HTTPException as e:
+        raise ValueError(_http_error_detail(e)) from e
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
 @tool(description="删除数据集，成功时返回被删除记录的公开信息；不存在则报错")
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
-    rec = DataSetsStore.delete_item(data_set_id)
-    if rec is None:
+    rec = get_data_set_detail_controller(data_set_id)
+    if rec is None or not delete_data_set_controller(data_set_id):
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
 DATA_SET_CHAT_TOOLS = [

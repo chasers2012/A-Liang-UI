@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 
 from app.data_set.controller import get_data_set
+from app.persistence.models import DataSetRow
+from app.persistence.sqlite_db import get_session
+from sqlmodel import select
 
 
 def _csv_datasource_body(name: str = "ds_csv") -> dict:
@@ -172,3 +175,8 @@ def test_data_set_preprocessing_workflow_applies_to_panel(
     # panel sorted by index; pick first row value.
     actual = float(panel.reset_index()["close"].iloc[0])
     assert actual == 20.0
+
+    with get_session() as session:
+        row = session.exec(select(DataSetRow).where(DataSetRow.id == data_set_id)).first()
+    assert row is not None
+    assert list(row.preprocessors or []) == [pp_id]

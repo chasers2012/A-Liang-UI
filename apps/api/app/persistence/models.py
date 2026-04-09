@@ -125,6 +125,7 @@ class DataSetRow(SQLModel, table=True):
     # Stored as a serialized workflow graph JSON string:
     # { "nodes": [...], "links": [...] }
     preprocessing_workflow: str = ""
+    preprocessors: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
