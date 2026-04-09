@@ -1,4 +1,4 @@
-from sql_datasource import SqlDataSource
+from datasources import SqlDataSource
 from sqlalchemy import create_engine, text
 
 

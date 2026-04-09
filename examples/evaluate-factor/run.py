@@ -1,10 +1,11 @@
 """
 从 CSV 加载行情，计算因子并用 Alphalens（evaluate.AlphalensFactorEvaluator）做效果评估。
 
-用法（在 quant-agent 仓库根目录，需 dev 依赖含 evaluate、csv-datasource）:
+用法（在 quant-agent 仓库根目录，需 dev 依赖含 evaluate、datasources）:
   uv run python examples/evaluate-factor/run.py
   uv run python examples/evaluate-factor/run.py -i path/to/bars.csv
 """
+
 from __future__ import annotations
 
 import argparse
@@ -17,10 +18,10 @@ _EX_DIR = Path(__file__).resolve().parent
 if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
-from momentum_factor import MomentumFactor  # noqa: E402
-from csv_datasource import CsvDataSource  # noqa: E402
+from datasources import CsvDataSource  # noqa: E402
 from evaluate import AlphalensFactorEvaluator  # noqa: E402
 from factor import DependencyResolver  # noqa: E402
+from momentum_factor import MomentumFactor  # noqa: E402
 
 
 def _default_end_date(csv_path: Path, date_column: str) -> str:
@@ -80,11 +81,9 @@ def main() -> None:
         raise SystemExit(f"输入文件不存在: {args.input}")
 
     end_date = args.end_date or _default_end_date(args.input, args.date_column)
-    start_date = args.start_date or _default_start_date(
-        args.input, args.date_column)
+    start_date = args.start_date or _default_start_date(args.input, args.date_column)
     try:
-        periods = tuple(
-            int(x.strip()) for x in args.periods.split(",") if x.strip())
+        periods = tuple(int(x.strip()) for x in args.periods.split(",") if x.strip())
     except ValueError as e:
         raise SystemExit(f"无效的 --periods: {args.periods}") from e
     if not periods:
@@ -96,9 +95,7 @@ def main() -> None:
         asset_column=args.asset_column,
     )
     resolver = DependencyResolver()
-    close_alias = {
-        "close": args.close_column
-    } if args.close_column != "close" else None
+    close_alias = {"close": args.close_column} if args.close_column != "close" else None
     resolver.register_datasource(ds, ["close"], alias=close_alias)
 
     factor = MomentumFactor(dependency_resolver=resolver)

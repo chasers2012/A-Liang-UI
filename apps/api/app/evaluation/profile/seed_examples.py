@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-from app.datasources.schemas import utc_now_iso
+from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import EvaluationProfileRecord
 

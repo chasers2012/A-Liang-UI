@@ -3,18 +3,20 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sql-datasource"
+name = "datasources"
 version = "0.1.0"
-description = "SQL-backed FactorDataSource for the factor package"
+description = "CSV and SQL FactorDataSource implementations for the factor package"
 requires-python = ">=3.10"
 dependencies = [
-    "factor",
-    "pandas>=2.0.0",
-    "sqlalchemy>=2.0.0",
+  "factor",
+  "pandas>=2.0.0",
+  "sqlalchemy>=2.0.0",
+  "workspace",
 ]
 
 [tool.uv.sources]
 factor = { workspace = true }
+workspace = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["sql_datasource"]
+packages = ["datasources"]

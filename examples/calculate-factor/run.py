@@ -4,6 +4,7 @@
 用法（在 quant-agent 仓库根目录）:
   uv run python examples/calculate-factor/run.py -i data.csv -o factors.csv --end-date 2025-01-03
 """
+
 from __future__ import annotations
 
 import argparse
@@ -14,7 +15,7 @@ _EX_DIR = Path(__file__).resolve().parent
 if str(_EX_DIR) not in sys.path:
     sys.path.insert(0, str(_EX_DIR))
 
-from csv_datasource import CsvDataSource  # noqa: E402
+from datasources import CsvDataSource  # noqa: E402
 from factor import DependencyResolver  # noqa: E402
 from price_factor import PriceFactor  # noqa: E402
 
@@ -68,9 +69,7 @@ def main() -> None:
         asset_column=args.asset_column,
     )
     resolver = DependencyResolver()
-    close_alias = ({
-        "close": args.close_column
-    } if args.close_column != "close" else None)
+    close_alias = {"close": args.close_column} if args.close_column != "close" else None
     resolver.register_datasource(ds, ["close"], alias=close_alias)
 
     factor = PriceFactor(dependency_resolver=resolver)

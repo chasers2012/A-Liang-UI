@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from csv_datasource import CsvDataSource
+from datasources import CsvDataSource, SqlDataSource
 from factor import FactorDataSource
-from sql_datasource import SqlDataSource
 from workspace import get_workspace_root
 
-from app.datasources.registry import DataSourceItemsRegistry
-from app.datasources.sql_url import build_sqlalchemy_url
+from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource.sql_url import build_sqlalchemy_url
 
 
 def get_datasource(id: str) -> FactorDataSource | None:

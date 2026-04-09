@@ -3,7 +3,7 @@ from __future__ import annotations
 from evaluate.data_set import DataSet, DataSourceBinding
 
 from app.data_set.redistry import DataSetsStore
-from app.datasources.controller import get_datasource
+from app.datasource.controller import get_datasource
 
 
 def get_data_set(id: str) -> DataSet | None:

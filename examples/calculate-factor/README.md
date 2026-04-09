@@ -1,6 +1,6 @@
 # calculate-factor 示例
 
-用 [lib/evaluate](../../lib/evaluate) 与 [lib/csv_datasource](../../lib/csv_datasource) 从 CSV 行情计算一个简单的 **PriceFactor**（因子值等于收盘价），并把结果写成 CSV。
+用 [lib/evaluate](../../lib/evaluate) 与 [lib/datasources](../../lib/datasources) 从 CSV 行情计算一个简单的 **PriceFactor**（因子值等于收盘价），并把结果写成 CSV。
 
 ## 内容说明
 
@@ -12,7 +12,7 @@
 
 ## 环境
 
-在仓库根目录 `quant-agent` 下执行，且已安装工作区依赖（例如 `uv sync`，dev 组包含 `evaluate`、`csv-datasource`）。
+在仓库根目录 `quant-agent` 下执行，且已安装工作区依赖（例如 `uv sync`，dev 组包含 `evaluate`、`datasources`）。
 
 ## 快速运行
 
@@ -42,4 +42,4 @@ uv run python examples/calculate-factor/run.py -i bars.csv -o out.csv \
 
 ## 输入 CSV 形态
 
-长表：一行表示某日某标的，至少包含日期列、资产代码列、收盘价列（或通过 `--close-column` 指定列名）。默认使用 UTF-8；带 BOM 的文件也可正常读取（`csv-datasource` 默认 `utf-8-sig`）。
+长表：一行表示某日某标的，至少包含日期列、资产代码列、收盘价列（或通过 `--close-column` 指定列名）。默认使用 UTF-8；带 BOM 的文件也可正常读取（`datasources.CsvDataSource` 默认 `utf-8-sig`）。

@@ -7,7 +7,7 @@ from uuid import uuid4
 from pydantic import BaseModel, field_validator
 from workflow import WorkflowGraph
 
-from app.datasources.schemas import utc_now_iso
+from app.datasource.schemas import utc_now_iso
 
 EvaluationWorkflow = WorkflowGraph
 

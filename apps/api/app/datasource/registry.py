@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import select
 
-from app.datasources.schemas import CsvConfigStored, DataSourceRecord, SqlConfigStored
+from app.datasource.schemas import CsvConfigStored, DataSourceRecord, SqlConfigStored
 from app.persistence.models import DataSourceRow
 from app.persistence.sqlite_db import get_session
 

@@ -1,12 +1,32 @@
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 
 MIN_SOURCE = "x = 1\n"
 
 _CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
 _LOAD = "evaluation_workflow_nodes.load_data_set.LoadDataSet"
 _COLLECT = "evaluation_workflow_nodes.collect_result.CollectResult"
+
+
+def _factor_source_for_name(name: str) -> str:
+    return f'''from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class EvalWorkflowFactor(Factor):
+    name = "{name}"
+    group = "g"
+    description = ""
+    dependencies = ["close"]
+    max_window = 2
+
+    def calc(self, data: pd.DataFrame) -> pd.Series:
+        return data["close"]
+'''
 
 
 def _profile_workflow_missing_data_set() -> dict:
@@ -20,7 +40,8 @@ def _profile_workflow_missing_data_set() -> dict:
                     "start_date": "2023-01-01",
                     "end_date": "2024-12-31",
                     "quantiles": 5,
-                    "stock_codes": "",
+                    "stock_codes": "A",
+                    "max_loss": 1.0,
                 },
             }
         ],
@@ -45,7 +66,8 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
                     "start_date": "2023-01-01",
                     "end_date": "2023-12-31",
                     "quantiles": 5,
-                    "stock_codes": "",
+                    "stock_codes": "A",
+                    "max_loss": 1.0,
                 },
             },
             {
@@ -158,7 +180,11 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     monkeypatch.delenv("FACTOR_AGENT_END_DATE", raising=False)
 
     csv_path = workspace_tmp / "eval_test_panel.csv"
-    csv_path.write_text("date,asset,close\n2023-01-01,A,1\n", encoding="utf-8")
+    lines = ["date,asset,close"]
+    d0 = date(2023, 1, 3)
+    for i in range(45):
+        lines.append(f"{(d0 + timedelta(days=i)).isoformat()},A,{10.0 + i * 0.02}")
+    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     r_ds = client.post("/datasources", json=_csv_datasource_body())
     assert r_ds.status_code == 200
     ds_id = r_ds.json()["id"]
@@ -167,7 +193,12 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
         "/data-sets",
         json={
             "name": "ts_run",
-            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
+            "datasource_bindings": [
+                {
+                    "datasource_id": ds_id,
+                    "dependencies": ["close"],
+                }
+            ],
             "start": "2023-01-01",
             "end": "2023-12-31",
             "stock_codes": [],
@@ -189,14 +220,15 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
             "name": "f_ts",
             "max_window": 2,
             "dependencies": ["close"],
-            "source": MIN_SOURCE,
+            "source": _factor_source_for_name("f_ts"),
         },
     )
     assert r_f.status_code == 200
     fid = r_f.json()["id"]
 
     r_run = client.post(
-        f"/evaluation-profiles/{prof_id}/factors/{fid}/evaluations/run",
+        "/evaluation-profiles/evaluations/run",
+        json={"profile_id": prof_id, "factor_id": fid},
     )
     assert r_run.status_code == 200
     body = r_run.json()
@@ -221,7 +253,12 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
         "/data-sets",
         json={
             "name": "ts_only",
-            "datasource_bindings": [{"datasource_id": ds_id, "dependencies": []}],
+            "datasource_bindings": [
+                {
+                    "datasource_id": ds_id,
+                    "dependencies": ["close"],
+                }
+            ],
             "start": "2023-01-01",
             "end": "2024-12-31",
             "stock_codes": [],
@@ -235,7 +272,7 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
             "name": "f_no_ds_in_body",
             "max_window": 2,
             "dependencies": ["close"],
-            "source": MIN_SOURCE,
+            "source": _factor_source_for_name("f_no_ds_in_body"),
         },
     )
     assert r_f.status_code == 200
@@ -248,6 +285,9 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
     assert r_prof.status_code == 200
     prof_id = r_prof.json()["id"]
 
-    r_run = client.post(f"/evaluation-profiles/{prof_id}/factors/{fid}/evaluations/run")
-    assert r_run.status_code == 400
-    assert "数据集" in r_run.json()["detail"]
+    r_run = client.post(
+        "/evaluation-profiles/evaluations/run",
+        json={"profile_id": prof_id, "factor_id": fid},
+    )
+    assert r_run.status_code == 200
+    assert "数据集" in (r_run.json().get("error") or "")

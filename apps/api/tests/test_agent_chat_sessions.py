@@ -91,7 +91,7 @@ def test_chat_stream_persists_on_done(client, monkeypatch):
             yield _Chunk(" world")
 
     monkeypatch.setattr(
-        "app.routers.agent_llm.build_chat_model_from_workspace_settings",
+        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
         lambda _settings: _FakeLlm(),
     )
 
@@ -148,7 +148,7 @@ def test_chat_stream_persists_tool_blocks(client, monkeypatch):
         return {"create_factor": _FakeCreateFactorTool()}
 
     monkeypatch.setattr(
-        "app.routers.agent_llm.build_chat_model_from_workspace_settings",
+        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
         lambda _s: _FakeLlmWithTools(),
     )
     monkeypatch.setattr(
@@ -192,7 +192,7 @@ def test_chat_stream_error_does_not_persist(client, monkeypatch):
             raise RuntimeError("boom")
 
     monkeypatch.setattr(
-        "app.routers.agent_llm.build_chat_model_from_workspace_settings",
+        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
         lambda _settings: _FakeBrokenLlm(),
     )
 

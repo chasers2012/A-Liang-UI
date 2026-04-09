@@ -22,8 +22,7 @@ dependencies = [
   "evaluation-metric-templates",
   "evaluation-workflow-nodes",
   "factor",
-  "sql-datasource",
-  "csv-datasource",
+  "datasources",
   "numpy>=1.26.0",
   "workflow",
 ]
@@ -37,8 +36,7 @@ evaluate = { workspace = true }
 evaluation-metric-templates = { workspace = true }
 evaluation-workflow-nodes = { workspace = true }
 factor = { workspace = true }
-sql-datasource = { workspace = true }
-csv-datasource = { workspace = true }
+datasources = { workspace = true }
 workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

@@ -12,8 +12,8 @@ from app.data_set.schemas import (
     DataSetPublic,
     DataSetRecord,
 )
-from app.datasources.registry import DataSourceItemsRegistry
-from app.datasources.schemas import DataSourceRecord, utc_now_iso
+from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource.schemas import DataSourceRecord, utc_now_iso
 
 router = APIRouter(prefix="/data-sets", tags=["data-sets"])
 

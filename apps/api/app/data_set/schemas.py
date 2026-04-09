@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from app.common.id import create_id_generator
-from app.datasources.schemas import utc_now_iso
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.common.id import create_id_generator
+from app.datasource.schemas import utc_now_iso
 
 generate_id = create_id_generator("data_sets")
 
@@ -21,8 +22,7 @@ class DataSetRecord(BaseModel):
     id: str
     name: str
     description: str = ""
-    datasource_bindings: list[DataSetDatasourceBindingStored] = Field(
-        default_factory=list)
+    datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
     start: str
     end: str
     stock_codes: list[str] = Field(default_factory=list)
@@ -75,7 +75,8 @@ class DataSetCreate(BaseModel):
             DataSetDatasourceBindingStored(
                 datasource_id=b.datasource_id.strip(),
                 dependencies=list(b.dependencies),
-            ) for b in self.datasource_bindings
+            )
+            for b in self.datasource_bindings
         ]
         return DataSetRecord(
             id=rid,
@@ -84,9 +85,7 @@ class DataSetCreate(BaseModel):
             datasource_bindings=bindings,
             start=self.start.strip(),
             end=self.end.strip(),
-            stock_codes=[
-                c.strip() for c in self.stock_codes if str(c).strip()
-            ],
+            stock_codes=[c.strip() for c in self.stock_codes if str(c).strip()],
             created_at=now,
             updated_at=now,
         )

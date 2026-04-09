@@ -10,8 +10,7 @@ dependencies = [
 
 [tool.uv.sources]
 quant-agent-api = { workspace = true }
-csv-datasource = { workspace = true }
-sql-datasource = { workspace = true }
+datasources = { workspace = true }
 evaluate = { workspace = true }
 evaluation-metric-templates = { workspace = true }
 factor = { workspace = true }
@@ -30,8 +29,7 @@ dev = [
     "httpx>=0.27.0",
     "pytest>=8.0.0",
     "agent",
-    "csv-datasource",
-    "sql-datasource",
+    "datasources",
     "evaluate",
     "factor",
     "workspace",

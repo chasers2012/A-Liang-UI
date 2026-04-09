@@ -5,8 +5,8 @@ from typing import Any
 from langchain_core.tools import tool
 
 from app.common.datetime_utils import utc_now_iso
-from app.datasources.registry import DataSourceItemsRegistry
-from app.datasources.schemas import (
+from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource.schemas import (
     DataSourceCreate,
     DataSourcePatch,
     DataSourceRecord,
@@ -15,12 +15,12 @@ from app.datasources.schemas import (
     TestResult,
     record_to_public,
 )
-from app.datasources.table_columns import (
+from app.datasource.table_columns import (
     list_table_column_names,
     sql_config_for_column_listing,
 )
-from app.datasources.verify import verify_datasource
-from app.routers.datasources import _merge_patch, list_datasources
+from app.datasource.verify import verify_datasource
+from app.datasource.api import _merge_patch, list_datasources
 
 
 @tool(

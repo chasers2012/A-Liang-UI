@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from csv_datasource import CsvDataSource
+from datasources import CsvDataSource
 
 
 def test_csv_data_source_wrong_column_names(tmp_path: Path):

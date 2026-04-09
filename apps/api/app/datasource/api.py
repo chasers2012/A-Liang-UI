@@ -4,9 +4,9 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.datasources.controller import get_datasource as get_datasource_instance
-from app.datasources.registry import DataSourceItemsRegistry
-from app.datasources.schemas import (
+from app.datasource.controller import get_datasource as get_datasource_instance
+from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource.schemas import (
     DataSourceCreate,
     DatasourceDependencyFieldsResponse,
     DataSourcePatch,
@@ -19,11 +19,11 @@ from app.datasources.schemas import (
     record_to_public,
     utc_now_iso,
 )
-from app.datasources.table_columns import (
+from app.datasource.table_columns import (
     list_table_column_names,
     sql_config_for_column_listing,
 )
-from app.datasources.verify import verify_datasource
+from app.datasource.verify import verify_datasource
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 

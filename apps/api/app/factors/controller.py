@@ -15,6 +15,7 @@ from app.factors.schemas import (
     FactorPatch,
     FactorRecord,
     FactorSummaryPublic,
+    generate_id,
     record_to_summary,
 )
 
@@ -62,7 +63,7 @@ def patch_factor_validate_and_merge(
 def create_factor(body: FactorCreate) -> FactorRecord:
     validate_identifier_name(body.name)
 
-    fid = FactorItemsRegistry.generate_id()
+    fid = generate_id()
     now = utc_now_iso()
     rec = body.to_record(fid, now)
     SourceFiles.write_source_text(rec.source_path, body.source, validators=[validate_source_syntax])

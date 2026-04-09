@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from urllib.parse import quote_plus
 
-from app.datasources.schemas import SqlConfigStored
+from app.datasource.schemas import SqlConfigStored
 
 
 def _auth_fragment(username: str, password: str) -> str:

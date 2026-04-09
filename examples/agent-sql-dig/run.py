@@ -20,8 +20,8 @@ import argparse
 from pathlib import Path
 
 from agent.run import run_factor_digging
+from datasources import SqlDataSource
 from factor import DependencyResolver
-from sql_datasource import SqlDataSource
 from sqlalchemy import create_engine
 
 

@@ -4,8 +4,8 @@ import re
 
 from sqlalchemy import create_engine, inspect
 
-from app.datasources.schemas import SqlConfigStored, SqlTableColumnsRequest
-from app.datasources.sql_url import build_sqlalchemy_url
+from app.datasource.schemas import SqlConfigStored, SqlTableColumnsRequest
+from app.datasource.sql_url import build_sqlalchemy_url
 
 _SAFE_TABLE_RE = re.compile(r"^[A-Za-z0-9_.]+$")
 

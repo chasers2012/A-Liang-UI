@@ -5,15 +5,7 @@ from typing import Any
 from fastapi import HTTPException
 from langchain_core.tools import tool
 
-from app.data_set.redistry import DataSetsStore
-from app.data_set.schemas import (
-    DataSetCreate,
-    DataSetDatasourceBindingInput,
-    DataSetPatch,
-    DataSetRecord,
-)
-from app.datasources.schemas import utc_now_iso
-from app.routers.data_sets import (
+from app.data_set.api import (
     _merge_patch,
     _to_public,
     _validate_and_touch_datasources,
@@ -21,6 +13,14 @@ from app.routers.data_sets import (
     _validate_datasource_enabled,
     list_data_sets,
 )
+from app.data_set.redistry import DataSetsStore
+from app.data_set.schemas import (
+    DataSetCreate,
+    DataSetDatasourceBindingInput,
+    DataSetPatch,
+    DataSetRecord,
+)
+from app.datasource.schemas import utc_now_iso
 
 
 def _http_error_detail(exc: HTTPException) -> str:
