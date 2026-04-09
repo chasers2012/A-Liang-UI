@@ -114,10 +114,7 @@ class DataSetRow(SQLModel, table=True):
     )
     start: str
     end: str
-    instrument_codes: list[str] = Field(
-        default_factory=list,
-        sa_column=Column("stock_codes", JsonText),
-    )
+    instrument_codes: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
     created_at: str
     updated_at: str
 
