@@ -11,7 +11,7 @@ from app.datasource.plugins import (
 )
 from datasources import SqlDataSource
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import create_engine, inspect, text
+from sqlmodel import create_engine, inspect, text
 
 
 class SqlConfig(BaseModel):

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from sqlalchemy import event, text
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine, text
 from workspace import workspace_path
 
 
@@ -20,22 +20,19 @@ def get_engine():
     db_path = sqlite_db_path()
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    engine = create_engine(
-        f"sqlite:///{db_path.as_posix()}",
-        connect_args={"check_same_thread": False},
+    def _connect_with_pragmas() -> sqlite3.Connection:
+        conn = sqlite3.connect(db_path.as_posix(), check_same_thread=False)
+        # Improve concurrency/durability tradeoffs for a local app.
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        return conn
+
+    return create_engine(
+        "sqlite://",
+        creator=_connect_with_pragmas,
         pool_pre_ping=True,
     )
-
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_connection, _):  # type: ignore[no-untyped-def]
-        # Improve concurrency/durability tradeoffs for a local app.
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.close()
-
-    return engine
 
 
 def create_db_and_tables() -> None:

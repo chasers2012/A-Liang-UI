@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Column, Index
-from sqlmodel import Field, SQLModel
+from sqlmodel import Column, Field, Index, SQLModel
 
 from app.persistence.sql_types import JsonText
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field, SQLModel
 
 from app.common.id import create_id_generator
 from app.data_set.constants import (
@@ -58,7 +59,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     return data
 
 
-class DataSetDatasourceBindingStored(BaseModel):
+class DataSetDatasourceBindingStored(SQLModel):
     """Maps one datasource to the logical dependency fields it provides."""
 
     datasource_id: str
@@ -68,7 +69,7 @@ class DataSetDatasourceBindingStored(BaseModel):
     asset_column: str = ""
 
 
-class DataSetRecord(BaseModel):
+class DataSetRecord(SQLModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str
@@ -106,7 +107,7 @@ class DataSetRecord(BaseModel):
         return out
 
 
-class DataSetDatasourceBindingInput(BaseModel):
+class DataSetDatasourceBindingInput(SQLModel):
     datasource_id: str
     dependencies: list[str] = Field(default_factory=list)
     alias: dict[str, str] | None = None
@@ -146,7 +147,7 @@ class DataSetDatasourceBindingInput(BaseModel):
         return str(v).strip()
 
 
-class DataSetCreate(BaseModel):
+class DataSetCreate(SQLModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str
@@ -211,7 +212,7 @@ class DataSetCreate(BaseModel):
         )
 
 
-class DataSetPatch(BaseModel):
+class DataSetPatch(SQLModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str | None = None
@@ -223,7 +224,7 @@ class DataSetPatch(BaseModel):
     instrument_codes: list[str] | None = None
 
 
-class DataSetDatasourceBindingPublic(BaseModel):
+class DataSetDatasourceBindingPublic(SQLModel):
     datasource_id: str
     datasource_name: str
     datasource_type: str
@@ -233,7 +234,7 @@ class DataSetDatasourceBindingPublic(BaseModel):
     asset_column: str
 
 
-class DataSetPublic(BaseModel):
+class DataSetPublic(SQLModel):
     id: str
     name: str
     description: str

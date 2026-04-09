@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.types import TEXT, TypeDecorator
+from sqlmodel import TEXT, TypeDecorator
 
 from app.persistence.json_codec import dumps_json, loads_json
 

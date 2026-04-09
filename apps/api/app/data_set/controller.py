@@ -97,6 +97,7 @@ def to_public(rec: DataSetRecord) -> DataSetPublic:
         description=rec.description,
         datasource_bindings=_bindings_to_public(rec.datasource_bindings),
         preprocessing_workflow=workflow_public_dict(rec.preprocessing_workflow),
+        preprocessors=list(rec.preprocessors),
         start=rec.start,
         end=rec.end,
         instrument_codes=list(rec.instrument_codes),
