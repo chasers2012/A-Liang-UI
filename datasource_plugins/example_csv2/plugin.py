@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import (
+    DataSourcePlugin,
+    PluginConfigField,
+    PluginConfigSchema,
+    VerifyResult,
+)
 from datasources import CsvDataSource
 from pydantic import BaseModel, Field
 
@@ -42,6 +47,26 @@ class Csv2Plugin(DataSourcePlugin):
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
         return VerifyResult(ok=True, message="OK")
+
+    def get_config_schema(self) -> PluginConfigSchema | None:
+        return PluginConfigSchema(
+            title="CSV2 数据源（示例插件）",
+            description="示例：插件可以自定义字段和默认行为。",
+            fields=[
+                PluginConfigField(key="path", label="文件路径", required=True),
+                PluginConfigField(
+                    key="encoding",
+                    label="编码",
+                    placeholder="utf-8-sig",
+                ),
+                PluginConfigField(
+                    key="read_csv_kwargs",
+                    label="read_csv_kwargs（JSON）",
+                    kind="json",
+                    placeholder="{}",
+                ),
+            ],
+        )
 
 
 DATASOURCE_PLUGINS = [Csv2Plugin()]

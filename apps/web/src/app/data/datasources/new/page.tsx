@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 
 import {
   listDatasources,
+  listDatasourcePlugins,
+  type DatasourcePluginPublic,
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
 
@@ -17,11 +19,13 @@ export default function NewDatasourcePage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [items, setItems] = useState<DataSourcePublic[] | null>(null);
+  const [plugins, setPlugins] = useState<DatasourcePluginPublic[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     void listDatasources().then(setItems).catch(() => setItems([]));
+    void listDatasourcePlugins().then(setPlugins).catch(() => setPlugins([]));
   }, []);
 
   const onSubmit = useCallback(
@@ -53,7 +57,7 @@ export default function NewDatasourcePage() {
       editorMode="create"
       form={form}
       setForm={setForm}
-      editingSql={undefined}
+      plugins={plugins}
       formError={formError}
       submitting={submitting}
       onSubmit={onSubmit}

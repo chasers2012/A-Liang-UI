@@ -5,17 +5,6 @@ import {
 } from "@/lib/quant-agent-api";
 
 import type { EditorMode, FormState } from "./form-model";
-import {
-  parseJsonObject,
-  parseOptionalPort,
-  sqlDriverFromApi,
-} from "./form-model";
-
-function validateSqlForCreate(form: FormState): void {
-  if (!form.db_host.trim() || !form.db_name.trim()) {
-    throw new Error("请填写主机（IP）与数据库名");
-  }
-}
 
 async function createDatasourceFromForm(
   form: FormState,
@@ -23,74 +12,12 @@ async function createDatasourceFromForm(
   if (!form.name.trim()) {
     throw new Error("请填写显示名称");
   }
-  if (form.type === "sql") {
-    validateSqlForCreate(form);
-    return await createDatasource({
-      name: form.name.trim(),
-      type: "sql",
-      enabled: form.enabled,
-      sql: {
-        db_driver: form.db_driver,
-        db_host: form.db_host.trim(),
-        db_port: parseOptionalPort(form.db_port),
-        db_username: form.db_username.trim(),
-        db_password: form.db_password,
-        db_name: form.db_name.trim(),
-        table: form.table.trim(),
-      },
-    });
-  }
   return await createDatasource({
     name: form.name.trim(),
-    type: "csv",
+    type: form.type,
     enabled: form.enabled,
-    csv: {
-      path: form.csv_path.trim(),
-      read_csv_kwargs: parseJsonObject(
-        form.read_csv_kwargs_json,
-        "read_csv_kwargs",
-      ),
-    },
+    config: form.config,
   });
-}
-
-function buildSqlPatchForEdit(
-  form: FormState,
-  o: NonNullable<DataSourcePublic["sql"]>,
-): Record<string, unknown> {
-  const sqlPatch: Record<string, unknown> = {};
-  const origDriver = sqlDriverFromApi(o.db_driver);
-  if (form.db_driver !== origDriver) sqlPatch.db_driver = form.db_driver;
-  if (form.db_host.trim() !== o.db_host) {
-    sqlPatch.db_host = form.db_host.trim();
-  }
-  const newPort = parseOptionalPort(form.db_port);
-  const origPort = o.db_port ?? undefined;
-  if (newPort !== origPort) sqlPatch.db_port = newPort ?? null;
-  if (form.db_username.trim() !== o.db_username) {
-    sqlPatch.db_username = form.db_username.trim();
-  }
-  if (form.db_password.trim()) sqlPatch.db_password = form.db_password;
-  if (form.db_name.trim() !== o.db_name) {
-    sqlPatch.db_name = form.db_name.trim();
-  }
-  if (form.table.trim() !== o.table) sqlPatch.table = form.table.trim();
-  return sqlPatch;
-}
-
-function buildCsvPatchForEdit(
-  form: FormState,
-  origCsv: NonNullable<DataSourcePublic["csv"]>,
-): Record<string, unknown> {
-  const csvPatch: Record<string, unknown> = {};
-  if (form.csv_path.trim() !== origCsv.path) {
-    csvPatch.path = form.csv_path.trim();
-  }
-  const kw = parseJsonObject(form.read_csv_kwargs_json, "read_csv_kwargs");
-  if (JSON.stringify(kw) !== JSON.stringify(origCsv.read_csv_kwargs)) {
-    csvPatch.read_csv_kwargs = kw;
-  }
-  return csvPatch;
 }
 
 function buildEditPatch(
@@ -102,12 +29,8 @@ function buildEditPatch(
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
   if (form.enabled !== orig.enabled) patch.enabled = form.enabled;
 
-  if (form.type === "sql" && orig.sql) {
-    const sqlPatch = buildSqlPatchForEdit(form, orig.sql);
-    if (Object.keys(sqlPatch).length) patch.sql = sqlPatch;
-  } else if (form.type === "csv" && orig.csv) {
-    const csvPatch = buildCsvPatchForEdit(form, orig.csv);
-    if (Object.keys(csvPatch).length) patch.csv = csvPatch;
+  if (JSON.stringify(form.config) !== JSON.stringify(orig.config ?? {})) {
+    patch.config = form.config;
   }
 
   return patch;

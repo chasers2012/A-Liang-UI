@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import {
   getDatasource,
   listDatasources,
+  listDatasourcePlugins,
+  type DatasourcePluginPublic,
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
 
@@ -31,9 +33,7 @@ export default function EditDatasourcePage() {
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [items, setItems] = useState<DataSourcePublic[] | null>(null);
-  const [loadedDetail, setLoadedDetail] = useState<DataSourcePublic | null>(
-    null,
-  );
+  const [plugins, setPlugins] = useState<DatasourcePluginPublic[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,13 +50,14 @@ export default function EditDatasourcePage() {
       setLoadError(null);
       setLoading(true);
       try {
-        const [ds, all] = await Promise.all([
+        const [ds, all, pluginCatalog] = await Promise.all([
           getDatasource(id),
           listDatasources(),
+          listDatasourcePlugins(),
         ]);
         if (cancelled) return;
         setItems(all);
-        setLoadedDetail(ds);
+        setPlugins(pluginCatalog);
         setForm(hydrateFormFromDataSource(ds));
       } catch (e) {
         if (!cancelled) {
@@ -71,8 +72,6 @@ export default function EditDatasourcePage() {
       cancelled = true;
     };
   }, [id]);
-
-  const editingSql = loadedDetail?.sql ?? undefined;
 
   const onSubmit = useCallback(
     async (e: FormEvent) => {
@@ -130,8 +129,7 @@ export default function EditDatasourcePage() {
       editorMode="edit"
       form={form}
       setForm={setForm}
-      editingSql={editingSql}
-      editingDatasourceId={id}
+      plugins={plugins}
       formError={formError}
       submitting={submitting}
       onSubmit={onSubmit}

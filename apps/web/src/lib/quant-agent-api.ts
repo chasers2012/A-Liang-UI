@@ -10,6 +10,7 @@ import type {
   AgentWorkflowDetailPublic,
   AgentWorkflowSummaryPublic,
   DataSourcePublic,
+  DatasourcePluginPublic,
   EvaluationMetricDetailPublic,
   EvaluationMetricSummaryPublic,
   EvaluationProfilePublic,
@@ -396,6 +397,10 @@ export function listAgentWorkflowNodeTypes(): Promise<AgentNodeTypePublic[]> {
 
 export function listDatasources(): Promise<DataSourcePublic[]> {
   return apiFetchJson<DataSourcePublic[]>("/datasources");
+}
+
+export function listDatasourcePlugins(): Promise<DatasourcePluginPublic[]> {
+  return apiFetchJson<DatasourcePluginPublic[]>("/datasources/plugins");
 }
 
 export function getDatasource(id: string): Promise<DataSourcePublic> {

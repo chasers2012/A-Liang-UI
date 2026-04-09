@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import (
+    DataSourcePlugin,
+    PluginConfigField,
+    PluginConfigSchema,
+    PluginFieldOption,
+    VerifyResult,
+)
 from datasources import SqlDataSource
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import create_engine, inspect, text
@@ -100,6 +106,56 @@ class SqlDataSourcePlugin(DataSourcePlugin):
             schema, table = table.split(".", 1)
         cols = insp.get_columns(table, schema=schema)
         return [str(c["name"]) for c in cols]
+
+    def get_config_schema(self) -> PluginConfigSchema | None:
+        return PluginConfigSchema(
+            title="SQL 数据源",
+            description="配置数据库连接和数据表信息。",
+            fields=[
+                PluginConfigField(
+                    key="db_driver",
+                    label="数据库类型",
+                    kind="select",
+                    required=True,
+                    options=[
+                        PluginFieldOption(value="postgresql", label="PostgreSQL"),
+                        PluginFieldOption(value="mysql", label="MySQL / MariaDB"),
+                    ],
+                ),
+                PluginConfigField(
+                    key="db_host",
+                    label="主机（IP）",
+                    required=True,
+                    placeholder="127.0.0.1",
+                ),
+                PluginConfigField(
+                    key="db_port",
+                    label="端口",
+                    kind="number",
+                    placeholder="留空使用默认端口",
+                ),
+                PluginConfigField(
+                    key="db_username",
+                    label="用户名",
+                ),
+                PluginConfigField(
+                    key="db_password",
+                    label="密码",
+                    kind="password",
+                    help_text="编辑时留空表示保持原密码（由后端合并）。",
+                ),
+                PluginConfigField(
+                    key="db_name",
+                    label="数据库名",
+                    required=True,
+                ),
+                PluginConfigField(
+                    key="table",
+                    label="表名（可含 schema）",
+                    required=True,
+                ),
+            ],
+        )
 
 
 SQL_PLUGIN = SqlDataSourcePlugin()

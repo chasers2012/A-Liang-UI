@@ -6,11 +6,14 @@ function truncate(s: string, max: number): string {
 }
 
 export function datasourceSummary(ds: DataSourcePublic): string {
-  if (ds.type === "sql" && ds.sql) {
-    const s = ds.sql;
-    const host = s.db_host.trim() ? truncate(s.db_host, 24) : "—";
-    return `${host} · ${s.table}`;
+  const cfg = ds.config ?? {};
+  if (typeof cfg.path === "string" && cfg.path.trim()) {
+    return truncate(cfg.path.trim(), 48);
   }
-  if (ds.type === "csv" && ds.csv) return truncate(ds.csv.path, 48);
-  return "—";
+  const host = typeof cfg.db_host === "string" ? cfg.db_host.trim() : "";
+  const table = typeof cfg.table === "string" ? cfg.table.trim() : "";
+  if (host || table) {
+    return `${host || "—"} · ${table || "—"}`;
+  }
+  return `type=${ds.type}`;
 }

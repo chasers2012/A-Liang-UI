@@ -22,6 +22,30 @@ class VerifyResult:
     message: str
 
 
+@dataclass(frozen=True, slots=True)
+class PluginFieldOption:
+    value: str
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class PluginConfigField:
+    key: str
+    label: str
+    kind: str = "string"  # string | number | boolean | password | json | select
+    required: bool = False
+    placeholder: str | None = None
+    help_text: str | None = None
+    options: list[PluginFieldOption] | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PluginConfigSchema:
+    title: str
+    description: str | None = None
+    fields: list[PluginConfigField] | None = None
+
+
 def redact_config(config: dict[str, Any]) -> dict[str, Any]:
     """
     Best-effort redact common secret fields in a nested config dict.
@@ -65,3 +89,6 @@ class DataSourcePlugin(Protocol):
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
         """Verify connectivity/readability based on config."""
+
+    def get_config_schema(self) -> PluginConfigSchema | None:
+        """Optional UI schema for rendering plugin config form fields."""

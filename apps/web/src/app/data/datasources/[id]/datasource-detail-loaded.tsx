@@ -57,6 +57,7 @@ export function DatasourceDetailLoaded({
   onConfirmDelete,
 }: Props) {
   const summary = datasourceSummary(ds);
+  const configPretty = JSON.stringify(ds.config ?? {}, null, 2);
 
   return (
     <Page
@@ -146,69 +147,16 @@ export function DatasourceDetailLoaded({
         </CardContent>
       </Card>
 
-      {ds.type === "sql" && ds.sql && (
-        <Card>
-          <CardHeader>
-            <CardTitle>SQL 配置（公开字段）</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-3 text-sm">
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">db_driver</dt>
-                <dd className="font-mono text-xs">{ds.sql.db_driver}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">db_host</dt>
-                <dd className="break-all font-mono text-xs">{ds.sql.db_host}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">db_port</dt>
-                <dd className="font-mono tabular-nums">
-                  {ds.sql.db_port ?? "—"}
-                </dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">db_username</dt>
-                <dd className="font-mono text-xs">{ds.sql.db_username}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">db_name</dt>
-                <dd className="break-all font-mono text-xs">{ds.sql.db_name}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">has_password</dt>
-                <dd>{ds.sql.has_password ? "是" : "否"}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">table</dt>
-                <dd className="break-all font-mono text-xs">{ds.sql.table}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-      )}
-
-      {ds.type === "csv" && ds.csv && (
-        <Card>
-          <CardHeader>
-            <CardTitle>CSV 配置</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid gap-3 text-sm">
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">path</dt>
-                <dd className="break-all font-mono text-xs">{ds.csv.path}</dd>
-              </div>
-              <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                <dt className="text-muted-foreground">read_csv_kwargs</dt>
-                <dd className="break-all font-mono text-xs">
-                  {JSON.stringify(ds.csv.read_csv_kwargs, null, 2)}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>插件配置（config）</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 font-mono text-xs">
+            {configPretty}
+          </pre>
+        </CardContent>
+      </Card>
 
       <DeleteDatasourceDialog
         target={deleteOpen ? ds : null}

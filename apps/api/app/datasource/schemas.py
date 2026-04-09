@@ -120,3 +120,25 @@ class DatasourceDependencyFieldsResponse(BaseModel):
     """数据源物理列名列表（供数据集配置 alias/date/asset 等映射使用）。"""
 
     fields: list[str]
+
+
+class DatasourcePluginFieldOptionPublic(BaseModel):
+    value: str
+    label: str
+
+
+class DatasourcePluginFieldPublic(BaseModel):
+    key: str
+    label: str
+    kind: str = "string"
+    required: bool = False
+    placeholder: str | None = None
+    help_text: str | None = None
+    options: list[DatasourcePluginFieldOptionPublic] = Field(default_factory=list)
+
+
+class DatasourcePluginPublic(BaseModel):
+    type: str
+    title: str
+    description: str | None = None
+    fields: list[DatasourcePluginFieldPublic] = Field(default_factory=list)

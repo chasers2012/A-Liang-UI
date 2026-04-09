@@ -4,7 +4,12 @@ import os
 from typing import Any, Literal
 
 from app.datasource.controller import resolve_csv_path
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import (
+    DataSourcePlugin,
+    PluginConfigField,
+    PluginConfigSchema,
+    VerifyResult,
+)
 from datasources import CsvDataSource
 from pydantic import BaseModel, Field, model_validator
 
@@ -45,6 +50,25 @@ class CsvDataSourcePlugin(DataSourcePlugin):
         except OSError as e:
             return VerifyResult(ok=False, message=f"无法访问路径: {e}")
         return VerifyResult(ok=True, message=f"CSV 可读: {p}")
+
+    def get_config_schema(self) -> PluginConfigSchema | None:
+        return PluginConfigSchema(
+            title="CSV 数据源",
+            description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
+            fields=[
+                PluginConfigField(
+                    key="path",
+                    label="文件路径",
+                    required=True,
+                ),
+                PluginConfigField(
+                    key="read_csv_kwargs",
+                    label="read_csv_kwargs（JSON）",
+                    kind="json",
+                    placeholder="{}",
+                ),
+            ],
+        )
 
 
 CSV_PLUGIN = CsvDataSourcePlugin()

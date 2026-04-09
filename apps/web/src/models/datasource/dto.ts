@@ -1,30 +1,13 @@
-/** 数据源（SQL / CSV）相关 DTO，与 API 响应一致。 */
+/** 数据源（插件化 config）相关 DTO，与 API 响应一致。 */
 
-export type DataSourceType = "sql" | "csv";
-
-export interface SqlPublic {
-  db_driver: string;
-  db_host: string;
-  db_port: number | null;
-  db_username: string;
-  db_name: string;
-  has_password: boolean;
-  table: string;
-  column_map: Record<string, string>;
-}
-
-export interface CsvPublic {
-  path: string;
-  read_csv_kwargs: Record<string, unknown>;
-}
+export type DataSourceType = string;
 
 export interface DataSourcePublic {
   id: string;
   name: string;
   type: DataSourceType;
   enabled: boolean;
-  sql: SqlPublic | null;
-  csv: CsvPublic | null;
+  config: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -47,4 +30,26 @@ export interface SqlTableColumnsRequestBody {
 
 export interface SqlTableColumnsResponseBody {
   columns: string[];
+}
+
+export interface DatasourcePluginFieldOptionPublic {
+  value: string;
+  label: string;
+}
+
+export interface DatasourcePluginFieldPublic {
+  key: string;
+  label: string;
+  kind: "string" | "number" | "boolean" | "password" | "json" | "select";
+  required: boolean;
+  placeholder: string | null;
+  help_text: string | null;
+  options: DatasourcePluginFieldOptionPublic[];
+}
+
+export interface DatasourcePluginPublic {
+  type: string;
+  title: string;
+  description: string | null;
+  fields: DatasourcePluginFieldPublic[];
 }

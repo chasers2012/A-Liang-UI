@@ -9,6 +9,9 @@ from app.datasource.schemas import (
     DataSourceCreate,
     DatasourceDependencyFieldsResponse,
     DataSourcePatch,
+    DatasourcePluginFieldOptionPublic,
+    DatasourcePluginFieldPublic,
+    DatasourcePluginPublic,
     DataSourcePublic,
     DataSourceRecord,
     InspectColumnsRequest,
@@ -25,6 +28,41 @@ router = APIRouter(prefix="/datasources", tags=["datasources"])
 @router.get("", response_model=list[DataSourcePublic])
 def list_datasources() -> list[DataSourcePublic]:
     return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
+
+
+@router.get("/plugins", response_model=list[DatasourcePluginPublic])
+def list_datasource_plugins() -> list[DatasourcePluginPublic]:
+    reg = PluginRegistry.instance()
+    out: list[DatasourcePluginPublic] = []
+    for ds_type in reg.list_types():
+        plugin = reg.get(ds_type)
+        schema = plugin.get_config_schema() if hasattr(plugin, "get_config_schema") else None
+        fields: list[DatasourcePluginFieldPublic] = []
+        if schema and schema.fields:
+            fields = [
+                DatasourcePluginFieldPublic(
+                    key=f.key,
+                    label=f.label,
+                    kind=f.kind,
+                    required=f.required,
+                    placeholder=f.placeholder,
+                    help_text=f.help_text,
+                    options=[
+                        DatasourcePluginFieldOptionPublic(value=o.value, label=o.label)
+                        for o in (f.options or [])
+                    ],
+                )
+                for f in schema.fields
+            ]
+        out.append(
+            DatasourcePluginPublic(
+                type=ds_type,
+                title=schema.title if schema else ds_type.upper(),
+                description=schema.description if schema else None,
+                fields=fields,
+            )
+        )
+    return out
 
 
 @router.post("/inspect-columns", response_model=InspectColumnsResponse)
