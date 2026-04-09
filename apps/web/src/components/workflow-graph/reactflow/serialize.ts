@@ -12,8 +12,9 @@ import {
   normalizeAppendableHandle,
 } from "./appendable-handle";
 
-export const WORKFLOW_INPUT_NODE_ID = "__workflow_input__";
-export const WORKFLOW_OUTPUT_NODE_ID = "__workflow_output__";
+// UI-only boundary node ids (NOT persisted in workflow.nodes).
+export const WORKFLOW_INPUT_NODE_ID = "workflow-input";
+export const WORKFLOW_OUTPUT_NODE_ID = "workflow-output";
 
 function appendableSocketNamesFromInputs(
   inputs: WorkflowNodeInputSpec[],
@@ -49,6 +50,10 @@ export const EMPTY_WORKFLOW: WorkflowGraphPersisted = {
   links: [],
   workflow_inputs: [],
   workflow_outputs: [],
+  workflow_boundary_positions: {
+    input: [-220, 0],
+    output: [1100, 0],
+  },
 };
 
 function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
@@ -72,35 +77,40 @@ function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
   const workflowOutputAppendableCount = new Map<string, number>();
 
   for (const l of persisted.links) {
-    const bases = appendableBasesByTargetNode.get(l.to_node);
-    if (bases?.has(l.to_socket)) {
+    const toNodeId = l.to.kind === "node" ? l.to.node_id : WORKFLOW_OUTPUT_NODE_ID;
+    const toSocket = l.to.socket;
+    const fromNodeId = l.from.kind === "node" ? l.from.node_id : WORKFLOW_INPUT_NODE_ID;
+    const fromSocket = l.from.socket;
+
+    const bases = appendableBasesByTargetNode.get(toNodeId);
+    if (bases?.has(toSocket)) {
       continue;
     }
-    if (l.to_node === WORKFLOW_OUTPUT_NODE_ID) {
-      const socket = workflowOutputSocketByName.get(l.to_socket);
+    if (l.to.kind === "workflow_output") {
+      const socket = workflowOutputSocketByName.get(toSocket);
       const isAppendable = socket?.render_type === "appendable";
-      const nextCount = (workflowOutputAppendableCount.get(l.to_socket) ?? 0) + 1;
-      workflowOutputAppendableCount.set(l.to_socket, nextCount);
+      const nextCount = (workflowOutputAppendableCount.get(toSocket) ?? 0) + 1;
+      workflowOutputAppendableCount.set(toSocket, nextCount);
       edges.push({
         id:
           l.id ??
-          `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}:${nextCount}`,
-        source: l.from_node,
-        sourceHandle: l.from_socket,
-        target: l.to_node,
+          `${fromNodeId}:${fromSocket}->${toNodeId}:${toSocket}:${nextCount}`,
+        source: fromNodeId,
+        sourceHandle: fromSocket,
+        target: toNodeId,
         targetHandle: isAppendable
-          ? appendableHandleId(l.to_socket, nextCount)
-          : l.to_socket,
+          ? appendableHandleId(toSocket, nextCount)
+          : toSocket,
         type: "default",
       });
       continue;
     }
     edges.push({
-      id: l.id ?? `${l.from_node}:${l.from_socket}->${l.to_node}:${l.to_socket}`,
-      source: l.from_node,
-      sourceHandle: l.from_socket,
-      target: l.to_node,
-      targetHandle: l.to_socket,
+      id: l.id ?? `${fromNodeId}:${fromSocket}->${toNodeId}:${toSocket}`,
+      source: fromNodeId,
+      sourceHandle: fromSocket,
+      target: toNodeId,
+      targetHandle: toSocket,
       type: "default",
     });
   }
@@ -163,22 +173,32 @@ function parsePersistedNode(
 
 function parsePersistedLink(l: unknown): WorkflowGraphLink | null {
   if (!isRecord(l)) return null;
-  const { from_node, from_socket, to_node, to_socket, id } = l;
-  if (
-    typeof from_node !== "string" ||
-    typeof from_socket !== "string" ||
-    typeof to_node !== "string" ||
-    typeof to_socket !== "string"
-  ) {
-    return null;
-  }
-  return {
-    id: typeof id === "string" || id === null ? id : undefined,
-    from_node,
-    from_socket,
-    to_node,
-    to_socket,
-  };
+  const id = typeof l.id === "string" || l.id === null ? l.id : undefined;
+  const from = parsePersistedEndpoint(l.from);
+  const to = parsePersistedEndpoint(l.to);
+  if (!from || !to) return null;
+  if (from.kind === "workflow_output") return null;
+  if (to.kind === "workflow_input") return null;
+  return { id, from, to } as WorkflowGraphLink;
+}
+
+function parsePersistedEndpoint(
+  raw: unknown,
+):
+  | { kind: "node"; node_id: string; socket: string }
+  | { kind: "workflow_input"; socket: string }
+  | { kind: "workflow_output"; socket: string }
+  | null {
+  if (!isRecord(raw)) return null;
+  const kind = raw.kind;
+  const socket = raw.socket;
+  if (typeof kind !== "string" || typeof socket !== "string" || !socket) return null;
+  if (kind === "workflow_input") return { kind: "workflow_input", socket };
+  if (kind === "workflow_output") return { kind: "workflow_output", socket };
+  if (kind !== "node") return null;
+  const nodeId = raw.node_id;
+  if (typeof nodeId !== "string" || !nodeId) return null;
+  return { kind: "node", node_id: nodeId, socket };
 }
 
 export function parsePersistedWorkflowGraphPayload(
@@ -193,18 +213,39 @@ export function parsePersistedWorkflowGraphPayload(
     .map(parsePersistedLink)
     .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
+  const boundaryRaw = isRecord(raw.workflow_boundary_positions)
+    ? raw.workflow_boundary_positions
+    : null;
+  const inputPosRaw = boundaryRaw ? boundaryRaw.input : null;
+  const outputPosRaw = boundaryRaw ? boundaryRaw.output : null;
+  const boundaryPositions = {
+    input: [
+      Array.isArray(inputPosRaw) ? num(inputPosRaw[0], -220) : -220,
+      Array.isArray(inputPosRaw) ? num(inputPosRaw[1], 0) : 0,
+    ] as [number, number],
+    output: [
+      Array.isArray(outputPosRaw) ? num(outputPosRaw[0], 1100) : 1100,
+      Array.isArray(outputPosRaw) ? num(outputPosRaw[1], 0) : 0,
+    ] as [number, number],
+  };
+
   return {
     nodes,
     links,
     workflow_inputs: arrayOrEmpty<WorkflowSocketDefinition>(raw.workflow_inputs),
     workflow_outputs: arrayOrEmpty<WorkflowSocketDefinition>(raw.workflow_outputs),
+    workflow_boundary_positions: boundaryPositions,
   };
 }
 
 export function toReactFlowNodes(
   persisted: WorkflowGraphPersisted,
   catalog: Record<string, WorkflowNodeTypeDefinition>,
+  opts?: { readOnly?: boolean },
 ): Node[] {
+  const readOnly = Boolean(opts?.readOnly);
+  const inputBoundaryPos = persisted.workflow_boundary_positions?.input ?? [-220, 0];
+  const outputBoundaryPos = persisted.workflow_boundary_positions?.output ?? [1100, 0];
   const flowNodes = persisted.nodes.map((n) => {
     const def = catalog[n.type];
     const persistedInputs = arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs);
@@ -231,9 +272,9 @@ export function toReactFlowNodes(
     {
       id: WORKFLOW_INPUT_NODE_ID,
       type: "workflowBoundary",
-      position: { x: -220, y: 0 },
+      position: { x: num(inputBoundaryPos[0], -220), y: num(inputBoundaryPos[1], 0) },
       deletable: false,
-      draggable: true,
+      draggable: !readOnly,
       selectable: true,
       data: {
         label: "输入",
@@ -247,9 +288,9 @@ export function toReactFlowNodes(
     {
       id: WORKFLOW_OUTPUT_NODE_ID,
       type: "workflowBoundary",
-      position: { x: 1100, y: 0 },
+      position: { x: num(outputBoundaryPos[0], 1100), y: num(outputBoundaryPos[1], 0) },
       deletable: false,
-      draggable: true,
+      draggable: !readOnly,
       selectable: true,
       data: {
         label: "输出",
@@ -289,12 +330,18 @@ function appendableNamesForTargetNode(nodes: Node[], to_node: string): Set<strin
 }
 
 function pushBoundaryLink(outLinks: WorkflowGraphLink[], e: Edge) {
+  const fromSocket = normalizeAppendableHandle(e.sourceHandle ?? "");
+  const toSocket = normalizeAppendableHandle(e.targetHandle ?? "");
   outLinks.push({
     id: e.id,
-    from_node: e.source,
-    from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
-    to_node: e.target,
-    to_socket: normalizeAppendableHandle(e.targetHandle ?? ""),
+    from:
+      e.source === WORKFLOW_INPUT_NODE_ID
+        ? { kind: "workflow_input", socket: fromSocket }
+        : { kind: "node", node_id: e.source, socket: fromSocket },
+    to:
+      e.target === WORKFLOW_OUTPUT_NODE_ID
+        ? { kind: "workflow_output", socket: toSocket }
+        : { kind: "node", node_id: e.target, socket: toSocket },
   });
 }
 
@@ -304,10 +351,14 @@ function pushNormalLink(outLinks: WorkflowGraphLink[], e: Edge, appendableNames:
   const to_socket = appendableNames.has(base) ? base : normalizeAppendableHandle(tgtRaw);
   outLinks.push({
     id: e.id,
-    from_node: e.source,
-    from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
-    to_node: e.target,
-    to_socket,
+    from:
+      e.source === WORKFLOW_INPUT_NODE_ID
+        ? { kind: "workflow_input", socket: normalizeAppendableHandle(e.sourceHandle ?? "") }
+        : { kind: "node", node_id: e.source, socket: normalizeAppendableHandle(e.sourceHandle ?? "") },
+    to:
+      e.target === WORKFLOW_OUTPUT_NODE_ID
+        ? { kind: "workflow_output", socket: to_socket }
+        : { kind: "node", node_id: e.target, socket: to_socket },
   });
 }
 
@@ -427,6 +478,9 @@ export function toPersistedWorkflowGraph(
     appendableWiresByNode,
   );
 
+  const inputBoundaryNode = nodes.find((n) => n.id === WORKFLOW_INPUT_NODE_ID);
+  const outputBoundaryNode = nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID);
+
   return {
     nodes: outNodes,
     links: outLinks,
@@ -438,5 +492,15 @@ export function toPersistedWorkflowGraph(
       ((nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>)
         .inputs,
     ),
+    workflow_boundary_positions: {
+      input: [
+        num(inputBoundaryNode?.position?.x, -220),
+        num(inputBoundaryNode?.position?.y, 0),
+      ],
+      output: [
+        num(outputBoundaryNode?.position?.x, 1100),
+        num(outputBoundaryNode?.position?.y, 0),
+      ],
+    },
   };
 }

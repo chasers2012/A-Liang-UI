@@ -1,13 +1,10 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect } from "react";
 import {
   useStore,
   useUpdateNodeInternals,
 } from "reactflow";
 
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
-import { MarkdownContent } from "@/components/markdown/markdown-content";
 
 import type { WorkflowSocketDefinition } from "../../types";
 import {
@@ -15,6 +12,7 @@ import {
   appendableHandleId,
   normalizeAppendableHandle,
 } from "../appendable-handle";
+import { SocketDescriptionTooltip } from "./socket-description-tooltip";
 import { WorkflowHandle } from "./workflow-handle";
 
 // eslint-disable-next-line complexity
@@ -72,8 +70,6 @@ export const SocketRow = memo(function SocketRow({
   const sourceValueType = useStore(pickSourceValueTypeFromStore);
 
   const isAppendable = isInput && socket.render_type === "appendable";
-  const [descTipOpen, setDescTipOpen] = useState(false);
-
   // 避免订阅整份 edges：只订阅“连接数”这个派生值，减少无关更新导致的重渲染。
   const connectedCountSelector = useCallback(
     (s: unknown) => {
@@ -134,36 +130,7 @@ export const SocketRow = memo(function SocketRow({
               })()}
               <span className={cn("flex min-w-0 items-center gap-1", isInput ? "" : "flex-row-reverse")}>
                 <span className={cn("truncate", isInput ? "" : "text-right")}>{displayName}</span>
-                {socket.description ? (
-                  <Tooltip
-                    open={descTipOpen}
-                    onOpenChange={(open) => setDescTipOpen(open)}
-                  >
-                    <TooltipTrigger
-                      delay={0}
-                      closeOnClick={false}
-                      render={
-                        <button
-                          type="button"
-                          className="pointer-events-auto inline-flex items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
-                          aria-label="socket description"
-                          onPointerDown={(e) => {
-                            e.stopPropagation();
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDescTipOpen(true);
-                          }}
-                        >
-                          <HelpCircle className="h-2.5 w-2.5 pointer-events-none" />
-                        </button>
-                      }
-                    />
-                    <TooltipContent side="top" className="max-w-96">
-                      <MarkdownContent content={socket.description} />
-                    </TooltipContent>
-                  </Tooltip>
-                ) : null}
+                {socket.description ? <SocketDescriptionTooltip description={socket.description} /> : null}
               </span>
             </div>
           );

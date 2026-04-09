@@ -210,8 +210,8 @@ export const WorkflowGraphCanvas = forwardRef<
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
     const initialNodes = useMemo(
-      () => toReactFlowNodes(initialGraph, catalog),
-      [initialGraph, catalog],
+      () => toReactFlowNodes(initialGraph, catalog, { readOnly }),
+      [initialGraph, catalog, readOnly],
     );
     const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
 
