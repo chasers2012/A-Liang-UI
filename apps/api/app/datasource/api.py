@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from pathlib import Path
+from uuid import uuid4
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from workspace import workspace_path
 
 from app.datasource.controller import get_datasource as get_datasource_instance
-from app.datasource.plugin_registry import PluginRegistry
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -14,6 +17,7 @@ from app.datasource.schemas import (
     DatasourcePluginPublic,
     DataSourcePublic,
     DataSourceRecord,
+    DatasourceUploadFileResponse,
     InspectColumnsRequest,
     InspectColumnsResponse,
     TestResult,
@@ -21,6 +25,7 @@ from app.datasource.schemas import (
     utc_now_iso,
 )
 from app.datasource.verify import verify_datasource
+from app.plugin import PluginRegistry
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
@@ -28,6 +33,24 @@ router = APIRouter(prefix="/datasources", tags=["datasources"])
 @router.get("", response_model=list[DataSourcePublic])
 def list_datasources() -> list[DataSourcePublic]:
     return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
+
+
+@router.post("/upload-file", response_model=DatasourceUploadFileResponse)
+async def upload_datasource_file(file: UploadFile = File(...)) -> DatasourceUploadFileResponse:
+    picked_name = Path(file.filename or "upload.bin").name
+    if not picked_name:
+        raise HTTPException(status_code=400, detail="文件名不能为空")
+    upload_dir = workspace_path("uploads")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid4().hex}_{picked_name}"
+    target = upload_dir / stored_name
+    data = await file.read()
+    target.write_bytes(data)
+    return DatasourceUploadFileResponse(
+        path=f"uploads/{stored_name}",
+        filename=picked_name,
+        size=len(data),
+    )
 
 
 @router.get("/plugins", response_model=list[DatasourcePluginPublic])
@@ -45,12 +68,14 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
                     label=f.label,
                     kind=f.kind,
                     required=f.required,
+                    secret=f.secret,
                     placeholder=f.placeholder,
                     help_text=f.help_text,
                     options=[
                         DatasourcePluginFieldOptionPublic(value=o.value, label=o.label)
-                        for o in (f.options or [])
+                        for o in getattr(f, "options", [])
                     ],
+                    file_types=list(getattr(f, "file_types", [])),
                 )
                 for f in schema.fields
             ]

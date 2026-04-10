@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "datasource-plugins-builtin"
+version = "0.1.0"
+description = "Built-in quant-agent datasource plugins (SQL, CSV)"
+requires-python = ">=3.10"
+dependencies = [
+    "quant-agent-api",
+]
+
+[project.entry-points."quant-agent.plugins"]
+csv = "datasource_plugins_builtin.csv:CsvDataSourcePlugin"
+sql = "datasource_plugins_builtin.sql:SqlDataSourcePlugin"
+
+[tool.uv.sources]
+quant-agent-api = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["datasource_plugins_builtin"]

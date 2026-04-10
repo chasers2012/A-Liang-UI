@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from app.datasource.plugin_registry import PluginRegistry
 from app.datasource.schemas import DataSourceRecord
+from app.plugin import PluginRegistry
 
 
 def verify_datasource(rec: DataSourceRecord) -> tuple[bool, str]:

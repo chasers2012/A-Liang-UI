@@ -6,7 +6,6 @@ from langchain_core.tools import tool
 
 from app.common.datetime_utils import utc_now_iso
 from app.datasource.api import list_datasources
-from app.datasource.plugin_registry import PluginRegistry
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -16,6 +15,7 @@ from app.datasource.schemas import (
     record_to_public,
 )
 from app.datasource.verify import verify_datasource
+from app.plugin import PluginRegistry
 
 
 @tool(
@@ -53,6 +53,7 @@ def get_datasource_list() -> list[dict[str, Any]]:
     )
 )
 def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, Any]:
+
     def _apply(rec: DataSourceRecord) -> None:
         data = body.model_dump(exclude_unset=True)
         if "name" in data:

@@ -39,11 +39,21 @@ export interface DatasourcePluginFieldOptionPublic {
 export interface DatasourcePluginFieldPublic {
   key: string;
   label: string;
-  kind: "string" | "number" | "boolean" | "password" | "json" | "select";
+  kind:
+    | "string"
+    | "number"
+    | "boolean"
+    | "password"
+    | "json"
+    | "select"
+    | "file";
   required: boolean;
+  /** 与后端脱敏一致：公开 API 中对应 config 键会被替换为 "***" */
+  secret: boolean;
   placeholder: string | null;
   help_text: string | null;
   options: DatasourcePluginFieldOptionPublic[];
+  file_types: string[];
 }
 
 export interface DatasourcePluginPublic {
@@ -51,4 +61,10 @@ export interface DatasourcePluginPublic {
   title: string;
   description: string | null;
   fields: DatasourcePluginFieldPublic[];
+}
+
+export interface DatasourceUploadFileResponse {
+  path: string;
+  filename: string;
+  size: number;
 }

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.datasource.plugins import (
-    DataSourcePlugin,
-    PluginConfigField,
+from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.plugin import (
+    NumberConfigField,
+    PasswordConfigField,
     PluginConfigSchema,
     PluginFieldOption,
-    VerifyResult,
+    SelectConfigField,
+    StringConfigField,
 )
 from datasources import SqlDataSource
 from pydantic import BaseModel, Field, model_validator
@@ -66,11 +68,59 @@ def build_sqlalchemy_url(cfg: SqlConfig) -> str:
     if driver in ("mysql", "mariadb"):
         p = int(port) if port is not None else 3306
         return f"mysql+pymysql://{auth}{host}:{p}/{db_path}"
-    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
+    raise ValueError(
+        f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
 
 
 class SqlDataSourcePlugin(DataSourcePlugin):
     type: Literal["sql"] = "sql"
+
+    config = PluginConfigSchema(
+        title="SQL 数据源",
+        description="配置数据库连接和数据表信息。",
+        fields=[
+            SelectConfigField(
+                key="db_driver",
+                label="数据库类型",
+                required=True,
+                options=[
+                    PluginFieldOption(value="postgresql", label="PostgreSQL"),
+                    PluginFieldOption(value="mysql", label="MySQL / MariaDB"),
+                ],
+            ),
+            StringConfigField(
+                key="db_host",
+                label="主机（IP）",
+                required=True,
+                placeholder="127.0.0.1",
+            ),
+            NumberConfigField(
+                key="db_port",
+                label="端口",
+                placeholder="留空使用默认端口",
+            ),
+            StringConfigField(
+                key="db_username",
+                label="用户名",
+            ),
+            PasswordConfigField(
+                key="db_password",
+                label="密码",
+                secret=True,
+                help_text="编辑时留空表示保持原密码（由后端合并）。",
+            ),
+            StringConfigField(
+                key="db_name",
+                label="数据库名",
+                required=True,
+            ),
+            StringConfigField(
+                key="table",
+                label="表名（可含 schema）",
+                required=True,
+            ),
+        ],
+    )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         cfg = SqlConfig.model_validate(config)
@@ -106,56 +156,6 @@ class SqlDataSourcePlugin(DataSourcePlugin):
             schema, table = table.split(".", 1)
         cols = insp.get_columns(table, schema=schema)
         return [str(c["name"]) for c in cols]
-
-    def get_config_schema(self) -> PluginConfigSchema | None:
-        return PluginConfigSchema(
-            title="SQL 数据源",
-            description="配置数据库连接和数据表信息。",
-            fields=[
-                PluginConfigField(
-                    key="db_driver",
-                    label="数据库类型",
-                    kind="select",
-                    required=True,
-                    options=[
-                        PluginFieldOption(value="postgresql", label="PostgreSQL"),
-                        PluginFieldOption(value="mysql", label="MySQL / MariaDB"),
-                    ],
-                ),
-                PluginConfigField(
-                    key="db_host",
-                    label="主机（IP）",
-                    required=True,
-                    placeholder="127.0.0.1",
-                ),
-                PluginConfigField(
-                    key="db_port",
-                    label="端口",
-                    kind="number",
-                    placeholder="留空使用默认端口",
-                ),
-                PluginConfigField(
-                    key="db_username",
-                    label="用户名",
-                ),
-                PluginConfigField(
-                    key="db_password",
-                    label="密码",
-                    kind="password",
-                    help_text="编辑时留空表示保持原密码（由后端合并）。",
-                ),
-                PluginConfigField(
-                    key="db_name",
-                    label="数据库名",
-                    required=True,
-                ),
-                PluginConfigField(
-                    key="table",
-                    label="表名（可含 schema）",
-                    required=True,
-                ),
-            ],
-        )
 
 
 SQL_PLUGIN = SqlDataSourcePlugin()

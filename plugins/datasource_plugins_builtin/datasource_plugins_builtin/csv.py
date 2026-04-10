@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Literal
 
-from app.datasource.controller import resolve_csv_path
-from app.datasource.plugins import (
-    DataSourcePlugin,
-    PluginConfigField,
-    PluginConfigSchema,
-    VerifyResult,
-)
+from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.plugin import FileConfigField, JsonConfigField, PluginConfigSchema
 from datasources import CsvDataSource
 from pydantic import BaseModel, Field, model_validator
+from workspace import get_workspace_root
+
+
+def resolve_csv_path(path_str: str) -> Path:
+    p = Path(path_str)
+    if p.is_absolute():
+        return p.resolve()
+    return (get_workspace_root() / p).resolve()
 
 
 class CsvConfig(BaseModel):
@@ -28,13 +32,32 @@ class CsvConfig(BaseModel):
 class CsvDataSourcePlugin(DataSourcePlugin):
     type: Literal["csv"] = "csv"
 
+    config = PluginConfigSchema(
+        title="CSV 数据源",
+        description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
+        fields=[
+            FileConfigField(
+                key="path",
+                label="文件路径",
+                required=True,
+                file_types=[".csv", "text/csv"],
+            ),
+            JsonConfigField(
+                key="read_csv_kwargs",
+                label="read_csv_kwargs（JSON）",
+                placeholder="{}",
+            ),
+        ],
+    )
+
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         cfg = CsvConfig.model_validate(config)
         return cfg.model_dump(mode="json")
 
     def to_factor_datasource(self, config: dict[str, Any]):
         cfg = CsvConfig.model_validate(config)
-        return CsvDataSource(path=cfg.path, read_csv_kwargs=dict(cfg.read_csv_kwargs))
+        return CsvDataSource(path=cfg.path,
+                             read_csv_kwargs=dict(cfg.read_csv_kwargs))
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
         try:
@@ -50,25 +73,6 @@ class CsvDataSourcePlugin(DataSourcePlugin):
         except OSError as e:
             return VerifyResult(ok=False, message=f"无法访问路径: {e}")
         return VerifyResult(ok=True, message=f"CSV 可读: {p}")
-
-    def get_config_schema(self) -> PluginConfigSchema | None:
-        return PluginConfigSchema(
-            title="CSV 数据源",
-            description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
-            fields=[
-                PluginConfigField(
-                    key="path",
-                    label="文件路径",
-                    required=True,
-                ),
-                PluginConfigField(
-                    key="read_csv_kwargs",
-                    label="read_csv_kwargs（JSON）",
-                    kind="json",
-                    placeholder="{}",
-                ),
-            ],
-        )
 
 
 CSV_PLUGIN = CsvDataSourcePlugin()

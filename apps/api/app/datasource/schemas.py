@@ -6,7 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
-from app.datasource.plugins import redact_config
+from app.datasource.plugins import UnknownDataSourceTypeError
+from app.plugin import PluginRegistry, redact_config
 
 DataSourceType = str
 
@@ -78,11 +79,17 @@ class DataSourcePublic(BaseModel):
 
 
 def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
+    schema = None
+    try:
+        plugin = PluginRegistry.instance().get(str(rec.type))
+        schema = plugin.get_config_schema()
+    except UnknownDataSourceTypeError:
+        schema = None
     return DataSourcePublic(
         id=rec.id,
         name=rec.name,
         type=str(rec.type),
-        config=redact_config(dict(rec.config or {})),
+        config=redact_config(dict(rec.config or {}), schema),
         created_at=rec.created_at,
         updated_at=rec.updated_at,
     )
@@ -126,9 +133,11 @@ class DatasourcePluginFieldPublic(BaseModel):
     label: str
     kind: str = "string"
     required: bool = False
+    secret: bool = False
     placeholder: str | None = None
     help_text: str | None = None
     options: list[DatasourcePluginFieldOptionPublic] = Field(default_factory=list)
+    file_types: list[str] = Field(default_factory=list)
 
 
 class DatasourcePluginPublic(BaseModel):
@@ -136,3 +145,9 @@ class DatasourcePluginPublic(BaseModel):
     title: str
     description: str | None = None
     fields: list[DatasourcePluginFieldPublic] = Field(default_factory=list)
+
+
+class DatasourceUploadFileResponse(BaseModel):
+    path: str
+    filename: str
+    size: int

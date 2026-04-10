@@ -1,8 +1,15 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import type { ChangeEvent, Dispatch, SetStateAction } from "react";
+import { useRef, useState } from "react";
 
-import type { DatasourcePluginPublic } from "@/lib/quant-agent-api";
+import {
+  ApiError,
+  type DatasourcePluginPublic,
+  uploadDatasourceFile,
+} from "@/lib/quant-agent-api";
+import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,6 +37,11 @@ type FieldRenderProps = {
   setConfigValue: (key: string, value: unknown) => void;
 };
 
+type UploadStatusView = {
+  Icon: typeof Loader2 | typeof AlertCircle | typeof CheckCircle2 | null;
+  className: string;
+};
+
 function FieldHelp({ helpText }: { helpText: string | null }) {
   if (!helpText) return null;
   return <p className="text-xs text-muted-foreground">{helpText}</p>;
@@ -50,7 +62,7 @@ function FieldLabel({
   );
 }
 
-function renderBooleanField({ field, value, setConfigValue }: FieldRenderProps) {
+function BooleanField({ field, value, setConfigValue }: FieldRenderProps) {
   const id = `ds-config-${field.key}`;
   return (
     <div key={field.key} className="grid gap-2">
@@ -68,7 +80,7 @@ function renderBooleanField({ field, value, setConfigValue }: FieldRenderProps) 
   );
 }
 
-function renderSelectField({ field, value, setConfigValue }: FieldRenderProps) {
+function SelectField({ field, value, setConfigValue }: FieldRenderProps) {
   const id = `ds-config-${field.key}`;
   const options = field.options ?? [];
   const selected = typeof value === "string" ? value : "";
@@ -109,7 +121,42 @@ function parseJsonOrKeepString(raw: string): unknown {
   }
 }
 
-function renderJsonField({ field, value, setConfigValue }: FieldRenderProps) {
+function toUploadErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.message;
+  if (err instanceof Error) return err.message;
+  return "文件上传失败";
+}
+
+function resolveUploadStatusView(
+  uploading: boolean,
+  uploadError: string | null,
+  showName: string,
+): UploadStatusView {
+  if (uploading) {
+    return {
+      Icon: Loader2,
+      className: "size-4 shrink-0 animate-spin text-muted-foreground",
+    };
+  }
+  if (uploadError) {
+    return {
+      Icon: AlertCircle,
+      className: "size-4 shrink-0 text-destructive",
+    };
+  }
+  if (showName) {
+    return {
+      Icon: CheckCircle2,
+      className: "size-4 shrink-0 text-emerald-600",
+    };
+  }
+  return {
+    Icon: null,
+    className: "size-4 shrink-0",
+  };
+}
+
+function JsonField({ field, value, setConfigValue }: FieldRenderProps) {
   const id = `ds-config-${field.key}`;
   const jsonText =
     typeof value === "string" ? value : JSON.stringify(value ?? {}, null, 2);
@@ -128,7 +175,82 @@ function renderJsonField({ field, value, setConfigValue }: FieldRenderProps) {
   );
 }
 
-function renderTextLikeField({ field, value, setConfigValue }: FieldRenderProps) {
+function FileField({
+  field,
+  value,
+  setConfigValue,
+}: Pick<FieldRenderProps, "field" | "value" | "setConfigValue">) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pickedName, setPickedName] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const id = `ds-config-${field.key}`;
+  const accept = (field.file_types ?? []).join(",");
+  const uploadedPath = typeof value === "string" ? value : "";
+  const uploadedName = uploadedPath ? uploadedPath.split("/").pop() ?? uploadedPath : "";
+  const showName = uploading ? pickedName : pickedName || uploadedName;
+  const { Icon: StatusIcon, className: statusClassName } = resolveUploadStatusView(
+    uploading,
+    uploadError,
+    showName,
+  );
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const picked = e.target.files?.[0];
+    if (!picked) return;
+    setPickedName(picked.name);
+    setUploadError(null);
+    setUploading(true);
+    void uploadDatasourceFile(picked)
+      .then((resp) => {
+        setConfigValue(field.key, resp.path);
+      })
+      .catch((err: unknown) => {
+        setUploadError(toUploadErrorMessage(err));
+      })
+      .finally(() => {
+        setUploading(false);
+      });
+  };
+  return (
+    <div key={field.key} className="grid gap-2">
+      <FieldLabel field={field} htmlFor={id} />
+      <Input
+        ref={inputRef}
+        id={id}
+        required={field.required}
+        type="file"
+        accept={accept || undefined}
+        disabled={uploading}
+        className="sr-only"
+        onChange={handleFileChange}
+      />
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+        >
+          {uploading ? "上传中..." : "选择文件"}
+        </Button>
+        <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+          {StatusIcon && <StatusIcon className={statusClassName} aria-hidden="true" />}
+          <span className="min-w-0 truncate" role="status" aria-live="polite">
+            {showName || "未选择文件"}
+          </span>
+        </span>
+      </div>
+      {uploadError && (
+        <p className="text-xs text-destructive" role="alert">
+          {uploadError}
+        </p>
+      )}
+      <FieldHelp helpText={field.help_text} />
+    </div>
+  );
+}
+
+function TextLikeField({ field, value, setConfigValue }: FieldRenderProps) {
   const id = `ds-config-${field.key}`;
   return (
     <div key={field.key} className="grid gap-2">
@@ -155,12 +277,13 @@ function renderTextLikeField({ field, value, setConfigValue }: FieldRenderProps)
   );
 }
 
-function renderField(props: FieldRenderProps) {
+function Field(props: FieldRenderProps) {
   const { field } = props;
-  if (field.kind === "boolean") return renderBooleanField(props);
-  if (field.kind === "select") return renderSelectField(props);
-  if (field.kind === "json") return renderJsonField(props);
-  return renderTextLikeField(props);
+  if (field.kind === "boolean") return <BooleanField {...props} />;
+  if (field.kind === "select") return <SelectField {...props} />;
+  if (field.kind === "json") return <JsonField {...props} />;
+  if (field.kind === "file") return <FileField  {...props} />;
+  return <TextLikeField {...props} />;
 }
 
 export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
@@ -172,11 +295,14 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
   return (
     <FormSection title={plugin.title} description={plugin.description ?? undefined}>
       {plugin.fields.map((field) =>
-        renderField({
-          field,
-          value: form.config[field.key],
-          setConfigValue,
-        }),
+      (
+        <Field
+          key={field.key}
+          field={field}
+          value={form.config[field.key]}
+          setConfigValue={setConfigValue}
+        />
+      ),
       )}
     </FormSection>
   );
