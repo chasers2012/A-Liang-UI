@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
+EventType = Literal["message_ids", "delta", "tool", "done", "error"]
 
-class ToolEventPayload(BaseModel):
+
+class ToolPayload(BaseModel):
+    stage: Literal["start", "result", "error"]
     name: str
     id: str
     args: Any | None = None
@@ -15,52 +18,34 @@ class ToolEventPayload(BaseModel):
     error: str | None = None
 
 
-class DeltaEvent(BaseModel):
-    delta: str
-
-
-class DoneEvent(BaseModel):
-    done: bool = True
-
-
-class ErrorEvent(BaseModel):
-    error: str
-
-
-class ToolStartEvent(BaseModel):
-    tool_start: ToolEventPayload
-
-
-class ToolResultEvent(BaseModel):
-    tool_result: ToolEventPayload
-
-
-class ToolErrorEvent(BaseModel):
-    tool_error: ToolEventPayload
-
-
 class MessageIdsPayload(BaseModel):
     user: str
     assistant: str
 
 
-class StreamEventEnvelope(BaseModel):
-    message_ids: MessageIdsPayload | None = None
-    delta: str | None = None
-    done: bool | None = None
-    error: str | None = None
-    tool_start: ToolEventPayload | None = None
-    tool_result: ToolEventPayload | None = None
-    tool_error: ToolEventPayload | None = None
+class MessageIdsEvent(BaseModel):
+    type: Literal["message_ids"] = "message_ids"
+    payload: MessageIdsPayload
 
 
-def parse_sse_data_line(event: str) -> StreamEventEnvelope | None:
-    if not event.startswith("data: "):
-        return None
-    raw = event.removeprefix("data: ").strip()
-    if not raw:
-        return None
-    try:
-        return StreamEventEnvelope.model_validate_json(raw)
-    except Exception:
-        return None
+class DeltaEvent(BaseModel):
+    type: Literal["delta"] = "delta"
+    payload: str
+
+
+class ToolEvent(BaseModel):
+    type: Literal["tool"] = "tool"
+    payload: ToolPayload
+
+
+class DoneEvent(BaseModel):
+    type: Literal["done"] = "done"
+    payload: None = None
+
+
+class ErrorEvent(BaseModel):
+    type: Literal["error"] = "error"
+    payload: str
+
+
+StreamEvent = MessageIdsEvent | DeltaEvent | ToolEvent | DoneEvent | ErrorEvent

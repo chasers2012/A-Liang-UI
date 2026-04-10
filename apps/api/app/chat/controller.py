@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
-import json
 import queue
 import threading
 import uuid
 from collections.abc import Iterator
 from typing import Any
 
-from app.chat.agent import sse_event_iter_for_chat
+from app.chat.agent import stream_event_iter_for_chat
+from app.chat.events import (
+    DeltaEvent,
+    DoneEvent,
+    ErrorEvent,
+    MessageIdsEvent,
+    MessageIdsPayload,
+    StreamEvent,
+    ToolEvent,
+    ToolPayload,
+)
 from app.chat.registry import (
     ChatRegistry,
     record_to_archived_summary,
@@ -35,7 +44,6 @@ from app.common.id import create_id_generator
 from app.workspace_config import load_workspace_config, save_workspace_config
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
-from pydantic import BaseModel
 
 _CONFIG_FILE = "agent/llm.json"
 MAX_SESSION_MESSAGES = 200
@@ -115,7 +123,7 @@ def _patch_tool_block(
     result: Any,
     error: str | None,
 ) -> None:
-    for b in blocks:
+    for b in reversed(blocks):
         if b.kind != "tool" or b.call is None or b.call.id != tc_id:
             continue
         if ok:
@@ -129,59 +137,61 @@ def _patch_tool_block(
         return
 
 
-def _apply_stream_event_to_blocks(blocks: list[AssistantBlockPublic], event: BaseModel) -> bool:
-    """Return True if payload contained stream ``error``."""
-    error = getattr(event, "error", None)
-    if isinstance(error, str):
-        return True
-    if getattr(event, "message_ids", None) is not None:
-        return False
-    delta = getattr(event, "delta", None)
-    if isinstance(delta, str) and delta:
-        _append_delta_block(blocks, delta)
-    ts = getattr(event, "tool_start", None)
-    if ts is not None:
-        blocks.append(
-            AssistantBlockPublic(
-                kind="tool",
-                call=ChatToolCallPublic(
-                    id=ts.id,
-                    name=ts.name,
-                    args=ts.args,
-                    status="running",
-                ),
-            )
+def _append_tool_start_block(
+    blocks: list[AssistantBlockPublic],
+    tool_payload: ToolPayload,
+) -> None:
+    blocks.append(
+        AssistantBlockPublic(
+            kind="tool",
+            call=ChatToolCallPublic(
+                id=tool_payload.id,
+                name=tool_payload.name,
+                args=tool_payload.args,
+                status="running",
+            ),
         )
-    tr = getattr(event, "tool_result", None)
-    if tr is not None:
-        _patch_tool_block(
-            blocks,
-            tr.id,
-            ok=True,
-            result=tr.result,
-            error=None,
-        )
-    te = getattr(event, "tool_error", None)
-    if te is not None:
-        _patch_tool_block(
-            blocks,
-            te.id,
-            ok=False,
-            result=None,
-            error=te.error or "",
-        )
-    return False
+    )
+
+
+def _patch_tool_terminal_event(
+    blocks: list[AssistantBlockPublic],
+    tool_payload: ToolPayload,
+    *,
+    ok: bool,
+) -> None:
+    _patch_tool_block(
+        blocks,
+        tool_payload.id,
+        ok=ok,
+        result=(tool_payload.result if ok else None),
+        error=(None if ok else tool_payload.error or ""),
+    )
+
+
+def _apply_stream_event_to_blocks(blocks: list[AssistantBlockPublic], event: StreamEvent) -> None:
+    if isinstance(event, (ErrorEvent, MessageIdsEvent, DoneEvent)):
+        return
+    if isinstance(event, DeltaEvent):
+        _append_delta_block(blocks, event.payload)
+        return
+
+    if isinstance(event, ToolEvent):
+        tool = event.payload
+        if tool.stage == "start":
+            _append_tool_start_block(blocks, tool)
+        elif tool.stage == "result":
+            _patch_tool_terminal_event(blocks, tool, ok=True)
+        elif tool.stage == "error":
+            _patch_tool_terminal_event(blocks, tool, ok=False)
 
 
 def _persist_chat_if_needed(
     session_id: str,
     messages: list[ChatMessageIn],
     blocks: list[AssistantBlockPublic],
-    saw_error: bool,
     assistant_message_id: str,
 ) -> None:
-    if saw_error:
-        return
     session = get_active_chat(session_id)
     if session is None:
         return
@@ -250,21 +260,22 @@ def stream(body: ChatRequest) -> Iterator[str]:
 
     def _producer() -> None:
         blocks: list[AssistantBlockPublic] = []
-        saw_error = False
         try:
-            out.put(
-                f"data: {json.dumps({'message_ids': {'user': last_user_id, 'assistant': assistant_message_id}}, ensure_ascii=False)}\n\n"
+            message_ids_event = MessageIdsEvent(
+                payload=MessageIdsPayload(
+                    user=last_user_id,
+                    assistant=assistant_message_id,
+                ),
             )
+            out.put(f"data: {message_ids_event.model_dump_json(exclude_none=True)}\n\n")
             llm = _build_llm_from_workspace()
 
-            for event in sse_event_iter_for_chat(llm, chat_messages=context_messages):
-                if _apply_stream_event_to_blocks(blocks, event):
-                    saw_error = True
+            for event in stream_event_iter_for_chat(llm, chat_messages=context_messages):
+                _apply_stream_event_to_blocks(blocks, event)
                 out.put(f"data: {event.model_dump_json(exclude_none=True)}\n\n")
         except ValueError as e:
-            err = f"{e}"
-            saw_error = True
-            out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
+            err_event = ErrorEvent(payload=f"{e}")
+            out.put(f"data: {err_event.model_dump_json(exclude_none=True)}\n\n")
             return
         finally:
             try:
@@ -272,7 +283,6 @@ def stream(body: ChatRequest) -> Iterator[str]:
                     body.session_id,
                     context_messages,
                     blocks,
-                    saw_error,
                     assistant_message_id,
                 )
             finally:

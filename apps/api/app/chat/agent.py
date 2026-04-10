@@ -9,13 +9,13 @@ from app.chat.events import (
     DeltaEvent,
     DoneEvent,
     ErrorEvent,
-    ToolErrorEvent,
-    ToolEventPayload,
-    ToolResultEvent,
-    ToolStartEvent,
+    StreamEvent,
+    ToolEvent,
+    ToolPayload,
 )
 from app.chat.schemas import ChatMessageIn, message_text_for_model
 from app.tool.controller import ToolController
+from langchain.agents import create_agent
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
@@ -24,8 +24,6 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
-from langgraph.prebuilt import create_react_agent
-from pydantic import BaseModel
 
 _MAX_TOOL_ROUNDS = 10
 
@@ -87,15 +85,15 @@ def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseM
     return lc_messages
 
 
-def _iter_sse_events_from_mode_data(
+def _iter_stream_events_from_mode_data(
     mode: str,
     data: Any,
     pending_tool_names: dict[str, str],
-) -> Iterable[BaseModel]:
+) -> Iterable[StreamEvent]:
     if mode == "messages":
         text = _stream_token_text(data)
         if text:
-            yield DeltaEvent(delta=text)
+            yield DeltaEvent(payload=text)
         return
     if mode != "updates":
         return
@@ -106,8 +104,9 @@ def _iter_sse_events_from_mode_data(
                 name = tc.get("name") or ""
                 tc_id = str(tc.get("id") or "") or name or "tool_call"
                 pending_tool_names[tc_id] = name
-                yield ToolStartEvent(
-                    tool_start=ToolEventPayload(
+                yield ToolEvent(
+                    payload=ToolPayload(
+                        stage="start",
                         name=name,
                         id=tc_id,
                         args=tc.get("args"),
@@ -119,8 +118,9 @@ def _iter_sse_events_from_mode_data(
             tc_id = msg.tool_call_id
             name = pending_tool_names.get(tc_id, "")
             if msg.status == "error":
-                yield ToolErrorEvent(
-                    tool_error=ToolEventPayload(
+                yield ToolEvent(
+                    payload=ToolPayload(
+                        stage="error",
                         name=name,
                         id=tc_id or name or "tool_call",
                         error=str(msg.content),
@@ -128,8 +128,9 @@ def _iter_sse_events_from_mode_data(
                 )
             else:
                 result = msg.artifact if msg.artifact is not None else msg.content
-                yield ToolResultEvent(
-                    tool_result=ToolEventPayload(
+                yield ToolEvent(
+                    payload=ToolPayload(
+                        stage="result",
                         name=name,
                         id=tc_id or name or "tool_call",
                         result=result,
@@ -137,19 +138,19 @@ def _iter_sse_events_from_mode_data(
                 )
 
 
-def sse_event_iter_for_chat(
+def stream_event_iter_for_chat(
     llm: Any,
     *,
     chat_messages: list[ChatMessageIn],
     max_tool_rounds: int = _MAX_TOOL_ROUNDS,
-) -> Iterable[BaseModel]:
+) -> Iterable[StreamEvent]:
     tools = list(ToolController().get_tools().values())
     lc_messages = _lc_messages_from_chat_messages(chat_messages)
 
     try:
-        agent = create_react_agent(model=llm, tools=tools)
+        agent = create_agent(model=llm, tools=tools)
     except Exception as e:
-        yield ErrorEvent(error=f"ReAct 初始化失败：{e}")
+        yield ErrorEvent(payload=f"ReAct 初始化失败：{e}")
         return
 
     try:
@@ -162,12 +163,12 @@ def sse_event_iter_for_chat(
             if not (isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], str)):
                 continue
             mode, data = item
-            yield from _iter_sse_events_from_mode_data(
+            yield from _iter_stream_events_from_mode_data(
                 mode,
                 data,
                 pending_tool_names,
             )
         yield DoneEvent()
     except Exception as e:
-        yield ErrorEvent(error=f"LLM 调用失败：{e}")
+        yield ErrorEvent(payload=f"LLM 调用失败：{e}")
         return

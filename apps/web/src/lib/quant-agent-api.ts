@@ -127,62 +127,70 @@ function sseStringField(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function parseAgentChatSsePayloadObject(
-  o: Record<string, unknown>,
-): AgentChatSseParsed {
-  if (typeof o.error === "string") return { kind: "error", message: o.error };
-  if (o.done === true) return { kind: "done" };
-  if (typeof o.delta === "string" && o.delta.length > 0) {
-    return { kind: "delta", text: o.delta };
+function parseToolPayload(payload: unknown): AgentChatSseParsed {
+  if (!payload || typeof payload !== "object") return { kind: "skip" };
+  const p = payload as Record<string, unknown>;
+  const stage = sseStringField(p.stage);
+  const base = {
+    name: sseStringField(p.name),
+    id: sseStringField(p.id),
+  };
+  if (stage === "start") {
+    return { kind: "tool_start", payload: { ...base, args: p.args } };
   }
-  const mid = o.message_ids;
-  if (mid && typeof mid === "object") {
-    const p = mid as Record<string, unknown>;
-    return {
-      kind: "message_ids",
-      payload: {
-        user: sseStringField(p.user),
-        assistant: sseStringField(p.assistant),
-      },
-    };
+  if (stage === "result") {
+    return { kind: "tool_result", payload: { ...base, result: p.result } };
   }
-  const ts = o.tool_start;
-  if (ts && typeof ts === "object") {
-    const p = ts as Record<string, unknown>;
-    return {
-      kind: "tool_start",
-      payload: {
-        name: sseStringField(p.name),
-        id: sseStringField(p.id),
-        args: p.args,
-      },
-    };
-  }
-  const tr = o.tool_result;
-  if (tr && typeof tr === "object") {
-    const p = tr as Record<string, unknown>;
-    return {
-      kind: "tool_result",
-      payload: {
-        name: sseStringField(p.name),
-        id: sseStringField(p.id),
-        result: p.result,
-      },
-    };
-  }
-  const te = o.tool_error;
-  if (te && typeof te === "object") {
-    const p = te as Record<string, unknown>;
+  if (stage === "error") {
     return {
       kind: "tool_error",
       payload: {
-        name: sseStringField(p.name),
-        id: sseStringField(p.id),
+        ...base,
         error: typeof p.error === "string" ? p.error : String(p.error ?? ""),
       },
     };
   }
   return { kind: "skip" };
+}
+
+function parseTypedEvent(type: string, payload: unknown): AgentChatSseParsed {
+  switch (type) {
+    case "delta":
+      return typeof payload === "string" && payload.length > 0
+        ? { kind: "delta", text: payload }
+        : { kind: "skip" };
+    case "done":
+      return { kind: "done" };
+    case "error":
+      return {
+        kind: "error",
+        message: typeof payload === "string" ? payload : "",
+      };
+    case "message_ids":
+      if (!payload || typeof payload !== "object") return { kind: "skip" };
+      return {
+        kind: "message_ids",
+        payload: {
+          user: sseStringField((payload as Record<string, unknown>).user),
+          assistant: sseStringField(
+            (payload as Record<string, unknown>).assistant,
+          ),
+        },
+      };
+    case "tool":
+      return parseToolPayload(payload);
+    default:
+      return { kind: "skip" };
+  }
+}
+
+function parseAgentChatSsePayloadObject(
+  o: Record<string, unknown>,
+): AgentChatSseParsed {
+  const type = o.type;
+  const payload = o.payload;
+  if (typeof type !== "string") return { kind: "skip" };
+  return parseTypedEvent(type, payload);
 }
 
 function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
