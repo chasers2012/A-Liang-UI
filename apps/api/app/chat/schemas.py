@@ -78,8 +78,10 @@ def message_text_for_model(m: ChatMessageIn) -> str:
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     session_id: str = Field(..., min_length=1, description="Target chat session id.")
-    message: ChatMessageIn = Field(..., description="The new incoming user message.")
+    message: ChatMessageIn = Field(..., description="The single incoming user message.")
 
     @field_validator("session_id", mode="before")
     @classmethod

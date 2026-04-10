@@ -285,23 +285,17 @@ export async function postAgentChatStream(
   }
 }
 
-export function listAgentChats(): Promise<
-  AgentChatSummaryPublic[]
-> {
+export function listAgentChats(): Promise<AgentChatSummaryPublic[]> {
   return apiFetchJson<AgentChatSummaryPublic[]>("/chat");
 }
 
 export function listArchivedAgentChats(): Promise<
   AgentChatArchivedSummaryPublic[]
 > {
-  return apiFetchJson<AgentChatArchivedSummaryPublic[]>(
-    "/chat/archived",
-  );
+  return apiFetchJson<AgentChatArchivedSummaryPublic[]>("/chat/archived");
 }
 
-export function restoreAgentChat(
-  id: string,
-): Promise<AgentChatDetailPublic> {
+export function restoreAgentChat(id: string): Promise<AgentChatDetailPublic> {
   return apiFetchJson<AgentChatDetailPublic>(
     `/chat/${encodeURIComponent(id)}/restore`,
     { method: "POST" },
@@ -309,10 +303,9 @@ export function restoreAgentChat(
 }
 
 export function purgeArchivedAgentChat(id: string): Promise<void> {
-  return apiFetchJson<void>(
-    `/chat/${encodeURIComponent(id)}/archived`,
-    { method: "DELETE" },
-  );
+  return apiFetchJson<void>(`/chat/${encodeURIComponent(id)}/archived`, {
+    method: "DELETE",
+  });
 }
 
 export function createAgentChat(
@@ -324,12 +317,8 @@ export function createAgentChat(
   });
 }
 
-export function getAgentChat(
-  id: string,
-): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>(
-    `/chat/${encodeURIComponent(id)}`,
-  );
+export function getAgentChat(id: string): Promise<AgentChatDetailPublic> {
+  return apiFetchJson<AgentChatDetailPublic>(`/chat/${encodeURIComponent(id)}`);
 }
 
 export function renameAgentChat(
@@ -724,7 +713,9 @@ export function getEvaluationWorkflowIO(): Promise<WorkflowIOSpecPublic> {
   return apiFetchJson<WorkflowIOSpecPublic>("/evaluation-profiles/workflow-io");
 }
 
-export function getEvaluationWorkflowTemplate(): Promise<Record<string, unknown>> {
+export function getEvaluationWorkflowTemplate(): Promise<
+  Record<string, unknown>
+> {
   return apiFetchJson<Record<string, unknown>>(
     "/evaluation-profiles/workflow-template",
   );

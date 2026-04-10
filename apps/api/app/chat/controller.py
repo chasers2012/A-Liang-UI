@@ -259,14 +259,19 @@ def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
     session = get_active_chat(body.session_id)
     if session is None:
         raise ValueError("会话不存在或已归档")
-    history_messages = ChatRegistry.get_messages(body.session_id) or []
-    messages = [*history_messages, ensure_chat_message_id(body.message)]
-    last_user_id = messages[-1].id
-    if not last_user_id:
+
+    # Request carries exactly one new user message; model context is built from
+    # persisted history + this single incoming turn.
+    incoming_user = ensure_chat_message_id(body.message)
+    if not incoming_user.id:
         raise ValueError("user 消息 id 生成失败")
+
+    history_messages = ChatRegistry.get_messages(body.session_id) or []
+    context_messages = [*history_messages, incoming_user]
+    last_user_id = incoming_user.id
     assistant_message_id = str(uuid.uuid4())
 
-    _persist_user_messages_on_receive(body.session_id, messages[-1])
+    _persist_user_messages_on_receive(body.session_id, incoming_user)
     out: queue.Queue[str | None] = queue.Queue()
 
     def _producer() -> None:
@@ -284,7 +289,7 @@ def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
                 out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
                 return
 
-            lc_messages = lc_messages_from_chat_messages(messages)
+            lc_messages = lc_messages_from_chat_messages(context_messages)
             for event in ToolController.sse_event_iter_for_chat(llm, lc_messages=lc_messages):
                 if acc.process_event(event):
                     saw_error = True
@@ -293,7 +298,7 @@ def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
             try:
                 _persist_chat_if_needed(
                     body.session_id,
-                    messages,
+                    context_messages,
                     acc,
                     saw_error,
                     assistant_message_id,
