@@ -1,260 +1,42 @@
-"""Read/write ``config/agent_llm.json`` for the factor agent CLI and web UI."""
+"""Chat API routes (thin HTTP layer)."""
 
 from __future__ import annotations
 
-import json
-import queue
-import threading
-import uuid
-from collections.abc import Iterator
-from typing import Any
-
-from app.chat.agent_chat import lc_messages_from_chat_request, sse_event_iter_for_chat
-from app.chat.chat_llm import build_chat_model_from_workspace_settings
+from app.chat import controller
 from app.chat.schemas import (
-    AssistantBlockPublic,
-    ChatMessageIn,
+    ChatArchivedSummaryPublic,
+    ChatCreateBody,
+    ChatDetailPublic,
+    ChatRenameBody,
     ChatRequest,
-    ChatSessionArchivedSummaryPublic,
-    ChatSessionCreateBody,
-    ChatSessionDetailPublic,
-    ChatSessionRenameBody,
-    ChatSessionSummaryPublic,
-    ChatToolCallPublic,
+    ChatSummaryPublic,
     LlmSettings,
-    ensure_chat_message_ids,
 )
-from app.chat.session_registry import (
-    ChatSessionRegistry,
-    record_to_archived_summary,
-    record_to_detail,
-    record_to_summary,
-)
-from app.workspace_config import load_workspace_config, save_workspace_config
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
-_CONFIG_FILE = "agent/llm.json"
-
-
-def _defaults() -> LlmSettings:
-    return LlmSettings()
-
-
-def _build_llm_from_workspace():
-    settings = load_workspace_config(
-        _CONFIG_FILE,
-        LlmSettings,
-        default_factory=_defaults,
-    )
-    return build_chat_model_from_workspace_settings(settings)
-
-
-class _AssistantStreamAccumulator:
-    """Rebuild assistant ``blocks`` from the same SSE stream the client sees."""
-
-    def __init__(self) -> None:
-        self.blocks: list[AssistantBlockPublic] = []
-
-    def append_delta(self, delta: str) -> None:
-        if not self.blocks:
-            self.blocks.append(AssistantBlockPublic(kind="text", content=delta))
-            return
-        last = self.blocks[-1]
-        if last.kind == "text":
-            last.content = (last.content or "") + delta
-        else:
-            self.blocks.append(AssistantBlockPublic(kind="text", content=delta))
-
-    def apply_tool_start(self, name: str, tc_id: str, args: Any) -> None:
-        call = ChatToolCallPublic(
-            id=tc_id,
-            name=name,
-            args=args,
-            status="running",
-        )
-        self.blocks.append(AssistantBlockPublic(kind="tool", call=call))
-
-    def _patch_tool_call(self, tc_id: str, *, ok: bool, result: Any, error: str | None) -> None:
-        if not self.blocks:
-            return
-        for b in self.blocks:
-            if b.kind != "tool" or b.call is None or b.call.id != tc_id:
-                continue
-            if ok:
-                b.call.status = "ok"
-                b.call.result = result
-                b.call.error = None
-            else:
-                b.call.status = "error"
-                b.call.error = error or ""
-                b.call.result = None
-            break
-
-    def apply_tool_result(self, tc_id: str, result: Any) -> None:
-        self._patch_tool_call(tc_id, ok=True, result=result, error=None)
-
-    def apply_tool_error(self, tc_id: str, err: str) -> None:
-        self._patch_tool_call(tc_id, ok=False, result=None, error=err)
-
-    def process_event(self, event: str) -> bool:
-        """Return True if payload contained a stream ``error`` (do not persist assistant)."""
-        if not event.startswith("data: "):
-            return False
-        raw = event.removeprefix("data: ").strip()
-        if not raw:
-            return False
-        payload = json.loads(raw)
-        if not isinstance(payload, dict):
-            return False
-        if isinstance(payload.get("error"), str):
-            return True
-        if payload.get("message_ids") is not None:
-            return False
-        delta = payload.get("delta")
-        if isinstance(delta, str) and delta:
-            self.append_delta(delta)
-        ts = payload.get("tool_start")
-        if isinstance(ts, dict):
-            self.apply_tool_start(
-                str(ts.get("name") or ""),
-                str(ts.get("id") or ""),
-                ts.get("args"),
-            )
-        tr = payload.get("tool_result")
-        if isinstance(tr, dict):
-            self.apply_tool_result(str(tr.get("id") or ""), tr.get("result"))
-        te = payload.get("tool_error")
-        if isinstance(te, dict):
-            self.apply_tool_error(
-                str(te.get("id") or ""),
-                str(te.get("error") or ""),
-            )
-        return False
-
-
-def _persist_chat_session_if_needed(
-    body: ChatRequest,
-    acc: _AssistantStreamAccumulator | None,
-    saw_error: bool,
-    assistant_message_id: str,
-) -> None:
-    if saw_error or not body.session_id:
-        return
-    session = ChatSessionRegistry.get_active_item(body.session_id)
-    if session is None:
-        return
-
-    final_messages = list(body.messages)
-    blocks = acc.blocks if acc else []
-    if blocks:
-        final_messages.append(
-            ChatMessageIn(
-                id=assistant_message_id,
-                role="assistant",
-                blocks=blocks,
-            )
-        )
-    try:
-        ChatSessionRegistry.replace_messages(body.session_id, final_messages)
-    except ValueError:
-        # Session may be archived while a generation is in progress.
-        return
-
-
-def _persist_user_messages_on_receive(body: ChatRequest) -> None:
-    """Persist current client messages immediately after request is accepted."""
-    if not body.session_id:
-        return
-    if ChatSessionRegistry.get_active_item(body.session_id) is None:
-        return
-    try:
-        ChatSessionRegistry.replace_messages(body.session_id, list(body.messages))
-    except ValueError:
-        # Session may become archived between checks; ignore and continue streaming.
-        return
-
 
 @router.get("/llm-settings", response_model=LlmSettings)
 def get_llm_settings() -> LlmSettings:
-    return load_workspace_config(
-        _CONFIG_FILE,
-        LlmSettings,
-        default_factory=_defaults,
-    )
+    return controller.get_llm_settings()
 
 
 @router.put("/llm-settings", response_model=LlmSettings)
 def put_llm_settings(body: LlmSettings) -> LlmSettings:
-    save_workspace_config(_CONFIG_FILE, body)
-    return body
-
-
-def _prepare_chat_stream_body(body: ChatRequest) -> tuple[ChatRequest, str, str]:
-    messages = ensure_chat_message_ids(list(body.messages))
-    last_user_id: str | None = None
-    for m in reversed(messages):
-        if m.role == "user":
-            last_user_id = m.id
-            break
-    if last_user_id is None:
-        raise HTTPException(status_code=400, detail="至少需要一条 user 消息")
-    assistant_message_id = str(uuid.uuid4())
-    body_filled = ChatRequest(messages=messages, session_id=body.session_id)
-    return body_filled, last_user_id, assistant_message_id
-
-
-def _iter_chat_stream_sse(
-    body_filled: ChatRequest,
-    last_user_id: str,
-    assistant_message_id: str,
-) -> Iterator[str]:
-    out: queue.Queue[str | None] = queue.Queue()
-
-    def _producer() -> None:
-        acc = _AssistantStreamAccumulator()
-        saw_error = False
-        try:
-            out.put(
-                f"data: {json.dumps({'message_ids': {'user': last_user_id, 'assistant': assistant_message_id}}, ensure_ascii=False)}\n\n"
-            )
-            try:
-                llm = _build_llm_from_workspace()
-            except ValueError as e:
-                err = f"{e}"
-                saw_error = True
-                out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
-                return
-
-            lc_messages = lc_messages_from_chat_request(body_filled)
-            for event in sse_event_iter_for_chat(llm, lc_messages=lc_messages):
-                if acc.process_event(event):
-                    saw_error = True
-                out.put(event)
-        finally:
-            try:
-                _persist_chat_session_if_needed(body_filled, acc, saw_error, assistant_message_id)
-            finally:
-                out.put(None)
-
-    threading.Thread(target=_producer, daemon=True).start()
-
-    while True:
-        ev = out.get()
-        if ev is None:
-            return
-        yield ev
+    return controller.put_llm_settings(body)
 
 
 @router.post("/chat/stream")
 def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
-    body_filled, last_user_id, assistant_message_id = _prepare_chat_stream_body(body)
-    _persist_user_messages_on_receive(body_filled)
+    try:
+        body_filled, last_user_id, assistant_message_id = controller.prepare_chat_stream_body(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return StreamingResponse(
-        _iter_chat_stream_sse(body_filled, last_user_id, assistant_message_id),
+        controller.iter_chat_stream_sse(body_filled, last_user_id, assistant_message_id),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -264,83 +46,74 @@ def chat_stream(body: ChatRequest) -> StreamingResponse:
     )
 
 
-@router.get("/chat/sessions", response_model=list[ChatSessionSummaryPublic])
-def list_chat_sessions() -> list[ChatSessionSummaryPublic]:
-    items = ChatSessionRegistry.list_active_items()
-    items.sort(key=lambda i: i.updated_at, reverse=True)
-    return [record_to_summary(i) for i in items]
+@router.get("/chat/sessions", response_model=list[ChatSummaryPublic])
+def list_chats() -> list[ChatSummaryPublic]:
+    return controller.list_chats()
 
 
 @router.get(
     "/chat/sessions/archived",
-    response_model=list[ChatSessionArchivedSummaryPublic],
+    response_model=list[ChatArchivedSummaryPublic],
 )
-def list_archived_chat_sessions() -> list[ChatSessionArchivedSummaryPublic]:
-    items = ChatSessionRegistry.list_archived_items()
-    items.sort(key=lambda i: i.archived_at or "", reverse=True)
-    return [record_to_archived_summary(i) for i in items]
+def list_archived_chats() -> list[ChatArchivedSummaryPublic]:
+    return controller.list_archived_chats()
 
 
 @router.post(
     "/chat/sessions",
-    response_model=ChatSessionDetailPublic,
+    response_model=ChatDetailPublic,
     response_model_exclude_none=True,
 )
-def create_chat_session(body: ChatSessionCreateBody) -> ChatSessionDetailPublic:
-    rec = ChatSessionRegistry.create_session(body.title)
-    return record_to_detail(rec)
+def create_chat(body: ChatCreateBody) -> ChatDetailPublic:
+    return controller.create_chat(body)
 
 
 @router.get(
     "/chat/sessions/{session_id}",
-    response_model=ChatSessionDetailPublic,
+    response_model=ChatDetailPublic,
     response_model_exclude_none=True,
 )
-def get_chat_session(session_id: str) -> ChatSessionDetailPublic:
-    rec = ChatSessionRegistry.get_active_item(session_id)
+def get_chat(session_id: str) -> ChatDetailPublic:
+    rec = controller.get_chat(session_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在")
-    return record_to_detail(rec)
+    return rec
 
 
 @router.patch(
     "/chat/sessions/{session_id}",
-    response_model=ChatSessionDetailPublic,
+    response_model=ChatDetailPublic,
     response_model_exclude_none=True,
 )
-def rename_chat_session(session_id: str, body: ChatSessionRenameBody) -> ChatSessionDetailPublic:
-    if ChatSessionRegistry.get_active_item(session_id) is None:
-        raise HTTPException(status_code=404, detail="会话不存在")
+def rename_chat(session_id: str, body: ChatRenameBody) -> ChatDetailPublic:
     try:
-        rec = ChatSessionRegistry.rename_session(session_id, body.title)
+        rec = controller.rename_chat(session_id, body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在")
-    return record_to_detail(rec)
+    return rec
 
 
 @router.delete("/chat/sessions/{session_id}", status_code=204)
-def delete_chat_session(session_id: str) -> None:
-    rec = ChatSessionRegistry.archive_session(session_id)
-    if rec is None:
+def delete_chat(session_id: str) -> None:
+    if not controller.delete_chat(session_id):
         raise HTTPException(status_code=404, detail="会话不存在")
 
 
 @router.post(
     "/chat/sessions/{session_id}/restore",
-    response_model=ChatSessionDetailPublic,
+    response_model=ChatDetailPublic,
     response_model_exclude_none=True,
 )
-def restore_chat_session(session_id: str) -> ChatSessionDetailPublic:
-    rec = ChatSessionRegistry.restore_session(session_id)
+def restore_chat(session_id: str) -> ChatDetailPublic:
+    rec = controller.restore_chat(session_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="会话不存在或未被归档")
-    return record_to_detail(rec)
+    return rec
 
 
 @router.delete("/chat/sessions/{session_id}/archived", status_code=204)
-def purge_archived_chat_session(session_id: str) -> None:
-    rec = ChatSessionRegistry.purge_archived_session(session_id)
-    if rec is None:
+def purge_archived_chat(session_id: str) -> None:
+    if not controller.purge_archived_chat(session_id):
         raise HTTPException(status_code=404, detail="会话不存在或未被归档")

@@ -9,8 +9,8 @@ from app.startup_jobs import register_startup_job
 
 @register_startup_job
 def register_evaluation_scheme_chat_tools() -> None:
-    from app.chat.tool_registry import ChatToolRegistry
     from app.evaluation.profile.tools import EVALUATION_SCHEME_CHAT_TOOLS
+    from app.tool.registry import ChatToolRegistry
 
     for tool in EVALUATION_SCHEME_CHAT_TOOLS:
         ChatToolRegistry.instance().register_tool(tool)

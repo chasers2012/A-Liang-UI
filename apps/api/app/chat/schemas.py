@@ -100,7 +100,7 @@ class ChatRequest(BaseModel):
         return s or None
 
 
-class ChatSessionRecord(BaseModel):
+class ChatRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str
@@ -115,12 +115,12 @@ class ChatSessionRecord(BaseModel):
     archived_at: str | None = None
 
 
-class ChatSessionsFile(BaseModel):
+class ChatsFile(BaseModel):
     version: int = 1
-    items: list[ChatSessionRecord] = Field(default_factory=list)
+    items: list[ChatRecord] = Field(default_factory=list)
 
 
-class ChatSessionSummaryPublic(BaseModel):
+class ChatSummaryPublic(BaseModel):
     id: str
     title: str
     created_at: str
@@ -128,11 +128,11 @@ class ChatSessionSummaryPublic(BaseModel):
     message_count: int
 
 
-class ChatSessionArchivedSummaryPublic(ChatSessionSummaryPublic):
+class ChatArchivedSummaryPublic(ChatSummaryPublic):
     archived_at: str
 
 
-class ChatSessionDetailPublic(BaseModel):
+class ChatDetailPublic(BaseModel):
     id: str
     title: str
     messages: list[ChatMessageIn]
@@ -140,7 +140,7 @@ class ChatSessionDetailPublic(BaseModel):
     updated_at: str
 
 
-class ChatSessionCreateBody(BaseModel):
+class ChatCreateBody(BaseModel):
     title: str = Field(default="新会话", min_length=1, max_length=120)
 
     @field_validator("title")
@@ -150,7 +150,7 @@ class ChatSessionCreateBody(BaseModel):
         return s or "新会话"
 
 
-class ChatSessionRenameBody(BaseModel):
+class ChatRenameBody(BaseModel):
     title: str = Field(..., min_length=1, max_length=120)
 
     @field_validator("title")

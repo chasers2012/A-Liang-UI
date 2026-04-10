@@ -89,8 +89,8 @@ class EvaluationProfileRow(SQLModel, table=True):
     updated_at: str
 
 
-class ChatSessionRow(SQLModel, table=True):
-    __tablename__ = "chat_sessions"
+class ChatRow(SQLModel, table=True):
+    __tablename__ = "chats"
 
     id: str = Field(primary_key=True)
     title: str
