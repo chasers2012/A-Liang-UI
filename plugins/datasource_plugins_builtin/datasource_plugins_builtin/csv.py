@@ -50,18 +50,24 @@ class CsvDataSourcePlugin(DataSourcePlugin):
         ],
     )
 
+    @staticmethod
+    def _validate_csv_config(config: dict[str, Any]) -> CsvConfig:
+        path = config.get("path")
+        if path is None or not str(path).strip():
+            raise ValueError("path 不能为空")
+        return CsvConfig.model_validate(config)
+
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        cfg = CsvConfig.model_validate(config)
+        cfg = self._validate_csv_config(config)
         return cfg.model_dump(mode="json")
 
     def to_factor_datasource(self, config: dict[str, Any]):
-        cfg = CsvConfig.model_validate(config)
-        return CsvDataSource(path=cfg.path,
-                             read_csv_kwargs=dict(cfg.read_csv_kwargs))
+        cfg = self._validate_csv_config(config)
+        return CsvDataSource(path=cfg.path, read_csv_kwargs=dict(cfg.read_csv_kwargs))
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
         try:
-            cfg = CsvConfig.model_validate(config)
+            cfg = self._validate_csv_config(config)
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
         p = resolve_csv_path(cfg.path)

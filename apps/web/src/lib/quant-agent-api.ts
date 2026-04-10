@@ -403,7 +403,7 @@ export function listDatasourcePlugins(): Promise<DatasourcePluginPublic[]> {
 export async function uploadDatasourceFile(
   file: File,
 ): Promise<DatasourceUploadFileResponse> {
-  const url = `${getQuantAgentApiBase()}/datasources/upload-file`;
+  const url = `${getQuantAgentApiBase()}/uploads/file`;
   const body = new FormData();
   body.append("file", file);
   const res = await fetch(url, { method: "POST", body });

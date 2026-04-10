@@ -19,6 +19,7 @@ from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
 from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
+from app.uploads import api as uploads_router
 
 
 def _load_env_file(path: Path) -> None:
@@ -79,6 +80,7 @@ app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
 app.include_router(preprocessors_router.router)
+app.include_router(uploads_router.router)
 
 _origins = os.getenv("CORS_ORIGINS", "*")
 _origins_list = [o.strip() for o in _origins.split(",") if o.strip()]

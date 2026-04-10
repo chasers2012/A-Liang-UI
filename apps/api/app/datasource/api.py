@@ -1,93 +1,30 @@
 from __future__ import annotations
 
-from pathlib import Path
-from uuid import uuid4
+from fastapi import APIRouter, HTTPException
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from workspace import workspace_path
-
-from app.datasource.controller import get_datasource as get_datasource_instance
-from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource import controller as datasource_controller
 from app.datasource.schemas import (
     DataSourceCreate,
     DatasourceDependencyFieldsResponse,
     DataSourcePatch,
-    DatasourcePluginFieldOptionPublic,
-    DatasourcePluginFieldPublic,
     DatasourcePluginPublic,
     DataSourcePublic,
-    DataSourceRecord,
-    DatasourceUploadFileResponse,
     InspectColumnsRequest,
     InspectColumnsResponse,
     TestResult,
-    record_to_public,
-    utc_now_iso,
 )
-from app.datasource.verify import verify_datasource
-from app.plugin import PluginRegistry
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
 
 
 @router.get("", response_model=list[DataSourcePublic])
 def list_datasources() -> list[DataSourcePublic]:
-    return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
-
-
-@router.post("/upload-file", response_model=DatasourceUploadFileResponse)
-async def upload_datasource_file(file: UploadFile = File(...)) -> DatasourceUploadFileResponse:
-    picked_name = Path(file.filename or "upload.bin").name
-    if not picked_name:
-        raise HTTPException(status_code=400, detail="文件名不能为空")
-    upload_dir = workspace_path("uploads")
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    stored_name = f"{uuid4().hex}_{picked_name}"
-    target = upload_dir / stored_name
-    data = await file.read()
-    target.write_bytes(data)
-    return DatasourceUploadFileResponse(
-        path=f"uploads/{stored_name}",
-        filename=picked_name,
-        size=len(data),
-    )
+    return datasource_controller.list_datasources()
 
 
 @router.get("/plugins", response_model=list[DatasourcePluginPublic])
 def list_datasource_plugins() -> list[DatasourcePluginPublic]:
-    reg = PluginRegistry.instance()
-    out: list[DatasourcePluginPublic] = []
-    for ds_type in reg.list_types():
-        plugin = reg.get(ds_type)
-        schema = plugin.get_config_schema() if hasattr(plugin, "get_config_schema") else None
-        fields: list[DatasourcePluginFieldPublic] = []
-        if schema and schema.fields:
-            fields = [
-                DatasourcePluginFieldPublic(
-                    key=f.key,
-                    label=f.label,
-                    kind=f.kind,
-                    required=f.required,
-                    secret=f.secret,
-                    placeholder=f.placeholder,
-                    help_text=f.help_text,
-                    options=[
-                        DatasourcePluginFieldOptionPublic(value=o.value, label=o.label)
-                        for o in getattr(f, "options", [])
-                    ],
-                    file_types=list(getattr(f, "file_types", [])),
-                )
-                for f in schema.fields
-            ]
-        out.append(
-            DatasourcePluginPublic(
-                type=ds_type,
-                title=schema.title if schema else ds_type.upper(),
-                description=schema.description if schema else None,
-                fields=fields,
-            )
-        )
-    return out
+    return datasource_controller.list_datasource_plugins()
 
 
 @router.post("/inspect-columns", response_model=InspectColumnsResponse)
@@ -97,33 +34,12 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
 
     For now this is implemented for `type=sql` using the built-in SQL plugin.
     """
-    config: dict = {}
-    ds_type: str | None = body.type
-    if body.datasource_id:
-        rec = DataSourceItemsRegistry.get_item(body.datasource_id)
-        if rec is None:
-            raise HTTPException(status_code=404, detail="数据源不存在")
-        ds_type = str(rec.type)
-        config = dict(rec.config or {})
-        if body.config is not None:
-            # replace semantics for overlay: if provided, it replaces saved config
-            config = dict(body.config)
-    else:
-        if not ds_type:
-            raise HTTPException(
-                status_code=400, detail="type is required when datasource_id is not provided"
-            )
-        config = dict(body.config or {})
-
     try:
-        plugin = PluginRegistry.instance().get(str(ds_type))
-        validated = plugin.validate_config(config)
-        if not hasattr(plugin, "list_table_columns"):
-            raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
-        cols = plugin.list_table_columns(validated)
+        return datasource_controller.inspect_columns(body)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except (ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return InspectColumnsResponse(columns=[str(c) for c in cols])
 
 
 @router.get(
@@ -133,70 +49,49 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
 def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:
     """供数据集绑定等场景列出该数据源可声明的因子依赖字段名。"""
     try:
-        inst = get_datasource_instance(ds_id)
+        return datasource_controller.get_datasource_dependency_fields(ds_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    if inst is None:
-        raise HTTPException(status_code=404, detail="数据源不存在")
-    try:
-        fields = inst.list_columns()
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    return DatasourceDependencyFieldsResponse(fields=fields)
 
 
 @router.get("/{ds_id}", response_model=DataSourcePublic)
 def get_datasource(ds_id: str) -> DataSourcePublic:
-    rec = DataSourceItemsRegistry.get_item(ds_id)
+    rec = datasource_controller.get_datasource_public(ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    return record_to_public(rec)
+    return rec
 
 
 @router.post("", response_model=DataSourcePublic)
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     try:
-        plugin = PluginRegistry.instance().get(str(body.type))
-        validated = plugin.validate_config(dict(body.config or {}))
+        return datasource_controller.create_datasource(body)
     except (ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    new_rec = body.to_record()
-    new_rec.config = validated
-    DataSourceItemsRegistry.add_item(new_rec)
-    return record_to_public(new_rec)
 
 
 @router.patch("/{ds_id}", response_model=DataSourcePublic)
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic:
-
-    def _apply(rec: DataSourceRecord) -> None:
-        data = body.model_dump(exclude_unset=True)
-        if "name" in data:
-            rec.name = data["name"]
-        if "config" in data:
-            try:
-                plugin = PluginRegistry.instance().get(str(rec.type))
-                rec.config = plugin.validate_config(dict(data["config"] or {}))
-            except (ValueError, TypeError) as e:
-                raise HTTPException(status_code=400, detail=str(e)) from e
-        rec.updated_at = utc_now_iso()
-
-    rec = DataSourceItemsRegistry.update_item(ds_id, _apply)
+    try:
+        rec = datasource_controller.patch_datasource(ds_id, body)
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    return record_to_public(rec)
+    return rec
 
 
 @router.delete("/{ds_id}", status_code=204)
 def delete_datasource(ds_id: str) -> None:
-    if DataSourceItemsRegistry.delete_item(ds_id) is None:
+    if not datasource_controller.delete_datasource(ds_id):
         raise HTTPException(status_code=404, detail="数据源不存在")
 
 
 @router.post("/{ds_id}/test", response_model=TestResult)
 def test_datasource_endpoint(ds_id: str) -> TestResult:
-    rec = DataSourceItemsRegistry.get_item(ds_id)
+    rec = datasource_controller.test_datasource(ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")
-    ok, msg = verify_datasource(rec)
-    return TestResult(ok=ok, message=msg)
+    return rec

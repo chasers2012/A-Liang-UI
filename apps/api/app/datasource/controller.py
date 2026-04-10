@@ -3,7 +3,36 @@ from __future__ import annotations
 from factor import FactorDataSource
 
 from app.datasource.registry import DataSourceItemsRegistry
+from app.datasource.schemas import (
+    DataSourceCreate,
+    DatasourceDependencyFieldsResponse,
+    DataSourcePatch,
+    DatasourcePluginFieldOptionPublic,
+    DatasourcePluginFieldPublic,
+    DatasourcePluginPublic,
+    DataSourcePublic,
+    DataSourceRecord,
+    InspectColumnsRequest,
+    InspectColumnsResponse,
+    TestResult,
+    record_to_public,
+    utc_now_iso,
+)
+from app.datasource.verify import verify_datasource
 from app.plugin import PluginRegistry
+
+
+def _normalize_name(name: str) -> str:
+    return str(name).strip()
+
+
+def _ensure_unique_name(name: str, *, exclude_id: str | None = None) -> None:
+    target = _normalize_name(name)
+    for item in DataSourceItemsRegistry.list_items():
+        if exclude_id and item.id == exclude_id:
+            continue
+        if _normalize_name(item.name) == target:
+            raise ValueError(f"数据源名称已存在: {name}")
 
 
 class BoundFactorDataSource(FactorDataSource):
@@ -27,3 +56,121 @@ def get_datasource(id: str) -> FactorDataSource | None:
     plugin = PluginRegistry.instance().get(rec.type)
     ds = plugin.to_factor_datasource(dict(rec.config or {}))
     return BoundFactorDataSource(id, ds)
+
+
+def list_datasources() -> list[DataSourcePublic]:
+    return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
+
+
+def list_datasource_plugins() -> list[DatasourcePluginPublic]:
+    reg = PluginRegistry.instance()
+    out: list[DatasourcePluginPublic] = []
+    for ds_type in reg.list_types():
+        plugin = reg.get(ds_type)
+        schema = plugin.get_config_schema() if hasattr(plugin, "get_config_schema") else None
+        fields: list[DatasourcePluginFieldPublic] = []
+        if schema and schema.fields:
+            fields = [
+                DatasourcePluginFieldPublic(
+                    key=f.key,
+                    label=f.label,
+                    kind=f.kind,
+                    required=f.required,
+                    secret=f.secret,
+                    placeholder=f.placeholder,
+                    help_text=f.help_text,
+                    options=[
+                        DatasourcePluginFieldOptionPublic(value=o.value, label=o.label)
+                        for o in getattr(f, "options", [])
+                    ],
+                    file_types=list(getattr(f, "file_types", [])),
+                )
+                for f in schema.fields
+            ]
+        out.append(
+            DatasourcePluginPublic(
+                type=ds_type,
+                title=schema.title if schema else ds_type.upper(),
+                description=schema.description if schema else None,
+                fields=fields,
+            )
+        )
+    return out
+
+
+def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
+    config: dict = {}
+    ds_type: str | None = body.type
+    if body.datasource_id:
+        rec = DataSourceItemsRegistry.get_item(body.datasource_id)
+        if rec is None:
+            raise LookupError("数据源不存在")
+        ds_type = str(rec.type)
+        config = dict(rec.config or {})
+        if body.config is not None:
+            config = dict(body.config)
+    else:
+        if not ds_type:
+            raise ValueError("type is required when datasource_id is not provided")
+        config = dict(body.config or {})
+
+    plugin = PluginRegistry.instance().get(str(ds_type))
+    validated = plugin.validate_config(config)
+    if not hasattr(plugin, "list_table_columns"):
+        raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
+    cols = plugin.list_table_columns(validated)
+    return InspectColumnsResponse(columns=[str(c) for c in cols])
+
+
+def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:
+    inst = get_datasource(ds_id)
+    if inst is None:
+        raise LookupError("数据源不存在")
+    fields = inst.list_columns()
+    return DatasourceDependencyFieldsResponse(fields=fields)
+
+
+def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
+    rec = DataSourceItemsRegistry.get_item(ds_id)
+    if rec is None:
+        return None
+    return record_to_public(rec)
+
+
+def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
+    _ensure_unique_name(body.name)
+    plugin = PluginRegistry.instance().get(str(body.type))
+    validated = plugin.validate_config(dict(body.config or {}))
+    new_rec = body.to_record()
+    new_rec.config = validated
+    DataSourceItemsRegistry.add_item(new_rec)
+    return record_to_public(new_rec)
+
+
+def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | None:
+    def _apply(rec: DataSourceRecord) -> None:
+        data = body.model_dump(exclude_unset=True)
+        if "name" in data:
+            _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
+            rec.name = data["name"]
+        if "config" in data:
+            plugin = PluginRegistry.instance().get(str(rec.type))
+            rec.config = plugin.validate_config(dict(data["config"] or {}))
+        rec.updated_at = utc_now_iso()
+
+    rec = DataSourceItemsRegistry.update_item(ds_id, _apply)
+    if rec is None:
+        return None
+    return record_to_public(rec)
+
+
+def delete_datasource(ds_id: str) -> bool:
+    return DataSourceItemsRegistry.delete_item(ds_id) is not None
+
+
+def test_datasource(ds_id: str) -> TestResult | None:
+    rec = DataSourceItemsRegistry.get_item(ds_id)
+    if rec is None:
+        return None
+    ok, msg = verify_datasource(rec)
+    return TestResult(ok=ok, message=msg)
