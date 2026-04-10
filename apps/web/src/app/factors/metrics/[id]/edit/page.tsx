@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
-import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
-import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
+import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
 import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_EDIT_FORM_ID = "evaluation-metric-edit-form";

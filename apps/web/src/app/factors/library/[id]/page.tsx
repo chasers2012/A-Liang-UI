@@ -39,10 +39,10 @@ import {
   refreshFactorEvalRowAtomFamily,
 } from "@/models/factor";
 
-import { DeleteFactorDialog } from "@/features/factors/ui/delete-factor-dialog";
+import { DeleteFactorDialog } from "@/components/factors/ui/delete-factor-dialog";
 import {
   EvaluationProfileMetricResultsPanel,
-} from "@/features/factors/ui/evaluation-profile-metric-results";
+} from "@/components/factors/ui/evaluation-profile-metric-results";
 import { Page } from "@/components/page";
 
 function formatIso(iso: string): string {

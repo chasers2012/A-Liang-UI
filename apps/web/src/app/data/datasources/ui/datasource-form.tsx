@@ -15,7 +15,7 @@ import {
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 
-import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
+import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
 import type { DatasourcePluginPublic } from "@/lib/quant-agent-api";
 import type { EditorMode, FormState } from "../form-model";
 import { DatasourceFormPluginConfig } from "./datasource-form-plugin-config";

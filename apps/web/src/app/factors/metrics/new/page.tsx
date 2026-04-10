@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label";
 import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/lib/quant-agent-api";
 import { defaultNewName } from "@/lib/default-new-name";
 
-import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
-import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
+import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
 import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";

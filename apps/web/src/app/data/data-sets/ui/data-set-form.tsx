@@ -28,8 +28,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
+import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
 import { cn } from "@/lib/utils";
 import { defaultNewName } from "@/lib/default-new-name";
 import {

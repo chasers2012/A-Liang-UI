@@ -6,9 +6,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { FactorCodeJar } from "@/features/factors/ui/factor-code-jar";
-import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
+import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
+import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
 
 export const PREPROCESSOR_MAIN_FORM_ID = "preprocessor-main-form";
 
