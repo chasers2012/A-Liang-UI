@@ -17,7 +17,7 @@ def test_agent_chat_stream_sse(client, monkeypatch):
         return _FakeLlm()
 
     monkeypatch.setattr(
-        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
+        "app.chat.controller.build_chat_model_from_workspace_settings",
         fake_build,
     )
 
@@ -87,11 +87,11 @@ def test_agent_chat_stream_sse_tool_calls(client, monkeypatch):
         return {"create_factor": _FakeCreateFactorTool()}
 
     monkeypatch.setattr(
-        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
+        "app.chat.controller.build_chat_model_from_workspace_settings",
         fake_build,
     )
     monkeypatch.setattr(
-        "app.chat.tool_registry.ChatToolRegistry.get_tools",
+        "app.tool.registry.ChatToolRegistry.get_tools",
         fake_get_tools,
     )
 

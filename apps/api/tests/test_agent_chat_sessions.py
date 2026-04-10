@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def test_chat_sessions_crud(client):
+def test_chats_crud(client):
     created = client.post("/agent/chat/sessions", json={"title": "策略讨论"})
     assert created.status_code == 200
     detail = created.json()
@@ -33,7 +33,7 @@ def test_chat_sessions_crud(client):
     assert missing.status_code == 404
 
 
-def test_chat_sessions_archived_list_and_restore(client):
+def test_chats_archived_list_and_restore(client):
     created = client.post("/agent/chat/sessions", json={"title": "归档恢复测"})
     assert created.status_code == 200
     sid = created.json()["id"]
@@ -61,7 +61,7 @@ def test_chat_sessions_archived_list_and_restore(client):
     assert all(i["id"] != sid for i in listed_after.json())
 
 
-def test_chat_sessions_archived_purge(client):
+def test_chats_archived_purge(client):
     created = client.post("/agent/chat/sessions", json={"title": "归档删除测"})
     assert created.status_code == 200
     sid = created.json()["id"]
@@ -91,7 +91,7 @@ def test_chat_stream_persists_on_done(client, monkeypatch):
             yield _Chunk(" world")
 
     monkeypatch.setattr(
-        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
+        "app.chat.controller.build_chat_model_from_workspace_settings",
         lambda _settings: _FakeLlm(),
     )
 
@@ -148,11 +148,11 @@ def test_chat_stream_persists_tool_blocks(client, monkeypatch):
         return {"create_factor": _FakeCreateFactorTool()}
 
     monkeypatch.setattr(
-        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
+        "app.chat.controller.build_chat_model_from_workspace_settings",
         lambda _s: _FakeLlmWithTools(),
     )
     monkeypatch.setattr(
-        "app.chat.tool_registry.ChatToolRegistry.get_tools",
+        "app.tool.registry.ChatToolRegistry.get_tools",
         fake_get_tools,
     )
 
@@ -192,7 +192,7 @@ def test_chat_stream_error_does_not_persist(client, monkeypatch):
             raise RuntimeError("boom")
 
     monkeypatch.setattr(
-        "app.chat.chat_llm.build_chat_model_from_workspace_settings",
+        "app.chat.controller.build_chat_model_from_workspace_settings",
         lambda _settings: _FakeBrokenLlm(),
     )
 
