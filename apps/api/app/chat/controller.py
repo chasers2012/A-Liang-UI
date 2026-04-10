@@ -6,7 +6,8 @@ import json
 import queue
 import threading
 import uuid
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
 from app.chat.registry import (
@@ -41,11 +42,13 @@ from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
     SystemMessage,
+    ToolMessage,
 )
 
 _CONFIG_FILE = "agent/llm.json"
 MAX_SESSION_MESSAGES = 200
 _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
+_MAX_TOOL_ROUNDS = 10
 
 
 def build_chat_model_from_workspace_settings(
@@ -113,6 +116,209 @@ def _build_llm_from_workspace():
         default_factory=_defaults,
     )
     return build_chat_model_from_workspace_settings(settings)
+
+
+class _StreamEventBuilder:
+    @staticmethod
+    def json_line(payload: dict[str, Any]) -> str:
+        return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+    @classmethod
+    def delta(cls, text: str) -> str:
+        return cls.json_line({"delta": text})
+
+    @classmethod
+    def done(cls) -> str:
+        return cls.json_line({"done": True})
+
+    @classmethod
+    def error(cls, message: str) -> str:
+        return cls.json_line({"error": message})
+
+    @classmethod
+    def tool_start(cls, *, name: str, tc_id: str, args: Any) -> str:
+        return cls.json_line({"tool_start": {"name": name, "id": tc_id, "args": args}})
+
+    @classmethod
+    def tool_result(cls, *, name: str, tc_id: str, result: Any) -> str:
+        return cls.json_line({"tool_result": {"name": name, "id": tc_id, "result": result}})
+
+    @classmethod
+    def tool_error(cls, *, name: str, tc_id: str, error: str) -> str:
+        return cls.json_line({"tool_error": {"name": name, "id": tc_id, "error": error}})
+
+
+@dataclass
+class _ModelCallResult:
+    ai: AIMessage | None
+    emitted_text: bool
+
+
+def _stream_chunk_text(chunk: Any) -> str:
+    c = getattr(chunk, "content", chunk)
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        parts: list[str] = []
+        for block in c:
+            if (isinstance(block, dict) and "text" in block) or (
+                isinstance(block, dict) and block.get("type") == "text" and block.get("text")
+            ):
+                parts.append(str(block["text"]))
+            elif isinstance(block, str):
+                parts.append(block)
+        return "".join(parts)
+    return str(c) if c is not None else ""
+
+
+def _tool_message_content(result: Any) -> str:
+    if result is None:
+        return "null"
+    if isinstance(result, str):
+        return result
+    if isinstance(result, (dict, list, int, float, bool)):
+        return json.dumps(result, ensure_ascii=False)
+    return json.dumps(str(result), ensure_ascii=False)
+
+
+def _bind_tools_if_supported(llm: Any, tools: dict[str, Any]) -> Any:
+    if not tools or not hasattr(llm, "bind_tools"):
+        return llm
+    try:
+        return llm.bind_tools(list(tools.values()))
+    except Exception:
+        return llm
+
+
+def _to_ai_message(value: Any) -> AIMessage:
+    if isinstance(value, AIMessage):
+        return value
+    return AIMessage(
+        content=_stream_chunk_text(value) or str(getattr(value, "content", value)),
+        tool_calls=list(getattr(value, "tool_calls", []) or []),
+    )
+
+
+def _stream_ai_with_deltas(
+    llm_like: Any,
+    messages: list[BaseMessage],
+    event_builder: _StreamEventBuilder,
+) -> Iterable[str]:
+    if not hasattr(llm_like, "stream"):
+        return
+    merged: Any | None = None
+    emitted_text = False
+    for chunk in llm_like.stream(messages):
+        if merged is None:
+            merged = chunk
+        else:
+            try:
+                merged = merged + chunk
+            except Exception:
+                merged = chunk
+        piece = _stream_chunk_text(chunk)
+        if piece:
+            emitted_text = True
+            yield event_builder.delta(piece)
+    return (_to_ai_message(merged) if merged is not None else None), emitted_text
+
+
+def _call_model_once(
+    *,
+    llm_with_tools: Any,
+    llm_raw: Any,
+    messages: list[BaseMessage],
+    event_builder: _StreamEventBuilder,
+) -> Iterable[str] | _ModelCallResult:
+    if hasattr(llm_with_tools, "stream"):
+        streamed = yield from _stream_ai_with_deltas(llm_with_tools, messages, event_builder)
+        ai, emitted_text = streamed
+        if ai is not None:
+            return _ModelCallResult(ai=ai, emitted_text=emitted_text)
+
+    if hasattr(llm_with_tools, "invoke"):
+        return _ModelCallResult(
+            ai=_to_ai_message(llm_with_tools.invoke(messages)), emitted_text=False
+        )
+
+    streamed = yield from _stream_ai_with_deltas(llm_raw, messages, event_builder)
+    ai, emitted_text = streamed
+    return _ModelCallResult(ai=ai, emitted_text=emitted_text)
+
+
+def _run_tool_calls(
+    *,
+    tool_controller: ToolController,
+    tool_calls: list[dict[str, Any]],
+    messages: list[BaseMessage],
+    event_builder: _StreamEventBuilder,
+) -> Iterable[str]:
+    for tc in tool_calls:
+        name = (tc.get("name") or "").strip()
+        tc_id = (tc.get("id") or "").strip() or name or "tool_call"
+        raw_args = tc.get("args")
+        yield event_builder.tool_start(name=name, tc_id=tc_id, args=raw_args)
+        try:
+            result = tool_controller.invoke_tool(name, raw_args)
+            tool_content = _tool_message_content(result)
+            event_result = result if isinstance(result, (dict, list)) else tool_content
+            yield event_builder.tool_result(name=name, tc_id=tc_id, result=event_result)
+            messages.append(ToolMessage(tool_call_id=tc_id, content=tool_content))
+        except Exception as e:
+            err = str(e)
+            yield event_builder.tool_error(name=name, tc_id=tc_id, error=err)
+            messages.append(
+                ToolMessage(tool_call_id=tc_id, content=_tool_message_content({"error": err}))
+            )
+
+
+def _sse_event_iter_for_chat(
+    llm: Any,
+    *,
+    lc_messages: list[BaseMessage],
+    max_tool_rounds: int = _MAX_TOOL_ROUNDS,
+) -> Iterable[str]:
+    tool_controller = ToolController()
+    event_builder = _StreamEventBuilder()
+    tools = tool_controller.get_tools()
+    llm_with_tools = _bind_tools_if_supported(llm, tools)
+    messages = list(lc_messages)
+
+    try:
+        for _round in range(max_tool_rounds):
+            model_result = yield from _call_model_once(
+                llm_with_tools=llm_with_tools,
+                llm_raw=llm,
+                messages=messages,
+                event_builder=event_builder,
+            )
+            ai = model_result.ai
+            emitted_text = model_result.emitted_text
+            if ai is None:
+                yield event_builder.done()
+                return
+
+            tool_calls = list(getattr(ai, "tool_calls", []) or [])
+            if not tool_calls:
+                text = _stream_chunk_text(ai)
+                if text and not emitted_text:
+                    yield event_builder.delta(text)
+                yield event_builder.done()
+                return
+
+            messages.append(ai)
+            yield from _run_tool_calls(
+                tool_controller=tool_controller,
+                tool_calls=tool_calls,
+                messages=messages,
+                event_builder=event_builder,
+            )
+
+        yield event_builder.error(f"工具调用轮次超过上限（max={max_tool_rounds}）")
+        return
+    except Exception as e:
+        yield event_builder.error(f"LLM 调用失败：{e}")
+        return
 
 
 class _AssistantStreamAccumulator:
@@ -255,7 +461,7 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
     return body
 
 
-def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
+def stream(body: ChatRequest) -> Iterator[str]:
     session = get_active_chat(body.session_id)
     if session is None:
         raise ValueError("会话不存在或已归档")
@@ -290,7 +496,7 @@ def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
                 return
 
             lc_messages = lc_messages_from_chat_messages(context_messages)
-            for event in ToolController.sse_event_iter_for_chat(llm, lc_messages=lc_messages):
+            for event in _sse_event_iter_for_chat(llm, lc_messages=lc_messages):
                 if acc.process_event(event):
                     saw_error = True
                 out.put(event)

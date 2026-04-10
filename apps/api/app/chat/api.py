@@ -32,7 +32,7 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
 def chat_stream(body: ChatRequest) -> StreamingResponse:
     """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
     try:
-        stream = controller.iter_chat_stream_sse(body)
+        stream = controller.stream(body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return StreamingResponse(
