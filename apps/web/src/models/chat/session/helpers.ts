@@ -93,11 +93,11 @@ export function summarizeFirstUserMessage(text: string): string {
 }
 
 export function toApiMessage(
-  turn: AgentChatMessagePublic,
+  turn: AgentChatMessagePublic & { role: "user" },
   omitId?: boolean,
 ): AgentChatRequestMessage {
   const base: AgentChatRequestMessage = {
-    role: turn.role,
+    role: "user",
     blocks: turn.blocks ?? [],
   };
   if (omitId) return base;

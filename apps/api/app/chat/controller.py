@@ -27,7 +27,7 @@ from app.chat.schemas import (
     ChatSummaryPublic,
     ChatToolCallPublic,
     LlmSettings,
-    ensure_chat_message_ids,
+    ensure_chat_message_id,
     message_text_for_model,
 )
 from app.common.datetime_utils import utc_now_iso
@@ -89,9 +89,9 @@ def build_chat_model_from_workspace_settings(
     return init_chat_model(f"ollama:{model}", **kwargs)
 
 
-def lc_messages_from_chat_request(body: ChatRequest) -> list[BaseMessage]:
+def lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseMessage]:
     lc_messages: list[BaseMessage] = []
-    for m in body.messages:
+    for m in messages:
         text = message_text_for_model(m)
         if m.role == "system":
             lc_messages.append(SystemMessage(content=text))
@@ -199,18 +199,19 @@ class _AssistantStreamAccumulator:
 
 
 def _persist_chat_if_needed(
-    body: ChatRequest,
+    session_id: str,
+    messages: list[ChatMessageIn],
     acc: _AssistantStreamAccumulator | None,
     saw_error: bool,
     assistant_message_id: str,
 ) -> None:
-    if saw_error or not body.session_id:
+    if saw_error:
         return
-    session = get_active_chat(body.session_id)
+    session = get_active_chat(session_id)
     if session is None:
         return
 
-    final_messages = list(body.messages)
+    final_messages = list(messages)
     blocks = acc.blocks if acc else []
     if blocks:
         final_messages.append(
@@ -221,18 +222,22 @@ def _persist_chat_if_needed(
             )
         )
     try:
-        replace_session_messages(body.session_id, final_messages)
+        replace_session_messages(session_id, final_messages)
     except ValueError:
         return
 
 
-def _persist_user_messages_on_receive(body: ChatRequest) -> None:
-    if not body.session_id:
+def _persist_user_messages_on_receive(session_id: str, message: ChatMessageIn) -> None:
+    rec = get_active_chat(session_id)
+    if rec is None:
         return
-    if get_active_chat(body.session_id) is None:
-        return
+    message_filled = ensure_chat_message_id(message)
     try:
-        replace_session_messages(body.session_id, list(body.messages))
+        if rec.message_count < MAX_SESSION_MESSAGES:
+            ChatRegistry.append_message(session_id, message_filled)
+            return
+        keep = (ChatRegistry.get_messages(session_id) or [])[-(MAX_SESSION_MESSAGES - 1) :]
+        replace_session_messages(session_id, [*keep, message_filled])
     except ValueError:
         return
 
@@ -250,26 +255,18 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
     return body
 
 
-def prepare_chat_stream_body(body: ChatRequest) -> tuple[ChatRequest, str, str]:
-    messages = ensure_chat_message_ids(list(body.messages))
-    last_user_id: str | None = None
-    for m in reversed(messages):
-        if m.role == "user":
-            last_user_id = m.id
-            break
-    if last_user_id is None:
-        raise ValueError("至少需要一条 user 消息")
+def iter_chat_stream_sse(body: ChatRequest) -> Iterator[str]:
+    session = get_active_chat(body.session_id)
+    if session is None:
+        raise ValueError("会话不存在或已归档")
+    history_messages = ChatRegistry.get_messages(body.session_id) or []
+    messages = [*history_messages, ensure_chat_message_id(body.message)]
+    last_user_id = messages[-1].id
+    if not last_user_id:
+        raise ValueError("user 消息 id 生成失败")
     assistant_message_id = str(uuid.uuid4())
-    body_filled = ChatRequest(messages=messages, session_id=body.session_id)
-    return body_filled, last_user_id, assistant_message_id
 
-
-def iter_chat_stream_sse(
-    body_filled: ChatRequest,
-    last_user_id: str,
-    assistant_message_id: str,
-) -> Iterator[str]:
-    _persist_user_messages_on_receive(body_filled)
+    _persist_user_messages_on_receive(body.session_id, messages[-1])
     out: queue.Queue[str | None] = queue.Queue()
 
     def _producer() -> None:
@@ -287,24 +284,33 @@ def iter_chat_stream_sse(
                 out.put(f"data: {json.dumps({'error': err}, ensure_ascii=False)}\n\n")
                 return
 
-            lc_messages = lc_messages_from_chat_request(body_filled)
+            lc_messages = lc_messages_from_chat_messages(messages)
             for event in ToolController.sse_event_iter_for_chat(llm, lc_messages=lc_messages):
                 if acc.process_event(event):
                     saw_error = True
                 out.put(event)
         finally:
             try:
-                _persist_chat_if_needed(body_filled, acc, saw_error, assistant_message_id)
+                _persist_chat_if_needed(
+                    body.session_id,
+                    messages,
+                    acc,
+                    saw_error,
+                    assistant_message_id,
+                )
             finally:
                 out.put(None)
 
     threading.Thread(target=_producer, daemon=True).start()
 
-    while True:
-        ev = out.get()
-        if ev is None:
-            return
-        yield ev
+    def _iter() -> Iterator[str]:
+        while True:
+            ev = out.get()
+            if ev is None:
+                return
+            yield ev
+
+    return _iter()
 
 
 def list_chats() -> list[ChatSummaryPublic]:
@@ -408,7 +414,7 @@ def replace_session_messages(session_id: str, messages: list[ChatMessageIn]) -> 
     rec = get_active_chat(session_id)
     if rec is None:
         raise ValueError("会话已归档")
-    trimmed = ensure_chat_message_ids(list(messages)[-MAX_SESSION_MESSAGES:])
+    trimmed = [ensure_chat_message_id(m) for m in list(messages)[-MAX_SESSION_MESSAGES:]]
     ChatRegistry.replace_messages(session_id, trimmed)
 
     def _apply(item: ChatRecord) -> None:

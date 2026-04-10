@@ -1,4 +1,4 @@
-import { atom, type Getter, type Setter } from "jotai";
+import { atom, type Setter } from "jotai";
 import { startTransition } from "react";
 
 import {
@@ -76,29 +76,6 @@ export {
   refetchChatsListAtom,
   selectChatAtom,
 };
-
-function buildPayloadMessages(
-  get: Getter,
-  userIds: string[],
-  getReplies: (userId: string) => string[],
-  optimisticAssistantId: string,
-  pendingLocalUserId: string,
-) {
-  return userIds.flatMap((uid) => {
-    const user = get(messagesAtomFamily(uid));
-    if (!user) return [];
-
-    const userPart = toApiMessage(user, uid === pendingLocalUserId);
-    const firstReplyId = (getReplies(uid) ?? [])[0];
-    if (!firstReplyId || firstReplyId === optimisticAssistantId)
-      return [userPart];
-
-    const assistant = get(messagesAtomFamily(firstReplyId));
-    if (!assistant) return [userPart];
-
-    return [userPart, toApiMessage(assistant)];
-  });
-}
 
 const remapPendingChatMessageIdsAtom = atom(
   null,
@@ -260,7 +237,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
 
   const provisionalUserId = crypto.randomUUID();
   const provisionalAssistantId = crypto.randomUUID();
-  const userTurn: AgentChatMessagePublic = {
+  const userTurn: AgentChatMessagePublic & { role: "user" } = {
     id: provisionalUserId,
     role: "user",
     blocks: [{ kind: "text", content: trimmed }],
@@ -283,16 +260,10 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(userMessageReplieIdsAtomFamily(userTurn.id), [provisionalAssistantId]);
 
   try {
-    const payloadMessages = buildPayloadMessages(
-      get,
-      get(sessionUserMessageIdsAtomFamily(sessionId)) ?? [],
-      (uid) => get(userMessageReplieIdsAtomFamily(uid)) ?? [],
-      provisionalAssistantId,
-      provisionalUserId,
-    );
+    const payloadMessage = toApiMessage(userTurn, true);
 
     await postAgentChatStream(
-      { session_id: sessionId, messages: payloadMessages },
+      { session_id: sessionId, message: payloadMessage },
       {
         onMessageIds: (ids) => {
           if (!ids.user || !ids.assistant) return;

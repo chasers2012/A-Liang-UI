@@ -67,11 +67,9 @@ class ChatMessageIn(BaseModel):
         return self
 
 
-def ensure_chat_message_ids(messages: list[ChatMessageIn]) -> list[ChatMessageIn]:
-    """Fill missing ``id`` on each message with a new UUID (preserves non-empty client ids)."""
-    return [
-        m.model_copy(update={"id": (m.id or "").strip() or str(uuid.uuid4())}) for m in messages
-    ]
+def ensure_chat_message_id(message: ChatMessageIn) -> ChatMessageIn:
+    """Fill missing ``id`` on one message with a new UUID."""
+    return message.model_copy(update={"id": (message.id or "").strip() or str(uuid.uuid4())})
 
 
 def message_text_for_model(m: ChatMessageIn) -> str:
@@ -80,24 +78,22 @@ def message_text_for_model(m: ChatMessageIn) -> str:
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessageIn] = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        description="Conversation turns in order (system / user / assistant).",
-    )
-    session_id: str | None = Field(
-        default=None,
-        description="Optional chat session id for persistence.",
-    )
+    session_id: str = Field(..., min_length=1, description="Target chat session id.")
+    message: ChatMessageIn = Field(..., description="The new incoming user message.")
 
     @field_validator("session_id", mode="before")
     @classmethod
-    def empty_session_id_to_none(cls, v: object) -> str | None:
-        if v is None:
-            return None
+    def empty_session_id_to_none(cls, v: object) -> str:
         s = str(v).strip()
-        return s or None
+        if not s:
+            raise ValueError("session_id 不能为空")
+        return s
+
+    @model_validator(mode="after")
+    def validate_stream_message(self) -> ChatRequest:
+        if self.message.role != "user":
+            raise ValueError("message.role 必须为 user")
+        return self
 
 
 class ChatRecord(BaseModel):

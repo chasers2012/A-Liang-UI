@@ -43,16 +43,16 @@ export type AgentChatMessagePublic = {
   blocks: AgentAssistantBlockPublic[];
 };
 
-/** ``POST /chat/message`` 请求体中的单条消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
+/** ``POST /chat/message`` 请求体中的单条 user 消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
 export type AgentChatRequestMessage = {
   id?: string | null;
-  role: AgentChatRolePublic;
+  role: "user";
   blocks: AgentAssistantBlockPublic[];
 };
 
 export type AgentChatRequestPublic = {
-  messages: AgentChatRequestMessage[];
-  session_id?: string | null;
+  session_id: string;
+  message: AgentChatRequestMessage;
 };
 
 export type AgentChatSummaryPublic = {
@@ -64,10 +64,9 @@ export type AgentChatSummaryPublic = {
 };
 
 /** 与后端 ``ChatArchivedSummaryPublic`` 一致。 */
-export type AgentChatArchivedSummaryPublic =
-  AgentChatSummaryPublic & {
-    archived_at: string;
-  };
+export type AgentChatArchivedSummaryPublic = AgentChatSummaryPublic & {
+  archived_at: string;
+};
 
 export type AgentChatDetailPublic = {
   id: string;

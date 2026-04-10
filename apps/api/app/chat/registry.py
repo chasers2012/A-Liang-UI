@@ -9,6 +9,7 @@ from app.chat.schemas import (
     ChatsFile,
     ChatSummaryPublic,
 )
+from app.common.datetime_utils import utc_now_iso
 from app.persistence.models import ChatMessageRow, ChatRow
 from app.persistence.sqlite_db import get_session
 from sqlmodel import select
@@ -163,6 +164,26 @@ class ChatRegistry:
                 )
             )
         return out
+
+    @classmethod
+    def append_message(cls, chat_id: str, message: ChatMessageIn) -> None:
+        with get_session() as db:
+            row = db.get(ChatRow, chat_id)
+            if row is None:
+                raise ValueError("会话不存在")
+            db.add(
+                ChatMessageRow(
+                    id=(message.id or "").strip(),
+                    session_id=chat_id,
+                    role=message.role,
+                    blocks=[b.model_dump(mode="json", exclude_none=True) for b in message.blocks],
+                    created_at=None,
+                )
+            )
+            row.message_count = int(row.message_count or 0) + 1
+            row.updated_at = utc_now_iso()
+            db.add(row)
+            db.commit()
 
 
 def record_to_summary(rec: ChatRecord) -> ChatSummaryPublic:
