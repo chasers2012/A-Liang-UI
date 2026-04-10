@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
+import { defaultNewName } from "@/lib/default-new-name";
 import {
   createEvaluationProfile,
   getEvaluationProfile,
@@ -41,7 +42,9 @@ export function EvaluationProfileFormPage(props: Props) {
     : "/factors/profiles";
 
   const [templateLoading, setTemplateLoading] = useState(!isEdit);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() =>
+    isEdit ? "" : defaultNewName("新评价方案"),
+  );
   const [description, setDescription] = useState("");
   const [workflow, setWorkflow] = useState<WorkflowGraphPersisted>(EMPTY_WORKFLOW);
   const [canvasKey, setCanvasKey] = useState(0);

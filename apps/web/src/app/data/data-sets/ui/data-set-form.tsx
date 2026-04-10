@@ -31,6 +31,7 @@ import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
 import { cn } from "@/lib/utils";
+import { defaultNewName } from "@/lib/default-new-name";
 import {
   AliasMapEditor,
   depsFromAliasRows,
@@ -81,7 +82,7 @@ export function emptyDataSetForm(
 ): DataSetFormState {
   const preprocessingWorkflow = template ?? parsePersistedWorkflowGraphPayload({});
   return {
-    name: "",
+    name: defaultNewName("新数据集"),
     description: "",
     bindings: [
       {
@@ -464,7 +465,11 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [datasources, setDatasources] = useState<DataSourcePublic[]>([]);
   const [preprocessingWorkflowTemplate, setPreprocessingWorkflowTemplate] =
     useState<WorkflowGraphPersisted | null>(null);
-  const [form, setForm] = useState<DataSetFormState>(emptyDataSetForm);
+  const [form, setForm] = useState<DataSetFormState>(() =>
+    mode === "create"
+      ? emptyDataSetForm()
+      : { ...emptyDataSetForm(), name: "", description: "" },
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(mode === "edit");
   const [formError, setFormError] = useState<string | null>(null);

@@ -135,10 +135,6 @@ export default function NewFactorPage() {
           hideDescriptionField
         />
       </form>
-
-      <p className="text-sm text-muted-foreground">
-        保存成功后将进入该因子的详情页。
-      </p>
     </Page>
   );
 }

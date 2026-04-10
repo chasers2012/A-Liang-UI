@@ -7,6 +7,7 @@ import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/lib/quant-agent-api";
+import { defaultNewName } from "@/lib/default-new-name";
 
 import { FactorEditPageDescription } from "@/features/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/features/factors/ui/factor-edit-page-title";
@@ -73,7 +74,7 @@ function EvaluationMetricSourceEditor({
 
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => defaultNewName("新评价指标"));
   const [description, setDescription] = useState("");
 
   const [error, setError] = useState<string | null>(null);

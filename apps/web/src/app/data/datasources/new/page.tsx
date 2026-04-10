@@ -10,6 +10,7 @@ import {
   type DatasourcePluginPublic,
   type DataSourcePublic,
 } from "@/lib/quant-agent-api";
+import { defaultNewName } from "@/lib/default-new-name";
 
 import { commitDatasourceForm } from "../commit-datasource";
 import { emptyForm, type FormState } from "../form-model";
@@ -17,7 +18,10 @@ import { DatasourceForm } from "../ui/datasource-form";
 
 export default function NewDatasourcePage() {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>(() => ({
+    ...emptyForm(),
+    name: defaultNewName("新数据源"),
+  }));
   const [items, setItems] = useState<DataSourcePublic[] | null>(null);
   const [plugins, setPlugins] = useState<DatasourcePluginPublic[]>([]);
   const [formError, setFormError] = useState<string | null>(null);

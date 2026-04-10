@@ -9,6 +9,7 @@ import {
   createPreprocessor,
   getPreprocessorTemplate,
 } from "@/lib/quant-agent-api";
+import { defaultNewName } from "@/lib/default-new-name";
 
 import {
   PreprocessorForm,
@@ -16,7 +17,7 @@ import {
 } from "../ui/preprocessor-form";
 
 const emptyForm = (): PreprocessorFormState => ({
-  name: "",
+  name: defaultNewName("新预处理器"),
   description: "",
   source: "",
 });
