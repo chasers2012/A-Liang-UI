@@ -217,7 +217,7 @@ export type AgentChatStreamOptions = {
 };
 
 /**
- * POST ``/agent/chat/stream`` (SSE). Invokes ``onDelta`` for each text chunk; optional tool callbacks; throws ``ApiError`` on HTTP or stream ``error`` events.
+ * POST ``/chat/message`` (SSE). Invokes ``onDelta`` for each text chunk; optional tool callbacks; throws ``ApiError`` on HTTP or stream ``error`` events.
  */
 function handleParsedAgentChatSseEvent(
   ev: AgentChatSseParsed,
@@ -250,7 +250,7 @@ export async function postAgentChatStream(
   body: AgentChatRequestPublic,
   options: AgentChatStreamOptions,
 ): Promise<void> {
-  const url = `${getQuantAgentApiBase()}/agent/chat/stream`;
+  const url = `${getQuantAgentApiBase()}/chat/message`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -288,14 +288,14 @@ export async function postAgentChatStream(
 export function listAgentChats(): Promise<
   AgentChatSummaryPublic[]
 > {
-  return apiFetchJson<AgentChatSummaryPublic[]>("/agent/chat/sessions");
+  return apiFetchJson<AgentChatSummaryPublic[]>("/chat");
 }
 
 export function listArchivedAgentChats(): Promise<
   AgentChatArchivedSummaryPublic[]
 > {
   return apiFetchJson<AgentChatArchivedSummaryPublic[]>(
-    "/agent/chat/sessions/archived",
+    "/chat/archived",
   );
 }
 
@@ -303,14 +303,14 @@ export function restoreAgentChat(
   id: string,
 ): Promise<AgentChatDetailPublic> {
   return apiFetchJson<AgentChatDetailPublic>(
-    `/agent/chat/sessions/${encodeURIComponent(id)}/restore`,
+    `/chat/${encodeURIComponent(id)}/restore`,
     { method: "POST" },
   );
 }
 
 export function purgeArchivedAgentChat(id: string): Promise<void> {
   return apiFetchJson<void>(
-    `/agent/chat/sessions/${encodeURIComponent(id)}/archived`,
+    `/chat/${encodeURIComponent(id)}/archived`,
     { method: "DELETE" },
   );
 }
@@ -318,7 +318,7 @@ export function purgeArchivedAgentChat(id: string): Promise<void> {
 export function createAgentChat(
   body: AgentChatCreateBody,
 ): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>("/agent/chat/sessions", {
+  return apiFetchJson<AgentChatDetailPublic>("/chat", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -328,7 +328,7 @@ export function getAgentChat(
   id: string,
 ): Promise<AgentChatDetailPublic> {
   return apiFetchJson<AgentChatDetailPublic>(
-    `/agent/chat/sessions/${encodeURIComponent(id)}`,
+    `/chat/${encodeURIComponent(id)}`,
   );
 }
 
@@ -337,7 +337,7 @@ export function renameAgentChat(
   body: AgentChatRenameBody,
 ): Promise<AgentChatDetailPublic> {
   return apiFetchJson<AgentChatDetailPublic>(
-    `/agent/chat/sessions/${encodeURIComponent(id)}`,
+    `/chat/${encodeURIComponent(id)}`,
     {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -346,7 +346,7 @@ export function renameAgentChat(
 }
 
 export function archiveAgentChat(id: string): Promise<void> {
-  return apiFetchJson<void>(`/agent/chat/sessions/${encodeURIComponent(id)}`, {
+  return apiFetchJson<void>(`/chat/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

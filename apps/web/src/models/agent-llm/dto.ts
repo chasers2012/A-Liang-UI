@@ -43,7 +43,7 @@ export type AgentChatMessagePublic = {
   blocks: AgentAssistantBlockPublic[];
 };
 
-/** ``POST /agent/chat/stream`` 请求体中的单条消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
+/** ``POST /chat/message`` 请求体中的单条消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
 export type AgentChatRequestMessage = {
   id?: string | null;
   role: AgentChatRolePublic;
