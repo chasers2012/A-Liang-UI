@@ -55,7 +55,7 @@ export type AgentChatRequestPublic = {
   session_id?: string | null;
 };
 
-export type AgentChatSessionSummaryPublic = {
+export type AgentChatSummaryPublic = {
   id: string;
   title: string;
   created_at: string;
@@ -63,13 +63,13 @@ export type AgentChatSessionSummaryPublic = {
   message_count: number;
 };
 
-/** 与后端 ``ChatSessionArchivedSummaryPublic`` 一致。 */
-export type AgentChatSessionArchivedSummaryPublic =
-  AgentChatSessionSummaryPublic & {
+/** 与后端 ``ChatArchivedSummaryPublic`` 一致。 */
+export type AgentChatArchivedSummaryPublic =
+  AgentChatSummaryPublic & {
     archived_at: string;
   };
 
-export type AgentChatSessionDetailPublic = {
+export type AgentChatDetailPublic = {
   id: string;
   title: string;
   messages: AgentChatMessagePublic[];
@@ -77,10 +77,10 @@ export type AgentChatSessionDetailPublic = {
   updated_at: string;
 };
 
-export type AgentChatSessionCreateBody = {
+export type AgentChatCreateBody = {
   title: string;
 };
 
-export type AgentChatSessionRenameBody = {
+export type AgentChatRenameBody = {
   title: string;
 };

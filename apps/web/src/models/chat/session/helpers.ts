@@ -1,8 +1,8 @@
 import type {
   AgentChatMessagePublic,
   AgentChatRequestMessage,
-  AgentChatSessionDetailPublic,
-  AgentChatSessionSummaryPublic,
+  AgentChatDetailPublic,
+  AgentChatSummaryPublic,
   AgentChatToolCallPublic,
 } from "@/models";
 import type { AssistantBlock } from "@/models/chat/types";
@@ -57,10 +57,10 @@ export function patchToolInBlocks(
 }
 
 export function upsertSummary(
-  list: AgentChatSessionSummaryPublic[],
-  detail: AgentChatSessionDetailPublic,
-): AgentChatSessionSummaryPublic[] {
-  const nextSummary: AgentChatSessionSummaryPublic = {
+  list: AgentChatSummaryPublic[],
+  detail: AgentChatDetailPublic,
+): AgentChatSummaryPublic[] {
+  const nextSummary: AgentChatSummaryPublic = {
     id: detail.id,
     title: detail.title,
     created_at: detail.created_at,

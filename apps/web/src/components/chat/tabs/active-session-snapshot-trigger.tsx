@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   activeSessionIdAtom,
   chatSessionSummaryAtomFamily,
-  hasValidActiveChatSessionAtom,
+  hasValidActiveChatAtom,
 } from "@/models/chat/session";
 
 /** 对当前激活会话做 store 快照后回调；不因切换 tab 而重绘（仅订阅是否存在有效激活会话） */
@@ -23,7 +23,7 @@ export const ActiveSessionSnapshotTrigger = memo(function ActiveSessionSnapshotT
   children: ReactNode;
 }) {
   const store = useStore();
-  const canAct = useAtomValue(hasValidActiveChatSessionAtom);
+  const canAct = useAtomValue(hasValidActiveChatAtom);
 
   const onClick = useCallback(() => {
     const id = store.get(activeSessionIdAtom);

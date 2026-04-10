@@ -6,10 +6,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { AgentChatSessionSummaryPublic } from "@/models";
-import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatSessionAtom } from "@/models/chat/session";
+import type { AgentChatSummaryPublic } from "@/models";
+import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from "@/models/chat/session";
 
-import { ChatSessionTabItem } from "./chat-session-tab-item";
+import { ChatTabItem } from "./chat-session-tab-item";
 
 const TabScrollChevronButton = memo(function TabScrollChevronButton({
   direction,
@@ -38,12 +38,12 @@ const TabScrollChevronButton = memo(function TabScrollChevronButton({
   );
 });
 
-const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
+const ChatTabsTabList = memo(function ChatTabsTabList({
   sessions,
   disabled,
   onSelectSession,
 }: {
-  sessions: AgentChatSessionSummaryPublic[];
+  sessions: AgentChatSummaryPublic[];
   disabled: boolean;
   onSelectSession: (id: string) => void;
 }) {
@@ -72,7 +72,7 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
       onKeyDown={onTabListKeyDown}
     >
       {sessions.map((s) => (
-        <ChatSessionTabItem
+        <ChatTabItem
           key={s.id}
           id={s.id}
           title={s.title}
@@ -85,9 +85,9 @@ const ChatSessionTabsTabList = memo(function ChatSessionTabsTabList({
   );
 });
 
-export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea() {
+export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
   const sessions = useAtomValue(chatSessionsAtom);
-  const selectSession = useSetAtom(selectChatSessionAtom);
+  const selectSession = useSetAtom(selectChatAtom);
   const isBusy = useAtomValue(chatIsSendingAtom);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -148,7 +148,7 @@ export const ChatSessionTabsScrollArea = memo(function ChatSessionTabsScrollArea
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-end justify-end",
         )}
       >
-        <ChatSessionTabsTabList
+        <ChatTabsTabList
           sessions={sessions}
           disabled={isBusy}
           onSelectSession={selectSession}

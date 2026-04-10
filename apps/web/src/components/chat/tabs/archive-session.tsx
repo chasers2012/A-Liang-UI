@@ -5,7 +5,7 @@ import { useSetAtom } from "jotai";
 import { Archive } from "lucide-react";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { archiveChatSessionAtom } from "@/models/chat/session";
+import { archiveChatAtom } from "@/models/chat/session";
 
 import { ActiveSessionSnapshotTrigger } from "./active-session-snapshot-trigger";
 
@@ -19,7 +19,7 @@ export const ArchiveButton = memo(function ArchiveButton({
     sessionId: string;
     title: string;
   } | null>(null);
-  const archiveSession = useSetAtom(archiveChatSessionAtom);
+  const archiveSession = useSetAtom(archiveChatAtom);
 
   const onRequestOpen = useCallback((sessionId: string, title: string) => {
     setPayload({ sessionId, title });

@@ -4,10 +4,10 @@ import { memo } from "react";
 import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
-import { isActiveChatSessionAtomFamily } from "@/models/chat/session";
+import { isActiveChatAtomFamily } from "@/models/chat/session";
 
 
-export const ChatSessionTabItem = memo(function ChatSessionTabItem({
+export const ChatTabItem = memo(function ChatTabItem({
   id,
   title,
   messageCount,
@@ -20,7 +20,7 @@ export const ChatSessionTabItem = memo(function ChatSessionTabItem({
   disabled: boolean;
   onSelect: (id: string) => void;
 }) {
-  const isSelected = useAtomValue(isActiveChatSessionAtomFamily(id));
+  const isSelected = useAtomValue(isActiveChatAtomFamily(id));
   return (
     <button
       type="button"

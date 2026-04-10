@@ -1,8 +1,8 @@
 import {
   AgentChatMessagePublic,
-  AgentChatSessionDetailPublic,
+  AgentChatDetailPublic,
   TextBlockPublic,
-  getAgentChatSession,
+  getAgentChat,
 } from "@/lib/quant-agent-api";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
@@ -56,14 +56,14 @@ export const userMessageTextAtomFamily = atomFamily((id: string) =>
 
 export const sessionDetailAtomFamily = atomFamily(
   (sessionId: string | undefined | null) => {
-    const base = atom<AgentChatSessionDetailPublic | null>(null);
+    const base = atom<AgentChatDetailPublic | null>(null);
     return atom(
       (get) => {
         return get(base);
       },
       async (_get, set) => {
         if (!sessionId) return;
-        const detail = await getAgentChatSession(sessionId);
+        const detail = await getAgentChat(sessionId);
         set(base, detail);
         set(
           sessionUserMessageIdsAtomFamily(sessionId),

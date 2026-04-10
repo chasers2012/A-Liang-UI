@@ -10,7 +10,7 @@ import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { AgentChatSessionArchivedSummaryPublic } from "@/models";
+import type { AgentChatArchivedSummaryPublic } from "@/models";
 import {
   Card,
   CardContent,
@@ -43,7 +43,7 @@ function formatWhen(iso: string): string {
   return d.toLocaleString();
 }
 
-type ArchivedItem = AgentChatSessionArchivedSummaryPublic;
+type ArchivedItem = AgentChatArchivedSummaryPublic;
 
 type ArchivedActionsProps = {
   restoringId: string | null;
@@ -192,7 +192,7 @@ function ArchivedDeleteDialog({
   );
 }
 
-export default function ArchivedChatSessionsPage() {
+export default function ArchivedChatsPage() {
   const router = useRouter();
   const [items] = useAtom(archivedSessionsAtom);
   const [error] = useAtom(archiveErrorAtom);

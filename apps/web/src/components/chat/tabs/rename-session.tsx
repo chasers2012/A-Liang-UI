@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import {
   chatSessionSummaryAtomFamily,
-  renameChatSessionAtom,
+  renameChatAtom,
 } from "@/models/chat/session";
 
 import { ActiveSessionSnapshotTrigger } from "./active-session-snapshot-trigger";
@@ -30,7 +30,7 @@ const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
   onClose: () => void;
 }) {
   const [renameValue, setRenameValue] = useState(initialTitle);
-  const renameSession = useSetAtom(renameChatSessionAtom);
+  const renameSession = useSetAtom(renameChatAtom);
   const active = useAtomValue(chatSessionSummaryAtomFamily(sessionId));
 
   const submitRename = useCallback(() => {

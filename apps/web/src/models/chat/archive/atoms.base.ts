@@ -1,9 +1,9 @@
 import { atom } from "jotai";
 
-import type { AgentChatSessionArchivedSummaryPublic } from "@/models";
+import type { AgentChatArchivedSummaryPublic } from "@/models";
 
 export const archivedSessionsAtom = atom<
-  AgentChatSessionArchivedSummaryPublic[] | null
+  AgentChatArchivedSummaryPublic[] | null
 >(null);
 
 export const archiveErrorAtom = atom<string | null>(null);
@@ -12,6 +12,6 @@ export const archiveRestoringIdAtom = atom<string | null>(null);
 
 export const archiveDeletingIdAtom = atom<string | null>(null);
 
-export const archiveConfirmDeleteAtom = atom<AgentChatSessionArchivedSummaryPublic | null>(
+export const archiveConfirmDeleteAtom = atom<AgentChatArchivedSummaryPublic | null>(
   null,
 );

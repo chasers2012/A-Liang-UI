@@ -1,6 +1,6 @@
 import {
-  AgentChatSessionSummaryPublic,
-  listAgentChatSessions,
+  AgentChatSummaryPublic,
+  listAgentChats,
 } from "@/lib/quant-agent-api";
 import { atom } from "jotai";
 import { ApiError } from "next/dist/server/api-utils";
@@ -10,13 +10,13 @@ import { sessionDetailAtomFamily } from "./session-detail";
 import { activeSessionIdAtom } from "./active-session";
 import { chatErrorAtom } from "./atoms.base";
 
-export const chatSessionsAtom = atom<AgentChatSessionSummaryPublic[]>([]);
+export const chatSessionsAtom = atom<AgentChatSummaryPublic[]>([]);
 
 /** 从服务端重新拉取当前会话列表（例如归档恢复后同步首页侧栏）。 */
-export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
+export const refetchChatsListAtom = atom(null, async (get, set) => {
   set(chatErrorAtom, null);
   try {
-    const list = await listAgentChatSessions();
+    const list = await listAgentChats();
     set(chatSessionsAtom, list);
 
     const activeId = get(activeSessionIdAtom);
@@ -30,7 +30,7 @@ export const refetchChatSessionsListAtom = atom(null, async (get, set) => {
   }
 });
 
-export const selectChatSessionAtom = atom(
+export const selectChatAtom = atom(
   null,
   async (get, set, sessionId: string) => {
     set(activeSessionIdAtom, sessionId);

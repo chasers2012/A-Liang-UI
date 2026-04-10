@@ -10,7 +10,7 @@ import {
 } from "@/models/chat/session";
 import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/messages";
-import { ChatSessionTabs } from "./tabs";
+import { ChatTabs } from "./tabs";
 import { GeneratingIndicator } from "./messages/generating-indicator";
 import { AiChartThemeProvider } from "./messages/ai-chat-markdown";
 import { MarkdownWarmup } from "./messages/markdown-warmup";
@@ -43,7 +43,7 @@ export function HomeAiChat() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden w-full h-full">
       <HydrateChatState />
-      <ChatSessionTabs />
+      <ChatTabs />
       <div className="flex flex-1 flex-col gap-3 overflow-hidden">
         <div className="overflow-x-hidden overflow-y-auto w-full relative flex-1">
           <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>

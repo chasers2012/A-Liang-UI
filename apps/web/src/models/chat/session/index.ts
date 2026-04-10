@@ -3,11 +3,11 @@ import { startTransition } from "react";
 
 import {
   ApiError,
-  archiveAgentChatSession,
-  createAgentChatSession,
-  listAgentChatSessions,
+  archiveAgentChat,
+  createAgentChat,
+  listAgentChats,
   postAgentChatStream,
-  renameAgentChatSession,
+  renameAgentChat,
 } from "@/lib/quant-agent-api";
 import type { AgentChatMessagePublic } from "@/models";
 import {
@@ -31,8 +31,8 @@ import {
   activeSessionIdAtom,
   activeUserMessageIdsAtom,
   chatSessionSummaryAtomFamily,
-  hasValidActiveChatSessionAtom,
-  isActiveChatSessionAtomFamily,
+  hasValidActiveChatAtom,
+  isActiveChatAtomFamily,
 } from "./active-session";
 import {
   messagesAtomFamily,
@@ -50,8 +50,8 @@ import {
 } from "./segment-open";
 import {
   chatSessionsAtom,
-  refetchChatSessionsListAtom,
-  selectChatSessionAtom,
+  refetchChatsListAtom,
+  selectChatAtom,
 } from "./session-list";
 
 export {
@@ -70,11 +70,11 @@ export {
   toggleSegmentOpenAtomFamily,
   userMessageTextAtomFamily,
   activeSessionIdAtom,
-  isActiveChatSessionAtomFamily,
+  isActiveChatAtomFamily,
   chatSessionSummaryAtomFamily,
-  hasValidActiveChatSessionAtom,
-  refetchChatSessionsListAtom,
-  selectChatSessionAtom,
+  hasValidActiveChatAtom,
+  refetchChatsListAtom,
+  selectChatAtom,
 };
 
 function buildPayloadMessages(
@@ -172,12 +172,12 @@ const patchAssistantMessageAtom = atom(
 export const hydrateChatStateAtom = atom(null, async (get, set) => {
   if (get(chatHydratedAtom)) return;
   set(chatErrorAtom, null);
-  const list = await listAgentChatSessions();
+  const list = await listAgentChats();
   let activeId = get(activeSessionIdAtom);
   let nextList = list;
 
   if (list.length === 0) {
-    const created = await createAgentChatSession({ title: CHAT_DEFAULT_TITLE });
+    const created = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
     nextList = [
       {
         id: created.id,
@@ -197,17 +197,17 @@ export const hydrateChatStateAtom = atom(null, async (get, set) => {
   set(chatHydratedAtom, true);
 });
 
-export const createChatSessionAtom = atom(null, async (get, set) => {
-  const detail = await createAgentChatSession({ title: CHAT_DEFAULT_TITLE });
+export const createChatAtom = atom(null, async (get, set) => {
+  const detail = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
   set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
   await set(sessionDetailAtomFamily(detail.id));
   set(activeSessionIdAtom, detail.id);
 });
 
-export const renameChatSessionAtom = atom(
+export const renameChatAtom = atom(
   null,
   async (get, set, payload: { sessionId: string; title: string }) => {
-    const detail = await renameAgentChatSession(payload.sessionId, {
+    const detail = await renameAgentChat(payload.sessionId, {
       title: payload.title,
     });
     set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
@@ -218,11 +218,11 @@ export const renameChatSessionAtom = atom(
   },
 );
 
-export const archiveChatSessionAtom = atom(
+export const archiveChatAtom = atom(
   null,
   async (get, set, sessionId: string) => {
     const sessions = get(chatSessionsAtom);
-    await archiveAgentChatSession(sessionId);
+    await archiveAgentChat(sessionId);
 
     const nextSessions = sessions.filter((s) => s.id !== sessionId);
     set(chatSessionsAtom, nextSessions);
@@ -242,7 +242,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
 
   let targetSessionId = get(activeSessionIdAtom);
   if (!targetSessionId) {
-    const created = await createAgentChatSession({ title: CHAT_DEFAULT_TITLE });
+    const created = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
     set(chatSessionsAtom, (prev) => upsertSummary(prev, created));
     get(sessionDetailAtomFamily(created.id));
     set(activeSessionIdAtom, created.id);
@@ -343,7 +343,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
 
     if (shouldAutoTitle) {
       try {
-        await renameAgentChatSession(sessionId, {
+        await renameAgentChat(sessionId, {
           title: summarizeFirstUserMessage(
             extractTextFromBlocks(userTurn.blocks),
           ),

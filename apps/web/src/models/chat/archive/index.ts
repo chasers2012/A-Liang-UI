@@ -2,13 +2,13 @@ import { atom } from "jotai";
 
 import {
   ApiError,
-  listArchivedAgentChatSessions,
-  purgeArchivedAgentChatSession,
-  restoreAgentChatSession,
+  listArchivedAgentChats,
+  purgeArchivedAgentChat,
+  restoreAgentChat,
 } from "@/lib/quant-agent-api";
 import {
-  refetchChatSessionsListAtom,
-  selectChatSessionAtom,
+  refetchChatsListAtom,
+  selectChatAtom,
 } from "@/models/chat/session";
 
 import {
@@ -30,7 +30,7 @@ export {
 export const loadArchivedSessionsAtom = atom(null, async (_get, set) => {
   set(archiveErrorAtom, null);
   try {
-    const list = await listArchivedAgentChatSessions();
+    const list = await listArchivedAgentChats();
     set(archivedSessionsAtom, list);
   } catch (e) {
     set(archivedSessionsAtom, []);
@@ -47,9 +47,9 @@ export const restoreArchivedSessionAtom = atom(
     set(archiveRestoringIdAtom, sessionId);
     set(archiveErrorAtom, null);
     try {
-      await restoreAgentChatSession(sessionId);
-      await set(refetchChatSessionsListAtom);
-      await set(selectChatSessionAtom, sessionId);
+      await restoreAgentChat(sessionId);
+      await set(refetchChatsListAtom);
+      await set(selectChatAtom, sessionId);
       set(archivedSessionsAtom, (prev) =>
         prev ? prev.filter((session) => session.id !== sessionId) : prev,
       );
@@ -72,7 +72,7 @@ export const purgeArchivedSessionAtom = atom(
     set(archiveDeletingIdAtom, sessionId);
     set(archiveErrorAtom, null);
     try {
-      await purgeArchivedAgentChatSession(sessionId);
+      await purgeArchivedAgentChat(sessionId);
       set(archivedSessionsAtom, (prev) =>
         prev ? prev.filter((session) => session.id !== sessionId) : prev,
       );

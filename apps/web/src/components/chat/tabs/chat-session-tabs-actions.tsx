@@ -5,12 +5,12 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { chatIsSendingAtom, createChatSessionAtom } from "@/models/chat/session";
+import { chatIsSendingAtom, createChatAtom } from "@/models/chat/session";
 
 import { ArchiveButton } from "./archive-session";
 import { RenameButton } from "./rename-session";
 
-const NewChatSessionButton = memo(function NewChatSessionButton({
+const NewChatButton = memo(function NewChatButton({
   disabled,
   onCreate,
 }: {
@@ -31,13 +31,13 @@ const NewChatSessionButton = memo(function NewChatSessionButton({
   );
 });
 
-export const ChatSessionTabsActions = memo(function ChatSessionTabsActions() {
+export const ChatTabsActions = memo(function ChatTabsActions() {
   const isBusy = useAtomValue(chatIsSendingAtom);
-  const createSession = useSetAtom(createChatSessionAtom);
+  const createSession = useSetAtom(createChatAtom);
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      <NewChatSessionButton disabled={isBusy} onCreate={createSession} />
+      <NewChatButton disabled={isBusy} onCreate={createSession} />
       <RenameButton disabled={isBusy} />
       <ArchiveButton disabled={isBusy} />
     </div>
