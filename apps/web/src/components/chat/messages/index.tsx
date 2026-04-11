@@ -5,7 +5,6 @@ import { useAtomValue } from "jotai";
 
 import { activeUserMessageIdsAtom } from "@/models/chat/session";
 
-import "@incremark/theme/styles.css";
 import { ChatMessageCollapsible } from "./chat-message-collapsible";
 
 

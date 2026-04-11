@@ -14,19 +14,38 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
+import { SocketDescriptionTooltip } from "./socket-description-tooltip";
+
 export interface IParamRowProps<TValType = unknown> {
   label: string;
+  description?: string | null;
   readOnly: boolean;
   value: TValType;
   onChange: (v: TValType) => void;
 }
 
+function ParamFieldLabel({
+  label,
+  description,
+}: {
+  label: string;
+  description?: string | null;
+}) {
+  const d = description?.trim();
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      {d ? <SocketDescriptionTooltip description={d} /> : null}
+    </div>
+  );
+}
+
 
 export function BooleanParamRow(props: IParamRowProps<boolean>) {
-  const { label, readOnly, value, onChange } = props;
+  const { label, description, readOnly, value, onChange } = props;
   return (
     <div className="flex items-center justify-between gap-2 overflow-hidden">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <Switch
         className={cn({ "cursor-pointer": !readOnly })}
         size="sm"
@@ -39,12 +58,12 @@ export function BooleanParamRow(props: IParamRowProps<boolean>) {
 }
 
 export function StringParamRow(props: IParamRowProps<string>) {
-  const { label, readOnly, value, onChange } = props;
+  const { label, description, readOnly, value, onChange } = props;
   const s =
     value === null || value === undefined ? "" : String(value);
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <Input
         type="text"
         disabled={readOnly}
@@ -59,7 +78,7 @@ export function StringParamRow(props: IParamRowProps<string>) {
 type tOptionItem = string | number | { label: string | number; value: string | number };
 
 export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: tOptionItem[] }) {
-  const { label, options, readOnly, value, onChange } = props;
+  const { label, description, options, readOnly, value, onChange } = props;
   const current =
     value === null || value === undefined ? "" : String(value);
 
@@ -72,7 +91,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
 
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <Select
         modal={false}
         value={current}
@@ -113,10 +132,10 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
 }
 
 export function DateParamRow(props: IParamRowProps<string>) {
-  const { label, readOnly, value, onChange } = props;
+  const { label, description, readOnly, value, onChange } = props;
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <DatePicker
         disabled={readOnly}
         value={value}
@@ -128,12 +147,12 @@ export function DateParamRow(props: IParamRowProps<string>) {
 }
 
 export function DateTimeParamRow(props: IParamRowProps<string>) {
-  const { label, readOnly, value, onChange } = props;
+  const { label, description, readOnly, value, onChange } = props;
   const s =
     value === null || value === undefined ? "" : String(value);
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <DatePicker
         disabled={readOnly}
         value={s}
@@ -145,14 +164,14 @@ export function DateTimeParamRow(props: IParamRowProps<string>) {
 }
 
 export function NumberParamRow(props: IParamRowProps<number | undefined> & { maximum: number; minimum: number }) {
-  const { label, maximum, minimum, readOnly, value, onChange } = props;
+  const { label, description, maximum, minimum, readOnly, value, onChange } = props;
   const numStr =
     value === null || value === undefined
       ? ""
       : String(value);
   return (
     <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <ParamFieldLabel label={label} description={description} />
       <Input
         type="number"
         disabled={readOnly}

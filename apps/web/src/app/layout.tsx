@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { Providers } from "@/components/providers";
 
 import "./globals.css";
+import "@incremark/theme/styles.css";
 import { cn } from "@/lib/utils";
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-sans' });

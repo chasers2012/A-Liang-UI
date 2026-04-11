@@ -1,14 +1,24 @@
 "use client";
 
-import { IncremarkContent } from "@incremark/react";
+import {
+  IncremarkContent,
+  type IncremarkContentProps,
+} from "@incremark/react";
 
 import { cn } from "@/lib/utils";
 
-export function MarkdownContent(props: { content: string; className?: string }) {
-  const { content, className } = props;
+export type MarkdownContentProps = IncremarkContentProps & {
+  /** 包裹 IncremarkContent 的外层容器 className */
+  className?: string;
+};
+
+export function MarkdownContent({
+  className,
+  ...incremarkProps
+}: MarkdownContentProps) {
   return (
     <div className={cn("ai-chat-md wrap-break-word text-xs leading-relaxed", className)}>
-      <IncremarkContent content={content} />
+      <IncremarkContent {...incremarkProps} />
     </div>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { IncremarkShadcnThemeProvider } from "@/components/incremark-shadcn-theme-provider";
+import { MarkdownWarmup } from "@/components/markdown/markdown-warmup";
 import { Provider } from "jotai";
 import { ThemeProvider } from "next-themes";
 
@@ -13,9 +15,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       storageKey="quant-agent-theme"
     >
-      <TooltipProvider>
-        <Provider>{children}</Provider>
-      </TooltipProvider>
+      <IncremarkShadcnThemeProvider>
+        <TooltipProvider>
+          <Provider>
+            <div className="sr-only" aria-hidden="true">
+              <MarkdownWarmup />
+            </div>
+            {children}
+          </Provider>
+        </TooltipProvider>
+      </IncremarkShadcnThemeProvider>
     </ThemeProvider>
   );
 }

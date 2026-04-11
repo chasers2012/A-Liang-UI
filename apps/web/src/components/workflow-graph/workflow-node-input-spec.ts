@@ -18,6 +18,7 @@ export function inputSpecToNodeParamModel(
   return {
     key: s.name,
     label: (s.label ?? "").trim() || s.name,
+    description: s.description ?? undefined,
     type: s.value_type,
     default: s.default as NodeParamModel["default"],
     minimum: s.minimum ?? undefined,

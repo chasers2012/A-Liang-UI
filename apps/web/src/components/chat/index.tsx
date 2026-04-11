@@ -12,9 +12,6 @@ import { AiChatComposer } from "@/components/chat/chat-composer";
 import { AiChatMessages } from "@/components/chat/messages";
 import { ChatTabs } from "./tabs";
 import { GeneratingIndicator } from "./messages/generating-indicator";
-import { AiChartThemeProvider } from "./messages/ai-chat-markdown";
-import { MarkdownWarmup } from "./messages/markdown-warmup";
-
 
 function ChatError() {
   const errorText = useAtomValue(chatErrorAtom);
@@ -48,12 +45,7 @@ export function HomeAiChat() {
         <div className="overflow-x-hidden overflow-y-auto w-full relative flex-1">
           <div className="h-3 w-full sticky top-0 left-0 right-0 z-11 bg-background"></div>
           <div id="chat-messages-container" className="w-full flex flex-col gap-3 pb-3 pl-9 pr-3">
-            <AiChartThemeProvider>
-              <div className="hidden">
-                <MarkdownWarmup />
-              </div>
-              <AiChatMessages />
-            </AiChartThemeProvider>
+            <AiChatMessages />
             <GeneratingIndicator />
           </div>
         </div>

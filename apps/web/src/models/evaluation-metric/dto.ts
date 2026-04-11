@@ -3,6 +3,8 @@ export interface NodeParamModel {
   key: string;
   label: string;
   type: string;
+  /** 与 Socket / NodeParam 序列化字段一致，Markdown 说明 */
+  description?: string | null;
   default?: string | number | boolean | null;
   minimum?: number | null;
   maximum?: number | null;
