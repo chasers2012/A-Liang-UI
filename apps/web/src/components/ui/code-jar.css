@@ -1,0 +1,85 @@
+/* Prism tokens inside CodeJar editor — scoped; follows app light/dark */
+
+.code-jar-editor .token.comment,
+.code-jar-editor .token.prolog,
+.code-jar-editor .token.doctype,
+.code-jar-editor .token.cdata {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.code-jar-editor .token.punctuation,
+.code-jar-editor .token.operator {
+  color: var(--muted-foreground);
+}
+
+.code-jar-editor .token.keyword,
+.code-jar-editor .token.constant,
+.code-jar-editor .token.builtin {
+  color: oklch(0.45 0.19 264);
+}
+
+.code-jar-editor .token.string,
+.code-jar-editor .token.char,
+.code-jar-editor .token.attr-value,
+.code-jar-editor .token.regex {
+  color: oklch(0.42 0.14 145);
+}
+
+.code-jar-editor .token.number,
+.code-jar-editor .token.boolean {
+  color: oklch(0.5 0.16 55);
+}
+
+.code-jar-editor .token.function,
+.code-jar-editor .token.method {
+  color: oklch(0.48 0.14 230);
+}
+
+.code-jar-editor .token.class-name,
+.code-jar-editor .token.maybe-class-name {
+  color: oklch(0.42 0.12 300);
+}
+
+.code-jar-editor .token.decorator,
+.code-jar-editor .token.annotation {
+  color: oklch(0.48 0.12 310);
+}
+
+.code-jar-editor .token.important,
+.code-jar-editor .token.variable {
+  color: var(--foreground);
+}
+
+.dark .code-jar-editor .token.keyword,
+.dark .code-jar-editor .token.constant,
+.dark .code-jar-editor .token.builtin {
+  color: oklch(0.78 0.12 264);
+}
+
+.dark .code-jar-editor .token.string,
+.dark .code-jar-editor .token.char,
+.dark .code-jar-editor .token.attr-value,
+.dark .code-jar-editor .token.regex {
+  color: oklch(0.72 0.12 150);
+}
+
+.dark .code-jar-editor .token.number,
+.dark .code-jar-editor .token.boolean {
+  color: oklch(0.78 0.14 75);
+}
+
+.dark .code-jar-editor .token.function,
+.dark .code-jar-editor .token.method {
+  color: oklch(0.75 0.1 230);
+}
+
+.dark .code-jar-editor .token.class-name,
+.dark .code-jar-editor .token.maybe-class-name {
+  color: oklch(0.78 0.1 300);
+}
+
+.dark .code-jar-editor .token.decorator,
+.dark .code-jar-editor .token.annotation {
+  color: oklch(0.72 0.1 310);
+}

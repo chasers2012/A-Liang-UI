@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
+import { CodeJar } from "@/components/ui/code-jar";
 import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
 
@@ -116,7 +116,7 @@ export function PreprocessorForm({
           {templateLoading && (
             <div className="text-sm text-muted-foreground">正在加载源码模板…</div>
           )}
-          <FactorCodeJar
+          <CodeJar
             id={
               editorMode === "create"
                 ? "new-preprocessor-source"

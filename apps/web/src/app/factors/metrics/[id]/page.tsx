@@ -7,6 +7,7 @@ import { Pencil } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
+import { CodeJar } from "@/components/ui/code-jar";
 import {
   Card,
   CardContent,
@@ -86,9 +87,12 @@ export default function EvaluationMetricDetailPage() {
           <CardTitle>源码</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="max-h-[min(60vh,32rem)] overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-relaxed">
-            {row.source}
-          </pre>
+          <CodeJar
+            id={`evaluation-metric-detail-source-${id}`}
+            readOnly
+            value={row.source}
+            className="min-h-0 max-h-[min(60vh,32rem)] sm:min-h-0"
+          />
         </CardContent>
       </Card>
     </Page>

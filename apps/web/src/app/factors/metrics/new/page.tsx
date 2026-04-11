@@ -11,7 +11,7 @@ import { defaultNewName } from "@/lib/default-new-name";
 
 import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
-import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
+import { CodeJar } from "@/components/ui/code-jar";
 import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
@@ -57,7 +57,7 @@ function EvaluationMetricSourceEditor({
   }, [displaySource, sourceRef]);
 
   return (
-    <FactorCodeJar
+    <CodeJar
       id="new-evaluation-metric-source"
       value={displaySource}
       onChange={(v) => {

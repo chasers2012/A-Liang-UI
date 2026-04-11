@@ -11,7 +11,7 @@ import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
-import { FactorCodeJar } from "@/components/factors/ui/factor-code-jar";
+import { CodeJar } from "@/components/ui/code-jar";
 import { Page } from "@/components/page";
 
 const EVALUATION_METRIC_EDIT_FORM_ID = "evaluation-metric-edit-form";
@@ -151,7 +151,7 @@ export default function EditEvaluationMetricPage() {
         )}
         <div className="space-y-2">
           <Label>源码</Label>
-          <FactorCodeJar
+          <CodeJar
             id="edit-evaluation-metric-source"
             value={source}
             onChange={setSource}

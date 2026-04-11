@@ -12,7 +12,7 @@ import {
   parseUserFactorMetadataFromSource,
 } from "../factor-metadata-sync";
 import type { FactorFormState } from "../form-model";
-import { FactorCodeJar } from "./factor-code-jar";
+import { CodeJar } from "@/components/ui/code-jar";
 import { FactorDependenciesCombobox } from "./factor-dependencies-combobox";
 import { FactorGroupCombobox } from "./factor-group-combobox";
 
@@ -142,7 +142,7 @@ export function FactorFormFields({
       </div>
       <div className="space-y-2">
         <Label htmlFor={pid("source")}>Python 源码</Label>
-        <FactorCodeJar
+        <CodeJar
           id={pid("source")}
           value={form.source}
           onChange={(source) => set({ source })}
