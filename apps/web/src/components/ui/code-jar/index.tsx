@@ -4,6 +4,8 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
+import "./code-jar.css";
+
 type CodeJarApi = {
   updateCode: (code: string, callOnUpdate?: boolean) => void;
   onUpdate: (callback: (code: string) => void) => void;
