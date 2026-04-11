@@ -30,6 +30,20 @@ function toPlainTextPreview(input?: string | null, maxLength = 120): string {
   return `${plain.slice(0, maxLength)}...`;
 }
 
+/** 列表摘要：只取描述中第一个非空行，再作纯文本预览。 */
+function toPlainTextFirstLinePreview(input?: string | null, maxLength = 120): string {
+  if (!input) return "";
+  let first = "";
+  for (const line of input.split(/\r?\n/)) {
+    const t = line.trim();
+    if (t) {
+      first = t;
+      break;
+    }
+  }
+  return toPlainTextPreview(first, maxLength);
+}
+
 export function WorkflowNodeTypeList(props: {
   items: WorkflowNodeTypeListItem[];
   title?: string;
@@ -124,37 +138,40 @@ export function WorkflowNodeTypeList(props: {
                 {g.category}
               </div>
               <ul className="space-y-2">
-                {g.items.map((it) => (
-                  <li
-                    key={it.type}
-                    className="cursor-pointer select-none rounded border border-border/40 bg-muted/30 px-2 py-2 hover:bg-muted/50"
-                    title={it.type}
-                    role="button"
-                    tabIndex={0}
-                    draggable={draggable}
-                    onClick={() => onSelectType?.(it.type)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        onSelectType?.(it.type);
-                      }
-                    }}
-                    onDragStart={(e) => {
-                      if (!draggable) return;
-                      e.dataTransfer.setData(dragMime, it.type);
-                      e.dataTransfer.effectAllowed = "copy";
-                    }}
-                  >
-                    <div className="truncate text-sm font-medium leading-5 text-foreground">
-                      {it.label}
-                    </div>
-                    {it.description ? (
-                      <p className="mt-0.5 pl-2 pt-1 text-[11px] leading-4 text-muted-foreground">
-                        {toPlainTextPreview(it.description)}
-                      </p>
-                    ) : null}
-                  </li>
-                ))}
+                {g.items.map((it) => {
+                  const descPreview = toPlainTextFirstLinePreview(it.description);
+                  return (
+                    <li
+                      key={it.type}
+                      className="cursor-pointer select-none rounded border border-border/40 bg-muted/30 px-2 py-2 hover:bg-muted/50"
+                      title={it.type}
+                      role="button"
+                      tabIndex={0}
+                      draggable={draggable}
+                      onClick={() => onSelectType?.(it.type)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelectType?.(it.type);
+                        }
+                      }}
+                      onDragStart={(e) => {
+                        if (!draggable) return;
+                        e.dataTransfer.setData(dragMime, it.type);
+                        e.dataTransfer.effectAllowed = "copy";
+                      }}
+                    >
+                      <div className="truncate text-sm font-medium leading-5 text-foreground">
+                        {it.label}
+                      </div>
+                      {descPreview ? (
+                        <p className="mt-0.5 pl-2 pt-1 text-[11px] leading-4 text-muted-foreground">
+                          {descPreview}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           ))}

@@ -16,12 +16,14 @@ import {
   inputSpecToNodeParamModel,
   isWireInputSpec,
 } from "../../workflow-node-input-spec";
+import { SocketDescriptionTooltip } from "./socket-description-tooltip";
 import { SocketRow } from "./socket-row";
 
 
 export type WorkflowStepNodeData = {
   backendType: string;
   label: string;
+  description?: string;
   inputs: WorkflowNodeInputSpec[];
   outputs: WorkflowSocketDefinition[];
   params: Record<string, unknown>;
@@ -78,10 +80,13 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium leading-5">
+        <div className="flex min-w-0 items-center gap-1">
+          <div className="min-w-0 truncate text-sm font-medium leading-5">
             {data.label}
           </div>
+          {data.description?.trim() ? (
+            <SocketDescriptionTooltip description={data.description.trim()} />
+          ) : null}
         </div>
       </div>
 

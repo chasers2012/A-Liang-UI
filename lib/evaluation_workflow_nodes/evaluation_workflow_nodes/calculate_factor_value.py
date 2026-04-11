@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from evaluate import AlphalensFactorEvaluator
 from factor import Factor
@@ -21,16 +21,117 @@ from evaluation_workflow_nodes.constants import (
     VALUE_TYPE_FACTOR,
     VALUE_TYPE_FACTOR_DATA_CLEAN,
     VALUE_TYPE_SCALAR_JSON,
+    VALUE_TYPE_SERIES,
 )
+
+
+def _int_or_tuple_from_numeric_seq(
+    seq: list | tuple,
+    *,
+    if_empty: int | tuple[float, ...] | None,
+) -> int | tuple[float, ...] | None:
+    if len(seq) == 0:
+        return if_empty
+    if len(seq) == 1:
+        return int(float(seq[0]))
+    return tuple(float(x) for x in seq)
+
+
+def _int_or_tuple_from_csv(
+    s: str,
+    *,
+    if_empty: int | tuple[float, ...] | None,
+) -> int | tuple[float, ...] | None:
+    tokens = [p.strip() for p in s.split(",") if p.strip()]
+    if not tokens:
+        return if_empty
+    if len(tokens) == 1:
+        return int(float(tokens[0]))
+    return tuple(float(t) for t in tokens)
+
+
+def _parse_quantiles_kwarg(raw: Any, *, default: int = 5) -> int | tuple[float, ...]:
+    """
+    Parse ``quantiles`` from StringNodeParam (comma-separated) or legacy persisted JSON.
+
+    Alphalens: one integer = equal-sized bucket count; 2+ floats in [0, 1] = quantile breakpoints.
+    """
+    if raw is None or isinstance(raw, bool):
+        return default
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        return int(raw)
+    if isinstance(raw, (list, tuple)):
+        return cast(
+            int | tuple[float, ...],
+            _int_or_tuple_from_numeric_seq(raw, if_empty=default),
+        )
+    if isinstance(raw, str):
+        return cast(
+            int | tuple[float, ...],
+            _int_or_tuple_from_csv(raw, if_empty=default),
+        )
+    return default
+
+
+def _parse_bins_kwarg(raw: Any) -> int | tuple[float, ...] | None:
+    """
+    Parse optional ``bins`` from StringNodeParam or legacy scalar_json (int / list).
+
+    Alphalens: int = equal-width bin count; sequence = explicit bin edges. Empty / absent -> None.
+    """
+    if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, float):
+        return int(raw)
+    if isinstance(raw, (list, tuple)):
+        return _int_or_tuple_from_numeric_seq(raw, if_empty=None)
+    if isinstance(raw, str):
+        return _int_or_tuple_from_csv(raw, if_empty=None)
+    return None
+
+
+def _parse_periods_kwarg(raw: Any) -> tuple[int, ...]:
+    default = (1, 5, 10, 20)
+    if raw is None:
+        return default
+    if isinstance(raw, (list, tuple)):
+        if len(raw) == 0:
+            return default
+        return tuple(int(p) for p in raw)
+    if isinstance(raw, str):
+        parts = [p.strip() for p in raw.split(",") if p.strip()]
+        return tuple(int(p) for p in parts) if parts else default
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        return (int(raw),)
+    return default
+
+
+def _coerce_max_loss_kwarg(raw: Any, *, default: float = 0.5) -> float:
+    if raw is None:
+        return default
+    return float(raw)
+
+
+def _coerce_filter_zscore_kwarg(raw: Any) -> int | float | None:
+    if raw is None:
+        return None
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, float) and raw != raw:  # NaN
+        return None
+    return float(raw) if isinstance(raw, float) else int(raw)
 
 
 @workflow_node(
     label="计算因子",
     description=(
-        "将因子数据、价格数据及（可选）分组映射整理为 MultiIndex（时间戳、资产）对齐的 DataFrame，"
-        "格式适用于 Alphalens 各函数。输出包含因子值、各持有期前向收益、因子分位，以及可选的 group 列。"
-        "若数据已完全符合 get_clean_factor_and_forward_returns 的约定，也可跳过等价步骤直接接入 Alphalens。"
-        "本节点通过 Factor 与数据集加载价格，并调用 get_clean_factor_and_forward_returns（经 prepare_factor_data）。"
+        "将因子数据、价格数据及分组映射整理为 DataFrame，其 MultiIndex（时间戳、资产）对齐；"
+        "返回的数据格式适用于 Alphalens 各函数。"
+        "本节点通过 Factor 与数据集加载价格，并调用 get_clean_factor_and_forward_returns。"
     ),
     category=FACTOR_EVALUATION_CATEGORY,
     input_sockets=[
@@ -39,32 +140,21 @@ from evaluation_workflow_nodes.constants import (
             required=True,
             value_type=VALUE_TYPE_FACTOR,
             label="因子",
-            description=(
-                "对应 Alphalens 的 factor：双层索引 Series，第 0 层为时间戳、第 1 层为资产代码，"
-                "值为单一 alpha 因子。本节点输入为 Factor 类，运行时在数据集区间与标的上调用 calculate 生成上述序列。"
-            ),
         ),
         Socket(
             "data_set",
             required=True,
             value_type=VALUE_TYPE_DATA_SET,
             label="数据集",
-            description=(
-                "提供评价区间、标的范围及依赖解析，以构造 Alphalens 所需的 prices。"
-                "prices 须为宽表 DataFrame：行为日期、列为资产；须覆盖因子涉及的时间段，且在每个 (日期, 资产) 之后"
-                "仍有不少于 periods 中最大持有期数的行情，用于计算前向收益。"
-                "各 (日期, 资产) 上的价格应对应于因子可交易时刻（一般为因子可得后的下一有效价；若延迟交易则对应该成交时刻价），"
-                "以避免前视偏差或收益滞后。评价区间与标的列表在本数据集上配置。"
-            ),
         ),
-        NumberNodeParam(
+        StringNodeParam(
             "quantiles",
             required=True,
-            default=5,
+            default="5",
             label="分位数",
             description=(
-                "因子分桶用的等样本量分位个数；亦可由分位点序列定义非等量桶（如 [0, .10, .5, .90, 1.] 或 [.05, .5, .95]）。"
-                "quantiles 与 bins 二者只能其一非空（本节点以数字参数传入整数分位个数）。"
+                "因子分桶：填**单个整数**（如 `5`）表示等样本量的分位个数；填**英文逗号分隔**的 0–1 分位点序列（如 `0, 0.10, 0.5, 0.90, 1.0`）表示非等量桶。"
+                "与 `bins` 二选一；`zero_aware` 为 True 时仅支持整数分位个数（Alphalens 限制）。"
             ),
         ),
         StringNodeParam(
@@ -100,27 +190,26 @@ from evaluation_workflow_nodes.constants import (
         Socket(
             "groupby",
             required=False,
-            value_type=VALUE_TYPE_SCALAR_JSON,
+            value_type=VALUE_TYPE_SERIES,
             label="分组",
             description=(
                 "或为按 (日期, 资产) 索引的 MultiIndex Series，给出各期各标的的组代码；"
                 "或为 dict（资产 → 组）。传入 dict 时假定该映射在因子样本整段时期内不变。未连接则为 None。"
             ),
         ),
-        Socket(
+        StringNodeParam(
             "bins",
             required=False,
-            value_type=VALUE_TYPE_SCALAR_JSON,
             label="自定义分位边界",
             description=(
-                "等数值宽度的分箱个数，或显式箱边界序列（如 [-4, -2, -0.5, 0, 10]），按因子取值本身间距划分，"
+                '等数值宽度的分箱个数，或显式箱边界序列（如 "-4, -2, -0.5, 0, 10"），按因子取值本身间距划分，'
                 "适合离散取值因子。与 quantiles 二选一。未连接则为 None。"
             ),
         ),
         NumberNodeParam(
             "filter_zscore",
             required=False,
-            default=20,
+            default=None,
             label="Z-score 过滤",
             description=(
                 "将偏离均值超过该倍数标准差的前向收益置为 NaN；在 Alphalens 中可设为 None 以关闭过滤。"
@@ -159,9 +248,17 @@ from evaluation_workflow_nodes.constants import (
             value_type=VALUE_TYPE_FACTOR_DATA_CLEAN,
             label="清洗后因子数据",
             description=(
-                "MultiIndex（日期、资产），含各持有期前向收益列（列名符合 pandas Timedelta 可解析格式，如 1D、5D、10D 等）、"
-                "factor、factor_quantile；若曾传入 groupby 则含 group。"
-                "结构示意（示例数据来自 Alphalens 文档；前向收益列名随 periods 变化，无 groupby 时无 group 列）：\n\n"
+                "### merged_data\n\n"
+                "`pd.DataFrame`，**MultiIndex** 索引：第 0 层为日期，第 1 层为资产。包含：\n\n"
+                "- 单一 alpha 因子的取值\n"
+                "- 各持有期的前向收益\n"
+                "- 因子值所属的分位/分桶\n"
+                "- （可选）资产所属分组\n\n"
+                "前向收益列名须为 **`pd.Timedelta`** 可解析格式，例如 `1D`、`30m`、`3h15m`、`1D1h`。\n\n"
+                "日期索引的 **`freq`**（`merged_data.index.levels[0].freq`）会根据输入推断为交易日历（**`pandas.DateOffset`**；"
+                "详见 **`infer_trading_calendar`**），目前仅用于累积收益计算。\n\n"
+                "### 结构示意\n\n"
+                "示例来自 Alphalens 文档；前向收益列名随 `periods` 变化；未使用 `groupby` 时无 `group` 列。\n\n"
                 "| date | asset | 1D | 5D | 10D | factor | group | factor_quantile |\n"
                 "|------|-------|-----|-----|-----|--------|-------|-----------------|\n"
                 "| 2014-01-01 | AAPL | 0.09 | -0.01 | -0.079 | 0.5 | G1 | 3 |\n"
@@ -169,17 +266,8 @@ from evaluation_workflow_nodes.constants import (
                 "| 2014-01-01 | CMG | 0.03 | 0.09 | 0.036 | 1.7 | G2 | 1 |\n"
                 "| 2014-01-01 | DAL | -0.02 | -0.06 | -0.029 | -0.1 | G3 | 5 |\n"
                 "| 2014-01-01 | LULU | -0.03 | 0.05 | -0.009 | 2.7 | G1 | 2 |\n\n"
-                "日期索引 freq 会按输入推断为交易日历（pandas DateOffset），主要用于累积收益计算。"
             ),
-        ),
-        Socket(
-            "quantiles",
-            value_type="number",
-            label="分位数",
-            description=(
-                "本次用于因子分桶的 quantiles 参数（整数），与输入一致，可传给下游分位或绩效相关节点。"
-            ),
-        ),
+        )
     ],
 )
 class CalculateFactorValueNode:
@@ -201,26 +289,20 @@ class CalculateFactorValueNode:
             instrument_codes=data_set.instrument_codes,
             long_short=bool(kwargs.get("long_short", True)),
         )
-        quantiles_n = int(kwargs.get("quantiles", 5))
-        periods_raw = kwargs.get("periods", "1, 5, 10, 20")
-        if isinstance(periods_raw, (list, tuple)):
-            periods = tuple(int(p) for p in periods_raw)
-        elif isinstance(periods_raw, str):
-            parts = [p.strip() for p in periods_raw.split(",") if p.strip()]
-            periods = tuple(int(p) for p in parts) if parts else (1, 5, 10, 20)
-        else:
-            periods = (1, 5, 10, 20)
-        max_loss = float(kwargs.get("max_loss", 0.5))
-        clean = ev.prepare_factor_data(
-            quantiles=quantiles_n,
+        quantiles = _parse_quantiles_kwarg(kwargs.get("quantiles", "5"))
+        periods = _parse_periods_kwarg(kwargs.get("periods", "1, 5, 10, 20"))
+        max_loss = _coerce_max_loss_kwarg(kwargs.get("max_loss", 0.5))
+        bins = _parse_bins_kwarg(kwargs.get("bins"))
+        filter_zscore = _coerce_filter_zscore_kwarg(kwargs.get("filter_zscore"))
+        return ev.prepare_factor_data(
+            quantiles=quantiles,
             periods=periods,
             max_loss=max_loss,
             groupby=kwargs.get("groupby"),
             binning_by_group=bool(kwargs.get("binning_by_group", False)),
-            bins=kwargs.get("bins"),
-            filter_zscore=kwargs.get("filter_zscore", 20),
+            bins=bins,
+            filter_zscore=filter_zscore,
             groupby_labels=kwargs.get("groupby_labels"),
             zero_aware=bool(kwargs.get("zero_aware", False)),
             cumulative_returns=bool(kwargs.get("cumulative_returns", True)),
         )
-        return clean, quantiles_n

@@ -36,6 +36,7 @@ from evaluation_workflow_nodes.visiualization.echarts import EchartsLineNode
 
 
 def build_returns_tear_workflow_template() -> dict:
+
     def n(node_id: str, socket: str) -> WorkflowEndpoint:
         return WorkflowEndpoint(kind="node", node_id=node_id, socket=socket)
 
@@ -117,7 +118,7 @@ def build_returns_tear_workflow_template() -> dict:
                 type=echarts_type,
                 pos=[1180, -180],
                 params={
-                    "title": "Mean Return by Quantile",
+                    "title": "Mean Period Wise Return By Factor Quantile",
                     "series_type": "bar",
                     "y_fields": "*",
                     "show_legend": True,

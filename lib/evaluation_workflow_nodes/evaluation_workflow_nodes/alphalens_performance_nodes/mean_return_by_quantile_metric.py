@@ -11,7 +11,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
 
 @workflow_node(
     label="Mean Return by Quantile",
-    description="按因子分位计算均值收益与标准误，可按日期或分组统计。",
+    description="计算给定未来收益列中各因子分位数的平均收益。",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -19,7 +19,7 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             required=True,
             value_type="factor_data_clean",
             label="清洗后因子数据",
-            description="由计算因子节点输出的 factor_data_clean",
+            description="由`计算因子`节点输出",
         ),
     ],
     workflow_parameters=[
@@ -28,21 +28,21 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             required=False,
             default=False,
             label="按日期输出",
-            description="True 时返回按日期拆分的结果",
+            description="如果为`True`，则分别计算每个日期的分位数桶收益率。",
         ),
         BooleanNodeParam(
             "by_group",
             required=False,
             default=False,
             label="按分组输出",
-            description="True 时返回按 group 拆分结果",
+            description="如果为`True`，则分别计算每个组的分位数桶收益率。",
         ),
         BooleanNodeParam(
             "demeaned",
             required=False,
             default=True,
             label="去均值",
-            description="是否按横截面去均值",
+            description="计算去均值平均收益率（多空投资组合）",
         ),
         BooleanNodeParam(
             "group_adjust",
@@ -57,13 +57,13 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             "mean_return_by_quantile",
             value_type="dataframe",
             label="分位平均收益",
-            description="各分位桶的平均收益\n\n**数据格式**\n- pd.DataFrame，index 为 quantile（可含 date/group 层级），columns 为收益周期",
+            description="按指定因子分位数计算各时期平均收益率。",
         ),
         Socket(
             "mean_return_by_quantile_std_error",
             value_type="dataframe",
             label="分位平均收益标准误",
-            description="各分位桶收益的标准误\n\n**数据格式**\n- pd.DataFrame，index/columns 与 mean_return_by_quantile 对齐",
+            description="按指定分位数计算的收益率标准误差。",
         ),
     ],
     entry="evaluate",

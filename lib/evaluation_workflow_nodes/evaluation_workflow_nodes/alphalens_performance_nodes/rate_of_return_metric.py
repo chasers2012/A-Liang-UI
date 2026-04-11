@@ -19,7 +19,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             required=True,
             value_type="dataframe",
             label="多周期收益",
-            description="列为不同持有期的收益矩阵",
+            description="包含收益率值的 DataFrame，列标题表示收益率周期。",
         ),
     ],
     workflow_parameters=[
@@ -28,7 +28,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             required=False,
             default="",
             label="基准周期",
-            description="为空时自动使用输入 dataframe 的首列",
+            description="转换中使用的基准周期长度。它必须遵循 pandas.Timedelta 构造函数的格式（例如，`1 days`、`1D`、`30m`、`3h`、`1D1h` 等）。",
         ),
     ],
     output_sockets=[
@@ -36,7 +36,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             "rate_of_return",
             value_type="dataframe",
             label="单位收益率",
-            description="折算到基准周期后的收益率\n\n**数据格式**\n- pd.DataFrame，index 与输入一致，columns 为各周期收益率列",
+            description="与输入格式相同的 DataFrame，但收益率值为 `one_period_len`。",
         ),
     ],
     entry="evaluate",

@@ -183,6 +183,7 @@ function parsePersistedNode(
     type,
     label: str(n.label) ?? type,
     category: str(n.category),
+    description: str(n.description),
     inputs: arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
     outputs: arrayOrEmpty<WorkflowSocketDefinition>(n.outputs),
     pos: [px, py],
@@ -278,6 +279,7 @@ export function toReactFlowNodes(
       data: {
         backendType: n.type,
         label: def?.label ?? n.label ?? n.type,
+        description: def?.description ?? n.description,
         // Prefer persisted sockets when available, so dynamic node sockets
         // (e.g. DataSetFramesInput per-datasource outputs) are preserved.
         inputs:
@@ -480,6 +482,7 @@ function persistedNodesWithAppendableParams(
       type: backendType,
       label: str(data.label) ?? backendType,
       category: str(data.category),
+      description: str(data.description),
       inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
       outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
       pos: [n.position.x, n.position.y],

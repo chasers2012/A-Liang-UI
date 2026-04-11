@@ -218,7 +218,7 @@ class AlphalensFactorEvaluator:
 
     def prepare_factor_data(
         self,
-        quantiles: int = 5,
+        quantiles: int | tuple[float, ...] = 5,
         periods: tuple[int, ...] = (1, 5, 10, 20),
         max_loss: float = 0.5,
         *,

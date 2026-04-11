@@ -318,6 +318,7 @@ export const WorkflowGraphCanvas = forwardRef<
             data: {
               backendType: typeKey,
               label: def?.label ?? typeKey,
+              description: def?.description,
               inputs: def?.inputs ?? [],
               outputs: def?.outputs ?? [],
               params: {},

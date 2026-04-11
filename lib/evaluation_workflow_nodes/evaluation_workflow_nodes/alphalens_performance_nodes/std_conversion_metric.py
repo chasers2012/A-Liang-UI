@@ -11,7 +11,7 @@ from workflow import Socket, StringNodeParam, workflow_node
 
 @workflow_node(
     label="Std Conversion",
-    description="将不同周期收益标准差折算到统一基准周期，便于跨周期比较风险。",
+    description="单周期标准差（或标准误差）近似值",
     category="Alphalens Performance",
     input_sockets=[
         Socket(
@@ -19,7 +19,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             required=True,
             value_type="dataframe",
             label="多周期标准差",
-            description="列为不同持有期标准差",
+            description="包含标准差或标准误差值的 DataFrame，列标题表示重现期。",
         ),
     ],
     workflow_parameters=[
@@ -28,7 +28,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             required=False,
             default="",
             label="基准周期",
-            description="为空时自动使用输入 dataframe 的首列",
+            description="转换中使用的基准周期长度。它必须遵循 pandas.Timedelta 构造函数的格式（例如，`1 days`、`1D`、`30m`、`3h`、`1D1h` 等）。",
         ),
     ],
     output_sockets=[
@@ -36,7 +36,7 @@ from workflow import Socket, StringNodeParam, workflow_node
             "std_converted",
             value_type="dataframe",
             label="标准差折算结果",
-            description="折算到基准周期后的标准差\n\n**数据格式**\n- pd.DataFrame，index 与输入一致，columns 为各周期标准差列",
+            description="数据框格式与输入格式相同，但标准差/误差值为单周期值。",
         ),
     ],
     entry="evaluate",
