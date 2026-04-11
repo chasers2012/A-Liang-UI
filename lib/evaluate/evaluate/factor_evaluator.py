@@ -217,7 +217,18 @@ class AlphalensFactorEvaluator:
         return self._close_wide
 
     def prepare_factor_data(
-        self, quantiles: int = 5, periods: tuple[int, ...] = (1, 5, 10, 20), max_loss: float = 0.5
+        self,
+        quantiles: int = 5,
+        periods: tuple[int, ...] = (1, 5, 10, 20),
+        max_loss: float = 0.5,
+        *,
+        groupby: Any | None = None,
+        binning_by_group: bool = False,
+        bins: Any | None = None,
+        filter_zscore: int | float = 20,
+        groupby_labels: Any | None = None,
+        zero_aware: bool = False,
+        cumulative_returns: bool = True,
     ) -> pd.DataFrame:
         factor_data = self.factor.calculate(
             self._start_date,
@@ -237,9 +248,16 @@ class AlphalensFactorEvaluator:
         return al.utils.get_clean_factor_and_forward_returns(
             factor=factor_series,
             prices=close_df,
+            groupby=groupby,
+            binning_by_group=binning_by_group,
             quantiles=quantiles,
+            bins=bins,
             periods=periods,
+            filter_zscore=filter_zscore,
+            groupby_labels=groupby_labels,
             max_loss=max_loss,
+            zero_aware=zero_aware,
+            cumulative_returns=cumulative_returns,
         )
 
     def evaluate_factor(
@@ -248,6 +266,13 @@ class AlphalensFactorEvaluator:
         quantiles: int = 5,
         periods: tuple[int, ...] = (1, 5, 10, 20),
         max_loss: float = 0.5,
+        groupby: Any | None = None,
+        binning_by_group: bool = False,
+        bins: Any | None = None,
+        filter_zscore: int | float = 20,
+        groupby_labels: Any | None = None,
+        zero_aware: bool = False,
+        cumulative_returns: bool = True,
         group_adjust: bool = False,
         quantile_returns_demeaned: bool = True,
     ) -> AlphalensEvaluateResult:
@@ -269,9 +294,16 @@ class AlphalensFactorEvaluator:
         factor_data_clean = al.utils.get_clean_factor_and_forward_returns(
             factor=factor_series,
             prices=close_df,
+            groupby=groupby,
+            binning_by_group=binning_by_group,
             quantiles=quantiles,
+            bins=bins,
             periods=periods,
+            filter_zscore=filter_zscore,
+            groupby_labels=groupby_labels,
             max_loss=max_loss,
+            zero_aware=zero_aware,
+            cumulative_returns=cumulative_returns,
         )
 
         quantized = al.utils.quantize_factor(factor_data_clean, quantiles)

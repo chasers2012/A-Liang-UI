@@ -5,19 +5,19 @@ from typing import Any
 
 EVALUATION_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
-        "name": "data_set",
-        "required": True,
-        "label": "数据集",
-        "description": "评价所使用的数据集",
-        "value_type": "data_set",
-        "render_type": "socket",
-    },
-    {
         "name": "factor",
         "required": True,
         "label": "因子",
         "description": "评价目标因子",
         "value_type": "factor",
+        "render_type": "socket",
+    },
+    {
+        "name": "data_set",
+        "required": True,
+        "label": "数据集",
+        "description": "评价所使用的数据集",
+        "value_type": "data_set",
         "render_type": "socket",
     },
 ]
@@ -30,7 +30,7 @@ EVALUATION_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
         "description": "评价工作流最终输出。",
         "value_type": "scalar_json",
         "render_type": "appendable",
-    }
+    },
 ]
 
 EVALUATION_EMPTY_WORKFLOW_TEMPLATE: dict[str, Any] = {
