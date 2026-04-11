@@ -20,7 +20,7 @@ import {
 import { getQuantAgentApiBase } from "@/api";
 import { factorsListAtom, refreshFactorsListAtom } from "@/models/factor";
 
-import { FactorCardList } from "@/components/factors/ui/factor-card-list";
+import { FactorCardList } from "@/app/factors/ui/factor-card-list";
 
 export function FactorsPanel() {
   const { items, error: loadError } = useAtomValue(factorsListAtom);

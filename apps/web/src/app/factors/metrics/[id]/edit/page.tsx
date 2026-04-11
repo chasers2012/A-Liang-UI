@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { getEvaluationMetric, patchEvaluationMetric } from "@/api";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
-import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
 import { CodeJar } from "@/components/ui/code-jar";
 import { Page } from "@/components/page";
 

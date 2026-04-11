@@ -16,7 +16,7 @@ import {
   refreshFactorsListAtom,
 } from "@/models/factor";
 
-import { FactorEvaluationsOverview } from "@/components/factors/ui/factor-evaluations-overview";
+import { FactorEvaluationsOverview } from "@/app/factors/ui/factor-evaluations-overview";
 
 export function FactorSectionContent() {
   const { items } = useAtomValue(factorsListAtom);

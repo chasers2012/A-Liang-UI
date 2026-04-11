@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Page } from "@/components/page";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { CodeJar } from "@/components/ui/code-jar";
-import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
 
 export const PREPROCESSOR_MAIN_FORM_ID = "preprocessor-main-form";
 

@@ -11,20 +11,20 @@ import {
   hydrateFromDetail,
   type FactorFormState,
   validateFormForSubmit,
-} from "@/components/factors/form-model";
-import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+} from "@/models/factor";
+import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
 import {
   applyFactorFormPatch,
   FactorFormFields,
-} from "@/components/factors/ui/factor-form-fields";
+} from "@/app/factors/ui/factor-form-fields";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Page } from "@/components/page";
 import {
   FACTOR_MAIN_FORM_ID,
   FactorFormLoadError,
   FactorFormLoading,
-} from "@/components/factors/ui/factor-form-page";
+} from "@/app/factors/ui/factor-form-page";
 
 export default function EditFactorPage() {
   const params = useParams<{ id: string }>();

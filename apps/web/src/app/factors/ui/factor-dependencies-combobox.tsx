@@ -7,7 +7,7 @@ import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { listFactors } from "@/api";
 
-import { parseDependencies } from "../form-model";
+import { parseDependencies } from "@/models/factor";
 
 const BASE_SUGGESTIONS: readonly string[] = [
   "open",

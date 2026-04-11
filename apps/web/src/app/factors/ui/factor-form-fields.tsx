@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   applyFormMetadataToSource,
   parseUserFactorMetadataFromSource,
-} from "../factor-metadata-sync";
-import type { FactorFormState } from "../form-model";
+  type FactorFormState,
+} from "@/models/factor";
 import { CodeJar } from "@/components/ui/code-jar";
 import { FactorDependenciesCombobox } from "./factor-dependencies-combobox";
 import { FactorGroupCombobox } from "./factor-group-combobox";

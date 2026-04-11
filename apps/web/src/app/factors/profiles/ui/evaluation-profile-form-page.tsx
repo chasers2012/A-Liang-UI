@@ -14,8 +14,8 @@ import {
   patchEvaluationProfile,
 } from "@/api";
 
-import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";
+import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
+import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
 import { Page } from "@/components/page";
 import { ProfileWorkflowEditorBlock } from "./profile-editor-main-section";
 import { EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT } from "./profile-form-shared";
