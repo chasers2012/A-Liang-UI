@@ -107,7 +107,7 @@ export default function EditEvaluationMetricPage() {
 
   if (loading) {
     return (
-      <Page title="编辑评价指标">
+      <Page title="编辑节点">
         <p className="text-sm text-muted-foreground">加载中…</p>
       </Page>
     );
@@ -119,14 +119,14 @@ export default function EditEvaluationMetricPage() {
         <FactorEditPageTitle
           name={name}
           onNameChange={setName}
-          nameAriaLabel="评价指标名称"
+          nameAriaLabel="节点名称"
         />
       }
       description={
         <FactorEditPageDescription
           description={description}
           onDescriptionChange={setDescription}
-          descriptionAriaLabel="评价指标描述"
+          descriptionAriaLabel="节点描述"
         />
       }
       action={

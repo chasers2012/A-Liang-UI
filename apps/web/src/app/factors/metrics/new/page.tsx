@@ -74,7 +74,7 @@ function EvaluationMetricSourceEditor({
 
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
-  const [name, setName] = useState(() => defaultNewName("新评价指标"));
+  const [name, setName] = useState(() => defaultNewName("新节点"));
   const [description, setDescription] = useState("");
 
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +93,7 @@ export default function NewEvaluationMetricPage() {
       } catch (e) {
         if (!cancelled) {
           setTemplateError(
-            e instanceof Error ? e.message : "无法加载评价指标源码模板",
+            e instanceof Error ? e.message : "无法加载节点源码模板",
           );
         }
       } finally {
@@ -131,14 +131,14 @@ export default function NewEvaluationMetricPage() {
         <FactorEditPageTitle
           name={name}
           onNameChange={setName}
-          nameAriaLabel="评价指标名称"
+          nameAriaLabel="节点名称"
         />
       }
       description={
         <FactorEditPageDescription
           description={description}
           onDescriptionChange={setDescription}
-          descriptionAriaLabel="评价指标描述"
+          descriptionAriaLabel="节点描述"
         />
       }
       action={

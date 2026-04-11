@@ -43,7 +43,7 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       items: [
         { title: "因子库", url: "/factors/library", icon: Library },
         { title: "评价方案", url: "/factors/profiles", icon: Table2 },
-        { title: "评价指标", url: "/factors/metrics", icon: LineChart },
+        { title: "节点", url: "/factors/metrics", icon: LineChart },
       ],
     },
     {

@@ -29,7 +29,7 @@ const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   [FACTOR_ROOT_HREF]: [{ label: "因子" }],
   [FACTOR_LIBRARY_LIST]: [{ label: "因子库" }],
   [FACTOR_PROFILES_LIST]: [{ label: "评价方案" }],
-  [FACTOR_METRICS_LIST]: [{ label: "评价指标" }],
+  [FACTOR_METRICS_LIST]: [{ label: "节点" }],
   [DATA_ROOT_HREF]: [{ label: "数据" }],
   [DATA_DATASOURCES_LIST]: [{ label: "数据源" }],
   [DATA_DATA_SETS_LIST]: [{ label: "数据集" }],
@@ -196,7 +196,7 @@ export function buildAppHeaderBreadcrumbs(
   const metrics = standardResourceBreadcrumbs(
     pathname,
     FACTOR_METRICS_LIST,
-    "评价指标",
+    "节点",
     "详情",
   );
   if (metrics) return withMenuSection(pathname, metrics);

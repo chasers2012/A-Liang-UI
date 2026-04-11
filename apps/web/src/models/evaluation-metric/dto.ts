@@ -26,7 +26,7 @@ export interface EvaluationMetricSummaryPublic {
   name: string;
   description: string;
   source_path: string;
-  /** 评价指标节点 id（与后端路由参数 `metric_id` 一致）。 */
+  /** 节点 id（与后端路由参数 `metric_id` 一致）。 */
   created_at: string;
   updated_at: string;
   workflow_parameters?: NodeParamModel[];

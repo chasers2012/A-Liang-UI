@@ -41,10 +41,10 @@ export default function EvaluationMetricsPage() {
 
   return (
     <Page
-      title="评价指标"
+      title="节点"
       description={
         <>
-          继承 EvaluationMetric 的 Python 实现，落盘 workspace{" "}
+          自定义工作流节点的 Python 实现（EvaluationMetric），落盘 workspace{" "}
           <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             evaluation_metrics/
           </code>
@@ -64,9 +64,9 @@ export default function EvaluationMetricsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>指标列表</CardTitle>
+          <CardTitle>节点列表</CardTitle>
           <CardDescription>
-            在工作流画布中从「添加节点」选择指标；节点类型由评价方案
+            在工作流画布中通过「添加节点」使用此处维护的实现；内置节点类型由评价方案
             API（<span className="font-mono">/evaluation-profiles/node-types</span>
             ）提供。
           </CardDescription>
@@ -76,7 +76,7 @@ export default function EvaluationMetricsPage() {
               className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
             >
               <Plus className="size-4" />
-              新增指标
+              新增节点
             </Link>
           </CardAction>
         </CardHeader>
@@ -85,7 +85,7 @@ export default function EvaluationMetricsPage() {
             <p className="p-6 text-sm text-muted-foreground">加载中…</p>
           ) : items.length === 0 ? (
             <p className="p-6 text-sm text-muted-foreground">
-              暂无指标。请使用上方「新增指标」开始配置。
+              暂无节点。请使用上方「新增节点」开始配置。
             </p>
           ) : (
             <Table>
