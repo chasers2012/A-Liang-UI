@@ -6,7 +6,8 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from sqlmodel import Session, SQLModel, create_engine, text
+from sqlalchemy.pool import NullPool
+from sqlmodel import Session, SQLModel, create_engine
 from workspace import workspace_path
 
 
@@ -28,9 +29,13 @@ def get_engine():
         conn.execute("PRAGMA synchronous=NORMAL")
         return conn
 
+    # NullPool: open/close a real sqlite connection per Session checkout. Avoids
+    # SingletonThreadPool holding a connection that sqlite has already closed
+    # (seen as "Cannot operate on a closed database" under thread-pool workers).
     return create_engine(
         "sqlite://",
         creator=_connect_with_pragmas,
+        poolclass=NullPool,
         pool_pre_ping=True,
     )
 
@@ -41,15 +46,6 @@ def create_db_and_tables() -> None:
 
     engine = get_engine()
     SQLModel.metadata.create_all(engine)
-
-    # Lightweight schema migration for old local DBs.
-    with engine.begin() as conn:
-        cols = conn.execute(text("PRAGMA table_info(data_sets)")).all()
-        col_names = {str(row[1]) for row in cols}
-        if "preprocessors" not in col_names:
-            conn.execute(
-                text("ALTER TABLE data_sets ADD COLUMN preprocessors TEXT NOT NULL DEFAULT '[]'")
-            )
 
 
 @contextmanager

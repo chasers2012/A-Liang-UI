@@ -84,7 +84,7 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
         const runDataSetId = (() => {
           const ds = prev.runDataSetId;
           if (ds && dataSets.some((x) => x.id === ds)) return ds;
-          return null;
+          return dataSets[0]?.id ?? null;
         })();
         return {
           ...prev,

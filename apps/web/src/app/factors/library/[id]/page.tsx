@@ -101,12 +101,12 @@ function FactorEvaluationRunControls(props: {
         <Select
           modal={false}
           items={profileSelectItems}
-          value={runProfileId ?? "__none__"}
+          value={runProfileId ?? ""}
           onValueChange={(v) => {
             if (!v) return;
             onProfileSelectValue(v);
           }}
-          disabled={selectDisabled}
+          disabled={selectDisabled || profiles.length === 0}
         >
           <SelectTrigger
             id="factor-eval-profile-card"
@@ -116,7 +116,6 @@ function FactorEvaluationRunControls(props: {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">无（默认参数）</SelectItem>
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
@@ -135,12 +134,12 @@ function FactorEvaluationRunControls(props: {
         <Select
           modal={false}
           items={dataSetSelectItems}
-          value={runDataSetId ?? "__default__"}
+          value={runDataSetId ?? ""}
           onValueChange={(v) => {
             if (!v) return;
             onDataSetSelectValue(v);
           }}
-          disabled={selectDisabled}
+          disabled={selectDisabled || dataSets.length === 0}
         >
           <SelectTrigger
             id="factor-eval-dataset-card"
@@ -150,7 +149,6 @@ function FactorEvaluationRunControls(props: {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__default__">默认（方案节点参数）</SelectItem>
             {dataSets.map((ds) => (
               <SelectItem key={ds.id} value={ds.id}>
                 {ds.name}
@@ -437,9 +435,7 @@ export default function FactorDetailPage() {
   } = s;
 
   const profileSelectItems = useMemo(() => {
-    const o: Record<string, string> = {
-      __none__: "无（默认参数）",
-    };
+    const o: Record<string, string> = {};
     for (const p of profiles) {
       o[p.id] = p.name;
     }
@@ -447,9 +443,7 @@ export default function FactorDetailPage() {
   }, [profiles]);
 
   const dataSetSelectItems = useMemo(() => {
-    const o: Record<string, string> = {
-      __default__: "默认（方案节点参数）",
-    };
+    const o: Record<string, string> = {};
     for (const ds of dataSets) {
       o[ds.id] = ds.name;
     }
@@ -481,7 +475,15 @@ export default function FactorDetailPage() {
     if (!profileId) {
       setS((prev) => ({
         ...prev,
-        loadError: "请先选择评价方案后再运行。",
+        loadError: "暂无可用评价方案，请先创建评价方案后再运行评价。",
+      }));
+      return;
+    }
+    const dataSetId = runDataSetId?.trim();
+    if (!dataSetId) {
+      setS((prev) => ({
+        ...prev,
+        loadError: "暂无可用数据集，请先创建数据集后再运行评价。",
       }));
       return;
     }
@@ -490,7 +492,7 @@ export default function FactorDetailPage() {
     setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
-        dataSetId: runDataSetId,
+        dataSetId,
         evaluationProfileId: profileId,
       });
       await refreshEvalRow();
@@ -599,16 +601,10 @@ export default function FactorDetailPage() {
           evaluatingOther ? evaluationRunning?.factorName : undefined
         }
         onProfileSelectValue={(v) =>
-          setS((prev) => ({
-            ...prev,
-            runProfileId: v === "__none__" ? null : v,
-          }))
+          setS((prev) => ({ ...prev, runProfileId: v }))
         }
         onDataSetSelectValue={(v) =>
-          setS((prev) => ({
-            ...prev,
-            runDataSetId: v === "__default__" ? null : v,
-          }))
+          setS((prev) => ({ ...prev, runDataSetId: v }))
         }
         onRunEvaluation={() => void handleRunEvaluation()}
       />
