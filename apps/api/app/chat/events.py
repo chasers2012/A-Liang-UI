@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Generic, Literal, TypeVar
 
 from pydantic import BaseModel
+
+StreamEventPayloadT = TypeVar("StreamEventPayloadT")
 
 EventType = Literal["message_ids", "delta", "tool", "done", "error"]
 
@@ -23,29 +25,33 @@ class MessageIdsPayload(BaseModel):
     assistant: str
 
 
-class MessageIdsEvent(BaseModel):
+class StreamEvent(BaseModel, Generic[StreamEventPayloadT]):
+    """Chat stream event: ``type`` discriminator + generic ``payload``."""
+
+    type: EventType
+    payload: StreamEventPayloadT
+
+
+class MessageIdsEvent(StreamEvent[MessageIdsPayload]):
     type: Literal["message_ids"] = "message_ids"
-    payload: MessageIdsPayload
 
 
-class DeltaEvent(BaseModel):
+class DeltaEvent(StreamEvent[str]):
     type: Literal["delta"] = "delta"
-    payload: str
 
 
-class ToolEvent(BaseModel):
+class ToolEvent(StreamEvent[ToolPayload]):
     type: Literal["tool"] = "tool"
-    payload: ToolPayload
 
 
-class DoneEvent(BaseModel):
+class DoneEvent(StreamEvent[None]):
     type: Literal["done"] = "done"
     payload: None = None
 
 
-class ErrorEvent(BaseModel):
+class ErrorEvent(StreamEvent[str]):
     type: Literal["error"] = "error"
-    payload: str
 
 
-StreamEvent = MessageIdsEvent | DeltaEvent | ToolEvent | DoneEvent | ErrorEvent
+# Annotation for handlers that accept any concrete stream event.
+StreamEventAny = StreamEvent[Any]

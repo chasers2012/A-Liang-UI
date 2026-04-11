@@ -30,7 +30,7 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
 
 @router.post("/message")
 def chat_stream(body: ChatRequest) -> StreamingResponse:
-    """SSE (``text/event-stream``): incremental assistant text as JSON lines ``data: {...}``."""
+    """SSE (``text/event-stream``): ``event:`` = stream kind; ``data:`` = JSON payload only."""
     try:
         stream = controller.stream(body)
     except ValueError as e:

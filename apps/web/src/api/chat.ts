@@ -30,8 +30,8 @@ type ChatSseMessageIdsPayload = {
 };
 
 /**
- * Mirrors ``StreamEvent`` in ``app.chat.events`` (wire JSON: ``type`` + ``payload``).
- * ``done`` may omit ``payload`` (``exclude_none=True`` on the server).
+ * Mirrors ``StreamEvent`` in ``app.chat.events`` after client normalization.
+ * Wire: SSE ``event:`` names the kind; ``data:`` is the payload JSON (no ``type`` field).
  */
 type ChatSseStreamEvent =
   | { type: "message_ids"; payload: ChatSseMessageIdsPayload }
@@ -74,10 +74,7 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
   return undefined;
 }
 
-/**
- * Mirrors ``app.chat.events.EventType`` wire shape; each SSE line is
- * ``data: {StreamEvent.model_dump_json(exclude_none=true)}`` then blank line, per ``controller.stream``.
- */
+/** Maps SSE ``event:`` name to normalized stream events. */
 const CHAT_SSE_TYPED_EVENT_PARSERS = {
   delta: (payload) =>
     typeof payload === "string" && payload.length > 0
@@ -108,29 +105,33 @@ const CHAT_SSE_TYPED_EVENT_PARSERS = {
 type ChatSseEventType = keyof typeof CHAT_SSE_TYPED_EVENT_PARSERS;
 
 function parseAgentChatSseBlock(block: string): ChatSseParsedEvent {
-  const dataLines = block
-    .split("\n")
-    .filter((line) => line.startsWith("data:"))
-    .map((line) => line.replace(/^data:\s?/, "").trim());
-  if (dataLines.length === 0) return undefined;
-  const json = dataLines.join("\n");
-  if (!json) return undefined;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return undefined;
+  const rawLines = block.split("\n");
+  let sseEventType: string | undefined;
+  const dataLines: string[] = [];
+  for (const line of rawLines) {
+    if (line.startsWith("event:")) {
+      sseEventType = line.replace(/^event:\s?/, "").trim();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.replace(/^data:\s?/, "").trimEnd());
+    }
   }
-  if (typeof parsed !== "object" || parsed === null) return undefined;
-  const o = parsed as Record<string, unknown>;
-  const type = o.type;
+
   if (
-    typeof type !== "string" ||
-    !Object.hasOwn(CHAT_SSE_TYPED_EVENT_PARSERS, type)
+    !sseEventType ||
+    !Object.hasOwn(CHAT_SSE_TYPED_EVENT_PARSERS, sseEventType)
   ) {
     return undefined;
   }
-  return CHAT_SSE_TYPED_EVENT_PARSERS[type as ChatSseEventType](o.payload);
+  const json = dataLines.join("\n");
+  let payload: unknown;
+  try {
+    payload = json === "" ? undefined : JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+  return CHAT_SSE_TYPED_EVENT_PARSERS[sseEventType as ChatSseEventType](
+    payload,
+  );
 }
 
 export type AgentChatStreamOptions = {
@@ -188,8 +189,8 @@ function handleParsedAgentChatSseEvent(
 }
 
 /**
- * POST ``/chat/message`` (SSE). Same JSON envelope as ``controller.stream`` / ``app.chat.events``.
- * **Contract:** each ``reader.read()`` chunk is one complete SSE event (e.g. ``data: {...}\\n\\n``); no cross-chunk framing.
+ * POST ``/chat/message`` (SSE). Wire: ``event:`` + payload-only ``data:`` (see ``app.chat`` controller stream).
+ * **Contract:** each ``reader.read()`` chunk is one complete SSE event; no cross-chunk framing.
  */
 export async function postAgentChatStream(
   body: ChatRequestPublic,

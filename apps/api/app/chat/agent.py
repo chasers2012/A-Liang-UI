@@ -9,7 +9,7 @@ from app.chat.events import (
     DeltaEvent,
     DoneEvent,
     ErrorEvent,
-    StreamEvent,
+    StreamEventAny,
     ToolEvent,
     ToolPayload,
 )
@@ -89,7 +89,7 @@ def _iter_stream_events_from_mode_data(
     mode: str,
     data: Any,
     pending_tool_names: dict[str, str],
-) -> Iterable[StreamEvent]:
+) -> Iterable[StreamEventAny]:
     if mode == "messages":
         text = _stream_token_text(data)
         if text:
@@ -143,7 +143,7 @@ def stream_event_iter_for_chat(
     *,
     chat_messages: list[ChatMessageIn],
     max_tool_rounds: int = _MAX_TOOL_ROUNDS,
-) -> Iterable[StreamEvent]:
+) -> Iterable[StreamEventAny]:
     tools = list(ToolController().get_tools().values())
     lc_messages = _lc_messages_from_chat_messages(chat_messages)
 

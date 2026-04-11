@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import queue
 import threading
 import uuid
@@ -15,7 +16,7 @@ from app.chat.events import (
     ErrorEvent,
     MessageIdsEvent,
     MessageIdsPayload,
-    StreamEvent,
+    StreamEventAny,
     ToolEvent,
     ToolPayload,
 )
@@ -169,7 +170,10 @@ def _patch_tool_terminal_event(
     )
 
 
-def _apply_stream_event_to_blocks(blocks: list[AssistantBlockPublic], event: StreamEvent) -> None:
+def _apply_stream_event_to_blocks(
+    blocks: list[AssistantBlockPublic],
+    event: StreamEventAny,
+) -> None:
     if isinstance(event, (ErrorEvent, MessageIdsEvent, DoneEvent)):
         return
     if isinstance(event, DeltaEvent):
@@ -184,6 +188,17 @@ def _apply_stream_event_to_blocks(blocks: list[AssistantBlockPublic], event: Str
             _patch_tool_terminal_event(blocks, tool, ok=True)
         elif tool.stage == "error":
             _patch_tool_terminal_event(blocks, tool, ok=False)
+
+
+def _sse_wire_frame(ev: StreamEventAny) -> str:
+    """One SSE message: ``event:`` = ``ev.type``; ``data:`` = JSON payload only (no ``type`` key)."""
+    dumped = ev.model_dump(mode="json", exclude_none=True)
+    data_body = json.dumps(dumped.get("payload"), ensure_ascii=False)
+    lines = [f"event: {ev.type}"]
+    for segment in data_body.split("\n"):
+        lines.append(f"data: {segment}")
+    lines.append("")
+    return "\n".join(lines) + "\n"
 
 
 def _persist_chat_if_needed(
@@ -267,15 +282,15 @@ def stream(body: ChatRequest) -> Iterator[str]:
                     assistant=assistant_message_id,
                 ),
             )
-            out.put(f"data: {message_ids_event.model_dump_json(exclude_none=True)}\n\n")
+            out.put(_sse_wire_frame(message_ids_event))
             llm = _build_llm_from_workspace()
 
             for event in stream_event_iter_for_chat(llm, chat_messages=context_messages):
                 _apply_stream_event_to_blocks(blocks, event)
-                out.put(f"data: {event.model_dump_json(exclude_none=True)}\n\n")
+                out.put(_sse_wire_frame(event))
         except ValueError as e:
             err_event = ErrorEvent(payload=f"{e}")
-            out.put(f"data: {err_event.model_dump_json(exclude_none=True)}\n\n")
+            out.put(_sse_wire_frame(err_event))
             return
         finally:
             try:
