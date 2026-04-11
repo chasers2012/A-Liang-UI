@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
-import { getFactor, patchFactor } from "@/lib/quant-agent-api";
+import { getFactor, patchFactor } from "@/api";
 
 import {
   bodyFromForm,

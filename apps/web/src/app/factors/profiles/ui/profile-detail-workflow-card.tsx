@@ -7,7 +7,7 @@ import {
   listEvaluationNodeTypes,
   type EvaluationProfilePublic,
   type EvaluationNodeTypeCatalogItemPublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 
 import { WorkflowGraphCanvas, type WorkflowNodeTypeDefinition } from "@/components/workflow-graph";
 

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { getEvaluationMetric, patchEvaluationMetric } from "@/lib/quant-agent-api";
+import { getEvaluationMetric, patchEvaluationMetric } from "@/api";
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 
 import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";

@@ -3,7 +3,7 @@ import {
   AgentChatDetailPublic,
   TextBlockPublic,
   getAgentChat,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 

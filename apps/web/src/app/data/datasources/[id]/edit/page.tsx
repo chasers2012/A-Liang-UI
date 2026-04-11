@@ -15,7 +15,7 @@ import {
   listDatasourcePlugins,
   type DatasourcePluginPublic,
   type DataSourcePublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 
 import { commitDatasourceForm } from "../../commit-datasource";
 import {

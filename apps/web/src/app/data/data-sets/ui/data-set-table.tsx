@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { DataSetPublic } from "@/lib/quant-agent-api";
+import type { DataSetPublic } from "@/api";
 
 type Props = {
   items: DataSetPublic[];

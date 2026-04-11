@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { DataSourcePublic } from "@/lib/quant-agent-api";
+import type { DataSourcePublic } from "@/api";
 
 import { datasourceSummary } from "../datasource-summary";
 

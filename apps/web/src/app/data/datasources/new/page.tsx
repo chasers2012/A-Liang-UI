@@ -9,7 +9,7 @@ import {
   listDatasourcePlugins,
   type DatasourcePluginPublic,
   type DataSourcePublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { defaultNewName } from "@/lib/default-new-name";
 
 import { commitDatasourceForm } from "../commit-datasource";

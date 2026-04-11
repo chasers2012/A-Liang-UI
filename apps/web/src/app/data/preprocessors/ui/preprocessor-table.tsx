@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { PreprocessorSummaryPublic } from "@/lib/quant-agent-api";
+import type { PreprocessorSummaryPublic } from "@/api";
 
 type Props = {
   items: PreprocessorSummaryPublic[];

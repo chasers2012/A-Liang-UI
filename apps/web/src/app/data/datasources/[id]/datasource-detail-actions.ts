@@ -1,4 +1,4 @@
-import { ApiError, deleteDatasource, testDatasource } from "@/lib/quant-agent-api";
+import { ApiError, deleteDatasource, testDatasource } from "@/api";
 import type { DatasourceDetailState } from "@/models/datasource/detail.atom";
 import type { DataSourcePublic } from "@/models/datasource/dto";
 

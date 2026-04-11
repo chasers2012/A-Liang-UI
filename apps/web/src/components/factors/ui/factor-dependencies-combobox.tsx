@@ -5,7 +5,7 @@ import { Combobox } from "@base-ui/react/combobox";
 import { Check, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { listFactors } from "@/lib/quant-agent-api";
+import { listFactors } from "@/api";
 
 import { parseDependencies } from "../form-model";
 

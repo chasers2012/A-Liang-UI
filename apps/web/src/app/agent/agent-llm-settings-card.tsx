@@ -23,7 +23,7 @@ import {
   ApiError,
   getAgentLlmSettings,
   putAgentLlmSettings,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { AgentLlmProvider, AgentLlmSettingsPublic } from "@/models";
 
 export const AGENT_LLM_FORM_ID = "agent-llm-settings-form";

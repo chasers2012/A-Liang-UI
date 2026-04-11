@@ -20,7 +20,7 @@ import {
   getAgentWorkflow,
   listAgentWorkflowNodeTypes,
   patchAgentWorkflow,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
 import { EMPTY_WORKFLOW } from "@/components/workflow-graph/reactflow/serialize";
 

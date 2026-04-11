@@ -1,7 +1,7 @@
 "use client";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { DataSourcePublic } from "@/lib/quant-agent-api";
+import type { DataSourcePublic } from "@/api";
 
 type Props = {
   target: DataSourcePublic | null;

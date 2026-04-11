@@ -5,7 +5,7 @@ import { Autocomplete } from "@base-ui/react/autocomplete";
 import { ChevronDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { listFactors } from "@/lib/quant-agent-api";
+import { listFactors } from "@/api";
 
 const inputClassName = cn(
   "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent py-1 pr-9 pl-2.5 font-mono text-sm outline-none transition-colors",

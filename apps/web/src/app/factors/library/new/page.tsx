@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createFactor, getFactorTemplate } from "@/lib/quant-agent-api";
+import { createFactor, getFactorTemplate } from "@/api";
 
 import {
   bodyFromForm,

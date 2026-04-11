@@ -4,7 +4,7 @@ import { atomFamily } from "jotai-family";
 import {
   getEvaluationProfile,
   listEvaluationProfiles,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { EvaluationProfilePublic } from "./dto";
 
 export type EvaluationProfilesListState = {

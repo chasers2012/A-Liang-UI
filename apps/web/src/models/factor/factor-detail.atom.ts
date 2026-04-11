@@ -6,7 +6,7 @@ import {
   getFactorEvaluationsSummary,
   listEvaluationMetrics,
   listEvaluationProfiles,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { EvaluationMetricSummaryPublic } from "../evaluation-metric/dto";
 import type { EvaluationProfilePublic } from "../evaluation-profile/dto";
 import type {

@@ -48,7 +48,7 @@ import {
   patchDataSet,
   type DataSetPublic,
   type DataSourcePublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 
 import {
   parsePersistedWorkflowGraphPayload,

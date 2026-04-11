@@ -5,7 +5,7 @@ import {
   listArchivedAgentChats,
   purgeArchivedAgentChat,
   restoreAgentChat,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import {
   refetchChatsListAtom,
   selectChatAtom,

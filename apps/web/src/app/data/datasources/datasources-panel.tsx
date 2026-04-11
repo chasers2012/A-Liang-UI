@@ -22,7 +22,7 @@ import {
   getQuantAgentApiBase,
   testDatasource,
   type DataSourcePublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { cn } from "@/lib/utils";
 import {
   datasourcesPanelAtom,

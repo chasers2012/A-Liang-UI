@@ -4,7 +4,7 @@ import { atomFamily } from "jotai-family";
 import {
   getEvaluationMetric,
   listEvaluationMetrics,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type {
   EvaluationMetricDetailPublic,
   EvaluationMetricSummaryPublic,

@@ -20,7 +20,7 @@ import {
   deletePreprocessor,
   getPreprocessor,
   type PreprocessorDetailPublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { cn } from "@/lib/utils";
 
 import { DeletePreprocessorDialog } from "../ui/delete-preprocessor-dialog";

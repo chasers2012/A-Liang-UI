@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { getQuantAgentApiBase } from "@/lib/quant-agent-api";
+import { getQuantAgentApiBase } from "@/api";
 import { cn } from "@/lib/utils";
 import {
   evaluationMetricsListAtom,

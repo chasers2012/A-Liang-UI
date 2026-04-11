@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 
-import { listDatasources } from "@/lib/quant-agent-api";
+import { listDatasources } from "@/api";
 import type { DataSourcePublic } from "./dto";
 
 export type DatasourcesPanelState = {

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Page } from "@/components/page";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { deleteDataSet } from "@/lib/quant-agent-api";
+import { deleteDataSet } from "@/api";
 import { cn } from "@/lib/utils";
 import {
   dataSetDetailAtomFamily,

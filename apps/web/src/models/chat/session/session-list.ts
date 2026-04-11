@@ -1,7 +1,7 @@
 import {
   AgentChatSummaryPublic,
   listAgentChats,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { atom } from "jotai";
 import { ApiError } from "next/dist/server/api-utils";
 import { startTransition } from "react";

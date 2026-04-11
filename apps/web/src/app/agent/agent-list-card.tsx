@@ -25,7 +25,7 @@ import {
   createAgentWorkflow,
   deleteAgentWorkflow,
   listAgentWorkflows,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { AgentWorkflowSummaryPublic } from "@/models";
 
 export interface AgentListCardProps {

@@ -1,4 +1,4 @@
-import type { DataSourcePublic } from "@/lib/quant-agent-api";
+import type { DataSourcePublic } from "@/api";
 
 export type EditorMode = "create" | "edit";
 

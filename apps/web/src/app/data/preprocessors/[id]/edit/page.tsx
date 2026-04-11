@@ -13,7 +13,7 @@ import {
   getPreprocessor,
   patchPreprocessor,
   type PreprocessorDetailPublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { cn } from "@/lib/utils";
 
 import {

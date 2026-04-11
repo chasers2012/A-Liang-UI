@@ -1,4 +1,4 @@
-import type { DataSourcePublic } from "@/lib/quant-agent-api";
+import type { DataSourcePublic } from "@/api";
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;

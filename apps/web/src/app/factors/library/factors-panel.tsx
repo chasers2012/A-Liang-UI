@@ -17,7 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { getQuantAgentApiBase } from "@/lib/quant-agent-api";
+import { getQuantAgentApiBase } from "@/api";
 import { factorsListAtom, refreshFactorsListAtom } from "@/models/factor";
 
 import { FactorCardList } from "@/components/factors/ui/factor-card-list";

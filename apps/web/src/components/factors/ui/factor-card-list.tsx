@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { FactorSummaryPublic } from "@/lib/quant-agent-api";
+import type { FactorSummaryPublic } from "@/api";
 
 type Props = {
   items: FactorSummaryPublic[];

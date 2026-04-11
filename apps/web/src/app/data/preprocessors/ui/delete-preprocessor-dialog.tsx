@@ -1,7 +1,7 @@
 "use client";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { PreprocessorSummaryPublic } from "@/lib/quant-agent-api";
+import type { PreprocessorSummaryPublic } from "@/api";
 
 type Props = {
   target: PreprocessorSummaryPublic | null;

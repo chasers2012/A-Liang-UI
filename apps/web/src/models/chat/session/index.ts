@@ -8,7 +8,7 @@ import {
   listAgentChats,
   postAgentChatStream,
   renameAgentChat,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { AgentChatMessagePublic } from "@/models";
 import {
   chatErrorAtom,

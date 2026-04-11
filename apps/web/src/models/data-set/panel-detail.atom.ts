@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 
-import { getDataSet, listDataSets } from "@/lib/quant-agent-api";
+import { getDataSet, listDataSets } from "@/api";
 import type { DataSetPublic } from "./dto";
 
 export type DataSetsPanelState = {

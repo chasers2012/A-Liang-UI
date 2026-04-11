@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 
-import { getFactorEvaluationsSummary } from "@/lib/quant-agent-api";
+import { getFactorEvaluationsSummary } from "@/api";
 import type { FactorEvaluationsSummaryPublic } from "./dto";
 
 export type FactorEvaluationsOverviewState = {

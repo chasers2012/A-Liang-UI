@@ -6,7 +6,7 @@ import {
   ApiError,
   type DatasourcePluginPublic,
   uploadDatasourceFile,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { FileUploadInput } from "@/components/ui/file-upload-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

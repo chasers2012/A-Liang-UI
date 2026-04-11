@@ -12,7 +12,7 @@ import {
   getEvaluationProfile,
   getEvaluationWorkflowTemplate,
   patchEvaluationProfile,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 
 import { FactorEditPageDescription } from "@/components/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/components/factors/ui/factor-edit-page-title";

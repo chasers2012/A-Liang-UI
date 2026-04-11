@@ -1,4 +1,4 @@
-import type { FactorDetailPublic } from "@/lib/quant-agent-api";
+import type { FactorDetailPublic } from "@/api";
 
 export type FactorFormState = {
   name: string;

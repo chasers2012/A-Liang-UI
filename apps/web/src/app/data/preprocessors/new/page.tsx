@@ -8,7 +8,7 @@ import {
   ApiError,
   createPreprocessor,
   getPreprocessorTemplate,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import { defaultNewName } from "@/lib/default-new-name";
 
 import {

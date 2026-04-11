@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   listPreprocessorNodeTypes,
   type EvaluationNodeTypeCatalogItemPublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 
 import {
   WorkflowGraphCanvas,

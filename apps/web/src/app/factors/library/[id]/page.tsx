@@ -30,7 +30,7 @@ import {
   runFactorEvaluation,
   type FactorEvaluationRowPublic,
   type FactorSummaryPublic,
-} from "@/lib/quant-agent-api";
+} from "@/api";
 import type { EvaluationProfilePublic } from "@/models/evaluation-profile/dto";
 import {
   factorDetailStateAtomFamily,
