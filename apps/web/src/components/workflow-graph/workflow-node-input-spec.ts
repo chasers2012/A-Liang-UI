@@ -25,5 +25,6 @@ export function inputSpecToNodeParamModel(
     maximum: s.maximum ?? undefined,
     render_type: s.render_type ?? undefined,
     options: s.options ?? undefined,
+    rows: s.rows ?? undefined,
   };
 }

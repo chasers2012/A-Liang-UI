@@ -568,6 +568,20 @@ wheels = [
 ]
 
 [[package]]
+name = "echartsy"
+version = "0.7.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fe/eb/1e98226556091a43532e2d8db8cdd73013288089efce3adac578ed8b9055/echartsy-0.7.4.tar.gz", hash = "sha256:91d68e54ee44ac3c60cfdff5bbadc8987f8c40205ac05d661adb9049622b7049", size = 109961, upload-time = "2026-03-23T09:31:47.249Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ae/1d/cb90dd350b604467cc7b054a699183cfab6558fd809088ce65c4006438d7/echartsy-0.7.4-py3-none-any.whl", hash = "sha256:59279505dba8e6f2d1658b6caeb2d58a60bf8ded694ca6ce12dd1d01e0a9f947", size = 84831, upload-time = "2026-03-23T09:31:45.737Z" },
+]
+
+[[package]]
 name = "empyrical-reloaded"
 version = "0.5.12"
 source = { registry = "https://pypi.org/simple" }
@@ -624,6 +638,7 @@ name = "evaluation-workflow-nodes"
 version = "0.1.0"
 source = { editable = "lib/evaluation_workflow_nodes" }
 dependencies = [
+    { name = "echartsy" },
     { name = "evaluate" },
     { name = "factor" },
     { name = "workflow" },
@@ -631,6 +646,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "echartsy", specifier = ">=0.7.4" },
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "factor", editable = "lib/factor" },
     { name = "workflow", editable = "lib/workflow" },

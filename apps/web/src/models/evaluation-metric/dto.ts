@@ -10,9 +10,11 @@ export interface NodeParamModel {
   maximum?: number | null;
   /**
    * 后端 workflow.node_types.NodeParam.serialize() 扩展字段（用于前端渲染不同控件）。
-   * - "select" | "number" | "input" | "toggle" | "date" | "datetime" | ...
+   * - "select" | "number" | "input" | "textarea" | "toggle" | "date" | "datetime" | ...
    */
   render_type?: string | null;
+  /** render_type=textarea 时后端 TextareaNodeParam.rows */
+  rows?: number | null;
   /** 仅当 render_type=select 时可能存在 */
   options?: Array<
     string | number | { label: string | number; value: string | number }

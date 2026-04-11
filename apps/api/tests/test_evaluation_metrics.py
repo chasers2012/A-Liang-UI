@@ -75,10 +75,13 @@ def test_evaluation_profiles_node_types(client):
     assert any("calculate_factor_value" in t for t in types)
     assert any(t.endswith(".EchartsLineNode") for t in types)
     assert any(t.endswith(".EchartsBarNode") for t in types)
+    assert any(t.endswith(".EchartsScatterNode") for t in types)
+    assert any(t.endswith(".EchartsPieNode") for t in types)
+    assert any(t.endswith(".EchartsFunnelNode") for t in types)
     assert any(t.endswith(".MeanIC") for t in types)
     assert any(t.endswith(".BuiltinMeanReturnSpreadNode") for t in types)
     echarts_types = [x for x in types if "echarts_" in x]
-    assert len(echarts_types) == 2
+    assert len(echarts_types) >= 18
     prep_row = next(x for x in rows if "CalculateFactorValueNode" in x["type"])
     assert len(prep_row["inputs"]) >= 2
     assert "node_category" not in prep_row

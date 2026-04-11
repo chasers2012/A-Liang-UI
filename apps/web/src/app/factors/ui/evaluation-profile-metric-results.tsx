@@ -34,7 +34,7 @@ function normalizeEvalResults(raw: unknown): unknown {
   return raw;
 }
 
-/** 深度遍历评价结果，收集所有 `EchartsLineNode` 输出的 `{ type: "echart", option }`（一节点一图，结果里可出现多个）。 */
+/** 深度遍历评价结果，收集所有 ECharts 可视化节点输出的 `{ type: "echart", option }`（一节点一图，结果里可出现多个）。 */
 function collectEchartsPayloads(value: unknown): EchartsPayload[] {
   const out: EchartsPayload[] = [];
   const visited = new Set<unknown>();
@@ -85,7 +85,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
   if (charts.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        未找到 ECharts 图表数据（工作流需包含 `EchartsLineNode` 节点输出）。
+        未找到 ECharts 图表数据（工作流需包含 ECharts 折线/柱状/散点/饼图等节点输出）。
       </p>
     );
   }

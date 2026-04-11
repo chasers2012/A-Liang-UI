@@ -2,7 +2,15 @@
 import type { NodeParamModel } from "@/models/evaluation-metric/dto";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useStore } from "reactflow";
-import { BooleanParamRow, DateParamRow, DateTimeParamRow, NumberParamRow, SelectParamRow, StringParamRow } from "./params";
+import {
+  BooleanParamRow,
+  DateParamRow,
+  DateTimeParamRow,
+  NumberParamRow,
+  SelectParamRow,
+  StringParamRow,
+  TextareaParamRow,
+} from "./params";
 import { WorkflowHandle } from "./workflow-handle";
 
 // eslint-disable-next-line complexity
@@ -54,6 +62,7 @@ const paramTypeMap = {
   // 后端 `StringNodeParam.render_type` 使用 `input`
   input: StringParamRow,
   string: StringParamRow,
+  textarea: TextareaParamRow,
 } as const;
 
 

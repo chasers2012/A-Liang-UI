@@ -32,7 +32,8 @@ from evaluation_workflow_nodes.constants import (
     VALUE_TYPE_SCALAR_JSON,
 )
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
-from evaluation_workflow_nodes.visiualization.echarts import EchartsLineNode
+from evaluation_workflow_nodes.visiualization.echarts_bar import EchartsBarNode
+from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
 
 
 def build_returns_tear_workflow_template() -> dict:
@@ -55,7 +56,8 @@ def build_returns_tear_workflow_template() -> dict:
     std_conversion_type = StdConversionMetric().type
     spread_type = ComputeMeanReturnsSpreadMetric().type
     cumulative_type = FactorCumulativeReturnsMetric().type
-    echarts_type = EchartsLineNode().type
+    echarts_bar_type = EchartsBarNode().type
+    echarts_line_type = EchartsLineNode().type
 
     graph = WorkflowGraph(
         nodes=[
@@ -115,11 +117,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_mean_q",
-                type=echarts_type,
+                type=echarts_bar_type,
                 pos=[1180, -180],
                 params={
                     "title": "Mean Period Wise Return By Factor Quantile",
-                    "series_type": "bar",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -127,11 +128,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_bydate",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, -40],
                 params={
                     "title": "Quantile Returns by Date",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -139,11 +139,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_spread",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 100],
                 params={
                     "title": "Mean Quantile Return Spread",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -151,11 +150,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_cumret",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 240],
                 params={
                     "title": "Factor Portfolio Cumulative Return (1D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -163,11 +161,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_cumret_byq_1d",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 380],
                 params={
                     "title": "Cumulative Return by Quantile (1D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -175,11 +172,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_top_bottom_1d",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 520],
                 params={
                     "title": "Top Minus Bottom Quantile Mean Return (1D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -187,11 +183,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_top_bottom_5d",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 660],
                 params={
                     "title": "Top Minus Bottom Quantile Mean Return (5D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -199,11 +194,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_top_bottom_10d",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 800],
                 params={
                     "title": "Top Minus Bottom Quantile Mean Return (10D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,
@@ -211,11 +205,10 @@ def build_returns_tear_workflow_template() -> dict:
             ),
             Node(
                 id="echarts_top_bottom_20d",
-                type=echarts_type,
+                type=echarts_line_type,
                 pos=[1180, 940],
                 params={
                     "title": "Top Minus Bottom Quantile Mean Return (20D)",
-                    "series_type": "line",
                     "y_fields": "*",
                     "show_legend": True,
                     "show_tooltip": True,

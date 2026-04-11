@@ -174,6 +174,34 @@ class StringNodeParam(NodeParam):
         )
 
 
+class TextareaNodeParam(StringNodeParam):
+    """多行字符串参数（前端用 textarea 渲染，适合 JSON、长文本）。"""
+
+    render_type: str = "textarea"
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        description: str = "",
+        value_type: str = "",
+        default: str = "",
+        rows: int = 6,
+        **_ignored: Any,
+    ) -> None:
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type,
+            default=default,
+            **_ignored,
+        )
+        self.rows = max(2, min(int(rows), 40))
+
+
 class BooleanNodeParam(NodeParam):
     default: bool = False
     value_type: str = "boolean"

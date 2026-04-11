@@ -20,7 +20,7 @@ class Parser:
     @staticmethod
     def serialize_socket(socket: Socket) -> dict[str, Any]:
         """JSON-friendly socket / param specification used by API responses."""
-        from .node_types import NodeParam, NumberNodeParam, OptionsNodeParam
+        from .node_types import NodeParam, NumberNodeParam, OptionsNodeParam, TextareaNodeParam
 
         if isinstance(socket, NumberNodeParam):
             return {
@@ -28,6 +28,8 @@ class Parser:
                 "minimum": socket.minimum,
                 "maximum": socket.maximum,
             }
+        if isinstance(socket, TextareaNodeParam):
+            return {**Parser._serialize_node_param(socket), "rows": socket.rows}
         if isinstance(socket, OptionsNodeParam):
             opts = socket.options
             options = list(opts()) if callable(opts) else list(opts or [])

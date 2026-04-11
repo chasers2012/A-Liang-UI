@@ -4,6 +4,7 @@ import {
 } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -68,6 +69,25 @@ export function StringParamRow(props: IParamRowProps<string>) {
         type="text"
         disabled={readOnly}
         className="h-7 font-mono text-xs"
+        value={s}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+export function TextareaParamRow(props: IParamRowProps<string> & { rows?: number }) {
+  const { label, description, readOnly, value, onChange, rows = 6 } = props;
+  const s =
+    value === null || value === undefined ? "" : String(value);
+  const rowCount = Math.max(2, Math.min(Number(rows) || 6, 40));
+  return (
+    <div>
+      <ParamFieldLabel label={label} description={description} />
+      <Textarea
+        disabled={readOnly}
+        rows={rowCount}
+        className="min-h-0 max-h-48 resize-y font-mono text-xs leading-snug"
         value={s}
         onChange={(e) => onChange(e.target.value)}
       />

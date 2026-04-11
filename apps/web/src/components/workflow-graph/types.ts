@@ -17,6 +17,8 @@ export type WorkflowNodeInputSpec = WorkflowSocketDefinition & {
   options?: Array<string | number> | null;
   minimum?: number | null;
   maximum?: number | null;
+  /** TextareaNodeParam.rows */
+  rows?: number | null;
 };
 
 /** 节点类型目录项：仅描述端口与展示名，不含业务扩展字段。 */
