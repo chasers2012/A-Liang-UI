@@ -72,7 +72,7 @@ export function FactorsPanel() {
         <CardHeader>
           <CardTitle>因子列表</CardTitle>
           <CardDescription>
-            共 {count} 条。点击卡片进入详情，再编辑或查看评价与历史。评价汇总见「因子」页。
+            共 {count} 条。点击「详情」进入编辑与评价、历史；窄屏仅显示名称与操作。评价汇总见「因子」页。
           </CardDescription>
           <CardAction>
             <Link
@@ -84,9 +84,9 @@ export function FactorsPanel() {
             </Link>
           </CardAction>
         </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto">
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto p-0">
           {items === null && !loadError && (
-            <div className="flex flex-1 flex-col justify-center py-12 text-center text-sm text-muted-foreground">
+            <div className="flex flex-1 flex-col justify-center px-6 py-12 text-center text-sm text-muted-foreground">
               加载因子列表…
             </div>
           )}
@@ -95,11 +95,7 @@ export function FactorsPanel() {
               暂无因子。请使用上方「新增因子」创建并保存到 workspace。
             </p>
           )}
-          {items && items.length > 0 && (
-            <div className="min-w-0">
-              <FactorCardList items={items} />
-            </div>
-          )}
+          {items && items.length > 0 && <FactorCardList items={items} />}
         </CardContent>
       </Card>
     </Page>
