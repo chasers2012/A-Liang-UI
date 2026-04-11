@@ -100,7 +100,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
             }}
           </SelectValue>
         </SelectTrigger>
-        <SelectContent alignItemWithTrigger={false}>
+        <SelectContent>
           {optionsItems.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
