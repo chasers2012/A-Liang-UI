@@ -111,6 +111,23 @@ def patch_x_axis_label_density(option: dict[str, Any], *, num_categories: int) -
             _apply_slant_for_long_x_labels(label, data)
 
 
+def patch_value_axes_scale_to_data(option: dict[str, Any]) -> None:
+    """数值轴默认会保留 0 刻度；开启 scale 使范围更贴合数据（条形图横向时作用在 x 轴）。"""
+    for key in ("xAxis", "yAxis"):
+        axes = option.get(key)
+        if axes is None:
+            continue
+        axes_list: list[dict[str, Any]] = (
+            [axes] if isinstance(axes, dict) else [a for a in axes if isinstance(a, dict)]
+        )
+        for ax in axes_list:
+            if ax.get("type") != "value":
+                continue
+            if "min" in ax or "max" in ax:
+                continue
+            ax.setdefault("scale", True)
+
+
 def coerce_to_dataframe(data: pd.DataFrame | pd.Series) -> pd.DataFrame:
     return data.to_frame(name="value") if isinstance(data, pd.Series) else data
 
@@ -214,7 +231,10 @@ def merge_extra_and_pack(
     extra_options: dict[str, Any] | None,
     *,
     value_decimal_places: int = 2,
+    value_axes_scale_to_data: bool = True,
 ) -> dict[str, Any]:
+    if value_axes_scale_to_data:
+        patch_value_axes_scale_to_data(option)
     patch_value_decimal_places(option, value_decimal_places)
     option.update(extra_options or {})
     return {"type": "echart", "option": option}

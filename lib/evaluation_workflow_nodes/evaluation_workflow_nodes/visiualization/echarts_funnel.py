@@ -75,6 +75,13 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             label="显示提示",
             description="是否显示 tooltip",
         ),
+        BooleanNodeParam(
+            "value_axes_scale_to_data",
+            required=False,
+            default=True,
+            label="数值轴贴合数据",
+            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+        ),
         NumberNodeParam(
             "value_decimal_places",
             required=False,
@@ -113,6 +120,7 @@ class EchartsFunnelNode:
         title: str = "",
         show_legend: bool = True,
         show_tooltip: bool = True,
+        value_axes_scale_to_data: bool = True,
         value_decimal_places: int | float = 2,
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -127,5 +135,8 @@ class EchartsFunnelNode:
         fig.funnel(df, names=x_col, values=y_list[0], sort_order=sort_order)  # type: ignore[arg-type]
         option = finalize_figure_option(fig)
         return merge_extra_and_pack(
-            option, extra_options, value_decimal_places=int(value_decimal_places)
+            option,
+            extra_options,
+            value_decimal_places=int(value_decimal_places),
+            value_axes_scale_to_data=value_axes_scale_to_data,
         )
