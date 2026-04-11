@@ -30,7 +30,7 @@ class CsvConfig(BaseModel):
 
 
 class CsvDataSourcePlugin(DataSourcePlugin):
-    type: Literal["csv"] = "csv"
+    name: Literal["csv"] = "csv"
 
     config = PluginConfigSchema(
         title="CSV 数据源",

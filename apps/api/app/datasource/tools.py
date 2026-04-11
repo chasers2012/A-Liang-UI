@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 
 from app.common.datetime_utils import utc_now_iso
 from app.datasource.api import list_datasources
+from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -15,7 +16,6 @@ from app.datasource.schemas import (
     record_to_public,
 )
 from app.datasource.verify import verify_datasource
-from app.plugin import PluginRegistry
 
 
 @tool(
@@ -25,7 +25,7 @@ from app.plugin import PluginRegistry
     )
 )
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
-    plugin = PluginRegistry.instance().get(str(body.type))
+    plugin = get_datasource_plugin(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
     new_rec = body.to_record()
     new_rec.config = validated
@@ -59,7 +59,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
         if "name" in data:
             rec.name = data["name"]
         if "config" in data:
-            plugin = PluginRegistry.instance().get(str(rec.type))
+            plugin = get_datasource_plugin(str(rec.type))
             rec.config = plugin.validate_config(dict(data["config"] or {}))
         rec.updated_at = utc_now_iso()
 

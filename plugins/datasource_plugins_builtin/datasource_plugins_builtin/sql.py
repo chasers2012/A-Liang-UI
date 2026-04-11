@@ -68,12 +68,11 @@ def build_sqlalchemy_url(cfg: SqlConfig) -> str:
     if driver in ("mysql", "mariadb"):
         p = int(port) if port is not None else 3306
         return f"mysql+pymysql://{auth}{host}:{p}/{db_path}"
-    raise ValueError(
-        f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
+    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
 
 
 class SqlDataSourcePlugin(DataSourcePlugin):
-    type: Literal["sql"] = "sql"
+    name: Literal["sql"] = "sql"
 
     config = PluginConfigSchema(
         title="SQL 数据源",

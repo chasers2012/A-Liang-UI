@@ -6,8 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
-from app.datasource.plugins import UnknownDataSourceTypeError
-from app.plugin import PluginRegistry, redact_config
+from app.datasource.plugins import UnknownDataSourceTypeError, get_datasource_plugin
+from app.plugin import redact_config
 
 DataSourceType = str
 
@@ -81,7 +81,7 @@ class DataSourcePublic(BaseModel):
 def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
     schema = None
     try:
-        plugin = PluginRegistry.instance().get(str(rec.type))
+        plugin = get_datasource_plugin(str(rec.type))
         schema = plugin.get_config_schema()
     except UnknownDataSourceTypeError:
         schema = None

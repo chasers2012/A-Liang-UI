@@ -1,35 +1,34 @@
 from __future__ import annotations
 
 import inspect
-from abc import ABC, abstractmethod
-from typing import Any, ClassVar
-
-from app.plugin.schema import PluginConfigSchema
+from abc import ABC
+from typing import Any
 
 
 class Plugin(ABC):
     """
-    Base class for config-driven plugins (validation, optional UI schema).
+    Base class for quant-agent plugins.
 
-    Subclasses must define a non-empty string ``type`` and implement abstract methods.
+    Subclasses must define non-empty string class attributes ``name`` (registry key)
+    and ``category`` (grouping, e.g. ``"datasource"``). Abstract intermediates may omit
+    ``name`` if they only set ``category`` for concrete subclasses to inherit.
+
+    Config validation and UI schema live on config-specific subclasses
+    (e.g. :class:`app.datasource.plugins.DataSourcePlugin`).
     """
 
-    type: str
-    catelog: str
-    config: ClassVar[PluginConfigSchema | None] = None
+    name: str
+    category: str
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
         if inspect.isabstract(cls):
             return
-        t = getattr(cls, "type", None)
-        if not isinstance(t, str) or not t.strip():
-            raise TypeError(f"{cls.__qualname__} must define non-empty class attribute 'type: str'")
-
-    @abstractmethod
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Validate and normalize config. Must return a JSON-serializable dict."""
-
-    def get_config_schema(self) -> PluginConfigSchema | None:
-        """Optional UI schema for rendering a config form (from class ``config``)."""
-        return self.config
+        n = getattr(cls, "name", None)
+        if not isinstance(n, str) or not n.strip():
+            raise TypeError(f"{cls.__qualname__} must define non-empty class attribute 'name: str'")
+        c = getattr(cls, "category", None)
+        if not isinstance(c, str) or not c.strip():
+            raise TypeError(
+                f"{cls.__qualname__} must define non-empty class attribute 'category: str'"
+            )

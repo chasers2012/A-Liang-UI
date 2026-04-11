@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from factor import FactorDataSource
 
+from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -53,7 +54,7 @@ def get_datasource(id: str) -> FactorDataSource | None:
     rec = DataSourceItemsRegistry.get_item(id)
     if rec is None:
         return None
-    plugin = PluginRegistry.instance().get(rec.type)
+    plugin = get_datasource_plugin(rec.type)
     ds = plugin.to_factor_datasource(dict(rec.config or {}))
     return BoundFactorDataSource(id, ds)
 
@@ -65,9 +66,8 @@ def list_datasources() -> list[DataSourcePublic]:
 def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     reg = PluginRegistry.instance()
     out: list[DatasourcePluginPublic] = []
-    for ds_type in reg.list_types():
-        plugin = reg.get(ds_type)
-        schema = plugin.get_config_schema() if hasattr(plugin, "get_config_schema") else None
+    for ds_type, plugin in reg.list_registered_by_category("datasource"):
+        schema = plugin.get_config_schema()
         fields: list[DatasourcePluginFieldPublic] = []
         if schema and schema.fields:
             fields = [
@@ -114,7 +114,7 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
             raise ValueError("type is required when datasource_id is not provided")
         config = dict(body.config or {})
 
-    plugin = PluginRegistry.instance().get(str(ds_type))
+    plugin = get_datasource_plugin(str(ds_type))
     validated = plugin.validate_config(config)
     if not hasattr(plugin, "list_table_columns"):
         raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
@@ -139,7 +139,7 @@ def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
 
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
-    plugin = PluginRegistry.instance().get(str(body.type))
+    plugin = get_datasource_plugin(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
     new_rec = body.to_record()
     new_rec.config = validated
@@ -154,7 +154,7 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
             _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
             rec.name = data["name"]
         if "config" in data:
-            plugin = PluginRegistry.instance().get(str(rec.type))
+            plugin = get_datasource_plugin(str(rec.type))
             rec.config = plugin.validate_config(dict(data["config"] or {}))
         rec.updated_at = utc_now_iso()
 
