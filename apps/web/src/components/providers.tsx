@@ -16,7 +16,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       storageKey="quant-agent-theme"
     >
       <IncremarkShadcnThemeProvider>
-        <TooltipProvider>
+        <TooltipProvider delay={200}>
           <Provider>
             <div className="sr-only" aria-hidden="true">
               <MarkdownWarmup />
