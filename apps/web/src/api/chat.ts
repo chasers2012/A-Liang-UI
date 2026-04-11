@@ -13,114 +13,124 @@ import {
   parseDetail,
 } from "./client";
 
-type AgentChatSseParsed =
-  | { kind: "delta"; text: string }
-  | { kind: "done" }
-  | { kind: "error"; message: string }
-  | {
-      kind: "message_ids";
-      payload: { user: string; assistant: string };
-    }
-  | {
-      kind: "tool_start";
-      payload: { name: string; id: string; args?: unknown };
-    }
-  | {
-      kind: "tool_result";
-      payload: { name: string; id: string; result: unknown };
-    }
-  | {
-      kind: "tool_error";
-      payload: { name: string; id: string; error: string };
-    }
-  | { kind: "skip" };
+/** Mirrors ``app.chat.events.ToolPayload``. */
+type ChatSseToolPayload = {
+  stage: "start" | "result" | "error";
+  name: string;
+  id: string;
+  args?: unknown;
+  result?: unknown;
+  error?: string | null;
+};
+
+/** Mirrors ``app.chat.events.MessageIdsPayload``. */
+type ChatSseMessageIdsPayload = {
+  user: string;
+  assistant: string;
+};
+
+/**
+ * Mirrors ``StreamEvent`` in ``app.chat.events`` (wire JSON: ``type`` + ``payload``).
+ * ``done`` may omit ``payload`` (``exclude_none=True`` on the server).
+ */
+type ChatSseStreamEvent =
+  | { type: "message_ids"; payload: ChatSseMessageIdsPayload }
+  | { type: "delta"; payload: string }
+  | { type: "tool"; payload: ChatSseToolPayload }
+  | { type: "done"; payload?: null | undefined }
+  | { type: "error"; payload: string };
+
+/** Parse outcome: a wire event, or ``undefined`` when the chunk is ignored / invalid. */
+type ChatSseParsedEvent = ChatSseStreamEvent | undefined;
 
 function sseStringField(v: unknown): string {
   return typeof v === "string" ? v : "";
 }
 
-function parseToolPayload(payload: unknown): AgentChatSseParsed {
-  if (!payload || typeof payload !== "object") return { kind: "skip" };
+function parseToolPayload(payload: unknown): ChatSseParsedEvent {
+  if (!payload || typeof payload !== "object") return undefined;
   const p = payload as Record<string, unknown>;
   const stage = sseStringField(p.stage);
-  const base = {
-    name: sseStringField(p.name),
-    id: sseStringField(p.id),
-  };
+  const base = { name: sseStringField(p.name), id: sseStringField(p.id) };
   if (stage === "start") {
-    return { kind: "tool_start", payload: { ...base, args: p.args } };
+    return { type: "tool", payload: { stage: "start", ...base, args: p.args } };
   }
   if (stage === "result") {
-    return { kind: "tool_result", payload: { ...base, result: p.result } };
+    return {
+      type: "tool",
+      payload: { stage: "result", ...base, result: p.result },
+    };
   }
   if (stage === "error") {
     return {
-      kind: "tool_error",
+      type: "tool",
       payload: {
+        stage: "error",
         ...base,
         error: typeof p.error === "string" ? p.error : String(p.error ?? ""),
       },
     };
   }
-  return { kind: "skip" };
+  return undefined;
 }
 
-function parseTypedEvent(type: string, payload: unknown): AgentChatSseParsed {
-  switch (type) {
-    case "delta":
-      return typeof payload === "string" && payload.length > 0
-        ? { kind: "delta", text: payload }
-        : { kind: "skip" };
-    case "done":
-      return { kind: "done" };
-    case "error":
-      return {
-        kind: "error",
-        message: typeof payload === "string" ? payload : "",
-      };
-    case "message_ids":
-      if (!payload || typeof payload !== "object") return { kind: "skip" };
-      return {
-        kind: "message_ids",
-        payload: {
-          user: sseStringField((payload as Record<string, unknown>).user),
-          assistant: sseStringField(
-            (payload as Record<string, unknown>).assistant,
-          ),
-        },
-      };
-    case "tool":
-      return parseToolPayload(payload);
-    default:
-      return { kind: "skip" };
-  }
-}
+/**
+ * Mirrors ``app.chat.events.EventType`` wire shape; each SSE line is
+ * ``data: {StreamEvent.model_dump_json(exclude_none=true)}`` then blank line, per ``controller.stream``.
+ */
+const CHAT_SSE_TYPED_EVENT_PARSERS = {
+  delta: (payload) =>
+    typeof payload === "string" && payload.length > 0
+      ? { type: "delta", payload }
+      : undefined,
+  done: () => ({ type: "done" }),
+  error: (payload) => ({
+    type: "error",
+    payload:
+      typeof payload === "string" && payload.length > 0
+        ? payload
+        : "流式错误",
+  }),
+  message_ids: (payload) => {
+    if (!payload || typeof payload !== "object") return undefined;
+    const p = payload as Record<string, unknown>;
+    return {
+      type: "message_ids",
+      payload: {
+        user: sseStringField(p.user),
+        assistant: sseStringField(p.assistant),
+      },
+    };
+  },
+  tool: (payload) => parseToolPayload(payload),
+} satisfies Record<string, (payload: unknown) => ChatSseParsedEvent>;
 
-function parseAgentChatSsePayloadObject(
-  o: Record<string, unknown>,
-): AgentChatSseParsed {
-  const type = o.type;
-  const payload = o.payload;
-  if (typeof type !== "string") return { kind: "skip" };
-  return parseTypedEvent(type, payload);
-}
+type ChatSseEventType = keyof typeof CHAT_SSE_TYPED_EVENT_PARSERS;
 
-function parseAgentChatSseBlock(block: string): AgentChatSseParsed {
+function parseAgentChatSseBlock(block: string): ChatSseParsedEvent {
   const dataLines = block
     .split("\n")
     .filter((line) => line.startsWith("data:"))
     .map((line) => line.replace(/^data:\s?/, "").trim());
-  if (dataLines.length === 0) return { kind: "skip" };
-  const payload = dataLines.join("\n");
-  if (!payload) return { kind: "skip" };
+  if (dataLines.length === 0) return undefined;
+  const json = dataLines.join("\n");
+  if (!json) return undefined;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(payload);
+    parsed = JSON.parse(json);
   } catch {
-    return { kind: "skip" };
+    return undefined;
   }
-  if (typeof parsed !== "object" || parsed === null) return { kind: "skip" };
-  return parseAgentChatSsePayloadObject(parsed as Record<string, unknown>);
+  if (typeof parsed !== "object" || parsed === null) return undefined;
+  const o = parsed as Record<string, unknown>;
+  const type = o.type;
+  if (
+    typeof type !== "string" ||
+    !Object.hasOwn(CHAT_SSE_TYPED_EVENT_PARSERS, type)
+  ) {
+    return undefined;
+  }
+  return CHAT_SSE_TYPED_EVENT_PARSERS[type as ChatSseEventType](o.payload);
 }
 
 export type AgentChatStreamOptions = {
@@ -136,36 +146,51 @@ export type AgentChatStreamOptions = {
   onToolError?: (payload: { name: string; id: string; error: string }) => void;
 };
 
-/**
- * POST ``/chat/message`` (SSE). Invokes ``onDelta`` for each text chunk; optional tool callbacks; throws ``ApiError`` on HTTP or stream ``error`` events.
- */
+/** @returns ``true`` to keep reading the stream; ``false`` when a terminal ``done`` event was handled. */
 function handleParsedAgentChatSseEvent(
-  ev: AgentChatSseParsed,
+  ev: ChatSseParsedEvent,
   options: AgentChatStreamOptions,
-): "continue" | "done" | "throw" {
-  if (ev.kind === "skip") return "continue";
-  if (ev.kind === "error") throw new ApiError(ev.message, 502);
-  if (ev.kind === "done") return "done";
-  if (ev.kind === "delta") {
-    options.onDelta(ev.text);
-    return "continue";
+): boolean {
+  if (ev === undefined) return true;
+  if (ev.type === "error") throw new ApiError(ev.payload, 502);
+  if (ev.type === "done") return false;
+  if (ev.type === "delta") {
+    options.onDelta(ev.payload);
+    return true;
   }
-  if (ev.kind === "message_ids") {
+  if (ev.type === "message_ids") {
     options.onMessageIds?.(ev.payload);
-    return "continue";
+    return true;
   }
-  if (ev.kind === "tool_start") {
-    options.onToolStart?.(ev.payload);
-    return "continue";
+  const { stage } = ev.payload;
+  if (stage === "start") {
+    options.onToolStart?.({
+      name: ev.payload.name,
+      id: ev.payload.id,
+      args: ev.payload.args,
+    });
+    return true;
   }
-  if (ev.kind === "tool_result") {
-    options.onToolResult?.(ev.payload);
-    return "continue";
+  if (stage === "result") {
+    options.onToolResult?.({
+      name: ev.payload.name,
+      id: ev.payload.id,
+      result: ev.payload.result,
+    });
+    return true;
   }
-  options.onToolError?.(ev.payload);
-  return "continue";
+  options.onToolError?.({
+    name: ev.payload.name,
+    id: ev.payload.id,
+    error: ev.payload.error ?? "",
+  });
+  return true;
 }
 
+/**
+ * POST ``/chat/message`` (SSE). Same JSON envelope as ``controller.stream`` / ``app.chat.events``.
+ * **Contract:** each ``reader.read()`` chunk is one complete SSE event (e.g. ``data: {...}\\n\\n``); no cross-chunk framing.
+ */
 export async function postAgentChatStream(
   body: ChatRequestPublic,
   options: AgentChatStreamOptions,
@@ -188,20 +213,14 @@ export async function postAgentChatStream(
     throw new ApiError("响应无正文", res.status || 502);
   }
   const decoder = new TextDecoder();
-  let buffer = "";
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    for (;;) {
-      const sep = buffer.indexOf("\n\n");
-      if (sep === -1) break;
-      const block = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      const ev = parseAgentChatSseBlock(block);
-      const action = handleParsedAgentChatSseEvent(ev, options);
-      if (action === "done") return;
-    }
+    if (!value?.byteLength) continue;
+    const block = decoder.decode(value);
+    const ev = parseAgentChatSseBlock(block);
+    const keepGoing = handleParsedAgentChatSseEvent(ev, options);
+    if (!keepGoing) return;
   }
 }
 
