@@ -5,6 +5,7 @@ import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from "lucide-rea
 
 
 import type { ChatToolCallDisplay } from "@/models/chat/types";
+import { cn } from "@/lib/utils";
 
 function formatJson(v: unknown): string {
   if (v === undefined) return "";
@@ -84,13 +85,17 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
 
   return (
     <div className="mb-2 rounded-md border border-border/60 bg-muted/30 text-left last:mb-0">
-      <div onClick={() => setOpen(o => !o)}
-        className="flex w-full flex-wrap items-center gap-2 px-3 py-2 text-xs font-medium outline-none \
-           hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 \
-           [&[data-panel-open]_svg:first-child]:rotate-90"
-
+      <div
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-xs font-medium outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
-        <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform" />
+        <ChevronRight
+          className={cn(
+            "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
+            open && "rotate-90",
+          )}
+          aria-hidden
+        />
         <ToolCallHeader name={name} status={status} />
       </div>
       {open && (
