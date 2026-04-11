@@ -1,7 +1,7 @@
 from evaluation_workflow_nodes import common as common_nodes_pkg
 from evaluation_workflow_nodes.calculate_factor_value import CalculateFactorValueNode
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
-from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
+from evaluation_workflow_nodes.visiualization.echarts import EchartsLineNode
 from workflow import Node, collect_node_classes
 from workflow.parser import Parser
 

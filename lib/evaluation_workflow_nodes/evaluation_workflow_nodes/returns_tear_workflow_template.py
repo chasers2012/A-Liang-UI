@@ -32,7 +32,7 @@ from evaluation_workflow_nodes.constants import (
     VALUE_TYPE_SCALAR_JSON,
 )
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
-from evaluation_workflow_nodes.visiualization.echarts_line import EchartsLineNode
+from evaluation_workflow_nodes.visiualization.echarts import EchartsLineNode
 
 
 def build_returns_tear_workflow_template() -> dict:
