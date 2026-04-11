@@ -1,16 +1,16 @@
 import type {
-  AgentChatMessagePublic,
-  AgentChatRequestMessage,
-  AgentChatDetailPublic,
-  AgentChatSummaryPublic,
-  AgentChatToolCallPublic,
+  ChatMessagePublic,
+  ChatRequestMessage,
+  ChatDetailPublic,
+  ChatSummaryPublic,
+  ChatToolCallPublic,
 } from "@/models";
 import type { AssistantBlock } from "@/models/chat/types";
 
 export function appendAssistantDelta(
-  prev: AgentChatMessagePublic | undefined,
+  prev: ChatMessagePublic | undefined,
   delta: string,
-): AgentChatMessagePublic | undefined {
+): ChatMessagePublic | undefined {
   if (!prev) return prev;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
@@ -26,11 +26,11 @@ export function appendAssistantDelta(
 }
 
 export function applyToolStart(
-  prev: AgentChatMessagePublic | undefined,
+  prev: ChatMessagePublic | undefined,
   payload: { name: string; id: string; args?: unknown },
-): AgentChatMessagePublic | undefined {
+): ChatMessagePublic | undefined {
   if (!prev) return prev;
-  const call: AgentChatToolCallPublic = {
+  const call: ChatToolCallPublic = {
     id: payload.id,
     name: payload.name,
     args: payload.args,
@@ -44,10 +44,10 @@ export function applyToolStart(
 }
 
 export function patchToolInBlocks(
-  prev: AgentChatMessagePublic | undefined,
+  prev: ChatMessagePublic | undefined,
   id: string,
-  patch: Partial<AgentChatToolCallPublic>,
-): AgentChatMessagePublic | undefined {
+  patch: Partial<ChatToolCallPublic>,
+): ChatMessagePublic | undefined {
   if (!prev) return prev;
   const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== "tool" || b.call.id !== id) return b;
@@ -57,10 +57,10 @@ export function patchToolInBlocks(
 }
 
 export function upsertSummary(
-  list: AgentChatSummaryPublic[],
-  detail: AgentChatDetailPublic,
-): AgentChatSummaryPublic[] {
-  const nextSummary: AgentChatSummaryPublic = {
+  list: ChatSummaryPublic[],
+  detail: ChatDetailPublic,
+): ChatSummaryPublic[] {
+  const nextSummary: ChatSummaryPublic = {
     id: detail.id,
     title: detail.title,
     created_at: detail.created_at,
@@ -93,10 +93,10 @@ export function summarizeFirstUserMessage(text: string): string {
 }
 
 export function toApiMessage(
-  turn: AgentChatMessagePublic & { role: "user" },
+  turn: ChatMessagePublic & { role: "user" },
   omitId?: boolean,
-): AgentChatRequestMessage {
-  const base: AgentChatRequestMessage = {
+): ChatRequestMessage {
+  const base: ChatRequestMessage = {
     role: "user",
     blocks: turn.blocks ?? [],
   };

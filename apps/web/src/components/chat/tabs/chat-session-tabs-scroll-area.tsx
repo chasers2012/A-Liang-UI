@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { AgentChatSummaryPublic } from "@/models";
+import type { ChatSummaryPublic } from "@/models";
 import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from "@/models/chat/session";
 
 import { ChatTabItem } from "./chat-session-tab-item";
@@ -43,7 +43,7 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
   disabled,
   onSelectSession,
 }: {
-  sessions: AgentChatSummaryPublic[];
+  sessions: ChatSummaryPublic[];
   disabled: boolean;
   onSelectSession: (id: string) => void;
 }) {

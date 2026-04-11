@@ -19,16 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ApiError,
-  getAgentLlmSettings,
-  putAgentLlmSettings,
-} from "@/api";
-import type { AgentLlmProvider, AgentLlmSettingsPublic } from "@/models";
+import { ApiError, getLlmSettings, putLlmSettings } from "@/api";
+import type { LlmProvider, LlmSettingsPublic } from "@/models";
 
 export const AGENT_LLM_FORM_ID = "agent-llm-settings-form";
 
-const DEFAULT_LLM: AgentLlmSettingsPublic = {
+const DEFAULT_LLM: LlmSettingsPublic = {
   provider: "ollama",
   model: "qwen3.5:9b",
   ollama_base_url: "http://127.0.0.1:11434",
@@ -45,7 +41,7 @@ export interface AgentLlmSettingsCardProps {
 }
 
 export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps) {
-  const [settings, setSettings] = useState<AgentLlmSettingsPublic>(DEFAULT_LLM);
+  const [settings, setSettings] = useState<LlmSettingsPublic>(DEFAULT_LLM);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedOk, setSavedOk] = useState(false);
@@ -60,7 +56,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    void getAgentLlmSettings()
+    void getLlmSettings()
       .then((data) => {
         if (!cancelled) {
           setSettings({
@@ -107,12 +103,12 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
       setSavedOk(false);
       setSaving(true);
       try {
-        const body: AgentLlmSettingsPublic = {
+        const body: LlmSettingsPublic = {
           ...settings,
           openai_base_url: settings.openai_base_url?.trim() || null,
           api_key: settings.api_key?.trim() || null,
         };
-        const next = await putAgentLlmSettings(body);
+        const next = await putLlmSettings(body);
         setSettings({
           ...next,
           openai_base_url: next.openai_base_url ?? null,
@@ -134,7 +130,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
     [settings],
   );
 
-  const setProvider = useCallback((v: AgentLlmProvider) => {
+  const setProvider = useCallback((v: LlmProvider) => {
     setSettings((s) => ({ ...s, provider: v }));
   }, []);
 

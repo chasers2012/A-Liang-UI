@@ -1,10 +1,10 @@
 import type {
-  AgentChatArchivedSummaryPublic,
-  AgentChatCreateBody,
-  AgentChatDetailPublic,
-  AgentChatRenameBody,
-  AgentChatRequestPublic,
-  AgentChatSummaryPublic,
+  ChatArchivedSummaryPublic,
+  ChatCreateBody,
+  ChatDetailPublic,
+  ChatRenameBody,
+  ChatRequestPublic,
+  ChatSummaryPublic,
 } from "@/models";
 import {
   ApiError,
@@ -167,7 +167,7 @@ function handleParsedAgentChatSseEvent(
 }
 
 export async function postAgentChatStream(
-  body: AgentChatRequestPublic,
+  body: ChatRequestPublic,
   options: AgentChatStreamOptions,
 ): Promise<void> {
   const url = `${getQuantAgentApiBase()}/chat/message`;
@@ -205,18 +205,18 @@ export async function postAgentChatStream(
   }
 }
 
-export function listAgentChats(): Promise<AgentChatSummaryPublic[]> {
-  return apiFetchJson<AgentChatSummaryPublic[]>("/chat");
+export function listAgentChats(): Promise<ChatSummaryPublic[]> {
+  return apiFetchJson<ChatSummaryPublic[]>("/chat");
 }
 
 export function listArchivedAgentChats(): Promise<
-  AgentChatArchivedSummaryPublic[]
+  ChatArchivedSummaryPublic[]
 > {
-  return apiFetchJson<AgentChatArchivedSummaryPublic[]>("/chat/archived");
+  return apiFetchJson<ChatArchivedSummaryPublic[]>("/chat/archived");
 }
 
-export function restoreAgentChat(id: string): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>(
+export function restoreAgentChat(id: string): Promise<ChatDetailPublic> {
+  return apiFetchJson<ChatDetailPublic>(
     `/chat/${encodeURIComponent(id)}/restore`,
     { method: "POST" },
   );
@@ -229,23 +229,23 @@ export function purgeArchivedAgentChat(id: string): Promise<void> {
 }
 
 export function createAgentChat(
-  body: AgentChatCreateBody,
-): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>("/chat", {
+  body: ChatCreateBody,
+): Promise<ChatDetailPublic> {
+  return apiFetchJson<ChatDetailPublic>("/chat", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export function getAgentChat(id: string): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>(`/chat/${encodeURIComponent(id)}`);
+export function getAgentChat(id: string): Promise<ChatDetailPublic> {
+  return apiFetchJson<ChatDetailPublic>(`/chat/${encodeURIComponent(id)}`);
 }
 
 export function renameAgentChat(
   id: string,
-  body: AgentChatRenameBody,
-): Promise<AgentChatDetailPublic> {
-  return apiFetchJson<AgentChatDetailPublic>(
+  body: ChatRenameBody,
+): Promise<ChatDetailPublic> {
+  return apiFetchJson<ChatDetailPublic>(
     `/chat/${encodeURIComponent(id)}`,
     {
       method: "PATCH",

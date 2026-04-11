@@ -145,9 +145,3 @@ class DatasourcePluginPublic(BaseModel):
     title: str
     description: str | None = None
     fields: list[DatasourcePluginFieldPublic] = Field(default_factory=list)
-
-
-class DatasourceUploadFileResponse(BaseModel):
-    path: str
-    filename: str
-    size: int

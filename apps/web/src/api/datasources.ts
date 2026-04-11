@@ -1,12 +1,11 @@
 import type {
   DataSourcePublic,
   DatasourcePluginPublic,
-  DatasourceUploadFileResponse,
   SqlTableColumnsRequestBody,
   SqlTableColumnsResponseBody,
   TestResult,
 } from "@/models";
-import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from "./client";
+import { apiFetchJson } from "./client";
 
 export function listDatasources(): Promise<DataSourcePublic[]> {
   return apiFetchJson<DataSourcePublic[]>("/datasources");
@@ -14,20 +13,6 @@ export function listDatasources(): Promise<DataSourcePublic[]> {
 
 export function listDatasourcePlugins(): Promise<DatasourcePluginPublic[]> {
   return apiFetchJson<DatasourcePluginPublic[]>("/datasources/plugins");
-}
-
-export async function uploadDatasourceFile(
-  file: File,
-): Promise<DatasourceUploadFileResponse> {
-  const url = `${getQuantAgentApiBase()}/uploads/file`;
-  const body = new FormData();
-  body.append("file", file);
-  const res = await fetch(url, { method: "POST", body });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new ApiError(parseDetail(text), res.status);
-  }
-  return res.json() as Promise<DatasourceUploadFileResponse>;
 }
 
 export function getDatasource(id: string): Promise<DataSourcePublic> {

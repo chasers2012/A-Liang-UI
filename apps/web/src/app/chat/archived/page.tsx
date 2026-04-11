@@ -10,7 +10,7 @@ import { Page } from "@/components/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { AgentChatArchivedSummaryPublic } from "@/models";
+import type { ChatArchivedSummaryPublic } from "@/models";
 import {
   Card,
   CardContent,
@@ -43,7 +43,7 @@ function formatWhen(iso: string): string {
   return d.toLocaleString();
 }
 
-type ArchivedItem = AgentChatArchivedSummaryPublic;
+type ArchivedItem = ChatArchivedSummaryPublic;
 
 type ArchivedActionsProps = {
   restoringId: string | null;

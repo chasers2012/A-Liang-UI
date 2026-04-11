@@ -1,6 +1,6 @@
 import {
-  AgentChatMessagePublic,
-  AgentChatDetailPublic,
+  ChatMessagePublic,
+  ChatDetailPublic,
   TextBlockPublic,
   getAgentChat,
 } from "@/api";
@@ -8,11 +8,11 @@ import { atom } from "jotai";
 import { atomFamily } from "jotai-family";
 
 /**
- * message id → message(AgentChatMessagePublic)
+ * message id → message(ChatMessagePublic)
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const messagesAtomFamily = atomFamily((_mid: string) =>
-  atom<AgentChatMessagePublic | undefined>(undefined),
+  atom<ChatMessagePublic | undefined>(undefined),
 );
 
 /**
@@ -36,7 +36,7 @@ export const replieIdOfMessageAtomFamily = atomFamily((id: string) =>
 );
 
 export const replyOfMessageAtomFamily = atomFamily((id: string) =>
-  atom<AgentChatMessagePublic | undefined>((get) => {
+  atom<ChatMessagePublic | undefined>((get) => {
     const rid = get(replieIdOfMessageAtomFamily(id));
     if (!rid) return undefined;
     return get(messagesAtomFamily(rid));
@@ -56,7 +56,7 @@ export const userMessageTextAtomFamily = atomFamily((id: string) =>
 
 export const sessionDetailAtomFamily = atomFamily(
   (sessionId: string | undefined | null) => {
-    const base = atom<AgentChatDetailPublic | null>(null);
+    const base = atom<ChatDetailPublic | null>(null);
     return atom(
       (get) => {
         return get(base);

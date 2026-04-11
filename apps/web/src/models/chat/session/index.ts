@@ -9,7 +9,7 @@ import {
   postAgentChatStream,
   renameAgentChat,
 } from "@/api";
-import type { AgentChatMessagePublic } from "@/models";
+import type { ChatMessagePublic } from "@/models";
 import {
   chatErrorAtom,
   chatHydratedAtom,
@@ -134,8 +134,8 @@ const patchAssistantMessageAtom = atom(
     }: {
       mid: string;
       patch: (
-        message: AgentChatMessagePublic | undefined,
-      ) => AgentChatMessagePublic | undefined;
+        message: ChatMessagePublic | undefined,
+      ) => ChatMessagePublic | undefined;
     },
   ) => {
     startTransition(() => {
@@ -237,7 +237,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
 
   const provisionalUserId = crypto.randomUUID();
   const provisionalAssistantId = crypto.randomUUID();
-  const userTurn: AgentChatMessagePublic & { role: "user" } = {
+  const userTurn: ChatMessagePublic & { role: "user" } = {
     id: provisionalUserId,
     role: "user",
     blocks: [{ kind: "text", content: trimmed }],

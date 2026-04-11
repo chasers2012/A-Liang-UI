@@ -4,7 +4,7 @@ import { sessionUserMessageIdsAtomFamily } from "./session-detail";
 import { LAST_ACTIVE_KEY } from "./constants";
 import { withAtomEffect } from "jotai-effect";
 import { atomFamily } from "jotai-family";
-import { AgentChatSummaryPublic } from "@/models";
+import { ChatSummaryPublic } from "@/models";
 import { chatSessionsAtom } from "./session-list";
 
 export const activeUserMessageIdsAtom = atom<string[]>([]);
@@ -33,7 +33,7 @@ export const isActiveChatAtomFamily = atomFamily((sessionId: string) =>
 /** 按 id 在会话列表中解析摘要；空 id 为 null（供与 activeSessionIdAtom 组合使用） */
 export const chatSessionSummaryAtomFamily = atomFamily(
   (sessionId: string | null) =>
-    atom((get): AgentChatSummaryPublic | undefined => {
+    atom((get): ChatSummaryPublic | undefined => {
       const sessions = get(chatSessionsAtom);
       if (!sessionId) return;
       return sessions.find((s) => s.id === sessionId);

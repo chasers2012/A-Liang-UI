@@ -5,7 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   ApiError,
   type DatasourcePluginPublic,
-  uploadDatasourceFile,
+  uploadFile,
 } from "@/api";
 import { FileUploadInput } from "@/components/ui/file-upload-input";
 import { Input } from "@/components/ui/input";
@@ -155,7 +155,7 @@ function FileField({
         required={field.required}
         accept={accept || undefined}
         className="grid gap-2"
-        onUpload={(picked) => uploadDatasourceFile(picked).then((resp) => resp.path)}
+        onUpload={(picked) => uploadFile(picked).then((resp) => resp.path)}
         onUploadError={toUploadErrorMessage}
         onUploaded={(path) => setConfigValue(field.key, path)}
       />

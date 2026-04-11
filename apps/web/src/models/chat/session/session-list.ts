@@ -1,5 +1,5 @@
 import {
-  AgentChatSummaryPublic,
+  ChatSummaryPublic,
   listAgentChats,
 } from "@/api";
 import { atom } from "jotai";
@@ -10,7 +10,7 @@ import { sessionDetailAtomFamily } from "./session-detail";
 import { activeSessionIdAtom } from "./active-session";
 import { chatErrorAtom } from "./atoms.base";
 
-export const chatSessionsAtom = atom<AgentChatSummaryPublic[]>([]);
+export const chatSessionsAtom = atom<ChatSummaryPublic[]>([]);
 
 /** 从服务端重新拉取当前会话列表（例如归档恢复后同步首页侧栏）。 */
 export const refetchChatsListAtom = atom(null, async (get, set) => {

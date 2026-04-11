@@ -63,7 +63,8 @@ export interface DatasourcePluginPublic {
   fields: DatasourcePluginFieldPublic[];
 }
 
-export interface DatasourceUploadFileResponse {
+/** `/uploads/file` 响应。 */
+export interface UploadFileResponse {
   path: string;
   filename: string;
   size: number;

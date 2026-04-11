@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 
 def test_get_llm_settings_returns_defaults(client):
-    r = client.get("/agent/llm-settings")
+    r = client.get("/chat/llm-settings")
     assert r.status_code == 200
     data = r.json()
     assert data["provider"] == "ollama"
@@ -34,7 +34,7 @@ def test_put_llm_settings_round_trip(client, workspace_tmp):
         "ollama_num_predict": 512,
         "ollama_reasoning": None,
     }
-    r = client.put("/agent/llm-settings", json=body)
+    r = client.put("/chat/llm-settings", json=body)
     assert r.status_code == 200
     assert r.json() == body
 
@@ -44,7 +44,7 @@ def test_put_llm_settings_round_trip(client, workspace_tmp):
     assert disk["provider"] == "openai"
     assert disk["api_key"] == "sk-test"
 
-    r2 = client.get("/agent/llm-settings")
+    r2 = client.get("/chat/llm-settings")
     assert r2.status_code == 200
     assert r2.json() == body
 
@@ -61,7 +61,7 @@ def test_put_strips_empty_api_key(client):
         "ollama_num_predict": -1,
         "ollama_reasoning": None,
     }
-    r = client.put("/agent/llm-settings", json=body)
+    r = client.put("/chat/llm-settings", json=body)
     assert r.status_code == 200
     out = r.json()
     assert out["api_key"] is None
