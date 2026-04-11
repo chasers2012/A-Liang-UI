@@ -8,6 +8,7 @@ from typing import Any
 
 from workflow import WorkflowExecutor
 
+from app.data_set.controller import get_data_set
 from app.evaluation.profile.schemas import EvaluationProfileRecord
 from app.factors.controller import get_factor
 
@@ -87,12 +88,19 @@ def _to_jsonable(value: Any) -> Any:
 def run_evaluation_profile_workflow(
     factor_id: str,
     profile: EvaluationProfileRecord,
+    *,
+    data_set_id: str | None = None,
 ) -> EvaluationRunRecord:
     started_at = datetime.now(timezone.utc)
 
     factor = get_factor(factor_id)
 
     workflow_inputs: dict[str, Any] = {"factor": factor}
+    override = (data_set_id or "").strip()
+    if override:
+        ds = get_data_set(override)
+        if ds is not None:
+            workflow_inputs["data_set"] = ds
 
     executor = WorkflowExecutor()
 

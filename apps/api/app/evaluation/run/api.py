@@ -30,7 +30,11 @@ def post_evaluation_run_for_profile(
     body: RunEvaluationRunRequest,
 ) -> EvaluationRunRowPublic:
     try:
-        return run_evaluation_run(body.profile_id, body.factor_id)
+        return run_evaluation_run(
+            body.profile_id,
+            body.factor_id,
+            data_set_id=body.data_set_id,
+        )
     except ProfileNotFoundError:
         raise HTTPException(status_code=404, detail="评价方案不存在") from None
     except FactorNotFoundError:

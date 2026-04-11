@@ -4,9 +4,11 @@ import { atomFamily } from "jotai-family";
 import {
   getFactor,
   getFactorEvaluationsSummary,
+  listDataSets,
   listEvaluationMetrics,
   listEvaluationProfiles,
 } from "@/api";
+import type { DataSetPublic } from "@/models/data-set/dto";
 import type { EvaluationMetricSummaryPublic } from "../evaluation-metric/dto";
 import type { EvaluationProfilePublic } from "../evaluation-profile/dto";
 import type {
@@ -21,8 +23,10 @@ export type FactorDetailPageState = {
   detail: FactorDetailPublic | null;
   evalRow: FactorEvaluationRowPublic | null;
   profiles: EvaluationProfilePublic[];
+  dataSets: DataSetPublic[];
   evaluationMetrics: EvaluationMetricSummaryPublic[];
   runProfileId: string | null;
+  runDataSetId: string | null;
   deleteTarget: FactorSummaryPublic | null;
   deleting: boolean;
 };
@@ -34,8 +38,10 @@ function initialFactorDetailState(): FactorDetailPageState {
     detail: null,
     evalRow: null,
     profiles: [],
+    dataSets: [],
     evaluationMetrics: [],
     runProfileId: null,
+    runDataSetId: null,
     deleteTarget: null,
     deleting: false,
   };
@@ -62,10 +68,11 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
       loading: true,
     }));
     try {
-      const [d, summary, pr, metrics] = await Promise.all([
+      const [d, summary, pr, dataSets, metrics] = await Promise.all([
         getFactor(factorId),
         getFactorEvaluationsSummary(),
         listEvaluationProfiles(),
+        listDataSets(),
         listEvaluationMetrics(),
       ]);
       set(factorDetailStateAtomFamily(factorId), (prev) => {
@@ -74,6 +81,11 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
           if (p && pr.some((x) => x.id === p)) return p;
           return pr[0]?.id ?? null;
         })();
+        const runDataSetId = (() => {
+          const ds = prev.runDataSetId;
+          if (ds && dataSets.some((x) => x.id === ds)) return ds;
+          return null;
+        })();
         return {
           ...prev,
           loading: false,
@@ -81,8 +93,10 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
           detail: d,
           evalRow: summary.rows.find((r) => r.factor_id === factorId) ?? null,
           profiles: pr,
+          dataSets,
           evaluationMetrics: metrics,
           runProfileId,
+          runDataSetId,
         };
       });
     } catch (e) {

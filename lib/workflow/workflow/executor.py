@@ -168,7 +168,15 @@ class WorkflowExecutor:
             node = by_id[nid]
 
             inputs = gather_node_inputs(graph, node, workflow_inputs, node_outputs)
-            node_inputs = {**ctx, **node.params, **inputs}
+            appendable_input_names = {
+                getattr(s, "name", "")
+                for s in (getattr(node, "inputs", ()) or ())
+                if getattr(s, "render_type", "") == "appendable" and getattr(s, "name", "")
+            }
+            inputs_for_merge = {
+                k: v for k, v in inputs.items() if k in appendable_input_names or v is not None
+            }
+            node_inputs = {**ctx, **node.params, **inputs_for_merge}
 
             # 调用节点类的entry方法
             node_out = getattr(node, node.entry or "execute")(**node_inputs)

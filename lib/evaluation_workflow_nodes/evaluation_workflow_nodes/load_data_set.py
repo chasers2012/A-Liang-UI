@@ -35,7 +35,10 @@ class LoadDataSet:
     def execute(self, **kwargs) -> DataSet:
         print("正在加载数据集")
         print(kwargs)
-        data_set_id = kwargs.get("data_set")
+        raw = kwargs.get("data_set")
+        if isinstance(raw, DataSet):
+            return raw
+        data_set_id = raw
         if not isinstance(data_set_id, str) or not data_set_id.strip():
             raise ValueError("data_set 参数不能为空")
         data_set = get_data_set(data_set_id)

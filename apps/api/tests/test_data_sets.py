@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from app.evaluation.profile.constants import EVALUATION_WORKFLOW_INPUTS
 from app.persistence.models import DataSetRow
 from app.persistence.sqlite_db import get_session
 from sqlmodel import select
@@ -59,7 +60,7 @@ def _profile_workflow_missing_data_set() -> dict:
 
 def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
     return {
-        "workflow_inputs": [],
+        "workflow_inputs": EVALUATION_WORKFLOW_INPUTS,
         "workflow_outputs": [
             {
                 "name": "result",
@@ -86,6 +87,14 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
             },
         ],
         "links": [
+            {
+                "from": {"kind": "workflow_input", "socket": "data_set"},
+                "to": {"kind": "node", "node_id": "load", "socket": "data_set"},
+            },
+            {
+                "from": {"kind": "workflow_input", "socket": "factor"},
+                "to": {"kind": "node", "node_id": "calc", "socket": "factor"},
+            },
             {
                 "from": {"kind": "node", "node_id": "load", "socket": "data_set"},
                 "to": {"kind": "node", "node_id": "calc", "socket": "data_set"},
@@ -231,6 +240,76 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     r_run = client.post(
         "/evaluation-profiles/evaluations/run",
         json={"profile_id": prof_id, "factor_id": fid},
+    )
+    assert r_run.status_code == 200
+    body = r_run.json()
+    assert body["factor_id"] == fid
+    assert (body.get("error") or "").strip() == ""
+    assert body.get("results") is not None
+
+
+def test_evaluation_run_data_set_id_overrides_profile_params(
+    client,
+    workspace_tmp,
+    monkeypatch,
+):
+    monkeypatch.delenv("FACTOR_AGENT_EVAL_START", raising=False)
+    monkeypatch.delenv("FACTOR_AGENT_EVAL_END", raising=False)
+    monkeypatch.delenv("FACTOR_AGENT_START_DATE", raising=False)
+    monkeypatch.delenv("FACTOR_AGENT_END_DATE", raising=False)
+
+    csv_path = workspace_tmp / "eval_test_panel.csv"
+    lines = ["date,asset,close"]
+    d0 = date(2023, 1, 3)
+    for i in range(45):
+        lines.append(f"{(d0 + timedelta(days=i)).isoformat()},A,{10.0 + i * 0.02}")
+    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    r_ds = client.post("/datasources", json=_csv_datasource_body())
+    assert r_ds.status_code == 200
+    ds_id = r_ds.json()["id"]
+
+    r_ts = client.post(
+        "/data-sets",
+        json={
+            "name": "ts_override",
+            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
+            "start": "2023-01-01",
+            "end": "2023-12-31",
+            "instrument_codes": ["A"],
+        },
+    )
+    assert r_ts.status_code == 200
+    ds_row_id = r_ts.json()["id"]
+
+    r_prof = client.post(
+        "/evaluation-profiles",
+        json={
+            "name": "prof_bad_embedded_ds",
+            "workflow": _profile_workflow_with_data_set("nonexistent-dataset-id"),
+        },
+    )
+    assert r_prof.status_code == 200
+    prof_id = r_prof.json()["id"]
+
+    r_f = client.post(
+        "/factors",
+        json={
+            "name": "f_override_ds",
+            "max_window": 2,
+            "dependencies": ["close"],
+            "source": _factor_source_for_name("f_override_ds"),
+        },
+    )
+    assert r_f.status_code == 200
+    fid = r_f.json()["id"]
+
+    r_run = client.post(
+        "/evaluation-profiles/evaluations/run",
+        json={
+            "profile_id": prof_id,
+            "factor_id": fid,
+            "data_set_id": ds_row_id,
+        },
     )
     assert r_run.status_code == 200
     body = r_run.json()

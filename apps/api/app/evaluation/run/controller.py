@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.data_set.controller import get_data_set
 from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
 from app.evaluation.profile.schemas import EvaluationProfileRecord
 from app.factors.registry import FactorItemsRegistry
@@ -26,17 +27,25 @@ class EvaluationRunNotFoundError(ValueError):
 def execute_and_persist_evaluation_run(
     factor_id: str,
     evaluation_profile: EvaluationProfileRecord,
+    *,
+    data_set_id: str | None = None,
 ) -> EvaluationRunRecord:
     """Execute one evaluation run and append one run record (registry.json)."""
     eval_rec = run_evaluation_profile_workflow(
         factor_id,
         evaluation_profile,
+        data_set_id=data_set_id,
     )
     upsert_evaluation_run(eval_rec)
     return eval_rec
 
 
-def run_evaluation_run(profile_id: str, factor_id: str) -> EvaluationRunRowPublic:
+def run_evaluation_run(
+    profile_id: str,
+    factor_id: str,
+    *,
+    data_set_id: str | None = None,
+) -> EvaluationRunRowPublic:
     from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 
     prof = EvaluationProfilesRegistry.get_by_id(profile_id)
@@ -45,9 +54,13 @@ def run_evaluation_run(profile_id: str, factor_id: str) -> EvaluationRunRowPubli
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise FactorNotFoundError(factor_id)
+    ds_override = (data_set_id or "").strip() or None
+    if ds_override is not None and get_data_set(ds_override) is None:
+        raise ValueError("数据集不存在")
     eval_rec = execute_and_persist_evaluation_run(
         factor_id,
         evaluation_profile=prof,
+        data_set_id=ds_override,
     )
     err_raw = (eval_rec.error or "").strip()
     err: str | None = err_raw or None

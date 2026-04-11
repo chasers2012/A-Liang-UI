@@ -31,6 +31,7 @@ import {
   type FactorEvaluationRowPublic,
   type FactorSummaryPublic,
 } from "@/api";
+import type { DataSetPublic } from "@/models";
 import type { EvaluationProfilePublic } from "@/models/evaluation-profile/dto";
 import {
   factorDetailStateAtomFamily,
@@ -61,20 +62,28 @@ function FactorEvaluationRunControls(props: {
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
+  dataSets: DataSetPublic[];
+  dataSetSelectItems: Record<string, string>;
+  runDataSetId: string | null;
   evaluatingThis: boolean;
   evaluatingOther: boolean;
   otherEvaluatingFactorName: string | undefined;
   onProfileSelectValue: (raw: string) => void;
+  onDataSetSelectValue: (raw: string) => void;
   onRunEvaluation: () => void;
 }) {
   const {
     profiles,
     profileSelectItems,
     runProfileId,
+    dataSets,
+    dataSetSelectItems,
+    runDataSetId,
     evaluatingThis,
     evaluatingOther,
     otherEvaluatingFactorName,
     onProfileSelectValue,
+    onDataSetSelectValue,
     onRunEvaluation,
   } = props;
 
@@ -111,6 +120,40 @@ function FactorEvaluationRunControls(props: {
             {profiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-xs">
+        <Label
+          htmlFor="factor-eval-dataset-card"
+          className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+        >
+          数据集
+        </Label>
+        <Select
+          modal={false}
+          items={dataSetSelectItems}
+          value={runDataSetId ?? "__default__"}
+          onValueChange={(v) => {
+            if (!v) return;
+            onDataSetSelectValue(v);
+          }}
+          disabled={selectDisabled}
+        >
+          <SelectTrigger
+            id="factor-eval-dataset-card"
+            size="sm"
+            className="w-full min-w-0"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__default__">默认（方案节点参数）</SelectItem>
+            {dataSets.map((ds) => (
+              <SelectItem key={ds.id} value={ds.id}>
+                {ds.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -229,10 +272,14 @@ function FactorEvaluationCard(props: {
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
+  dataSets: DataSetPublic[];
+  dataSetSelectItems: Record<string, string>;
+  runDataSetId: string | null;
   evaluatingThis: boolean;
   evaluatingOther: boolean;
   otherEvaluatingFactorName: string | undefined;
   onProfileSelectValue: (raw: string) => void;
+  onDataSetSelectValue: (raw: string) => void;
   onRunEvaluation: () => void;
 }) {
   const {
@@ -241,10 +288,14 @@ function FactorEvaluationCard(props: {
     profiles,
     profileSelectItems,
     runProfileId,
+    dataSets,
+    dataSetSelectItems,
+    runDataSetId,
     evaluatingThis,
     evaluatingOther,
     otherEvaluatingFactorName,
     onProfileSelectValue,
+    onDataSetSelectValue,
     onRunEvaluation,
   } = props;
 
@@ -265,10 +316,14 @@ function FactorEvaluationCard(props: {
           profiles={profiles}
           profileSelectItems={profileSelectItems}
           runProfileId={runProfileId}
+          dataSets={dataSets}
+          dataSetSelectItems={dataSetSelectItems}
+          runDataSetId={runDataSetId}
           evaluatingThis={evaluatingThis}
           evaluatingOther={evaluatingOther}
           otherEvaluatingFactorName={otherEvaluatingFactorName}
           onProfileSelectValue={onProfileSelectValue}
+          onDataSetSelectValue={onDataSetSelectValue}
           onRunEvaluation={onRunEvaluation}
         />
         {!evalRow?.has_evaluation ? (
@@ -293,10 +348,14 @@ function FactorDetailLoadedView(props: {
   profiles: EvaluationProfilePublic[];
   profileSelectItems: Record<string, string>;
   runProfileId: string | null;
+  dataSets: DataSetPublic[];
+  dataSetSelectItems: Record<string, string>;
+  runDataSetId: string | null;
   evaluatingThis: boolean;
   evaluatingOther: boolean;
   otherEvaluatingFactorName: string | undefined;
   onProfileSelectValue: (raw: string) => void;
+  onDataSetSelectValue: (raw: string) => void;
   onRunEvaluation: () => void;
 }) {
   const {
@@ -306,10 +365,14 @@ function FactorDetailLoadedView(props: {
     profiles,
     profileSelectItems,
     runProfileId,
+    dataSets,
+    dataSetSelectItems,
+    runDataSetId,
     evaluatingThis,
     evaluatingOther,
     otherEvaluatingFactorName,
     onProfileSelectValue,
+    onDataSetSelectValue,
     onRunEvaluation,
   } = props;
 
@@ -329,10 +392,14 @@ function FactorDetailLoadedView(props: {
           profiles={profiles}
           profileSelectItems={profileSelectItems}
           runProfileId={runProfileId}
+          dataSets={dataSets}
+          dataSetSelectItems={dataSetSelectItems}
+          runDataSetId={runDataSetId}
           evaluatingThis={evaluatingThis}
           evaluatingOther={evaluatingOther}
           otherEvaluatingFactorName={otherEvaluatingFactorName}
           onProfileSelectValue={onProfileSelectValue}
+          onDataSetSelectValue={onDataSetSelectValue}
           onRunEvaluation={onRunEvaluation}
         />
       </div>
@@ -362,7 +429,9 @@ export default function FactorDetailPage() {
     loadError,
     loading,
     profiles,
+    dataSets,
     runProfileId,
+    runDataSetId,
     deleteTarget,
     deleting,
   } = s;
@@ -376,6 +445,16 @@ export default function FactorDetailPage() {
     }
     return o;
   }, [profiles]);
+
+  const dataSetSelectItems = useMemo(() => {
+    const o: Record<string, string> = {
+      __default__: "默认（方案节点参数）",
+    };
+    for (const ds of dataSets) {
+      o[ds.id] = ds.name;
+    }
+    return o;
+  }, [dataSets]);
 
   const evalProfile = useMemo(() => {
     const pid = evalRow?.evaluation_profile_id;
@@ -411,7 +490,7 @@ export default function FactorDetailPage() {
     setS((prev) => ({ ...prev, loadError: null }));
     try {
       await runFactorEvaluation(id, {
-        dataSetId: null,
+        dataSetId: runDataSetId,
         evaluationProfileId: profileId,
       });
       await refreshEvalRow();
@@ -511,6 +590,9 @@ export default function FactorDetailPage() {
         profiles={profiles}
         profileSelectItems={profileSelectItems}
         runProfileId={runProfileId}
+        dataSets={dataSets}
+        dataSetSelectItems={dataSetSelectItems}
+        runDataSetId={runDataSetId}
         evaluatingThis={evaluatingThis}
         evaluatingOther={evaluatingOther}
         otherEvaluatingFactorName={
@@ -520,6 +602,12 @@ export default function FactorDetailPage() {
           setS((prev) => ({
             ...prev,
             runProfileId: v === "__none__" ? null : v,
+          }))
+        }
+        onDataSetSelectValue={(v) =>
+          setS((prev) => ({
+            ...prev,
+            runDataSetId: v === "__default__" ? null : v,
           }))
         }
         onRunEvaluation={() => void handleRunEvaluation()}

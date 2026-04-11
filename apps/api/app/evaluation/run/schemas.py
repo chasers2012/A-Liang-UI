@@ -40,6 +40,10 @@ class EvaluationRunRowPublic(BaseModel):
 class RunEvaluationRunRequest(BaseModel):
     profile_id: str
     factor_id: str
+    data_set_id: str | None = Field(
+        default=None,
+        description="若提供，则覆盖方案中所有「加载数据集」节点的 data_set 参数。",
+    )
 
 
 class EvaluationRunsAggregatePublic(BaseModel):
