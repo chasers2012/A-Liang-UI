@@ -13,13 +13,14 @@ from app.agent_workflows import api as agent_workflows_router
 from app.chat import api as agent_llm_router
 from app.data_set import api as data_sets_router
 from app.datasource import api as datasources_router
-from app.evaluation.metrics import api as evaluation_metrics_router
 from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
+from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
 from app.uploads import api as uploads_router
+from app.workflows import api as workflows_router
 
 
 def _load_env_file(path: Path) -> None:
@@ -74,7 +75,8 @@ app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
 app.include_router(agent_llm_router.router)
 app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)
-app.include_router(evaluation_metrics_router.router)
+app.include_router(nodes_router.router)
+app.include_router(workflows_router.router)
 app.include_router(evaluation_profiles_router.router)
 app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)

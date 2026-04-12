@@ -3,10 +3,10 @@ from __future__ import annotations
 from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
-from app.evaluation.metrics.controller import list_metric_records, read_metric_source
 from app.evaluation.profile.constants import evaluation_workflow_io_spec_dict
 from app.evaluation.profile.internal_nodes import get_internal_nodes
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
+from app.nodes.controller import list_node_records, read_node_source
 
 
 class ProfileNotFoundError(LookupError):
@@ -28,10 +28,11 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     # built-in nodes (internal catalog)
     out.extend(get_internal_nodes())
 
-    # metrics nodes (loaded from stored source)
-    for metric in list_metric_records():
-        source = read_metric_source(metric)
+    # user nodes (loaded from stored source)
+    for node in list_node_records():
+        source = read_node_source(node)
         node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+        WorkflowNodeLoader.instance().register_node(node.id, node_cls)
         inputs = [Parser.serialize_socket(s) for s in node_cls.inputs]
         outputs = [Parser.serialize_socket(s) for s in node_cls.outputs]
 
@@ -41,9 +42,9 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
 
         out.append(
             EvaluationNodeTypePublic(
-                type=metric.id,
-                label=metric.name,
-                description=metric.description,
+                type=node.id,
+                label=node.name,
+                description=node.description,
                 category=category,
                 inputs=inputs,
                 outputs=outputs,

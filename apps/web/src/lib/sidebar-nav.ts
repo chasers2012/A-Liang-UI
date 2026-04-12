@@ -8,6 +8,7 @@ import {
   Library,
   LineChart,
   Settings,
+  Share2,
   Table2,
   TableProperties,
   Wand2,
@@ -43,8 +44,13 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       items: [
         { title: "因子库", url: "/factors/library", icon: Library },
         { title: "评价方案", url: "/factors/profiles", icon: Table2 },
-        { title: "节点", url: "/factors/metrics", icon: LineChart },
       ],
+    },
+    {
+      title: "工作流",
+      url: "/nodes",
+      icon: Share2,
+      items: [{ title: "节点", url: "/nodes", icon: LineChart }],
     },
     {
       title: "数据",

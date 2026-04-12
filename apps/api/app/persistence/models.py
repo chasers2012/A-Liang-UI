@@ -45,8 +45,8 @@ class EvaluationRunRow(SQLModel, table=True):
     results: Any = Field(default=None, sa_column=Column(JsonText))
 
 
-class EvaluationMetricRow(SQLModel, table=True):
-    __tablename__ = "evaluation_metrics"
+class WorkflowNodeRow(SQLModel, table=True):
+    __tablename__ = "workflow_nodes"
 
     id: str = Field(primary_key=True)
     name: str

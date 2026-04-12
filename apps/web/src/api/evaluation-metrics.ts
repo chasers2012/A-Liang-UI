@@ -7,25 +7,25 @@ import { apiFetchJson } from "./client";
 export function listEvaluationMetrics(): Promise<
   EvaluationMetricSummaryPublic[]
 > {
-  return apiFetchJson<EvaluationMetricSummaryPublic[]>("/evaluation-metrics");
+  return apiFetchJson<EvaluationMetricSummaryPublic[]>("/nodes");
 }
 
 export function getEvaluationMetric(
   id: string,
 ): Promise<EvaluationMetricDetailPublic> {
   return apiFetchJson<EvaluationMetricDetailPublic>(
-    `/evaluation-metrics/${encodeURIComponent(id)}`,
+    `/nodes/${encodeURIComponent(id)}`,
   );
 }
 
 export function getEvaluationMetricTemplate(): Promise<string> {
-  return apiFetchJson<string>("/evaluation-metrics/template");
+  return apiFetchJson<string>("/nodes/template");
 }
 
 export function createEvaluationMetric(
   body: unknown,
 ): Promise<EvaluationMetricDetailPublic> {
-  return apiFetchJson<EvaluationMetricDetailPublic>("/evaluation-metrics", {
+  return apiFetchJson<EvaluationMetricDetailPublic>("/nodes", {
     method: "POST",
     body: JSON.stringify(body),
   });
