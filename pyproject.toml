@@ -22,7 +22,6 @@ evaluation-nodes = { workspace = true }
 alphalens-nodes = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }
-evaluation-metric-templates = { workspace = true }
 factor = { workspace = true }
 agent = { workspace = true }
 workspace = { workspace = true }

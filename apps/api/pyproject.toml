@@ -19,7 +19,6 @@ dependencies = [
   "pymysql>=1.1.0",
   "workspace",
   "evaluate",
-  "evaluation-metric-templates",
   "evaluation-workflow-nodes",
   "factor",
   "datasources",
@@ -33,7 +32,6 @@ agent-workflow-nodes = { workspace = true }
 custom-code = { workspace = true }
 workspace = { workspace = true }
 evaluate = { workspace = true }
-evaluation-metric-templates = { workspace = true }
 evaluation-workflow-nodes = { workspace = true }
 factor = { workspace = true }
 datasources = { workspace = true }

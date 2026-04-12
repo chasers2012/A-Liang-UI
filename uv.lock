@@ -25,7 +25,7 @@ members = [
     "datasources",
     "echarts-nodes",
     "evaluate",
-    "evaluation-metric-templates",
+    "evaluation-nodes",
     "evaluation-workflow-nodes",
     "factor",
     "quant-agent",
@@ -671,17 +671,21 @@ requires-dist = [
 ]
 
 [[package]]
-name = "evaluation-metric-templates"
+name = "evaluation-nodes"
 version = "0.1.0"
-source = { editable = "lib/evaluation_metric_templates" }
+source = { editable = "plugins/evaluation_nodes" }
 dependencies = [
     { name = "evaluate" },
+    { name = "factor" },
+    { name = "quant-agent-api" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "evaluate", editable = "lib/evaluate" },
+    { name = "factor", editable = "lib/factor" },
+    { name = "quant-agent-api", editable = "apps/api" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -2480,6 +2484,7 @@ dependencies = [
     { name = "common-nodes" },
     { name = "datasource-plugins-builtin" },
     { name = "echarts-nodes" },
+    { name = "evaluation-nodes" },
     { name = "quant-agent-api" },
     { name = "sqlmodel" },
 ]
@@ -2504,6 +2509,7 @@ requires-dist = [
     { name = "common-nodes", editable = "plugins/common_nodes" },
     { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
     { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
+    { name = "evaluation-nodes", editable = "plugins/evaluation_nodes" },
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
 ]
@@ -2532,7 +2538,6 @@ dependencies = [
     { name = "custom-code" },
     { name = "datasources" },
     { name = "evaluate" },
-    { name = "evaluation-metric-templates" },
     { name = "evaluation-workflow-nodes" },
     { name = "factor" },
     { name = "fastapi" },
@@ -2554,7 +2559,6 @@ requires-dist = [
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "datasources", editable = "lib/datasources" },
     { name = "evaluate", editable = "lib/evaluate" },
-    { name = "evaluation-metric-templates", editable = "lib/evaluation_metric_templates" },
     { name = "evaluation-workflow-nodes", editable = "lib/evaluation_workflow_nodes" },
     { name = "factor", editable = "lib/factor" },
     { name = "fastapi", specifier = ">=0.115.0" },
