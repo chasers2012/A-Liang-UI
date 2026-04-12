@@ -8,6 +8,7 @@ dependencies = [
     "datasource-plugins-builtin",
     "echarts-nodes",
     "common-nodes",
+    "evaluation-nodes",
     "alphalens-nodes",
     "sqlmodel>=0.0.38",
 ]
@@ -17,6 +18,7 @@ quant-agent-api = { workspace = true }
 datasource-plugins-builtin = { workspace = true }
 echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
+evaluation-nodes = { workspace = true }
 alphalens-nodes = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }
@@ -30,7 +32,7 @@ evaluation-workflow-nodes = { workspace = true }
 agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/alphalens_nodes"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/evaluation_nodes", "plugins/alphalens_nodes"]
 
 [dependency-groups]
 dev = [

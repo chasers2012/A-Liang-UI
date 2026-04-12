@@ -4,10 +4,8 @@ from factor.data_set import DataSet
 from workflow import Socket, workflow_node
 from workflow.node_types import OptionsNodeParam
 
-from evaluation_workflow_nodes.constants import (
-    FACTOR_EVALUATION_CATEGORY,
-    VALUE_TYPE_DATA_SET,
-)
+FACTOR_EVALUATION_CATEGORY = "factor_evaluation"
+VALUE_TYPE_DATA_SET = "data_set"
 
 
 @workflow_node(

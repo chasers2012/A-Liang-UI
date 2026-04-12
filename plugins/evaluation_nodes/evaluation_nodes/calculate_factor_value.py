@@ -15,14 +15,13 @@ from workflow import (
 )
 from workflow.node_types import StringNodeParam
 
-from evaluation_workflow_nodes.constants import (
-    FACTOR_EVALUATION_CATEGORY,
-    VALUE_TYPE_DATA_SET,
-    VALUE_TYPE_FACTOR,
-    VALUE_TYPE_FACTOR_DATA_CLEAN,
-    VALUE_TYPE_SCALAR_JSON,
-    VALUE_TYPE_SERIES,
-)
+FACTOR_EVALUATION_CATEGORY = "factor_evaluation"
+
+VALUE_TYPE_FACTOR = "factor"
+VALUE_TYPE_DATA_SET = "data_set"
+VALUE_TYPE_FACTOR_DATA_CLEAN = "factor_data_clean"
+VALUE_TYPE_SCALAR_JSON = "scalar_json"
+VALUE_TYPE_SERIES = "series"
 
 
 def _int_or_tuple_from_numeric_seq(
