@@ -7,6 +7,7 @@ dependencies = [
     "quant-agent-api",
     "datasource-plugins-builtin",
     "echarts-nodes",
+    "alphalens-nodes",
     "sqlmodel>=0.0.38",
 ]
 
@@ -14,6 +15,7 @@ dependencies = [
 quant-agent-api = { workspace = true }
 datasource-plugins-builtin = { workspace = true }
 echarts-nodes = { workspace = true }
+alphalens-nodes = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }
 evaluation-metric-templates = { workspace = true }
@@ -26,7 +28,7 @@ evaluation-workflow-nodes = { workspace = true }
 agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/alphalens_nodes"]
 
 [dependency-groups]
 dev = [

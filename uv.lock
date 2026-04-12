@@ -18,6 +18,7 @@ resolution-markers = [
 members = [
     "agent",
     "agent-workflow-nodes",
+    "alphalens-nodes",
     "custom-code",
     "datasource-plugins-builtin",
     "datasources",
@@ -76,6 +77,23 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "workflow", editable = "lib/workflow" }]
+
+[[package]]
+name = "alphalens-nodes"
+version = "0.1.0"
+source = { editable = "plugins/alphalens_nodes" }
+dependencies = [
+    { name = "evaluate" },
+    { name = "quant-agent-api" },
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "evaluate", editable = "lib/evaluate" },
+    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "workflow", editable = "lib/workflow" },
+]
 
 [[package]]
 name = "alphalens-reloaded"
@@ -2442,6 +2460,7 @@ name = "quant-agent"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "alphalens-nodes" },
     { name = "datasource-plugins-builtin" },
     { name = "echarts-nodes" },
     { name = "quant-agent-api" },
@@ -2464,6 +2483,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "alphalens-nodes", editable = "plugins/alphalens_nodes" },
     { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
     { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
     { name = "quant-agent-api", editable = "apps/api" },
