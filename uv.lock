@@ -21,6 +21,7 @@ members = [
     "custom-code",
     "datasource-plugins-builtin",
     "datasources",
+    "echarts-nodes",
     "evaluate",
     "evaluation-metric-templates",
     "evaluation-workflow-nodes",
@@ -565,6 +566,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fc/f8/98eea607f65de6527f8a2e8885fc8015d3e6f5775df186e443e0964a11c3/distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed", size = 60722, upload-time = "2023-12-24T09:54:32.31Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2", size = 20277, upload-time = "2023-12-24T09:54:30.421Z" },
+]
+
+[[package]]
+name = "echarts-nodes"
+version = "0.1.0"
+source = { editable = "plugins/echarts_nodes" }
+dependencies = [
+    { name = "echartsy" },
+    { name = "quant-agent-api" },
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "echartsy", specifier = ">=0.7.4" },
+    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "workflow", editable = "lib/workflow" },
 ]
 
 [[package]]
@@ -2425,6 +2443,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "datasource-plugins-builtin" },
+    { name = "echarts-nodes" },
     { name = "quant-agent-api" },
     { name = "sqlmodel" },
 ]
@@ -2446,6 +2465,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
+    { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
 ]

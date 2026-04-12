@@ -1,4 +1,4 @@
-"""ECharts 柱状图节点（echartsy）。"""
+"""ECharts 箱线图节点（echartsy）�?""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from workflow import (
     workflow_node,
 )
 
-from evaluation_workflow_nodes.visiualization.echarts_common import (
+from echarts_nodes.echarts_common import (
     apply_chrome,
     coerce_to_dataframe,
     ensure_y_columns,
@@ -23,14 +23,12 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
     merge_extra_and_pack,
     parse_y_field_list,
     patch_x_axis_label_density,
-    patch_x_axis_type,
-    prepare_dataframe_with_x,
 )
 
 
 @workflow_node(
-    label="ECharts 柱状图",
-    description="从 DataFrame 生成柱状图 ECharts option（echartsy）",
+    label="ECharts 箱线�?,
+    description="�?DataFrame 生成分组箱线图（分类�?+ 数值列，echartsy boxplot�?,
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -42,34 +40,27 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
         ),
         StringNodeParam(
             "x_field",
-            required=False,
+            required=True,
             default="",
-            label="X 轴字段",
-            description="为空时使用 DataFrame 索引作为 X 轴",
+            label="分类�?,
+            description="箱线图分组维度列�?,
         ),
         StringNodeParam(
             "y_fields",
             required=False,
             default="value",
-            label="Y 字段(逗号分隔，* 表示全部列)",
-            description="例如 close,ma20 或 *",
-        ),
-        StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
-        StringNodeParam(
-            "x_axis_type",
-            required=False,
-            default="category",
-            label="X 轴类型",
-            description="例如 category/time/value",
+            label="数值列",
+            description="单个列名；若逗号分隔则仅使用第一�?,
         ),
         OptionsNodeParam(
             "orient",
             required=False,
             default="v",
             label="方向",
-            description="v 纵向柱状图，h 条形图（echartsy orient）",
+            description="v 纵向 / h 横向",
             options=["v", "h"],
         ),
+        StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
         BooleanNodeParam(
             "show_legend",
             required=False,
@@ -89,7 +80,7 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             required=False,
             default=True,
             label="数值轴贴合数据",
-            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+            description="开启时为直角坐标系 value 轴设�?scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常�?0）。无直角坐标轴的图表类型不受影响",
         ),
         NumberNodeParam(
             "value_decimal_places",
@@ -97,16 +88,16 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             default=2,
             minimum=0,
             maximum=15,
-            label="数值小数位数",
-            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
+            label="数值小数位�?,
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整�?,
         ),
         NodeParam(
             "extra_options",
             required=False,
             value_type="scalar_json",
             default=None,
-            label="额外配置(将并入 option 根级)",
-            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
+            label="额外配置(将并�?option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前�?,
         ),
     ],
     output_sockets=[
@@ -114,37 +105,39 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+            description="包含 type=echart �?option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",
 )
-class EchartsBarNode:
+class EchartsBoxplotNode:
     def execute(
         self,
         data: Any,
         x_field: str = "",
         y_fields: str = "value",
-        title: str = "",
-        x_axis_type: str = "category",
         orient: str = "v",
+        title: str = "",
         show_legend: bool = True,
         show_tooltip: bool = True,
         value_axes_scale_to_data: bool = True,
         value_decimal_places: int | float = 2,
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        data = coerce_to_dataframe(data)
-        y_list = parse_y_field_list(data, y_fields)
-        ensure_y_columns(data, y_list)
-        df, x_col = prepare_dataframe_with_x(data, x_field)
+        df = coerce_to_dataframe(data)
+        xc = x_field.strip()
+        if not xc or xc not in df.columns:
+            raise KeyError(f"x_field {xc!r} not found in dataframe columns")
+        y_list = parse_y_field_list(df, y_fields)
+        if len(y_list) != 1:
+            raise ValueError("箱线图仅支持单个数值列（y_fields 只填一列）")
+        ensure_y_columns(df, y_list)
         fig = ec.Figure()
         apply_chrome(fig, title, show_legend, show_tooltip)
-        for y in y_list:
-            fig.bar(df, x=x_col, y=y, orient=orient)  # type: ignore[arg-type]
+        fig.boxplot(df, x=xc, y=y_list[0], orient=orient)  # type: ignore[arg-type]
         option = finalize_figure_option(fig)
-        patch_x_axis_type(option, x_axis_type)
-        patch_x_axis_label_density(option, num_categories=len(df))
+        n = int(df[xc].nunique(dropna=False))
+        patch_x_axis_label_density(option, num_categories=max(n, 1))
         return merge_extra_and_pack(
             option,
             extra_options,

@@ -1,26 +1,6 @@
 from evaluation_workflow_nodes import common as common_nodes_pkg
 from evaluation_workflow_nodes.calculate_factor_value import CalculateFactorValueNode
 from evaluation_workflow_nodes.load_data_set import LoadDataSet
-from evaluation_workflow_nodes.visiualization import (
-    EchartsBarNode,
-    EchartsBoxplotNode,
-    EchartsCalendarHeatmapNode,
-    EchartsCandlestickNode,
-    EchartsFunnelNode,
-    EchartsGaugeNode,
-    EchartsGraphNode,
-    EchartsHeatmapNode,
-    EchartsHistNode,
-    EchartsKdeNode,
-    EchartsLineNode,
-    EchartsPieNode,
-    EchartsRadarNode,
-    EchartsSankeyNode,
-    EchartsScatterNode,
-    EchartsSunburstNode,
-    EchartsTreemapNode,
-    EchartsWaterfallNode,
-)
 from workflow import Node, collect_node_classes
 from workflow.parser import Parser
 
@@ -33,24 +13,6 @@ INTERNAL_NODES = [
     *_COMMON_NODE_CLASSES,
     LoadDataSet,
     CalculateFactorValueNode,
-    EchartsLineNode,
-    EchartsBarNode,
-    EchartsScatterNode,
-    EchartsPieNode,
-    EchartsFunnelNode,
-    EchartsHistNode,
-    EchartsHeatmapNode,
-    EchartsBoxplotNode,
-    EchartsTreemapNode,
-    EchartsSankeyNode,
-    EchartsCandlestickNode,
-    EchartsWaterfallNode,
-    EchartsGaugeNode,
-    EchartsSunburstNode,
-    EchartsCalendarHeatmapNode,
-    EchartsRadarNode,
-    EchartsKdeNode,
-    EchartsGraphNode,
 ]
 
 

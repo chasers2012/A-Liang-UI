@@ -7,6 +7,7 @@ from typing import Any, ClassVar
 from factor import FactorDataSource
 
 from app.plugin.base import Plugin
+from app.plugin.registry import PluginRegistry
 from app.plugin.schema import PluginConfigSchema
 
 __all__ = [
@@ -56,7 +57,6 @@ class DataSourcePlugin(Plugin):
 
 def get_datasource_plugin(type_id: str) -> DataSourcePlugin:
     """Return the plugin registered for ``type_id`` (must be a :class:`DataSourcePlugin`)."""
-    from app.plugin.registry import PluginRegistry
 
     p = PluginRegistry.instance().get("datasource", type_id)
     if not isinstance(p, DataSourcePlugin):

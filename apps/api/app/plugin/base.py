@@ -32,3 +32,7 @@ class Plugin(ABC):
             raise TypeError(
                 f"{cls.__qualname__} must define non-empty class attribute 'category: str'"
             )
+
+    def on_registered(self) -> None:
+        """Optional hook executed after this plugin is registered."""
+        return

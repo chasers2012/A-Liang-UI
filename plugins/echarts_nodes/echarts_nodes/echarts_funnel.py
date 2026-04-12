@@ -1,4 +1,4 @@
-"""ECharts 核密度曲线节点（echartsy）。"""
+"""ECharts 漏斗图节点（echartsy）�?""
 
 from __future__ import annotations
 
@@ -9,23 +9,26 @@ from workflow import (
     BooleanNodeParam,
     NodeParam,
     NumberNodeParam,
+    OptionsNodeParam,
     Socket,
     StringNodeParam,
     workflow_node,
 )
 
-from evaluation_workflow_nodes.visiualization.echarts_common import (
+from echarts_nodes.echarts_common import (
     apply_chrome,
     coerce_to_dataframe,
+    ensure_y_columns,
     finalize_figure_option,
     merge_extra_and_pack,
-    patch_x_axis_label_density,
+    parse_y_field_list,
+    prepare_dataframe_with_x,
 )
 
 
 @workflow_node(
-    label="ECharts KDE 曲线",
-    description="从 DataFrame 数值列生成核密度估计曲线（echartsy kde，可选 hue 分组）",
+    label="ECharts 漏斗�?,
+    description="�?DataFrame 生成漏斗图（阶段名称�?+ 数值列，echartsy funnel�?,
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -36,25 +39,26 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             description="用于生成图表的数据源",
         ),
         StringNodeParam(
-            "column",
-            required=True,
-            default="value",
-            label="数值列",
-            description="估计密度的目标列",
-        ),
-        StringNodeParam(
-            "hue_field",
+            "x_field",
             required=False,
             default="",
-            label="分组列",
-            description="可选；按该列分组绘制多条 KDE",
+            label="阶段名称�?,
+            description="漏斗各阶段名称；为空时使�?DataFrame 索引",
         ),
-        BooleanNodeParam(
-            "area",
+        StringNodeParam(
+            "y_fields",
             required=False,
-            default=False,
-            label="填充面积",
-            description="曲线下方是否填充",
+            default="value",
+            label="数值列",
+            description="单个列名；若逗号分隔则仅使用第一�?,
+        ),
+        OptionsNodeParam(
+            "sort_order",
+            required=False,
+            default="descending",
+            label="排序",
+            description="阶段排序方式",
+            options=["descending", "ascending", "none"],
         ),
         StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
         BooleanNodeParam(
@@ -76,7 +80,7 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             required=False,
             default=True,
             label="数值轴贴合数据",
-            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+            description="开启时为直角坐标系 value 轴设�?scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常�?0）。无直角坐标轴的图表类型不受影响",
         ),
         NumberNodeParam(
             "value_decimal_places",
@@ -84,16 +88,16 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             default=2,
             minimum=0,
             maximum=15,
-            label="数值小数位数",
-            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
+            label="数值小数位�?,
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整�?,
         ),
         NodeParam(
             "extra_options",
             required=False,
             value_type="scalar_json",
             default=None,
-            label="额外配置(将并入 option 根级)",
-            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
+            label="额外配置(将并�?option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前�?,
         ),
     ],
     output_sockets=[
@@ -101,18 +105,18 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+            description="包含 type=echart �?option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",
 )
-class EchartsKdeNode:
+class EchartsFunnelNode:
     def execute(
         self,
         data: Any,
-        column: str = "value",
-        hue_field: str = "",
-        area: bool = False,
+        x_field: str = "",
+        y_fields: str = "value",
+        sort_order: str = "descending",
         title: str = "",
         show_legend: bool = True,
         show_tooltip: bool = True,
@@ -120,25 +124,16 @@ class EchartsKdeNode:
         value_decimal_places: int | float = 2,
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        df = coerce_to_dataframe(data)
-        col = column.strip()
-        if not col or col not in df.columns:
-            raise KeyError(f"column {col!r} not found in dataframe columns")
-        hf = hue_field.strip()
-        if hf and hf not in df.columns:
-            raise KeyError(f"hue_field {hf!r} not found in dataframe columns")
+        data = coerce_to_dataframe(data)
+        y_list = parse_y_field_list(data, y_fields)
+        if len(y_list) != 1:
+            raise ValueError("漏斗图仅支持单个数值列（y_fields 只填一列）")
+        ensure_y_columns(data, y_list)
+        df, x_col = prepare_dataframe_with_x(data, x_field)
         fig = ec.Figure()
         apply_chrome(fig, title, show_legend, show_tooltip)
-        if hf:
-            fig.kde(df, column=col, hue=hf, area=area)
-        else:
-            fig.kde(df, column=col, area=area)
+        fig.funnel(df, names=x_col, values=y_list[0], sort_order=sort_order)  # type: ignore[arg-type]
         option = finalize_figure_option(fig)
-        xd = option.get("xAxis")
-        n = 0
-        if isinstance(xd, dict) and isinstance(xd.get("data"), list):
-            n = len(xd["data"])
-        patch_x_axis_label_density(option, num_categories=max(n, 32))
         return merge_extra_and_pack(
             option,
             extra_options,

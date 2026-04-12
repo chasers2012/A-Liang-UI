@@ -1,4 +1,4 @@
-"""ECharts 饼图节点（echartsy）。"""
+"""ECharts 仪表盘节点（echartsy）�?""
 
 from __future__ import annotations
 
@@ -14,20 +14,17 @@ from workflow import (
     workflow_node,
 )
 
-from evaluation_workflow_nodes.visiualization.echarts_common import (
+from echarts_nodes.echarts_common import (
     apply_chrome,
     coerce_to_dataframe,
-    ensure_y_columns,
     finalize_figure_option,
     merge_extra_and_pack,
-    parse_y_field_list,
-    prepare_dataframe_with_x,
 )
 
 
 @workflow_node(
-    label="ECharts 饼图",
-    description="从 DataFrame 生成饼图 ECharts option（名称列 + 单个数值列，echartsy）",
+    label="ECharts 仪表�?,
+    description="�?DataFrame 单列取最后一行数值作为指针读数（echartsy gauge�?,
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -38,18 +35,32 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             description="用于生成图表的数据源",
         ),
         StringNodeParam(
-            "x_field",
-            required=False,
-            default="",
-            label="名称列",
-            description="扇区名称所在列；为空时使用 DataFrame 索引",
-        ),
-        StringNodeParam(
-            "y_fields",
-            required=False,
+            "value_field",
+            required=True,
             default="value",
             label="数值列",
-            description="单个列名；若逗号分隔则仅使用第一列",
+            description="取该列最后一个非空值作为指�?,
+        ),
+        StringNodeParam(
+            "gauge_name",
+            required=False,
+            default="",
+            label="名称",
+            description="表盘下方文字标签",
+        ),
+        NumberNodeParam(
+            "min_val",
+            required=False,
+            default=0,
+            label="最小�?,
+            description="量程下限",
+        ),
+        NumberNodeParam(
+            "max_val",
+            required=False,
+            default=100,
+            label="最大�?,
+            description="量程上限",
         ),
         StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
         BooleanNodeParam(
@@ -71,7 +82,7 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             required=False,
             default=True,
             label="数值轴贴合数据",
-            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+            description="开启时为直角坐标系 value 轴设�?scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常�?0）。无直角坐标轴的图表类型不受影响",
         ),
         NumberNodeParam(
             "value_decimal_places",
@@ -79,16 +90,16 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             default=2,
             minimum=0,
             maximum=15,
-            label="数值小数位数",
-            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
+            label="数值小数位�?,
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整�?,
         ),
         NodeParam(
             "extra_options",
             required=False,
             value_type="scalar_json",
             default=None,
-            label="额外配置(将并入 option 根级)",
-            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
+            label="额外配置(将并�?option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前�?,
         ),
     ],
     output_sockets=[
@@ -96,17 +107,19 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+            description="包含 type=echart �?option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",
 )
-class EchartsPieNode:
+class EchartsGaugeNode:
     def execute(
         self,
         data: Any,
-        x_field: str = "",
-        y_fields: str = "value",
+        value_field: str = "value",
+        gauge_name: str = "",
+        min_val: float = 0,
+        max_val: float = 100,
         title: str = "",
         show_legend: bool = True,
         show_tooltip: bool = True,
@@ -114,15 +127,17 @@ class EchartsPieNode:
         value_decimal_places: int | float = 2,
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        data = coerce_to_dataframe(data)
-        y_list = parse_y_field_list(data, y_fields)
-        if len(y_list) != 1:
-            raise ValueError("饼图仅支持单个数值列（y_fields 只填一列，勿使用 * 多列）")
-        ensure_y_columns(data, y_list)
-        df, x_col = prepare_dataframe_with_x(data, x_field)
+        df = coerce_to_dataframe(data)
+        vf = value_field.strip()
+        if not vf or vf not in df.columns:
+            raise KeyError(f"value_field {vf!r} not found in dataframe columns")
+        series = df[vf].dropna()
+        if series.empty:
+            raise ValueError("value_field has no non-null values")
+        val = float(series.iloc[-1])
         fig = ec.Figure()
         apply_chrome(fig, title, show_legend, show_tooltip)
-        fig.pie(df, names=x_col, values=y_list[0])
+        fig.gauge(val, name=gauge_name.strip(), min_val=float(min_val), max_val=float(max_val))
         option = finalize_figure_option(fig)
         return merge_extra_and_pack(
             option,

@@ -1,4 +1,4 @@
-"""ECharts 矩形树图节点（echartsy）。"""
+"""ECharts 核密度曲线节点（echartsy）�?""
 
 from __future__ import annotations
 
@@ -14,18 +14,18 @@ from workflow import (
     workflow_node,
 )
 
-from evaluation_workflow_nodes.visiualization.echarts_common import (
+from echarts_nodes.echarts_common import (
     apply_chrome,
     coerce_to_dataframe,
     finalize_figure_option,
     merge_extra_and_pack,
-    split_csv_fields,
+    patch_x_axis_label_density,
 )
 
 
 @workflow_node(
-    label="ECharts 矩形树图",
-    description="从 DataFrame 层级列生成 treemap（path 为逗号分隔列名，自顶向下，echartsy treemap）",
+    label="ECharts KDE 曲线",
+    description="�?DataFrame 数值列生成核密度估计曲线（echartsy kde，可�?hue 分组�?,
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -36,27 +36,27 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             description="用于生成图表的数据源",
         ),
         StringNodeParam(
-            "path_columns",
+            "column",
             required=True,
-            default="",
-            label="层级列",
-            description="逗号分隔，顺序为根→叶，如 Region,Country,City",
+            default="value",
+            label="数值列",
+            description="估计密度的目标列",
         ),
         StringNodeParam(
-            "value_field",
+            "hue_field",
             required=False,
             default="",
-            label="数值列",
-            description="可选；为空时按 echartsy 默认计数",
+            label="分组�?,
+            description="可选；按该列分组绘制多�?KDE",
         ),
-        StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
         BooleanNodeParam(
-            "roam",
+            "area",
             required=False,
             default=False,
-            label="缩放平移",
-            description="是否允许 roam 交互",
+            label="填充面积",
+            description="曲线下方是否填充",
         ),
+        StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
         BooleanNodeParam(
             "show_legend",
             required=False,
@@ -76,7 +76,7 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             required=False,
             default=True,
             label="数值轴贴合数据",
-            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+            description="开启时为直角坐标系 value 轴设�?scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常�?0）。无直角坐标轴的图表类型不受影响",
         ),
         NumberNodeParam(
             "value_decimal_places",
@@ -84,16 +84,16 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             default=2,
             minimum=0,
             maximum=15,
-            label="数值小数位数",
-            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
+            label="数值小数位�?,
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整�?,
         ),
         NodeParam(
             "extra_options",
             required=False,
             value_type="scalar_json",
             default=None,
-            label="额外配置(将并入 option 根级)",
-            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
+            label="额外配置(将并�?option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前�?,
         ),
     ],
     output_sockets=[
@@ -101,19 +101,19 @@ from evaluation_workflow_nodes.visiualization.echarts_common import (
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+            description="包含 type=echart �?option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",
 )
-class EchartsTreemapNode:
+class EchartsKdeNode:
     def execute(
         self,
         data: Any,
-        path_columns: str = "",
-        value_field: str = "",
+        column: str = "value",
+        hue_field: str = "",
+        area: bool = False,
         title: str = "",
-        roam: bool = False,
         show_legend: bool = True,
         show_tooltip: bool = True,
         value_axes_scale_to_data: bool = True,
@@ -121,22 +121,24 @@ class EchartsTreemapNode:
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         df = coerce_to_dataframe(data)
-        path = split_csv_fields(path_columns)
-        if not path:
-            raise ValueError("path_columns must list at least one column")
-        for p in path:
-            if p not in df.columns:
-                raise KeyError(f"path column {p!r} not found in dataframe columns")
-        vf = value_field.strip()
-        if vf and vf not in df.columns:
-            raise KeyError(f"value_field {vf!r} not found in dataframe columns")
+        col = column.strip()
+        if not col or col not in df.columns:
+            raise KeyError(f"column {col!r} not found in dataframe columns")
+        hf = hue_field.strip()
+        if hf and hf not in df.columns:
+            raise KeyError(f"hue_field {hf!r} not found in dataframe columns")
         fig = ec.Figure()
         apply_chrome(fig, title, show_legend, show_tooltip)
-        if vf:
-            fig.treemap(df, path=path, value=vf, roam=roam)
+        if hf:
+            fig.kde(df, column=col, hue=hf, area=area)
         else:
-            fig.treemap(df, path=path, value=None, roam=roam)
+            fig.kde(df, column=col, area=area)
         option = finalize_figure_option(fig)
+        xd = option.get("xAxis")
+        n = 0
+        if isinstance(xd, dict) and isinstance(xd.get("data"), list):
+            n = len(xd["data"])
+        patch_x_axis_label_density(option, num_categories=max(n, 32))
         return merge_extra_and_pack(
             option,
             extra_options,

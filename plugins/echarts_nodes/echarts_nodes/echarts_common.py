@@ -11,7 +11,7 @@ import pandas as pd
 
 
 def _format_x_axis_tick(value: Any) -> Any:
-    """缩短刻度文本：日频时间戳用 YYYY-MM-DD，避免整段 ISO 挤在一起。"""
+    """缩短刻度文本：日频时间戳�?YYYY-MM-DD，避免整�?ISO 挤在一起�?""
     if hasattr(value, "strftime"):
         try:
             if (
@@ -63,11 +63,9 @@ def patch_x_axis_type(option: dict[str, Any], x_axis_type: str) -> None:
     (x_axis_type != "category") and isinstance(xa, dict) and xa.update({"type": x_axis_type})
 
 
-# 类目轴上大约保留的刻度标签数量上限（再多则通过 interval 抽样）
-_MAX_CATEGORY_AXIS_LABELS = 16
-# 刻度字符串达到该长度及以上时倾斜（如 YYYY-MM-DD 为 10 字符）
-_MIN_CHARS_FOR_X_LABEL_SLANT = 10
-# 长标签时的倾斜角（度）；避免 echartsy 默认拉成 90° 竖排
+# 类目轴上大约保留的刻度标签数量上限（再多则通过 interval 抽样�?_MAX_CATEGORY_AXIS_LABELS = 16
+# 刻度字符串达到该长度及以上时倾斜（如 YYYY-MM-DD �?10 字符�?_MIN_CHARS_FOR_X_LABEL_SLANT = 10
+# 长标签时的倾斜角（度）；避�?echartsy 默认拉成 90° 竖排
 _SLANT_X_LABEL_ROTATE = 38
 
 
@@ -84,7 +82,7 @@ def _apply_slant_for_long_x_labels(axis_label: dict[str, Any], category_data: li
 
 
 def patch_x_axis_label_density(option: dict[str, Any], *, num_categories: int) -> None:
-    """缓解 x 轴类目/时间轴标签过密：抽样刻度、隐藏重叠；长文本时刻度倾斜显示。"""
+    """缓解 x 轴类�?时间轴标签过密：抽样刻度、隐藏重叠；长文本时刻度倾斜显示�?""
     if num_categories <= 0:
         return
     axes = option.get("xAxis")
@@ -112,7 +110,7 @@ def patch_x_axis_label_density(option: dict[str, Any], *, num_categories: int) -
 
 
 def patch_value_axes_scale_to_data(option: dict[str, Any]) -> None:
-    """数值轴默认会保留 0 刻度；开启 scale 使范围更贴合数据（条形图横向时作用在 x 轴）。"""
+    """数值轴默认会保�?0 刻度；开�?scale 使范围更贴合数据（条形图横向时作用在 x 轴）�?""
     for key in ("xAxis", "yAxis"):
         axes = option.get(key)
         if axes is None:
@@ -219,7 +217,7 @@ def _patch_visual_map_bounds(option: dict[str, Any], places: int) -> None:
 
 
 def patch_value_decimal_places(option: dict[str, Any], places: int) -> None:
-    """统一数值显示精度：series.data、sankey/graph links、radar 轴上限、连续型 visualMap。"""
+    """统一数值显示精度：series.data、sankey/graph links、radar 轴上限、连续型 visualMap�?""
     p = max(0, min(int(places), 15))
     _patch_series_data_and_links(option.get("series") or [], p)
     _patch_radar_indicator_max(option, p)

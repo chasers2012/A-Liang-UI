@@ -50,11 +50,9 @@ class PluginRegistry:
     def __init__(
         self,
         *,
-        on_missing: Callable[[str, str], BaseException],
         duplicate_message: Callable[[str, str], str] | None = None,
     ) -> None:
         self._plugins: dict[PluginRegistryKey, Plugin] = {}
-        self._on_missing = on_missing
         self._duplicate_message = duplicate_message or (
             lambda c, n: f"Duplicate plugin registered: {c!r}/{n!r}"
         )
@@ -64,6 +62,7 @@ class PluginRegistry:
         if key in self._plugins:
             raise ValueError(self._duplicate_message(key[0], key[1]))
         self._plugins[key] = plugin
+        plugin.on_registered()
 
     def register_many(self, plugins: Iterable[Plugin]) -> None:
         for p in plugins:
@@ -74,7 +73,7 @@ class PluginRegistry:
         if not key[0] or not key[1]:
             raise ValueError("category and name must be non-empty")
         if key not in self._plugins:
-            raise self._on_missing(key[0], key[1])
+            return None
         return self._plugins[key]
 
     def list_registered_by_class(
@@ -120,10 +119,7 @@ class PluginRegistry:
     @classmethod
     def instance(cls) -> PluginRegistry:
         if PluginRegistry._instance is None:
-            from app.datasource.plugins import UnknownDataSourceTypeError
-
             PluginRegistry._instance = PluginRegistry(
-                on_missing=lambda cat, name: UnknownDataSourceTypeError(name),
                 duplicate_message=lambda cat, name: (
                     f"Duplicate datasource plugin registered: {cat!r}/{name!r}"
                 ),
