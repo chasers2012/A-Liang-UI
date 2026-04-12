@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
 from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
 
 
@@ -115,7 +114,7 @@ def _coerce_groups_filter_arg(raw: Any) -> Any:
     ],
     entry="evaluate",
 )
-class FactorCumulativeReturnsMetric(EvaluationMetric):
+class FactorCumulativeReturnsMetric:
     def evaluate(self, **kwargs: Any) -> pd.Series:
         import alphalens as al
 

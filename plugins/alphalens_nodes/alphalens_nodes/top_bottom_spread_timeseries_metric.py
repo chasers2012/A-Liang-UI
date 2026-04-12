@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
 from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
 
 
@@ -62,7 +61,7 @@ from workflow import NumberNodeParam, Socket, StringNodeParam, workflow_node
     ],
     entry="evaluate",
 )
-class TopBottomSpreadTimeSeriesMetric(EvaluationMetric):
+class TopBottomSpreadTimeSeriesMetric:
     def evaluate(
         self,
         mean_returns_bydate: pd.DataFrame,

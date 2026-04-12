@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
 from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
 
 
@@ -56,7 +55,7 @@ from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
     ],
     entry="evaluate",
 )
-class MeanIC(EvaluationMetric):
+class MeanIC:
     def evaluate(
         self,
         clean_factor: pd.DataFrame,

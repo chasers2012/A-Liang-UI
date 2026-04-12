@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
 from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workflow_node
 
 
@@ -78,7 +77,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
     ],
     entry="evaluate",
 )
-class FactorPositionsMetric(EvaluationMetric):
+class FactorPositionsMetric:
     def evaluate(
         self,
         clean_factor: pd.DataFrame,

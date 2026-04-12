@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from evaluate import EvaluationMetric
 from workflow import Socket, StringNodeParam, workflow_node
 
 
@@ -41,7 +40,7 @@ from workflow import Socket, StringNodeParam, workflow_node
     ],
     entry="evaluate",
 )
-class RateOfReturnMetric(EvaluationMetric):
+class RateOfReturnMetric:
     def evaluate(
         self,
         returns: pd.DataFrame,
