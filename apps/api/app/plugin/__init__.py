@@ -3,7 +3,6 @@
 from app.plugin.base import Plugin
 from app.plugin.redact import redact_config
 from app.plugin.registry import (
-    EntryPointPluginLoadResult,
     PluginRegistry,
     load_plugins_from_entry_points,
 )
@@ -23,7 +22,6 @@ from app.startup_jobs import register_startup_job
 
 __all__ = [
     "BooleanConfigField",
-    "EntryPointPluginLoadResult",
     "FileConfigField",
     "JsonConfigField",
     "NumberConfigField",
@@ -49,5 +47,6 @@ def discover_and_register_plugins() -> None:
     """
     try:
         load_plugins_from_entry_points(PluginRegistry.instance())
-    except Exception:
+    except Exception as e:
+        print("error loaing plugin: ", e)
         return

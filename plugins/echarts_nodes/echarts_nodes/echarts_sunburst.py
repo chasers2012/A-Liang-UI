@@ -1,4 +1,4 @@
-"""ECharts 旭日图节点（echartsy）�?""
+"""ECharts 旭日图节点（echartsy）。"""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from workflow import (
     workflow_node,
 )
 
-from echarts_nodes.echarts_common import (
+from .echarts_common import (
     apply_chrome,
     coerce_to_dataframe,
     finalize_figure_option,
@@ -24,8 +24,8 @@ from echarts_nodes.echarts_common import (
 
 
 @workflow_node(
-    label="ECharts 旭日�?,
-    description="�?DataFrame 层级列生成旭日图（echartsy sunburst�?,
+    label="ECharts 旭日图",
+    description="从 DataFrame 层级列生成旭日图（echartsy sunburst）",
     category="factor_evaluation",
     input_sockets=[
         Socket(
@@ -39,7 +39,7 @@ from echarts_nodes.echarts_common import (
             "path_columns",
             required=True,
             default="",
-            label="层级�?,
+            label="层级列",
             description="逗号分隔，根→叶，如 Region,Country",
         ),
         StringNodeParam(
@@ -69,7 +69,7 @@ from echarts_nodes.echarts_common import (
             required=False,
             default=True,
             label="数值轴贴合数据",
-            description="开启时为直角坐标系 value 轴设�?scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常�?0）。无直角坐标轴的图表类型不受影响",
+            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
         ),
         NumberNodeParam(
             "value_decimal_places",
@@ -77,16 +77,16 @@ from echarts_nodes.echarts_common import (
             default=2,
             minimum=0,
             maximum=15,
-            label="数值小数位�?,
-            description="图内数值（series、视觉映射等）保留的小数位；0 为整�?,
+            label="数值小数位数",
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
         ),
         NodeParam(
             "extra_options",
             required=False,
             value_type="scalar_json",
             default=None,
-            label="额外配置(将并�?option 根级)",
-            description="与自动生成的 option 合并，冲突键以后者覆盖前�?,
+            label="额外配置(将并入 option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
         ),
     ],
     output_sockets=[
@@ -94,7 +94,7 @@ from echarts_nodes.echarts_common import (
             "option",
             value_type="scalar_json",
             label="ECharts 配置",
-            description="包含 type=echart �?option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )
     ],
     entry="execute",

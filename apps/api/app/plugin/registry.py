@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib.metadata
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 from typing import ClassVar
 
 from app.plugin.base import Plugin
@@ -19,12 +18,6 @@ def _plugin_registry_key(plugin: Plugin) -> PluginRegistryKey:
     if not n:
         raise ValueError("plugin.name must be non-empty")
     return (c, n)
-
-
-@dataclass(frozen=True, slots=True)
-class EntryPointPluginLoadResult:
-    loaded_modules: list[str]
-    registered_types: list[str]
 
 
 def _entry_points_for_group(group: str) -> list[importlib.metadata.EntryPoint]:
@@ -59,8 +52,8 @@ class PluginRegistry:
 
     def register(self, plugin: Plugin) -> None:
         key = _plugin_registry_key(plugin)
-        if key in self._plugins:
-            raise ValueError(self._duplicate_message(key[0], key[1]))
+        # if key in self._plugins:
+        #     raise ValueError(self._duplicate_message(key[0], key[1]))
         self._plugins[key] = plugin
         plugin.on_registered()
 
@@ -127,7 +120,7 @@ class PluginRegistry:
         return PluginRegistry._instance
 
 
-def load_plugins_from_entry_points(registry: PluginRegistry) -> EntryPointPluginLoadResult:
+def load_plugins_from_entry_points(registry: PluginRegistry) -> None:
     """
     Discover plugins via ``importlib.metadata`` entry points.
 
@@ -135,31 +128,24 @@ def load_plugins_from_entry_points(registry: PluginRegistry) -> EntryPointPlugin
     - Each entry point should resolve to either a Plugin subclass (class object)
       or a Plugin instance.
     """
-    loaded_modules: list[str] = []
-    registered: list[str] = []
 
     for ep in _entry_points_for_group(PLUGIN_ENTRY_POINT_GROUP):
-        loaded = ep.load()
-        loaded_modules.append(ep.value)
+        try:
+            loaded = ep.load()
 
-        before = set(registry.list_plugin_keys())
-        plugin: Plugin
-        if isinstance(loaded, type) and issubclass(loaded, Plugin):
-            plugin = loaded()
-        elif isinstance(loaded, Plugin):
-            plugin = loaded
-        else:
-            raise TypeError(
-                f"Entry point {ep.name!r} must resolve to a Plugin subclass or instance, "
-                f"got {type(loaded).__name__!r}"
-            )
+            plugin: Plugin
+            if isinstance(loaded, type) and issubclass(loaded, Plugin):
+                plugin = loaded()
+            elif isinstance(loaded, Plugin):
+                plugin = loaded
+            else:
+                raise TypeError(
+                    f"Entry point {ep.name!r} must resolve to a Plugin subclass or instance, "
+                    f"got {type(loaded).__name__!r}"
+                )
 
-        registry.register(plugin)
-        after = set(registry.list_plugin_keys())
-        for key in sorted(after - before, key=lambda k: (k[0].lower(), k[1].lower())):
-            registered.append(f"{key[0]}:{key[1]}")
+            registry.register(plugin)
 
-    return EntryPointPluginLoadResult(
-        loaded_modules=loaded_modules,
-        registered_types=sorted(set(registered), key=lambda x: (x.lower(), x)),
-    )
+        except Exception as e:
+            print(f"Error loading plugin {ep.name}: {e}")
+            continue

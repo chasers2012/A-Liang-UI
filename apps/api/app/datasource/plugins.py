@@ -59,6 +59,8 @@ def get_datasource_plugin(type_id: str) -> DataSourcePlugin:
     """Return the plugin registered for ``type_id`` (must be a :class:`DataSourcePlugin`)."""
 
     p = PluginRegistry.instance().get("datasource", type_id)
+    if not p:
+        raise TypeError(f"Plugin {type_id!r} does not exist")
     if not isinstance(p, DataSourcePlugin):
         raise TypeError(
             f"Plugin {type_id!r} is not a DataSourcePlugin (got {type(p).__qualname__})"
