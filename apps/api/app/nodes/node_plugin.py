@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from app.plugin import Plugin
 from workflow import Node, workflow_node_type_key
 
 from app.nodes.registry import WorkflowNodesRegistry
+from app.plugin import Plugin
 
 
 class NodePlugin(Plugin):
