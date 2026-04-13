@@ -14,11 +14,12 @@ export type MarkdownContentProps = IncremarkContentProps & {
 
 export function MarkdownContent({
   className,
+  isFinished = true,
   ...incremarkProps
 }: MarkdownContentProps) {
   return (
     <div className={cn("ai-chat-md wrap-break-word text-xs leading-relaxed", className)}>
-      <IncremarkContent {...incremarkProps} />
+      <IncremarkContent isFinished={isFinished} {...incremarkProps} />
     </div>
   );
 }

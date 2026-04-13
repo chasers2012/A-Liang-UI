@@ -3,16 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/api";
-import { defaultNewName } from "@/lib/default-new-name";
-
 import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
 import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
+import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/api";
+import { PageFormHeaderActions } from "@/components/page-form-header-actions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { CodeJar } from "@/components/ui/code-jar";
-import { Page } from "@/components/page";
+import { Label } from "@/components/ui/label";
+import { defaultNewName } from "@/lib/default-new-name";
 
 const NODE_NEW_FORM_ID = "node-new-form";
 
@@ -37,7 +41,7 @@ function NodeSourceEditor({
 
     return src.replace(
       /(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/,
-      (_, prefix: string, _oldLabel: string, suffix: string) => {
+      (_: string, prefix: string, _oldLabel: string, suffix: string) => {
         return `${prefix}${escaped}${suffix}`;
       },
     );
@@ -118,51 +122,64 @@ export default function NewNodePage() {
   };
 
   return (
-    <Page
-      title={<FactorEditPageTitle name={name} onNameChange={setName} nameAriaLabel="节点名称" />}
-      description={
-        <FactorEditPageDescription
-          description={description}
-          onDescriptionChange={setDescription}
-          descriptionAriaLabel="节点描述"
-        />
-      }
-      action={
-        <PageFormHeaderActions
-          formId={NODE_NEW_FORM_ID}
-          submitting={submitting}
-          submitDisabled={!name.trim() || templateLoading || template == null}
-          submitLabel="创建"
-          submittingLabel="创建中…"
-          cancelHref="/nodes"
-        />
-      }
-    >
-      <form
-        id={NODE_NEW_FORM_ID}
-        className="flex flex-col gap-6"
-        onSubmit={(e) => void onSubmit(e)}
-      >
-        {templateError && (
-          <Alert variant="destructive">
-            <AlertTitle>无法加载模板</AlertTitle>
-            <AlertDescription>{templateError}</AlertDescription>
-          </Alert>
-        )}
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>无法保存</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <div className="space-y-2">
-          <Label>源码</Label>
-          {templateLoading && <div className="text-sm text-muted-foreground">正在加载源码模板…</div>}
-          {template != null && (
-            <NodeSourceEditor template={template} sourceRef={sourceRef} name={name} />
-          )}
+    <>
+      <CardHeader className="shrink-0 space-y-4 border-b pb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-2">
+            <CardTitle>
+              <FactorEditPageTitle
+                name={name}
+                onNameChange={setName}
+                nameAriaLabel="节点名称"
+              />
+            </CardTitle>
+            <CardDescription className="max-w-2xl">
+              <FactorEditPageDescription
+                description={description}
+                onDescriptionChange={setDescription}
+                descriptionAriaLabel="节点描述"
+              />
+            </CardDescription>
+          </div>
+          <PageFormHeaderActions
+            formId={NODE_NEW_FORM_ID}
+            submitting={submitting}
+            submitDisabled={!name.trim() || templateLoading || template == null}
+            submitLabel="创建"
+            submittingLabel="创建中…"
+            cancelHref="/nodes"
+          />
         </div>
-      </form>
-    </Page>
+      </CardHeader>
+      <CardContent className="min-h-0 flex-1 overflow-y-auto">
+        <form
+          id={NODE_NEW_FORM_ID}
+          className="flex flex-col gap-6 py-2"
+          onSubmit={(e) => void onSubmit(e)}
+        >
+          {templateError && (
+            <Alert variant="destructive">
+              <AlertTitle>无法加载模板</AlertTitle>
+              <AlertDescription>{templateError}</AlertDescription>
+            </Alert>
+          )}
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>无法保存</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          <div className="space-y-2">
+            <Label>源码</Label>
+            {templateLoading && (
+              <div className="text-sm text-muted-foreground">正在加载源码模板…</div>
+            )}
+            {template != null && (
+              <NodeSourceEditor template={template} sourceRef={sourceRef} name={name} />
+            )}
+          </div>
+        </form>
+      </CardContent>
+    </>
   );
 }

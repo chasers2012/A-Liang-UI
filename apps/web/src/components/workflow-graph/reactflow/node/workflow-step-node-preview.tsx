@@ -16,11 +16,59 @@ import {
 } from "reactflow";
 import "reactflow/dist/style.css";
 
+import { MarkdownContent } from "@/components/markdown/markdown-content";
 import { WorkflowGraphContextProvider } from "../../workflow-graph-context";
 import { WORKFLOW_GRAPH_RF_NODE_TYPES, WORKFLOW_GRAPH_RF_PRO_OPTIONS } from "../workflow-graph-reactflow-defaults";
 import type { WorkflowNodeInputSpec, WorkflowSocketDefinition } from "../../types";
 import { inputSpecToNodeParamModel, isWireInputSpec } from "../../workflow-node-input-spec";
 import type { WorkflowStepNodeData } from "./nodes";
+import { Item, ItemContent, ItemTitle } from "@/components/ui/item";
+
+/** 预览侧列表项：标题行拉满宽，类型徽标贴右，且允许多行标题（覆盖 ItemTitle 默认单行截断）。 */
+const previewItemTitleClass =
+  "!line-clamp-none w-full min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1 font-normal";
+
+const previewTypeBadgeClass =
+  "shrink-0 rounded-md border border-border/60 bg-muted/45 px-1.5 py-0.5 font-mono text-[10px] font-normal leading-tight text-muted-foreground";
+
+function PreviewTypeBadge({ children }: { children: string }) {
+  const t = children.trim();
+  if (!t) return null;
+  return <code className={previewTypeBadgeClass}>{t}</code>;
+}
+
+function RequiredPill({ required }: { required: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium",
+        required
+          ? "bg-primary/12 text-primary"
+          : "bg-muted/80 text-muted-foreground",
+      )}
+    >
+      {required ? "必填" : "可选"}
+    </span>
+  );
+}
+
+function PreviewMarkdownBlock({ content }: { content: string }) {
+  return (
+    <div className="mt-2.5 border-t border-border/40 pt-2.5">
+      <MarkdownContent
+        content={content}
+        className="text-[11px] leading-relaxed text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+function previewSectionTitleClassName(extra?: string) {
+  return cn(
+    "mb-2.5 border-b border-border/45 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground",
+    extra,
+  );
+}
 
 const PREVIEW_NODE_ID = "workflow-node-preview";
 
@@ -178,6 +226,30 @@ export function WorkflowStepNodePreview(props: WorkflowStepNodePreviewProps) {
   );
 }
 
+function SocketItem({ socket }: { socket: WorkflowSocketDefinition }) {
+  return (
+    <Item variant="outline" size="xs" className="bg-card/40 shadow-none">
+      <ItemContent className="gap-1.5">
+        <ItemTitle className={previewItemTitleClass}>
+          <span className="min-w-0 break-words font-medium leading-snug text-foreground">
+            {socket.label?.trim() || socket.name}
+          </span>
+          <PreviewTypeBadge>{socket.value_type}</PreviewTypeBadge>
+        </ItemTitle>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-tight text-muted-foreground">
+          <RequiredPill required={socket.required} />
+          <span className="font-mono text-[10px] text-muted-foreground/90" title="字段名">
+            {socket.name}
+          </span>
+        </div>
+        {socket.description?.trim() ? (
+          <PreviewMarkdownBlock content={socket.description.trim()} />
+        ) : null}
+      </ItemContent>
+    </Item>
+  );
+}
+
 function SocketListTable({
   title,
   rows,
@@ -188,43 +260,46 @@ function SocketListTable({
   if (rows.length === 0) {
     return (
       <div>
-        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </h4>
-        <p className="text-sm text-muted-foreground">无</p>
+        <h4 className={previewSectionTitleClassName("mb-2")}>{title}</h4>
+        <p className="text-xs text-muted-foreground">无</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {title}
-      </h4>
-      <ul className="space-y-2 text-sm">
+      <h4 className={previewSectionTitleClassName()}>{title}</h4>
+      <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
         {rows.map((s) => (
-          <li
-            key={s.name}
-            className="rounded-md border border-border/50 bg-muted/20 px-2 py-1.5"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-              <span className="font-medium text-foreground">
-                {s.label?.trim() || s.name}
-              </span>
-              <code className="text-xs text-muted-foreground">{s.value_type}</code>
-            </div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
-              {s.required ? "必填" : "可选"} · {s.name}
-            </div>
-            {s.description?.trim() ? (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {s.description.trim()}
-              </p>
-            ) : null}
-          </li>
+          <SocketItem key={s.name} socket={s} />
         ))}
       </ul>
     </div>
+  );
+}
+
+function ParamItem({ item }: { item: NodeParamModel }) {
+  const renderType = item.render_type?.trim() ?? "";
+  return (
+    <Item variant="outline" size="xs" className="bg-card/40 shadow-none">
+      <ItemContent className="gap-1.5">
+        <ItemTitle className={previewItemTitleClass}>
+          <span className="min-w-0 break-words font-medium leading-snug text-foreground">
+            {item.label?.trim() || item.key}
+          </span>
+          {renderType ? <PreviewTypeBadge>{renderType}</PreviewTypeBadge> : null}
+        </ItemTitle>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-tight text-muted-foreground">
+          <PreviewTypeBadge>{item.type}</PreviewTypeBadge>
+          <span className="font-mono text-[10px] text-muted-foreground/90" title="参数键">
+            {item.key}
+          </span>
+        </div>
+        {item.description?.trim() ? (
+          <PreviewMarkdownBlock content={item.description.trim()} />
+        ) : null}
+      </ItemContent>
+    </Item>
   );
 }
 
@@ -232,41 +307,18 @@ function ParamsListTable({ params }: { params: NodeParamModel[] }) {
   if (params.length === 0) {
     return (
       <div>
-        <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          节点参数（声明）
-        </h4>
-        <p className="text-sm text-muted-foreground">无</p>
+        <h4 className={previewSectionTitleClassName("mb-2")}>节点参数（声明）</h4>
+        <p className="text-xs text-muted-foreground">无</p>
       </div>
     );
   }
 
   return (
     <div>
-      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        节点参数（声明）
-      </h4>
-      <ul className="space-y-2 text-sm">
+      <h4 className={previewSectionTitleClassName()}>节点参数（声明）</h4>
+      <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
         {params.map((p) => (
-          <li
-            key={p.key}
-            className="rounded-md border border-border/50 bg-muted/20 px-2 py-1.5"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-              <span className="font-medium text-foreground">
-                {p.label?.trim() || p.key}
-              </span>
-              <code className="text-xs text-muted-foreground">{p.type}</code>
-            </div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
-              {p.key}
-              {p.render_type ? ` · ${p.render_type}` : ""}
-            </div>
-            {p.description ? (
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {p.description}
-              </p>
-            ) : null}
-          </li>
+          <ParamItem key={p.key} item={p} />
         ))}
       </ul>
     </div>
@@ -309,24 +361,9 @@ export function WorkflowNodePreviewPanel(props: {
     );
   })();
 
-  const socketGrid = (
-    <div className="grid gap-6 min-[520px]:grid-cols-2">
-      <SocketListTable title="输入接口" rows={wireInputs} />
-      <SocketListTable title="输出接口" rows={outputs} />
-    </div>
-  );
 
-  const preview = (
-    <WorkflowStepNodePreview
-      label={label}
-      description={description}
-      inputs={inputs}
-      outputs={outputs}
-      params={{}}
-      selected
-      className="h-full min-h-[280px] flex-1 max-lg:min-h-[min(400px,55vh)]"
-    />
-  );
+
+
 
   return (
     <div
@@ -335,14 +372,21 @@ export function WorkflowNodePreviewPanel(props: {
         className,
       )}
     >
-      <div className="flex-1 overflow-y-auto pr-1 ">
-        {socketGrid}
-        <div className="mt-6">
-          <ParamsListTable params={mergedParamModels} />
-        </div>
+      <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-3">
+        <SocketListTable title="输入接口" rows={wireInputs} />
+        <SocketListTable title="输出接口" rows={outputs} />
+        <ParamsListTable params={mergedParamModels} />
       </div>
-      <div className="flex flex-1 flex-col ">
-        {preview}
+      <div className="flex flex-col max-w-[500px] w-[500px]">
+        <WorkflowStepNodePreview
+          label={label}
+          description={description}
+          inputs={inputs}
+          outputs={outputs}
+          params={{}}
+          selected
+          className="h-full min-h-[280px] flex-1 max-lg:min-h-[min(400px,55vh)]"
+        />
       </div>
     </div>
   );

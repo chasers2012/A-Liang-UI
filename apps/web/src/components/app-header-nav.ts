@@ -8,6 +8,7 @@ const FACTOR_PROFILES_LIST = "/factors/profiles";
 const FACTOR_METRICS_LIST = "/factors/metrics";
 const DATA_DATASOURCES_LIST = "/data/datasources";
 const DATA_DATA_SETS_LIST = "/data/data-sets";
+const NODES_LIST = "/nodes";
 
 const TOP_LEVEL = new Set([
   "/",
@@ -21,6 +22,7 @@ const TOP_LEVEL = new Set([
   "/strategies",
   "/backtest",
   "/agent",
+  NODES_LIST,
 ]);
 
 /** Exact pathname → single crumb (list/home pages). */
@@ -36,6 +38,7 @@ const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   "/strategies": [{ label: "策略" }],
   "/backtest": [{ label: "回测" }],
   "/agent": [{ label: "Agent" }],
+  [NODES_LIST]: [{ label: "节点" }],
 };
 
 function withMenuSection(
@@ -201,6 +204,9 @@ export function buildAppHeaderBreadcrumbs(
   );
   if (metrics) return withMenuSection(pathname, metrics);
 
+  const nodes = standardResourceBreadcrumbs(pathname, NODES_LIST, "节点", "详情");
+  if (nodes) return withMenuSection(pathname, nodes);
+
   const profiles = standardResourceBreadcrumbs(
     pathname,
     FACTOR_PROFILES_LIST,
@@ -262,6 +268,9 @@ export function headerBackHref(pathname: string): string | null {
 
   const metrics = standardResourceBackHref(pathname, FACTOR_METRICS_LIST);
   if (metrics !== null) return metrics;
+
+  const nodesBack = standardResourceBackHref(pathname, NODES_LIST);
+  if (nodesBack !== null) return nodesBack;
 
   const profiles = standardResourceBackHref(pathname, FACTOR_PROFILES_LIST);
   if (profiles !== null) return profiles;
