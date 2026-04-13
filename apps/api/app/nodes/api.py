@@ -20,8 +20,10 @@ from app.nodes.schemas import (
     WorkflowNodePatch,
     WorkflowNodeSummaryPublic,
 )
+from app.visibility.api import router as domains_router
 
 router = APIRouter(prefix="/nodes", tags=["nodes"])
+router.include_router(domains_router)
 
 
 @router.get("", response_model=list[WorkflowNodeSummaryPublic])

@@ -45,14 +45,6 @@ function PreviewMarkdownBlock({ content }: { content: string }) {
   );
 }
 
-export function SectionHeader({ children }: { children: React.ReactNode }) {
-  return (
-    <h4 className="mt-2.5 font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}
-    </h4>
-  );
-}
-
 export function SocketItem({ socket }: { socket: WorkflowSocketDefinition }) {
   return (
     <Item variant="outline" size="xs" className="bg-card/40 shadow-none">

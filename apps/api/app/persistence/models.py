@@ -56,6 +56,16 @@ class WorkflowNodeRow(SQLModel, table=True):
     updated_at: str
 
 
+class WorkflowNodeVisibilityRow(SQLModel, table=True):
+    __tablename__ = "workflow_node_visibility"
+
+    domain: str = Field(primary_key=True)
+    hidden_node_ids: list[str] = Field(
+        default_factory=list,
+        sa_column=Column("blocked_node_ids", JsonText),
+    )
+
+
 class PreprocessorRow(SQLModel, table=True):
     __tablename__ = "preprocessors"
 

@@ -44,3 +44,8 @@ export interface NodeDetailPublic extends NodeSummaryPublic {
   source: string;
 }
 
+/** 与后端 ``WorkflowDomainNodeVisibilityPublic``（``GET /nodes/node-visibility``）一致。 */
+export interface WorkflowDomainNodeVisibilityPublic {
+  domain: string;
+  hidden_node_ids: string[];
+}

@@ -1,4 +1,8 @@
-import type { NodeDetailPublic, NodeSummaryPublic } from "@/models/nodes/dto";
+import type {
+  NodeDetailPublic,
+  NodeSummaryPublic,
+  WorkflowDomainNodeVisibilityPublic,
+} from "@/models/nodes/dto";
 import { apiFetchJson } from "./client";
 
 export function listNodes(): Promise<NodeSummaryPublic[]> {
@@ -20,7 +24,10 @@ export function createNode(body: unknown): Promise<NodeDetailPublic> {
   });
 }
 
-export function patchNode(id: string, body: unknown): Promise<NodeDetailPublic> {
+export function patchNode(
+  id: string,
+  body: unknown,
+): Promise<NodeDetailPublic> {
   return apiFetchJson<NodeDetailPublic>(`/nodes/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(body),
@@ -33,3 +40,22 @@ export function deleteNode(id: string): Promise<void> {
   });
 }
 
+export function listNodeVisibilityConfigs(): Promise<WorkflowDomainNodeVisibilityPublic[]> {
+  return apiFetchJson<WorkflowDomainNodeVisibilityPublic[]>(
+    "/nodes/node-visibility",
+  );
+}
+
+export function putNodeVisibilityConfig(
+  domain: string,
+  hidden_node_ids: string[],
+): Promise<WorkflowDomainNodeVisibilityPublic> {
+  const safeDomain = domain.trim();
+  return apiFetchJson<WorkflowDomainNodeVisibilityPublic>(
+    `/nodes/node-visibility/${encodeURIComponent(safeDomain)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ domain: safeDomain, hidden_node_ids }),
+    },
+  );
+}

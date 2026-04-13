@@ -58,6 +58,7 @@ export function ProfileWorkflowEditorBlock(props: {
       ) : (
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
+            className="w-[300px]"
             items={catalog}
             onSelectType={(type) => canvasRef.current?.addNode(type)}
           />

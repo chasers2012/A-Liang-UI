@@ -15,6 +15,7 @@ from app.nodes.schemas import (
     WorkflowNodeSummaryPublic,
 )
 from app.persistence.models import WorkflowNodeRow
+from app.visibility.registry import WorkflowDomainNodesRegistry
 
 
 def create_workflow_node(body: WorkflowNodeCreate, id_name: str | None = None) -> WorkflowNodeRow:
@@ -87,6 +88,39 @@ def list_nodes() -> list[WorkflowNodeSummaryPublic]:
         out.append(_to_summary(rec))
     for type_key, _node_cls in WorkflowNodesRegistry.iter_registered_plugin_nodes():
         if type_key in db_ids:
+            continue
+        plugin_rec = WorkflowNodesRegistry.get_item(type_key)
+        if plugin_rec is None:
+            continue
+        out.append(_to_summary(plugin_rec))
+    return out
+
+
+def list_nodes_by_domain(domain: str) -> list[WorkflowNodeSummaryPublic]:
+    """
+    List nodes usable in a given domain.
+
+    Behavior matches WorkflowDomainNodesRegistry:
+    - If the domain is not configured, all nodes are allowed.
+    - Otherwise, only configured node ids are blocked (blacklist).
+    """
+    hidden_ids = WorkflowDomainNodesRegistry.get_hidden_node_ids(domain)
+    if hidden_ids is None:
+        return list_nodes()
+
+    # Keep the same ordering strategy as list_nodes(): DB nodes first, then plugin-only nodes.
+    db_recs = list_node_records()
+    db_ids = {r.id for r in db_recs}
+    out: list[WorkflowNodeSummaryPublic] = []
+    for rec in db_recs:
+        if rec.id in hidden_ids:
+            continue
+        out.append(_to_summary(rec))
+
+    for type_key, _node_cls in WorkflowNodesRegistry.iter_registered_plugin_nodes():
+        if type_key in db_ids:
+            continue
+        if type_key in hidden_ids:
             continue
         plugin_rec = WorkflowNodesRegistry.get_item(type_key)
         if plugin_rec is None:

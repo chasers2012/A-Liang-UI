@@ -8,11 +8,16 @@ from workflow.parser import Parser
 
 from app.data_set.constants import preprocessing_workflow_io_spec_dict
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
+from app.nodes.controller import list_nodes_by_domain
 from app.preprocessors.controller import list_preprocessor_records, resolve_preprocessor_class
 from app.startup_jobs import register_startup_job
+from app.visibility.controller import ensure_domain_node_visibility_config
 
 _REGISTERED_PREPROCESSOR_IDS: set[str] = set()
 _PREPROCESSING_WORKFLOW_IO_SPEC = WorkflowIOSpecPublic(**preprocessing_workflow_io_spec_dict())
+_PREPROCESSING_DOMAIN = "preprocessors"
+
+ensure_domain_node_visibility_config(_PREPROCESSING_DOMAIN)
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:
@@ -100,6 +105,7 @@ def list_preprocessor_node_types_public() -> list[EvaluationNodeTypePublic]:
     ensure_preprocessor_workflow_nodes_registered()
 
     out: list[EvaluationNodeTypePublic] = []
+    seen_type_keys: set[str] = set()
 
     loader = WorkflowNodeLoader.instance()
 
@@ -119,6 +125,23 @@ def list_preprocessor_node_types_public() -> list[EvaluationNodeTypePublic]:
                 outputs=[Parser.serialize_socket(s) for s in node_obj.outputs],
             )
         )
+        seen_type_keys.add(rec.id)
+
+    # Include generic workflow nodes (user + plugin) filtered by preprocessing domain.
+    for node in list_nodes_by_domain(_PREPROCESSING_DOMAIN):
+        if node.id in seen_type_keys:
+            continue
+        out.append(
+            EvaluationNodeTypePublic(
+                type=node.id,
+                label=node.name,
+                description=node.description,
+                category=node.category,
+                inputs=node.inputs,
+                outputs=node.outputs,
+            )
+        )
+        seen_type_keys.add(node.id)
 
     return out
 

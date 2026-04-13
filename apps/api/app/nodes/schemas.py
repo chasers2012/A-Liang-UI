@@ -70,3 +70,32 @@ class WorkflowNodeSummaryPublic(BaseModel):
 
 class WorkflowNodeDetailPublic(WorkflowNodeSummaryPublic):
     source: str
+
+
+class WorkflowDomainNodeVisibilityPatch(BaseModel):
+    domain: str
+    hidden_node_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("domain")
+    @classmethod
+    def _validate_domain(cls, v: str) -> str:
+        value = v.strip()
+        if not value:
+            raise ValueError("domain 不能为空")
+        return value
+
+    @field_validator("hidden_node_ids")
+    @classmethod
+    def _validate_hidden_node_ids(cls, v: list[str]) -> list[str]:
+        return [item.strip() for item in v if item and item.strip()]
+
+
+class WorkflowDomainNodeVisibilityPublic(BaseModel):
+    domain: str
+    hidden_node_ids: list[str]
+
+
+class WorkflowDomainNodeValidationPublic(BaseModel):
+    domain: str
+    node_id: str
+    allowed: bool

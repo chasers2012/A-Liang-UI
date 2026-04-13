@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from workflow.node_loader import WorkflowNodeLoader
-from workflow.parser import Parser
-
 from app.evaluation.profile.constants import evaluation_workflow_io_spec_dict
-from app.evaluation.profile.internal_nodes import get_internal_nodes
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
-from app.nodes.controller import list_node_records, read_node_source
+from app.nodes.controller import list_nodes_by_domain
+from app.visibility.controller import ensure_domain_node_visibility_config
+
+ensure_domain_node_visibility_config("evaluation-profile")
 
 
 class ProfileNotFoundError(LookupError):
@@ -25,29 +24,16 @@ def list_evaluation_profile_node_types_public() -> list[EvaluationNodeTypePublic
     """Evaluation workflow node types catalog for UI (built-in nodes + metrics nodes)."""
     out: list[EvaluationNodeTypePublic] = []
 
-    # built-in nodes (internal catalog)
-    out.extend(get_internal_nodes())
-
-    # user nodes (loaded from stored source)
-    for node in list_node_records():
-        source = read_node_source(node)
-        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
-        WorkflowNodeLoader.instance().register_node(node.id, node_cls)
-        inputs = [Parser.serialize_socket(s) for s in node_cls.inputs]
-        outputs = [Parser.serialize_socket(s) for s in node_cls.outputs]
-
-        category = getattr(node_cls, "category", None)
-        if isinstance(category, str):
-            category = category.strip() or None
-
+    # domain nodes (user nodes + plugin nodes)
+    for node in list_nodes_by_domain("evaluation-profile"):
         out.append(
             EvaluationNodeTypePublic(
                 type=node.id,
                 label=node.name,
                 description=node.description,
-                category=category,
-                inputs=inputs,
-                outputs=outputs,
+                category=node.category,
+                inputs=node.inputs,
+                outputs=node.outputs,
             )
         )
     return out
