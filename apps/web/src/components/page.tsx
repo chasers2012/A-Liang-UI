@@ -49,14 +49,15 @@ export type PageProps = {
   showAppHeaderBack?: boolean;
   /** 顶栏右侧操作区（如保存/取消），与面包屑、返回同一行。 */
   action?: ReactNode;
+  /** 主内容区宽度：`default` 为 `max-w-7xl` 居中；`full` 铺满可用宽度。 */
+  size?: "default" | "full";
 };
 
-type PageChromeProps = PageProps & { pathname: string };
 
 type PagePrimaryColumnProps = {
   gap: PageGap;
+  size: NonNullable<PageProps["size"]>;
   className?: string;
-  showPageHeading: boolean;
   title?: ReactNode;
   description?: ReactNode;
   headerClassName?: string;
@@ -65,17 +66,20 @@ type PagePrimaryColumnProps = {
 
 function PagePrimaryColumn({
   gap,
+  size,
   className,
-  showPageHeading,
   title,
   description,
   headerClassName,
   children,
 }: PagePrimaryColumnProps) {
+  const showPageHeading = !!title || !!description;
+
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-full min-w-0 w-full max-w-7xl flex-col p-6 md:p-8",
+        "mx-auto flex min-h-full min-w-0 w-full flex-col p-6 md:p-8",
+        size === "full" ? "max-w-none" : "max-w-7xl",
         gapClass[gap],
         className,
       )}
@@ -99,11 +103,7 @@ function PagePrimaryColumn({
   );
 }
 
-/**
- * 顶栏单独 memo：`PageChrome` 会因 `children`（如对话流）引用变化而重渲染，
- * 但顶栏只依赖 pathname / 返回按钮 / action，与正文解耦后可避免面包屑整栏无效更新。
- */
-const PageChromeAppHeader = memo(function PageChromeAppHeader({
+const PageAppHeader = memo(function PageAppHeader({
   pathname,
   showBackLink,
   action,
@@ -148,20 +148,22 @@ const PageChromeAppHeader = memo(function PageChromeAppHeader({
   );
 });
 
-const PageChrome = memo(function PageChrome({
-  pathname,
+
+
+export function Page({
   children,
   className,
   title,
   description,
   headerClassName,
   gap = "lg",
+  size = "default",
   showAppHeader = true,
   showAppHeaderBack,
   action,
-}: PageChromeProps) {
+}: PageProps) {
+  const pathname = usePathname();
   const canHeaderBack = headerBackHref(pathname) != null;
-  const showPageHeading = title != null || description != null;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] =
     useState(false);
@@ -183,7 +185,7 @@ const PageChrome = memo(function PageChrome({
     <PageAppHeaderContext.Provider value={headerContextValue}>
       <div className="flex h-full flex-1 min-w-0 w-full flex-col">
         {showAppHeader ? (
-          <PageChromeAppHeader
+          <PageAppHeader
             pathname={pathname}
             showBackLink={showBackLink}
             action={action}
@@ -193,8 +195,8 @@ const PageChrome = memo(function PageChrome({
         <div className="min-w-0 w-full flex-1 overflow-y-auto">
           <PagePrimaryColumn
             gap={gap}
+            size={size}
             className={className}
-            showPageHeading={showPageHeading}
             title={title}
             description={description}
             headerClassName={headerClassName}
@@ -204,11 +206,5 @@ const PageChrome = memo(function PageChrome({
         </div>
       </div>
     </PageAppHeaderContext.Provider>
-  );
-});
-
-/** 全站主内容区：固定顶栏 + 下方主内容区内部纵向滚动（`max-w-7xl` + `p-6 md:p-8`）。 */
-export function Page(props: PageProps) {
-  const pathname = usePathname();
-  return <PageChrome key={pathname} pathname={pathname} {...props} />;
+  )
 }

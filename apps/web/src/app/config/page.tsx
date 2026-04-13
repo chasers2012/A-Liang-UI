@@ -8,7 +8,7 @@ import { PageFormHeaderActions } from "@/components/page-form-header-actions";
 import {
   AGENT_LLM_FORM_ID,
   AgentLlmSettingsCard,
-} from "../agent-llm-settings-card";
+} from "./agent-llm-settings-card";
 
 export default function AgentConfigPage() {
   const [busy, setBusy] = useState({ saving: false, loading: true });

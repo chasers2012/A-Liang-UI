@@ -3,7 +3,7 @@ import { Page } from "@/components/page";
 
 export default function HomePage() {
   return (
-    <Page gap="sm" className="max-w-full p-0! overflow-hidden w-full h-full">
+    <Page size="full" gap="none" className="p-0! overflow-hidden w-full h-full">
       <HomeAiChat />
     </Page>
   );

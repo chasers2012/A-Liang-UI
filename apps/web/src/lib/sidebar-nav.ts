@@ -1,18 +1,17 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Archive,
-  Bot,
   Database,
   GitBranch,
   Layers,
   Library,
   LineChart,
   Settings,
-  Share2,
   Table2,
   TableProperties,
   Wand2,
   MessageCircle,
+  Workflow,
 } from "lucide-react";
 
 export type SidebarNavLeaf = {
@@ -47,10 +46,10 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
       ],
     },
     {
-      title: "工作流",
+      title: "节点",
       url: "/nodes",
-      icon: Share2,
-      items: [{ title: "节点", url: "/nodes", icon: LineChart }],
+      icon: Workflow,
+      items: [],
     },
     {
       title: "数据",
@@ -65,10 +64,10 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
     { title: "策略", url: "/strategies", icon: GitBranch },
     { title: "回测", url: "/backtest", icon: LineChart },
     {
-      title: "Agent",
-      url: "/agent",
-      icon: Bot,
-      items: [{ title: "配置", url: "/agent/config", icon: Settings }],
+      title: "配置",
+      url: "/config",
+      icon: Settings,
+      items: [],
     },
   ],
 };
