@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from workflow.node_loader import WorkflowNodeLoader
 
-from app.nodes.constants import DEFAULT_NODE_SOURCE
+from app.nodes.constants import DEFAULT_NODE_SOURCE, PLUGIN_NODE_SOURCE_SENTINEL
 from app.nodes.controller import (
     apply_node_patch,
     create_workflow_node,
@@ -12,6 +13,7 @@ from app.nodes.controller import (
     load_node_detail,
     update_node_record,
 )
+from app.nodes.registry import WorkflowNodesRegistry
 from app.nodes.schemas import (
     WorkflowNodeCreate,
     WorkflowNodeDetailPublic,
@@ -24,7 +26,19 @@ router = APIRouter(prefix="/nodes", tags=["nodes"])
 
 @router.get("", response_model=list[WorkflowNodeSummaryPublic])
 def get_nodes() -> list[WorkflowNodeSummaryPublic]:
-    return list_nodes()
+    rows = list_nodes()
+    loader = WorkflowNodeLoader.instance()
+    for row in rows:
+        try:
+            rec = WorkflowNodesRegistry.get_item(row.id)
+            if rec is None or rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+                continue
+            source = WorkflowNodesRegistry.read_source(rec)
+            node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+            loader.register_node(row.id, node_cls)
+        except Exception:
+            continue
+    return rows
 
 
 @router.get("/template", response_model=str)

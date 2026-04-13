@@ -1,3 +1,5 @@
+import type { NodeTypeSocketPublic } from "../evaluation-profile/dto";
+
 /** 与后端 ``workflow.NodeParamModel``（JSON）一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
 export interface NodeParamModel {
   key: string;
@@ -21,14 +23,20 @@ export interface NodeParamModel {
   > | null;
 }
 
+/** 与后端 ``WorkflowNodeSummaryPublic``（``GET /nodes``）一致。 */
 export interface EvaluationMetricSummaryPublic {
   id: string;
   name: string;
   description: string;
   source_path: string;
-  /** 节点 id（与后端路由参数 `metric_id` 一致）。 */
   created_at: string;
   updated_at: string;
+  type: string;
+  category: string | null;
+  entry: string;
+  inputs: NodeTypeSocketPublic[];
+  outputs: NodeTypeSocketPublic[];
+  /** 若后端扩展返回 evaluate 参数模型时使用；当前 ``GET /nodes`` 通常不返回。 */
   workflow_parameters?: NodeParamModel[];
 }
 

@@ -21,7 +21,6 @@ from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
 from app.uploads import api as uploads_router
-from app.workflows import api as workflows_router
 
 
 def _load_env_file(path: Path) -> None:
@@ -77,7 +76,6 @@ app.include_router(agent_llm_router.router)
 app.include_router(agent_workflows_router.router)
 app.include_router(datasources_router.router)
 app.include_router(nodes_router.router)
-app.include_router(workflows_router.router)
 app.include_router(evaluation_profiles_router.router)
 app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)

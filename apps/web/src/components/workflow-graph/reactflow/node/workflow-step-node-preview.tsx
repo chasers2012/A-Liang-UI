@@ -9,6 +9,9 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useNodesState,
+  useNodesInitialized,
+  useReactFlow,
+  type FitViewOptions,
   type Node,
 } from "reactflow";
 import "reactflow/dist/style.css";
@@ -21,7 +24,42 @@ import type { WorkflowStepNodeData } from "./nodes";
 
 const PREVIEW_NODE_ID = "workflow-node-preview";
 
-const fitViewOptions = { padding: 0.18, duration: 200 } as const;
+const PREVIEW_FIT_VIEW: FitViewOptions = {
+  padding: 0.32,
+  duration: 220,
+  maxZoom: 1.45,
+  minZoom: 0.12,
+  includeHiddenNodes: false,
+  nodes: [{ id: PREVIEW_NODE_ID }],
+};
+
+function PreviewFitViewOnReady({ fitKey }: { fitKey: string }) {
+  const { fitView } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+
+  useEffect(() => {
+    if (!nodesInitialized) {
+      return;
+    }
+    let cancelled = false;
+    const id1 = requestAnimationFrame(() => {
+      const id2 = requestAnimationFrame(() => {
+        if (!cancelled) {
+          fitView(PREVIEW_FIT_VIEW);
+        }
+      });
+      if (cancelled) {
+        cancelAnimationFrame(id2);
+      }
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id1);
+    };
+  }, [fitView, fitKey, nodesInitialized]);
+
+  return null;
+}
 
 function WorkflowStepNodePreviewFlow(props: WorkflowStepNodePreviewProps) {
   const {
@@ -60,6 +98,19 @@ function WorkflowStepNodePreviewFlow(props: WorkflowStepNodePreviewProps) {
     nextNode,
   ]);
 
+  const fitKey = useMemo(
+    () =>
+      JSON.stringify({
+        label,
+        description,
+        inputs,
+        outputs,
+        params,
+        selected,
+      }),
+    [label, description, inputs, outputs, params, selected],
+  );
+
   useEffect(() => {
     setNodes([nextNode]);
   }, [nextNode, setNodes]);
@@ -70,8 +121,6 @@ function WorkflowStepNodePreviewFlow(props: WorkflowStepNodePreviewProps) {
       onNodesChange={onNodesChange}
       edges={[]}
       nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-      fitView
-      fitViewOptions={fitViewOptions}
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
@@ -83,6 +132,7 @@ function WorkflowStepNodePreviewFlow(props: WorkflowStepNodePreviewProps) {
       proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
       className="h-full min-h-0 w-full !bg-transparent"
     >
+      <PreviewFitViewOnReady fitKey={fitKey} />
       <Background
         id="workflow-node-preview-bg"
         gap={22}
@@ -259,23 +309,41 @@ export function WorkflowNodePreviewPanel(props: {
     );
   })();
 
+  const socketGrid = (
+    <div className="grid gap-6 min-[520px]:grid-cols-2">
+      <SocketListTable title="输入接口" rows={wireInputs} />
+      <SocketListTable title="输出接口" rows={outputs} />
+    </div>
+  );
+
+  const preview = (
+    <WorkflowStepNodePreview
+      label={label}
+      description={description}
+      inputs={inputs}
+      outputs={outputs}
+      params={{}}
+      selected
+      className="h-full min-h-[280px] flex-1 max-lg:min-h-[min(400px,55vh)]"
+    />
+  );
+
   return (
-    <div className={cn("flex min-h-0 flex-col gap-6", className)}>
-      <WorkflowStepNodePreview
-        label={label}
-        description={description}
-        inputs={inputs}
-        outputs={outputs}
-        params={{}}
-        selected
-      />
-
-      <div className="grid gap-6 min-[520px]:grid-cols-2">
-        <SocketListTable title="输入接口" rows={wireInputs} />
-        <SocketListTable title="输出接口" rows={outputs} />
+    <div
+      className={cn(
+        "flex min-h-0 flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-8",
+        className,
+      )}
+    >
+      <div className="flex-1 overflow-y-auto pr-1 ">
+        {socketGrid}
+        <div className="mt-6">
+          <ParamsListTable params={mergedParamModels} />
+        </div>
       </div>
-
-      <ParamsListTable params={mergedParamModels} />
+      <div className="flex flex-1 flex-col ">
+        {preview}
+      </div>
     </div>
   );
 }

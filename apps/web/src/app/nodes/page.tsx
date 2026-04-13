@@ -4,11 +4,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { Funnel, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import {
-  getEvaluationMetric,
-  listEvaluationNodeTypes,
-  type EvaluationNodeTypeCatalogItemPublic,
-} from "@/api";
+import { getEvaluationMetric } from "@/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
@@ -44,53 +40,32 @@ const TAB_TRIGGER_CLASS =
   "inline-flex items-center justify-center rounded-md px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[active]:bg-background data-[active]:text-foreground data-[active]:shadow-sm";
 
 function NodesPagePreviewTab(props: {
-  catalogLoading: boolean;
-  catalogError: string | null;
   selectedRow: EvaluationMetricSummaryPublic | null;
-  selectedCatalog: EvaluationNodeTypeCatalogItemPublic | undefined;
 }) {
-  const { catalogLoading, catalogError, selectedRow, selectedCatalog } = props;
+  const { selectedRow } = props;
 
   return (
-    <ScrollArea className={cn(PREVIEW_SCROLL_CLASS, "min-h-0 flex-1")}>
-      {catalogLoading ? (
-        <p className="py-8 text-sm text-muted-foreground">加载节点类型目录…</p>
-      ) : catalogError ? (
-        <Alert variant="destructive" className="mt-2">
-          <AlertTitle>无法加载节点目录</AlertTitle>
-          <AlertDescription>{catalogError}</AlertDescription>
-        </Alert>
-      ) : !selectedRow ? (
+    <div
+      className={cn(
+        PREVIEW_SCROLL_CLASS,
+        "flex min-h-0 flex-1 flex-col overflow-hidden",
+      )}
+    >
+      {!selectedRow ? (
         <p className="py-8 text-sm text-muted-foreground">
           请从左侧选择一个节点。
         </p>
-      ) : !selectedCatalog ? (
-        <div className="space-y-2 py-4">
-          <p className="text-sm text-muted-foreground">
-            目录中尚未包含「{selectedRow.name}」的类型定义，无法绘制与工作流一致的端口预览。
-          </p>
-          {selectedRow.workflow_parameters &&
-            selectedRow.workflow_parameters.length > 0 ? (
-            <WorkflowNodePreviewPanel
-              label={selectedRow.name}
-              description={selectedRow.description}
-              inputs={[]}
-              outputs={[]}
-              declaredParams={selectedRow.workflow_parameters}
-            />
-          ) : null}
-        </div>
       ) : (
         <WorkflowNodePreviewPanel
-          label={selectedCatalog.label}
-          description={selectedCatalog.description}
-          inputs={selectedCatalog.inputs}
-          outputs={selectedCatalog.outputs}
+          label={selectedRow.name}
+          description={selectedRow.description}
+          inputs={selectedRow.inputs}
+          outputs={selectedRow.outputs}
           declaredParams={selectedRow.workflow_parameters ?? null}
-          className="pb-2 pt-2"
+          className="min-h-0 flex-1 pb-2 pt-2"
         />
       )}
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -138,9 +113,6 @@ export default function NodesPage() {
   const { items, error } = useAtomValue(evaluationMetricsListAtom);
   const refresh = useSetAtom(refreshEvaluationMetricsListAtom);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [sourceFetch, setSourceFetch] = useState<NodeSourceFetchState>({
     id: null,
     text: null,
@@ -150,33 +122,6 @@ export default function NodesPage() {
   useEffectMicrotask(() => {
     void refresh();
   }, [refresh]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void listEvaluationNodeTypes()
-      .then((rows) => {
-        if (!cancelled) {
-          setCatalog(rows);
-          setCatalogError(null);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setCatalogError(e instanceof Error ? e.message : String(e));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setCatalogLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const catalogByType = useMemo(
-    () => new Map(catalog.map((c) => [c.type, c])),
-    [catalog],
-  );
 
   const effectiveSelectedId = useMemo(() => {
     if (!items?.length) return null;
@@ -193,10 +138,6 @@ export default function NodesPage() {
         : null,
     [items, effectiveSelectedId],
   );
-
-  const selectedCatalog = selectedRow
-    ? catalogByType.get(selectedRow.id)
-    : undefined;
 
   useEffect(() => {
     if (!selectedRow?.id) {
@@ -328,12 +269,7 @@ export default function NodesPage() {
               value="preview"
               className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[hidden]:hidden"
             >
-              <NodesPagePreviewTab
-                catalogLoading={catalogLoading}
-                catalogError={catalogError}
-                selectedRow={selectedRow}
-                selectedCatalog={selectedCatalog}
-              />
+              <NodesPagePreviewTab selectedRow={selectedRow} />
             </TabsContent>
 
             <TabsContent
