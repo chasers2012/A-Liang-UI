@@ -1,4 +1,4 @@
-import type { NodeParamModel } from "@/models/evaluation-metric/dto";
+import type { NodeParamModel } from "@/models/nodes/dto";
 
 import type { WorkflowNodeInputSpec } from "./types";
 

@@ -1,5 +1,5 @@
 
-import type { NodeParamModel } from "@/models/evaluation-metric/dto";
+import type { NodeParamModel } from "@/models/nodes/dto";
 import { memo, useCallback, useMemo, useState } from "react";
 import { useStore } from "reactflow";
 import {

@@ -7,6 +7,7 @@ export * from "./datasources";
 export * from "./evaluation-metrics";
 export * from "./evaluation-profiles";
 export * from "./factors";
+export * from "./nodes";
 export * from "./preprocessors";
 export * from "./upload";
 

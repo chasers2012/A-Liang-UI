@@ -36,13 +36,13 @@ export function patchEvaluationMetric(
   body: unknown,
 ): Promise<EvaluationMetricDetailPublic> {
   return apiFetchJson<EvaluationMetricDetailPublic>(
-    `/evaluation-metrics/${encodeURIComponent(id)}`,
+    `/nodes/${encodeURIComponent(id)}`,
     { method: "PATCH", body: JSON.stringify(body) },
   );
 }
 
 export function deleteEvaluationMetric(id: string): Promise<void> {
-  return apiFetchJson<void>(`/evaluation-metrics/${encodeURIComponent(id)}`, {
+  return apiFetchJson<void>(`/nodes/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
