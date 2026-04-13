@@ -1,24 +1,15 @@
 from __future__ import annotations
 
 from custom_code import validate_identifier_name, validate_source_syntax
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from workflow.node_loader import WorkflowNodeLoader
 
-
-class WorkflowNodeRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
-
-    id: str
-    name: str
-    description: str = ""
-    source_path: str
-    created_at: str
-    updated_at: str
+from app.persistence.models import WorkflowNodeRow
 
 
 class WorkflowNodesRegistryFile(BaseModel):
     version: int = 1
-    items: list[WorkflowNodeRecord] = Field(default_factory=list)
+    items: list[WorkflowNodeRow] = Field(default_factory=list)
 
 
 class WorkflowNodeCreate(BaseModel):
@@ -35,9 +26,9 @@ class WorkflowNodeCreate(BaseModel):
         validate_identifier_name(node_cls.label)
         return s
 
-    def to_record(self, node_id: str, now: str, source_path: str) -> WorkflowNodeRecord:
+    def to_record(self, node_id: str, now: str, source_path: str) -> WorkflowNodeRow:
         node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(self.source)
-        return WorkflowNodeRecord(
+        return WorkflowNodeRow(
             id=node_id,
             name=node_cls.label,
             description=node_cls.description,

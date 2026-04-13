@@ -12,14 +12,12 @@ from app.nodes.schemas import (
     WorkflowNodeCreate,
     WorkflowNodeDetailPublic,
     WorkflowNodePatch,
-    WorkflowNodeRecord,
     WorkflowNodeSummaryPublic,
 )
+from app.persistence.models import WorkflowNodeRow
 
 
-def create_workflow_node(
-    body: WorkflowNodeCreate, id_name: str | None = None
-) -> WorkflowNodeRecord:
+def create_workflow_node(body: WorkflowNodeCreate, id_name: str | None = None) -> WorkflowNodeRow:
     nid = WorkflowNodesRegistry.generate_id(id_name)
     if id_name and WorkflowNodesRegistry.get_item(nid) is not None:
         raise ValueError(f"Workflow node {id_name} already exists")
@@ -30,7 +28,7 @@ def create_workflow_node(
     return rec
 
 
-def _node_cls_to_summary(rec: WorkflowNodeRecord, node_cls: type) -> WorkflowNodeSummaryPublic:
+def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSummaryPublic:
     type_key = getattr(node_cls, "type", "") or workflow_node_type_key(node_cls)
     category_raw = getattr(node_cls, "category", None)
     category = category_raw.strip() or None if isinstance(category_raw, str) else None
@@ -49,7 +47,7 @@ def _node_cls_to_summary(rec: WorkflowNodeRecord, node_cls: type) -> WorkflowNod
     )
 
 
-def _to_summary(rec: WorkflowNodeRecord) -> WorkflowNodeSummaryPublic:
+def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
     if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
         node_cls = WorkflowNodesRegistry.get_plugin_node_class(rec.id)
         if node_cls is None:
@@ -77,7 +75,7 @@ def load_node_detail(node_id: str) -> WorkflowNodeDetailPublic | None:
     )
 
 
-def list_node_records() -> list[WorkflowNodeRecord]:
+def list_node_records() -> list[WorkflowNodeRow]:
     return WorkflowNodesRegistry.list_items()
 
 
@@ -97,23 +95,23 @@ def list_nodes() -> list[WorkflowNodeSummaryPublic]:
     return out
 
 
-def get_node_record(node_id: str) -> WorkflowNodeRecord | None:
+def get_node_record(node_id: str) -> WorkflowNodeRow | None:
     return WorkflowNodesRegistry.get_item(node_id)
 
 
-def read_node_source(rec: WorkflowNodeRecord) -> str:
+def read_node_source(rec: WorkflowNodeRow) -> str:
     return WorkflowNodesRegistry.read_source(rec)
 
 
-def write_node_source(rec: WorkflowNodeRecord, source: str) -> None:
+def write_node_source(rec: WorkflowNodeRow, source: str) -> None:
     WorkflowNodesRegistry.write_source(rec, source)
 
 
-def update_node_record(node_id: str, apply_fn) -> WorkflowNodeRecord | None:
+def update_node_record(node_id: str, apply_fn) -> WorkflowNodeRow | None:
     return WorkflowNodesRegistry.update_item(node_id, apply_fn)
 
 
-def delete_workflow_node(node_id: str) -> WorkflowNodeRecord | None:
+def delete_workflow_node(node_id: str) -> WorkflowNodeRow | None:
     rec = WorkflowNodesRegistry.get_item(node_id)
     if rec is None:
         return None
@@ -123,7 +121,7 @@ def delete_workflow_node(node_id: str) -> WorkflowNodeRecord | None:
     return WorkflowNodesRegistry.delete_item(node_id)
 
 
-def apply_node_patch(rec: WorkflowNodeRecord, patch: WorkflowNodePatch) -> None:
+def apply_node_patch(rec: WorkflowNodeRow, patch: WorkflowNodePatch) -> None:
     if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
         raise ValueError("cannot patch plugin workflow node")
     data = patch.model_dump(exclude_unset=True)

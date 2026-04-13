@@ -16,31 +16,9 @@ from app.nodes.constants import (
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
 )
-from app.nodes.schemas import WorkflowNodeRecord, WorkflowNodesRegistryFile
+from app.nodes.schemas import WorkflowNodesRegistryFile
 from app.persistence.models import WorkflowNodeRow
 from app.persistence.sqlite_db import get_session
-
-
-def _row_to_record(row: WorkflowNodeRow) -> WorkflowNodeRecord:
-    return WorkflowNodeRecord(
-        id=row.id,
-        name=row.name,
-        description=row.description,
-        source_path=row.source_path,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
-    )
-
-
-def _record_to_row(rec: WorkflowNodeRecord) -> WorkflowNodeRow:
-    return WorkflowNodeRow(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        source_path=rec.source_path,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
-    )
 
 
 class WorkflowNodesRegistry:
@@ -68,11 +46,11 @@ class WorkflowNodesRegistry:
         return cls._plugin_nodes.get(type_key)
 
     @classmethod
-    def _plugin_node_record(cls, type_key: str) -> WorkflowNodeRecord | None:
+    def _plugin_node_record(cls, type_key: str) -> WorkflowNodeRow | None:
         node_cls = cls._plugin_nodes.get(type_key)
         if node_cls is None:
             return None
-        return WorkflowNodeRecord(
+        return WorkflowNodeRow(
             id=type_key,
             name=getattr(node_cls, "label", type_key),
             description=getattr(node_cls, "description", "") or "",
@@ -82,44 +60,44 @@ class WorkflowNodesRegistry:
         )
 
     @classmethod
-    def list_items(cls) -> list[WorkflowNodeRecord]:
+    def list_items(cls) -> list[WorkflowNodeRow]:
         with get_session() as session:
             rows = list(session.exec(select(WorkflowNodeRow)))
-        return [_row_to_record(r) for r in rows]
+        return [WorkflowNodeRow(**r.model_dump()) for r in rows]
 
     @classmethod
-    def get_item(cls, node_id: str) -> WorkflowNodeRecord | None:
+    def get_item(cls, node_id: str) -> WorkflowNodeRow | None:
         with get_session() as session:
             row = session.get(WorkflowNodeRow, node_id)
             if row is not None:
-                return _row_to_record(row)
+                return WorkflowNodeRow(**row.model_dump())
         return cls._plugin_node_record(node_id)
 
     @classmethod
-    def add_item(cls, item: WorkflowNodeRecord) -> None:
+    def add_item(cls, item: WorkflowNodeRow) -> None:
         with get_session() as session:
-            session.add(_record_to_row(item))
+            session.add(WorkflowNodeRow(**item.model_dump()))
             session.commit()
 
     @classmethod
-    def update_item(cls, node_id: str, fn) -> WorkflowNodeRecord | None:  # type: ignore[no-untyped-def]
+    def update_item(cls, node_id: str, fn) -> WorkflowNodeRow | None:  # type: ignore[no-untyped-def]
         with get_session() as session:
             row = session.get(WorkflowNodeRow, node_id)
             if row is None:
                 return None
-            rec = _row_to_record(row)
+            rec = WorkflowNodeRow(**row.model_dump())
             fn(rec)
-            session.merge(_record_to_row(rec))
+            session.merge(WorkflowNodeRow(**rec.model_dump()))
             session.commit()
             return rec
 
     @classmethod
-    def delete_item(cls, node_id: str) -> WorkflowNodeRecord | None:
+    def delete_item(cls, node_id: str) -> WorkflowNodeRow | None:
         with get_session() as session:
             row = session.get(WorkflowNodeRow, node_id)
             if row is None:
                 return None
-            rec = _row_to_record(row)
+            rec = WorkflowNodeRow(**row.model_dump())
             session.delete(row)
             session.commit()
             return rec
@@ -133,7 +111,7 @@ class WorkflowNodesRegistry:
         return ensure_dir(USER_NODE_WORKFLOW_ROOT)
 
     @staticmethod
-    def read_source(rec: WorkflowNodeRecord) -> str:
+    def read_source(rec: WorkflowNodeRow) -> str:
         if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
             node_cls = WorkflowNodesRegistry.get_plugin_node_class(rec.id)
             if node_cls is None:
@@ -148,14 +126,14 @@ class WorkflowNodesRegistry:
         return SourceFiles.read_source_text(rec.source_path)
 
     @classmethod
-    def write_source(cls, rec: WorkflowNodeRecord, source: str, validators=None) -> None:
+    def write_source(cls, rec: WorkflowNodeRow, source: str, validators=None) -> None:
         if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
             raise ValueError("cannot write source for plugin workflow node")
         cls.nodes_dir_path()
         SourceFiles.write_source_text(rec.source_path, source, validators=validators)
 
     @staticmethod
-    def delete_source_file(rec: WorkflowNodeRecord) -> None:
+    def delete_source_file(rec: WorkflowNodeRow) -> None:
         if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
             return
         SourceFiles.delete_source_text_file(rec.source_path)
