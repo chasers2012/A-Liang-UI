@@ -127,4 +127,28 @@
   html {
     @apply font-sans;
   }
+
+  /**
+   * 全局统一滚动条样式：与 `components/ui/scroll-area.tsx` 的尺寸和配色保持一致。
+   */
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-clip: padding-box;
+  }
 }

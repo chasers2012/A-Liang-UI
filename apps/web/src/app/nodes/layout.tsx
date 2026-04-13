@@ -28,7 +28,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Page } from "@/components/page";
 import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
 import { cn } from "@/lib/utils";
@@ -275,7 +274,7 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
               </Link>
             </div>
           </div>
-          <ScrollArea className="min-h-0 w-full flex-1 px-4">
+          <div className="min-h-0 w-full flex-1 pl-3 pr-1 overflow-y-auto overflow-x-hidden">
             <div className="flex flex-col gap-1 py-2">
 
               {!filteredItems ? (
@@ -315,7 +314,7 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
                       />
                     }
                   >
-                    <ItemContent>
+                    <ItemContent className="overflow-hidden">
                       <ItemTitle>{m.name}</ItemTitle>
                       <ItemDescription>{m.description || "—"}</ItemDescription>
                     </ItemContent>
@@ -323,7 +322,7 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 

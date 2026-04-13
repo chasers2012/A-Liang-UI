@@ -145,7 +145,7 @@ export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
         ref={scrollerRef}
         className={cn(
           "min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
-          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-end justify-end",
+          "items-end justify-end",
         )}
       >
         <ChatTabsTabList
