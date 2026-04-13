@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Item, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import { SectionHeader } from "@/components/section-header";
 import { cn } from "@/lib/utils";
 
 import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from "./workflow-graph-canvas";
@@ -14,6 +16,52 @@ export type WorkflowNodeTypeListItem = {
   description?: string | null;
   category?: string | null;
 };
+
+function NodeItem(props: {
+  item: WorkflowNodeTypeListItem;
+  selectedType?: string | null;
+  description: string;
+  onSelectType?: (type: string) => void;
+  draggable: boolean;
+  dragMime: string;
+}) {
+  const { item, selectedType, description, onSelectType, draggable, dragMime } = props;
+  return (
+    <Item
+      key={item.type}
+      variant="outline"
+      className={cn({
+        "border-primary bg-muted/50 ring-1 ring-primary/35":
+          item.type === selectedType,
+      })}
+      render={
+        <div
+          role="button"
+          tabIndex={0}
+          className="w-full cursor-pointer text-left outline-none"
+          onClick={() => onSelectType?.(item.type)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onSelectType?.(item.type);
+            }
+          }}
+          draggable={draggable}
+          onDragStart={(e) => {
+            if (!draggable) return;
+            e.dataTransfer.setData(dragMime, item.type);
+            e.dataTransfer.effectAllowed = "copy";
+          }}
+        />
+      }
+    >
+      <ItemContent className="overflow-hidden">
+        <ItemTitle>{item.label}</ItemTitle>
+        {description ? <ItemDescription>{description}</ItemDescription> : null}
+      </ItemContent>
+    </Item>
+  );
+}
 
 function toPlainTextPreview(input?: string | null, maxLength = 120): string {
   if (!input) return "";
@@ -45,136 +93,128 @@ function toPlainTextFirstLinePreview(input?: string | null, maxLength = 120): st
 }
 
 export function WorkflowNodeTypeList(props: {
-  items: WorkflowNodeTypeListItem[];
-  title?: string;
+  items: WorkflowNodeTypeListItem[] | null;
   searchPlaceholder?: string;
+  searchQuery?: string;
+  onSearchQueryChange?: (value: string) => void;
+  selectedType?: string | null;
+  error?: string | null;
+  loadingText?: string;
   emptyText?: string;
-  emptyFilteredText?: string;
   className?: string;
+  listClassName?: string;
+  toolbarRight?: ReactNode;
   onSelectType?: (type: string) => void;
   draggable?: boolean;
   dragMime?: string;
 }) {
   const {
     items,
-    title = "节点列表",
     searchPlaceholder = "搜索名称/描述",
+    searchQuery,
+    onSearchQueryChange,
+    selectedType,
+    error,
+    loadingText = "加载中…",
     emptyText = "暂无节点",
-    emptyFilteredText = "没有匹配节点",
     className,
+    listClassName,
+    toolbarRight,
     onSelectType,
     draggable = true,
     dragMime = WORKFLOW_GRAPH_NODE_DRAG_MIME,
   } = props;
+  const [innerQuery, setInnerQuery] = useState("");
+  const effectiveQuery = searchQuery ?? innerQuery;
 
-  const [keyword, setKeyword] = useState("");
+  const filteredItems = useMemo(() => {
+    if (!items) return null;
+    const q = effectiveQuery.trim().toLocaleLowerCase("zh-CN");
+    if (!q) return items;
+    return items.filter((item) => {
+      const text = [item.label, item.description ?? "", item.category ?? ""]
+        .join(" ")
+        .toLocaleLowerCase("zh-CN");
+      return text.includes(q);
+    });
+  }, [items, effectiveQuery]);
 
-  const groups = useMemo(() => {
-    const q = keyword.trim().toLocaleLowerCase("zh-CN");
-    const grouped = new Map<string, WorkflowNodeTypeListItem[]>();
-    for (const item of items) {
-      if (q) {
-        const searchText = [item.label, item.description ?? "", item.category ?? ""]
-          .join(" ")
-          .toLocaleLowerCase("zh-CN");
-        if (!searchText.includes(q)) continue;
-      }
+  const groupedItems = useMemo(() => {
+    if (!filteredItems) return null;
+    const groups = new Map<string, WorkflowNodeTypeListItem[]>();
+    for (const item of filteredItems) {
       const key = item.category?.trim() || "其他";
-      const arr = grouped.get(key) ?? [];
-      arr.push(item);
-      grouped.set(key, arr);
+      const list = groups.get(key);
+      if (list) list.push(item);
+      else groups.set(key, [item]);
     }
-
-    return Array.from(grouped.entries())
-      .map(([category, arr]) => ({
-        category,
-        items: [...arr].sort((a, b) => a.label.localeCompare(b.label, "zh-Hans-CN")),
-      }))
-      .sort((a, b) => a.category.localeCompare(b.category, "zh-Hans-CN"));
-  }, [items, keyword]);
-
-  const filteredCount = useMemo(
-    () => groups.reduce((acc, g) => acc + g.items.length, 0),
-    [groups],
-  );
-
-  const isFiltered = keyword.trim().length > 0;
-  const isEmpty = groups.length === 0;
+    return [...groups.entries()];
+  }, [filteredItems]);
 
   return (
     <aside
       className={cn(
-        "h-full w-[300px] max-w-[30%] flex-col overflow-hidden rounded-md border border-border/70 bg-background md:flex",
+        "flex min-h-0 flex-col overflow-hidden",
         className,
       )}
     >
-      <div className="border-b border-border/70 px-3 py-2">
-        <div className="flex items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <span>{title}</span>
-          <span>{filteredCount}</span>
-        </div>
-        <div className="relative mt-2">
-          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+      <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-2 pb-3 pt-0">
+        <InputGroup className="max-w-xs">
+          <InputGroupInput
             placeholder={searchPlaceholder}
-            className="h-8 pl-7 text-xs"
+            value={effectiveQuery}
+            onChange={(e) => {
+              if (onSearchQueryChange) onSearchQueryChange(e.target.value);
+              else setInnerQuery(e.target.value);
+            }}
+            aria-label={searchPlaceholder}
           />
-        </div>
+          <InputGroupAddon>
+            <Search />
+          </InputGroupAddon>
+        </InputGroup>
+        {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
       </div>
-
-      <div className="relative flex-1 overflow-y-auto p-2">
-        <div className="space-y-3 overflow-hidden">
-          {isEmpty ? (
-            <p className="p-3 text-sm text-muted-foreground">
-              {isFiltered ? emptyFilteredText : emptyText}
+      <div
+        className={cn(
+          "min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-3 pr-1",
+          listClassName,
+        )}
+      >
+        <div className="flex flex-col gap-1 py-2">
+          {!filteredItems ? (
+            error ? (
+              <p className="p-6 text-sm text-destructive">{error}</p>
+            ) : (
+              <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
+            )
+          ) : filteredItems.length === 0 ? (
+            <p className="p-6 text-sm text-muted-foreground">
+              {emptyText}
             </p>
-          ) : null}
-
-          {groups.map((g) => (
-            <section key={g.category}>
-              <div className="sticky top-0 bg-background px-1 py-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                {g.category}
-              </div>
-              <ul className="space-y-2">
-                {g.items.map((it) => {
-                  const descPreview = toPlainTextFirstLinePreview(it.description);
+          ) : (
+            groupedItems?.map(([category, list]) => (
+              <section key={category} className="space-y-1">
+                <div className="px-3 pt-1 pb-2 ">
+                  <SectionHeader>{category}</SectionHeader>
+                </div>
+                {list.map((item) => {
+                  const description = toPlainTextFirstLinePreview(item.description);
                   return (
-                    <li
-                      key={it.type}
-                      className="cursor-pointer select-none rounded border border-border/40 bg-muted/30 px-2 py-2 hover:bg-muted/50"
-                      title={it.type}
-                      role="button"
-                      tabIndex={0}
+                    <NodeItem
+                      key={item.type}
+                      item={item}
+                      selectedType={selectedType}
+                      description={description}
+                      onSelectType={onSelectType}
                       draggable={draggable}
-                      onClick={() => onSelectType?.(it.type)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          onSelectType?.(it.type);
-                        }
-                      }}
-                      onDragStart={(e) => {
-                        if (!draggable) return;
-                        e.dataTransfer.setData(dragMime, it.type);
-                        e.dataTransfer.effectAllowed = "copy";
-                      }}
-                    >
-                      <div className="truncate text-sm font-medium leading-5 text-foreground">
-                        {it.label}
-                      </div>
-                      {descPreview ? (
-                        <p className="mt-0.5 pl-2 pt-1 text-[11px] leading-4 text-muted-foreground">
-                          {descPreview}
-                        </p>
-                      ) : null}
-                    </li>
+                      dragMime={dragMime}
+                    />
                   );
                 })}
-              </ul>
-            </section>
-          ))}
+              </section>
+            ))
+          )}
         </div>
       </div>
     </aside>
