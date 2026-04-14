@@ -32,12 +32,11 @@ def upsert_domain_node_visibility_config(domain: str, hidden_node_ids: list[str]
     return sorted(hidden_ids or [])
 
 
-def delete_domain_node_visibility_config(domain: str) -> bool:
-    hidden_before = WorkflowDomainNodesRegistry.get_hidden_node_ids(domain)
-    if hidden_before is None:
-        return False
-    WorkflowDomainNodesRegistry.delete_domain_visibility(domain)
-    return True
+def toggle_node_visibility(domain: str, node_id: str, visible: bool) -> None:
+    if visible:
+        WorkflowDomainNodesRegistry.remove_hidden_node_id(domain, node_id)
+    else:
+        WorkflowDomainNodesRegistry.append_hidden_node_id(domain, node_id)
 
 
 def is_node_visible_in_domain(domain: str, node_id: str) -> bool:

@@ -3,9 +3,6 @@ from __future__ import annotations
 from app.evaluation.profile.constants import evaluation_workflow_io_spec_dict
 from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
 from app.nodes.controller import list_nodes_by_domain
-from app.visibility.controller import ensure_domain_node_visibility_config
-
-ensure_domain_node_visibility_config("evaluation-profile")
 
 
 class ProfileNotFoundError(LookupError):

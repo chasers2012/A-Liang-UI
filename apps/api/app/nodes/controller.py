@@ -5,7 +5,6 @@ from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
 from app.common.datetime_utils import utc_now_iso
-from app.nodes.constants import PLUGIN_NODE_SOURCE_SENTINEL
 from app.nodes.package_manager import WorkflowNodePackageManager
 from app.nodes.registry import WorkflowNodesRegistry
 from app.nodes.schemas import (
@@ -49,13 +48,7 @@ def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSu
 
 
 def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
-    if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
-        node_cls = WorkflowNodesRegistry.get_plugin_node_class(rec.id)
-        if node_cls is None:
-            raise ValueError(f"missing plugin workflow node class for id {rec.id!r}")
-        return _node_cls_to_summary(rec, node_cls)
-    source = WorkflowNodesRegistry.read_source(rec)
-    node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+    node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
     return _node_cls_to_summary(rec, node_cls)
 
 
@@ -81,19 +74,7 @@ def list_node_records() -> list[WorkflowNodeRow]:
 
 
 def list_nodes() -> list[WorkflowNodeSummaryPublic]:
-    db_recs = list_node_records()
-    db_ids = {r.id for r in db_recs}
-    out: list[WorkflowNodeSummaryPublic] = []
-    for rec in db_recs:
-        out.append(_to_summary(rec))
-    for type_key, _node_cls in WorkflowNodesRegistry.iter_registered_plugin_nodes():
-        if type_key in db_ids:
-            continue
-        plugin_rec = WorkflowNodesRegistry.get_item(type_key)
-        if plugin_rec is None:
-            continue
-        out.append(_to_summary(plugin_rec))
-    return out
+    return [_to_summary(rec) for rec in list_node_records()]
 
 
 def list_nodes_by_domain(domain: str) -> list[WorkflowNodeSummaryPublic]:
@@ -108,24 +89,12 @@ def list_nodes_by_domain(domain: str) -> list[WorkflowNodeSummaryPublic]:
     if hidden_ids is None:
         return list_nodes()
 
-    # Keep the same ordering strategy as list_nodes(): DB nodes first, then plugin-only nodes.
     db_recs = list_node_records()
-    db_ids = {r.id for r in db_recs}
     out: list[WorkflowNodeSummaryPublic] = []
     for rec in db_recs:
         if rec.id in hidden_ids:
             continue
         out.append(_to_summary(rec))
-
-    for type_key, _node_cls in WorkflowNodesRegistry.iter_registered_plugin_nodes():
-        if type_key in db_ids:
-            continue
-        if type_key in hidden_ids:
-            continue
-        plugin_rec = WorkflowNodesRegistry.get_item(type_key)
-        if plugin_rec is None:
-            continue
-        out.append(_to_summary(plugin_rec))
     return out
 
 
@@ -149,14 +118,14 @@ def delete_workflow_node(node_id: str) -> WorkflowNodeRow | None:
     rec = WorkflowNodesRegistry.get_item(node_id)
     if rec is None:
         return None
-    if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+    if rec.is_plugin:
         return None
     WorkflowNodePackageManager.delete_node_package(node_id)
     return WorkflowNodesRegistry.delete_item(node_id)
 
 
 def apply_node_patch(rec: WorkflowNodeRow, patch: WorkflowNodePatch) -> None:
-    if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+    if rec.is_plugin:
         raise ValueError("cannot patch plugin workflow node")
     data = patch.model_dump(exclude_unset=True)
     if "source" in data and patch.source is not None:

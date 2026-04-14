@@ -32,6 +32,7 @@ class WorkflowNodeCreate(BaseModel):
             id=node_id,
             name=node_cls.label,
             description=node_cls.description,
+            is_plugin=False,
             source_path=source_path,
             created_at=now,
             updated_at=now,

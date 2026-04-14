@@ -1,8 +1,7 @@
 USER_NODE_WORKFLOW_ROOT = "workflow_nodes/user"
 REGISTRY_FILENAME = "nodes/registry.json"
 
-# Synthetic workflow node rows for plugin-registered nodes (not stored in SQLite).
-PLUGIN_NODE_SOURCE_SENTINEL = "__plugin__"
+# Synthetic timestamps for plugin-registered workflow nodes.
 PLUGIN_NODE_TIMESTAMP_ISO = "1970-01-01T00:00:00+00:00"
 
 DEFAULT_NODE_SOURCE = """

@@ -51,6 +51,7 @@ class WorkflowNodeRow(SQLModel, table=True):
     id: str = Field(primary_key=True)
     name: str
     description: str = ""
+    is_plugin: bool = False
     source_path: str
     created_at: str
     updated_at: str

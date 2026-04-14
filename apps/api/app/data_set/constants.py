@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from typing import Any
 
+# 预处理工作流节点在节点可见性注册表中的 domain id。
+WORKFLOW_PREPROCESSING_DOMAIN: str = "preprocessors"
+
 PREPROCESSING_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
         "name": "frames",

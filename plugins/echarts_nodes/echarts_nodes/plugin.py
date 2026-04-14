@@ -26,6 +26,7 @@ from echarts_nodes import (
 
 class EchartsNodesPlugin(NodePlugin):
     name = "echarts"
+    visible_domains: ClassVar[tuple[str, ...]] = ("evaluation-profile",)
     nodes: ClassVar[list[type]] = [
         EchartsBarNode,
         EchartsBoxplotNode,

@@ -54,6 +54,53 @@ class WorkflowDomainNodesRegistry:
             session.commit()
 
     @classmethod
+    def append_hidden_node_id(cls, domain: str, node_id: str) -> None:
+        cls._ensure_db_ready()
+        normalized_domain = cls._normalize_domain(domain)
+        normalized_node_id = node_id.strip()
+        if not normalized_node_id:
+            return
+        with get_session() as session:
+            row = session.get(WorkflowNodeVisibilityRow, normalized_domain)
+            if row is None:
+                row = WorkflowNodeVisibilityRow(
+                    domain=normalized_domain,
+                    hidden_node_ids=[],
+                )
+            hidden_ids = cls._sanitize_ids([*(row.hidden_node_ids or []), normalized_node_id])
+            session.merge(
+                WorkflowNodeVisibilityRow(
+                    domain=normalized_domain,
+                    hidden_node_ids=hidden_ids,
+                )
+            )
+            session.commit()
+
+    @classmethod
+    def remove_hidden_node_id(cls, domain: str, node_id: str) -> None:
+        cls._ensure_db_ready()
+        normalized_domain = cls._normalize_domain(domain)
+        normalized_node_id = node_id.strip()
+        if not normalized_node_id:
+            return
+        with get_session() as session:
+            row = session.get(WorkflowNodeVisibilityRow, normalized_domain)
+            if row is None:
+                return
+            hidden_ids = [
+                hidden_id
+                for hidden_id in (row.hidden_node_ids or [])
+                if hidden_id != normalized_node_id
+            ]
+            session.merge(
+                WorkflowNodeVisibilityRow(
+                    domain=normalized_domain,
+                    hidden_node_ids=hidden_ids,
+                )
+            )
+            session.commit()
+
+    @classmethod
     def delete_domain_visibility(cls, domain: str) -> None:
         cls._ensure_db_ready()
         normalized_domain = cls._normalize_domain(domain)

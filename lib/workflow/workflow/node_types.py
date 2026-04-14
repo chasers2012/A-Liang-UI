@@ -7,7 +7,7 @@ graph instances (nodes + links; viewport is not persisted).
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any, Literal
 
 # --- Dataclasses (compile-time node metadata) ---------------------------------
@@ -65,6 +65,8 @@ class AppendableSocket(Socket):
 class NodeParam(Socket):
     default = None
     render_type: str = None
+    #: ``None``：序列化时使用插件级默认；``()``：任意领域可见；非空元组：仅列出的领域。
+    visible_domains: tuple[str, ...] | None = None
 
     def __init__(
         self,
@@ -74,6 +76,7 @@ class NodeParam(Socket):
         description: str = "",
         value_type: str = "",
         default: Any | None = None,
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ):
         super().__init__(
@@ -87,6 +90,12 @@ class NodeParam(Socket):
         )
         self.default = default
         self.render_type = getattr(type(self), "render_type", None)
+        if visible_domains is None:
+            self.visible_domains = None
+        else:
+            self.visible_domains = tuple(
+                s.strip() for s in visible_domains if isinstance(s, str) and s.strip()
+            )
 
 
 class OptionsNodeParam(NodeParam):
@@ -102,6 +111,7 @@ class OptionsNodeParam(NodeParam):
         value_type: str = "",
         options: list[str | float | int] | Callable | None = None,
         default: Any | None = None,
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ):
         super().__init__(
@@ -111,6 +121,7 @@ class OptionsNodeParam(NodeParam):
             description=description,
             value_type=value_type,
             default=default,
+            visible_domains=visible_domains,
             **_ignored,
         )
         self.options = options
@@ -133,6 +144,7 @@ class NumberNodeParam(NodeParam):
         default: float | int | None = None,
         minimum: float | int | None = None,
         maximum: float | int | None = None,
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ):
         super().__init__(
@@ -142,6 +154,7 @@ class NumberNodeParam(NodeParam):
             description=description,
             value_type=value_type,
             default=default,
+            visible_domains=visible_domains,
             **_ignored,
         )
         self.minimum = minimum
@@ -161,6 +174,7 @@ class StringNodeParam(NodeParam):
         description: str = "",
         value_type: str = "",
         default: str = "",
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ) -> None:
         super().__init__(
@@ -170,6 +184,7 @@ class StringNodeParam(NodeParam):
             description=description,
             value_type=value_type or self.value_type,
             default=default,
+            visible_domains=visible_domains,
             **_ignored,
         )
 
@@ -188,6 +203,7 @@ class TextareaNodeParam(StringNodeParam):
         value_type: str = "",
         default: str = "",
         rows: int = 6,
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ) -> None:
         super().__init__(
@@ -197,6 +213,7 @@ class TextareaNodeParam(StringNodeParam):
             description=description,
             value_type=value_type,
             default=default,
+            visible_domains=visible_domains,
             **_ignored,
         )
         self.rows = max(2, min(int(rows), 40))
@@ -221,6 +238,7 @@ class DateTimeNodeParam(NodeParam):
         description: str = "",
         value_type: str = "",
         default: str = "",
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ):
         super().__init__(
@@ -230,6 +248,7 @@ class DateTimeNodeParam(NodeParam):
             description=description,
             value_type=value_type or self.value_type,
             default=default or self.default,
+            visible_domains=visible_domains,
             **_ignored,
         )
 
@@ -247,6 +266,7 @@ class DateNodeParam(NodeParam):
         description: str = "",
         value_type: str = "",
         default: str = "",
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
         **_ignored: Any,
     ):
         super().__init__(
@@ -256,6 +276,7 @@ class DateNodeParam(NodeParam):
             description=description,
             value_type=value_type or self.value_type,
             default=default or self.default,
+            visible_domains=visible_domains,
             **_ignored,
         )
 

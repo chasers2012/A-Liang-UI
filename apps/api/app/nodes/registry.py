@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
-from typing import ClassVar
 
 from custom_code import SourceFiles
 from sqlmodel import select
@@ -12,7 +11,6 @@ from workspace import ensure_dir
 
 from app.common.id import create_id_generator
 from app.nodes.constants import (
-    PLUGIN_NODE_SOURCE_SENTINEL,
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
 )
@@ -23,7 +21,6 @@ from app.persistence.sqlite_db import get_session
 
 class WorkflowNodesRegistry:
     id_generator = create_id_generator("WorkflowNodesRegistry")
-    _plugin_nodes: ClassVar[dict[str, type[Node]]] = {}
 
     @classmethod
     def generate_id(cls, name: str | None = None) -> str:
@@ -35,29 +32,32 @@ class WorkflowNodesRegistry:
         if not tk:
             raise ValueError("plugin workflow node type_key must be non-empty")
         WorkflowNodeLoader.instance().register_node(tk, node_cls)
-        cls._plugin_nodes[tk] = node_cls
+        with get_session() as session:
+            session.merge(
+                WorkflowNodeRow(
+                    id=tk,
+                    name=getattr(node_cls, "label", tk),
+                    description=getattr(node_cls, "description", "") or "",
+                    is_plugin=True,
+                    source_path="",
+                    created_at=PLUGIN_NODE_TIMESTAMP_ISO,
+                    updated_at=PLUGIN_NODE_TIMESTAMP_ISO,
+                )
+            )
+            session.commit()
 
     @classmethod
-    def iter_registered_plugin_nodes(cls) -> list[tuple[str, type[Node]]]:
-        return list(cls._plugin_nodes.items())
-
-    @classmethod
-    def get_plugin_node_class(cls, type_key: str) -> type[Node] | None:
-        return cls._plugin_nodes.get(type_key)
-
-    @classmethod
-    def _plugin_node_record(cls, type_key: str) -> WorkflowNodeRow | None:
-        node_cls = cls._plugin_nodes.get(type_key)
-        if node_cls is None:
-            return None
-        return WorkflowNodeRow(
-            id=type_key,
-            name=getattr(node_cls, "label", type_key),
-            description=getattr(node_cls, "description", "") or "",
-            source_path=PLUGIN_NODE_SOURCE_SENTINEL,
-            created_at=PLUGIN_NODE_TIMESTAMP_ISO,
-            updated_at=PLUGIN_NODE_TIMESTAMP_ISO,
-        )
+    def resolve_node_class(cls, rec: WorkflowNodeRow) -> type[Node]:
+        loader = WorkflowNodeLoader.instance()
+        try:
+            return loader.resolve(rec.id)
+        except Exception:
+            if rec.is_plugin:
+                raise
+            source = cls.read_source(rec)
+            node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+            loader.register_node(rec.id, node_cls)
+            return loader.resolve(rec.id)
 
     @classmethod
     def list_items(cls) -> list[WorkflowNodeRow]:
@@ -71,7 +71,7 @@ class WorkflowNodesRegistry:
             row = session.get(WorkflowNodeRow, node_id)
             if row is not None:
                 return WorkflowNodeRow(**row.model_dump())
-        return cls._plugin_node_record(node_id)
+        return None
 
     @classmethod
     def add_item(cls, item: WorkflowNodeRow) -> None:
@@ -112,28 +112,22 @@ class WorkflowNodesRegistry:
 
     @staticmethod
     def read_source(rec: WorkflowNodeRow) -> str:
-        if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
-            node_cls = WorkflowNodesRegistry.get_plugin_node_class(rec.id)
-            if node_cls is None:
-                return ""
+        if rec.is_plugin:
             try:
-                return inspect.getsource(node_cls)
+                return inspect.getsource(WorkflowNodesRegistry.resolve_node_class(rec))
             except (OSError, TypeError):
-                return (
-                    f"# 无法读取插件节点类 {node_cls.__module__}.{node_cls.__qualname__} 的源码"
-                    "（可能为内置或动态定义）。\n"
-                )
+                return f"# 无法读取插件节点类 {rec.id} 的源码（可能为内置或动态定义）。\n"
         return SourceFiles.read_source_text(rec.source_path)
 
     @classmethod
     def write_source(cls, rec: WorkflowNodeRow, source: str, validators=None) -> None:
-        if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+        if rec.is_plugin:
             raise ValueError("cannot write source for plugin workflow node")
         cls.nodes_dir_path()
         SourceFiles.write_source_text(rec.source_path, source, validators=validators)
 
     @staticmethod
     def delete_source_file(rec: WorkflowNodeRow) -> None:
-        if rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+        if rec.is_plugin:
             return
         SourceFiles.delete_source_text_file(rec.source_path)

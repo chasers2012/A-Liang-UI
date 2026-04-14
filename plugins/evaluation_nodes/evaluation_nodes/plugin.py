@@ -8,6 +8,7 @@ from evaluation_nodes.load_data_set import LoadDataSet
 
 class EvaluationNodesPlugin(NodePlugin):
     name = "evaluation"
+    visible_domains: ClassVar[tuple[str, ...]] = ("evaluation-profile",)
     nodes: ClassVar[list[type]] = [
         LoadDataSet,
         CalculateFactorValueNode,

@@ -8,7 +8,6 @@ from app.nodes.schemas import (
     WorkflowDomainNodeVisibilityPublic,
 )
 from app.visibility.controller import (
-    delete_domain_node_visibility_config,
     get_domain_node_visibility_config,
     is_node_visible_in_domain,
     list_domain_node_visibility_configs,
@@ -47,12 +46,6 @@ def put_domain_nodes(
         raise HTTPException(status_code=400, detail="path domain 与 body.domain 不一致")
     hidden_node_ids = upsert_domain_node_visibility_config(path_domain, body.hidden_node_ids)
     return WorkflowDomainNodeVisibilityPublic(domain=path_domain, hidden_node_ids=hidden_node_ids)
-
-
-@router.delete("/{domain}", status_code=204)
-def delete_domain_nodes(domain: str) -> None:
-    if not delete_domain_node_visibility_config(domain):
-        raise HTTPException(status_code=404, detail="领域未配置")
 
 
 @router.get("/{domain}/nodes/{node_id}/allowed", response_model=WorkflowDomainNodeValidationPublic)

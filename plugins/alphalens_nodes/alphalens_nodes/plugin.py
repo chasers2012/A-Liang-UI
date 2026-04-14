@@ -29,6 +29,7 @@ from alphalens_nodes.top_bottom_spread_timeseries_metric import TopBottomSpreadT
 
 class AlphalensNodesPlugin(NodePlugin):
     name = "alphalens"
+    visible_domains = ("evaluation-profile",)
     nodes: ClassVar[list[type[Node]]] = [
         AverageCumulativeReturnByQuantileMetric,
         CommonStartReturnsMetric,

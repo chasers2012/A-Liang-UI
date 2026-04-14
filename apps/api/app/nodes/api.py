@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from workflow.node_loader import WorkflowNodeLoader
 
-from app.nodes.constants import DEFAULT_NODE_SOURCE, PLUGIN_NODE_SOURCE_SENTINEL
+from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
     apply_node_patch,
     create_workflow_node,
@@ -33,7 +33,7 @@ def get_nodes() -> list[WorkflowNodeSummaryPublic]:
     for row in rows:
         try:
             rec = WorkflowNodesRegistry.get_item(row.id)
-            if rec is None or rec.source_path == PLUGIN_NODE_SOURCE_SENTINEL:
+            if rec is None or rec.is_plugin:
                 continue
             source = WorkflowNodesRegistry.read_source(rec)
             node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)

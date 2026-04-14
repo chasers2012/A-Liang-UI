@@ -55,6 +55,7 @@ class Parser:
             "value_type": param.value_type,
             "render_type": param.render_type,
             "default": param.default,
+            "visible_domains": list(getattr(param, "visible_domains", None) or ()),
         }
 
     @staticmethod
