@@ -1,0 +1,33 @@
+from __future__ import annotations
+
+from typing import Any
+
+import pandas as pd
+
+
+def run_portfolio_from_target_weights(
+    *,
+    price: pd.DataFrame,
+    target_weights: pd.DataFrame,
+    initial_cash: float,
+    fees: float,
+    slippage: float,
+    freq: str = "1D",
+) -> Any:
+    import vectorbt as vbt
+
+    # Align inputs
+    px = price.sort_index()
+    w = target_weights.reindex(px.index).fillna(0.0)
+    w = w.reindex(columns=px.columns).fillna(0.0)
+
+    # Use target percent sizing: each timestamp's weights are desired portfolio weights.
+    return vbt.Portfolio.from_orders(
+        px,
+        size=w,
+        size_type="targetpercent",
+        init_cash=float(initial_cash),
+        fees=float(fees),
+        slippage=float(slippage),
+        freq=freq,
+    )

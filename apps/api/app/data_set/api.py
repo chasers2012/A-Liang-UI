@@ -45,12 +45,18 @@ def get_data_set(data_set_id: str) -> DataSetPublic:
 
 @router.post("", response_model=DataSetPublic)
 def create_data_set(body: DataSetCreate) -> DataSetPublic:
-    return create_data_set_controller(body)
+    try:
+        return create_data_set_controller(body)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.patch("/{data_set_id}", response_model=DataSetPublic)
 def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
-    rec = update_data_set_controller(data_set_id, body)
+    try:
+        rec = update_data_set_controller(data_set_id, body)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     if rec is None:
         raise HTTPException(status_code=404, detail="数据集不存在")
     return rec

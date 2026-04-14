@@ -36,6 +36,9 @@ def _validate_preprocessing_workflow_dict(workflow: dict[str, Any]) -> None:
 
 def _stored_workflow_str(v: object) -> str:
     """Normalize workflow for :class:`DataSetRecord` (disk / in-memory record)."""
+    if isinstance(v, dict):
+        _validate_preprocessing_workflow_dict(v)
+        return json.dumps(dict(v), ensure_ascii=False)
     if isinstance(v, str):
         s = v.strip()
         if not s:
@@ -45,7 +48,7 @@ def _stored_workflow_str(v: object) -> str:
             raise TypeError("workflow 必须是 JSON 字符串（对象）")
         _validate_preprocessing_workflow_dict(loaded)
         return json.dumps(dict(loaded), ensure_ascii=False)
-    raise TypeError("workflow 必须是 JSON 字符串（对象）")
+    raise TypeError("workflow 必须是 JSON 对象或 JSON 字符串（对象）")
 
 
 def workflow_public_dict(workflow_json: str) -> dict[str, Any]:

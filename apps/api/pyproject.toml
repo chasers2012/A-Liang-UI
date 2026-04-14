@@ -23,6 +23,7 @@ dependencies = [
   "factor",
   "datasources",
   "numpy>=1.26.0",
+  "vectorbt",
   "workflow",
 ]
 

@@ -1,0 +1,163 @@
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
+
+import { deleteBacktest, getBacktest, getBacktestEquity, getBacktestTrades, listBacktests, listDataSets, listStrategies, runBacktest } from '@/api';
+import type { DataSetPublic, StrategyPublic } from '@/models';
+
+import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from './dto';
+
+export type BacktestsListState = {
+  items: BacktestRunPublic[] | null;
+  error: string | null;
+};
+
+export const backtestsListAtom = atom<BacktestsListState>({
+  items: null,
+  error: null,
+});
+
+export const refreshBacktestsListAtom = atom(null, async (_get, set) => {
+  set(backtestsListAtom, (s) => ({ ...s, error: null }));
+  try {
+    const items = await listBacktests({ limit: 50 });
+    set(backtestsListAtom, { items, error: null });
+  } catch (e) {
+    set(backtestsListAtom, {
+      items: null,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});
+
+export type BacktestRunFormState = {
+  strategyId: string;
+  dataSetId: string;
+  submitting: boolean;
+  catalogLoading: boolean;
+  error: string | null;
+};
+
+export const backtestRunFormAtom = atom<BacktestRunFormState>({
+  strategyId: '',
+  dataSetId: '',
+  submitting: false,
+  catalogLoading: true,
+  error: null,
+});
+
+export type BacktestRunCatalogState = {
+  strategies: StrategyPublic[];
+  dataSets: DataSetPublic[];
+};
+
+export const backtestRunCatalogAtom = atom<BacktestRunCatalogState>({
+  strategies: [],
+  dataSets: [],
+});
+
+export const loadBacktestRunCatalogAtom = atom(null, async (_get, set) => {
+  set(backtestRunFormAtom, (s) => ({ ...s, catalogLoading: true, error: null }));
+  try {
+    const [strategies, dataSets] = await Promise.all([listStrategies(), listDataSets()]);
+    set(backtestRunCatalogAtom, { strategies, dataSets });
+    set(backtestRunFormAtom, (s) => ({
+      ...s,
+      catalogLoading: false,
+      strategyId: s.strategyId || strategies[0]?.id || '',
+      dataSetId: s.dataSetId || dataSets[0]?.id || '',
+    }));
+  } catch (e) {
+    set(backtestRunCatalogAtom, { strategies: [], dataSets: [] });
+    set(backtestRunFormAtom, (s) => ({
+      ...s,
+      catalogLoading: false,
+      error: e instanceof Error ? e.message : String(e),
+    }));
+  }
+});
+
+export const setBacktestRunStrategyIdAtom = atom(null, (_get, set, id: string) => {
+  set(backtestRunFormAtom, (s) => ({ ...s, strategyId: id }));
+});
+
+export const setBacktestRunDataSetIdAtom = atom(null, (_get, set, id: string) => {
+  set(backtestRunFormAtom, (s) => ({ ...s, dataSetId: id }));
+});
+
+export const submitBacktestRunAtom = atom(null, async (get, set) => {
+  const { strategyId, dataSetId } = get(backtestRunFormAtom);
+  const sid = strategyId.trim();
+  const did = dataSetId.trim();
+  if (!sid || !did) {
+    set(backtestRunFormAtom, (s) => ({ ...s, error: '请选择策略与数据集' }));
+    return;
+  }
+
+  set(backtestRunFormAtom, (s) => ({ ...s, submitting: true, error: null }));
+  try {
+    await runBacktest({ strategy_id: sid, data_set_id: did });
+    set(backtestRunFormAtom, (s) => ({ ...s, submitting: false }));
+    await set(refreshBacktestsListAtom);
+  } catch (e) {
+    set(backtestRunFormAtom, (s) => ({
+      ...s,
+      submitting: false,
+      error: e instanceof Error ? e.message : String(e),
+    }));
+  }
+});
+
+export type BacktestDetailState = {
+  run: BacktestRunPublic | null;
+  equity: BacktestEquityResponse | null;
+  trades: BacktestTradesResponse | null;
+  error: string | null;
+};
+
+export const backtestDetailAtomFamily = atomFamily((runId: string) => {
+  void runId;
+  return atom<BacktestDetailState>({
+    run: null,
+    equity: null,
+    trades: null,
+    error: null,
+  });
+});
+
+export const loadBacktestDetailAtomFamily = atomFamily((runId: string) =>
+  atom(null, async (_get, set) => {
+    if (!runId) return;
+    set(backtestDetailAtomFamily(runId), { run: null, equity: null, trades: null, error: null });
+    try {
+      const run = await getBacktest(runId);
+      let equity: BacktestEquityResponse | null = null;
+      let trades: BacktestTradesResponse | null = null;
+      let auxError: string | null = null;
+
+      try {
+        [equity, trades] = await Promise.all([getBacktestEquity(runId), getBacktestTrades(runId)]);
+      } catch (e) {
+        // Keep primary run visible even if auxiliary endpoints fail.
+        auxError = e instanceof Error ? e.message : String(e);
+      }
+
+      set(backtestDetailAtomFamily(runId), { run, equity, trades, error: auxError });
+    } catch (e) {
+      set(backtestDetailAtomFamily(runId), {
+        run: null,
+        equity: null,
+        trades: null,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }),
+);
+
+export const deleteBacktestAtomFamily = atomFamily((runId: string) =>
+  atom(null, async (_get, set) => {
+    if (!runId) return;
+    await deleteBacktest(runId);
+    set(backtestDetailAtomFamily(runId), { run: null, equity: null, trades: null, error: null });
+    await set(refreshBacktestsListAtom);
+  }),
+);

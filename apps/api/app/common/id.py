@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from uuid import NAMESPACE_URL, uuid4, uuid5
 

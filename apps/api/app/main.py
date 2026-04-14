@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.persistence
 import app.plugin
 from app.agent_workflows import api as agent_workflows_router
+from app.backtest import api as backtests_router
 from app.chat import api as agent_llm_router
 from app.config import api as config_router
 from app.data_set import api as data_sets_router
@@ -21,6 +22,7 @@ from app.factors import api as factors_router
 from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
+from app.strategy import api as strategies_router
 from app.tool import api as tools_router
 from app.uploads import api as uploads_router
 
@@ -81,9 +83,11 @@ app.include_router(datasources_router.router)
 app.include_router(nodes_router.router)
 app.include_router(evaluation_profiles_router.router)
 app.include_router(evaluation_runs_router.router)
+app.include_router(backtests_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
 app.include_router(preprocessors_router.router)
+app.include_router(strategies_router.router)
 app.include_router(tools_router.router)
 app.include_router(uploads_router.router)
 
