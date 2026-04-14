@@ -31,7 +31,8 @@ export function BacktestRunForm() {
     void loadCatalog();
   }, [loadCatalog]);
 
-  const submitDisabled = submitting || catalogLoading || !strategyId.trim() || !dataSetId.trim() || !strategies.length || !dataSets.length;
+  const submitDisabled =
+    submitting || catalogLoading || !strategyId.trim() || !dataSetId.trim() || !strategies.length || !dataSets.length;
 
   const onRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -54,7 +55,7 @@ export function BacktestRunForm() {
         <form className="grid gap-3 md:grid-cols-3" onSubmit={(e) => void onRun(e)}>
           <div className="grid gap-1.5">
             <Label htmlFor="strategy_id">strategy_id</Label>
-            <Select value={strategyId || undefined} onValueChange={(v) => v && setStrategyId(v)}>
+            <Select value={strategyId} onValueChange={(v) => v && setStrategyId(v)}>
               <SelectTrigger id="strategy_id" className="w-full">
                 <SelectValue placeholder={catalogLoading ? '加载中…' : '选择策略'} />
               </SelectTrigger>
@@ -77,7 +78,7 @@ export function BacktestRunForm() {
 
           <div className="grid gap-1.5">
             <Label htmlFor="data_set_id">data_set_id</Label>
-            <Select value={dataSetId || undefined} onValueChange={(v) => v && setDataSetId(v)}>
+            <Select value={dataSetId} onValueChange={(v) => v && setDataSetId(v)}>
               <SelectTrigger id="data_set_id" className="w-full">
                 <SelectValue placeholder={catalogLoading ? '加载中…' : '选择数据集'} />
               </SelectTrigger>

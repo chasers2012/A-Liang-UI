@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 
 import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from './workflow-graph-canvas';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 
 export type WorkflowNodeTypeListItem = {
   type: string;
@@ -150,59 +151,64 @@ export function WorkflowNodeTypeList(props: {
   }, [filteredItems]);
 
   return (
-    <aside className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
-      <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-2 pb-3 pt-0">
-        <InputGroup className="max-w-xs">
-          <InputGroupInput
-            placeholder={searchPlaceholder}
-            value={effectiveQuery}
-            onChange={(e) => {
-              if (onSearchQueryChange) onSearchQueryChange(e.target.value);
-              else setInnerQuery(e.target.value);
-            }}
-            aria-label={searchPlaceholder}
-          />
-          <InputGroupAddon>
-            <Search />
-          </InputGroupAddon>
-        </InputGroup>
-        {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
-      </div>
-      <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-1 pr-1', listClassName)}>
-        <div className="flex flex-col gap-1 py-2">
-          {!filteredItems ? (
-            error ? (
-              <p className="p-6 text-sm text-destructive">{error}</p>
-            ) : (
-              <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
-            )
-          ) : filteredItems.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">{emptyText}</p>
-          ) : (
-            groupedItems?.map(([category, list]) => (
-              <section key={category} className="space-y-1">
-                <div className="px-3 pt-1 pb-2 ">
-                  <SectionHeader>{category}</SectionHeader>
-                </div>
-                {list.map((item) => {
-                  const description = toPlainTextFirstLinePreview(item.description);
-                  return (
-                    <NodeItem
-                      key={item.type}
-                      item={item}
-                      selectedType={selectedType}
-                      description={description}
-                      onSelectType={onSelectType}
-                      draggable={draggable}
-                      dragMime={dragMime}
-                    />
-                  );
-                })}
-              </section>
-            ))
-          )}
+    <Card className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
+      <CardHeader className="shrink-0">
+        <CardTitle>节点列表</CardTitle>
+      </CardHeader>
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+        <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-2 pb-3 pt-0">
+          <InputGroup className="max-w-xs">
+            <InputGroupInput
+              placeholder={searchPlaceholder}
+              value={effectiveQuery}
+              onChange={(e) => {
+                if (onSearchQueryChange) onSearchQueryChange(e.target.value);
+                else setInnerQuery(e.target.value);
+              }}
+              aria-label={searchPlaceholder}
+            />
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+          </InputGroup>
+          {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
         </div>
-      </div>
-    </aside>
+        <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-2 pr-1', listClassName)}>
+          <div className="flex flex-col gap-1 pb-2">
+            {!filteredItems ? (
+              error ? (
+                <p className="p-6 text-sm text-destructive">{error}</p>
+              ) : (
+                <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
+              )
+            ) : filteredItems.length === 0 ? (
+              <p className="p-6 text-sm text-muted-foreground">{emptyText}</p>
+            ) : (
+              groupedItems?.map(([category, list]) => (
+                <section key={category} className="space-y-1">
+                  <div className="px-3 pt-3 pb-2 bg-card sticky top-0 left-0 right-0">
+                    <SectionHeader>{category}</SectionHeader>
+                  </div>
+                  {list.map((item) => {
+                    const description = toPlainTextFirstLinePreview(item.description);
+                    return (
+                      <NodeItem
+                        key={item.type}
+                        item={item}
+                        selectedType={selectedType}
+                        description={description}
+                        onSelectType={onSelectType}
+                        draggable={draggable}
+                        dragMime={dragMime}
+                      />
+                    );
+                  })}
+                </section>
+              ))
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

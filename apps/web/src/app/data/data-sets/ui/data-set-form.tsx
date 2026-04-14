@@ -206,7 +206,11 @@ function BindingDependencyMessages({ loading, noDataColumns, extras }: BindingDe
   return (
     <>
       {loading ? <p className="text-xs text-muted-foreground">正在加载该数据源可用字段…</p> : null}
-      {noDataColumns ? <p className="text-xs text-amber-600 dark:text-amber-500">未能读取到该数据源可用字段列表。请检查数据源配置与可连接性/可读性。</p> : null}
+      {noDataColumns ? (
+        <p className="text-xs text-amber-600 dark:text-amber-500">
+          未能读取到该数据源可用字段列表。请检查数据源配置与可连接性/可读性。
+        </p>
+      ) : null}
       {extras.length > 0 ? (
         <p className="text-xs text-muted-foreground">
           已保存且不在当前列表中的依赖： <span className="font-mono">{extras.join(', ')}</span>
@@ -266,7 +270,13 @@ function DataSetBindingRowBlock({
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">绑定 {index + 1}</span>
         {bindingsLength > 1 ? (
-          <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 text-destructive" onClick={() => removeBinding(index)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 text-destructive"
+            onClick={() => removeBinding(index)}
+          >
             <Minus className="size-4" />
             移除
           </Button>
@@ -303,12 +313,18 @@ function DataSetBindingRowBlock({
 
       <div className="space-y-2">
         <Label>索引列（date / asset）</Label>
-        <p className="text-xs text-muted-foreground">这两列用于把数据标准化为 (date, asset) 面板索引；与依赖字段映射独立。</p>
+        <p className="text-xs text-muted-foreground">
+          这两列用于把数据标准化为 (date, asset) 面板索引；与依赖字段映射独立。
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">date_column</Label>
             {useColumnSelects ? (
-              <Select modal={false} value={row.date_column.trim() || undefined} onValueChange={(v) => v && updateBinding(index, { date_column: v })}>
+              <Select
+                modal={false}
+                value={row.date_column.trim() || undefined}
+                onValueChange={(v) => v && updateBinding(index, { date_column: v })}
+              >
                 <SelectTrigger className="w-full font-mono text-xs">
                   <SelectValue placeholder="选择列" />
                 </SelectTrigger>
@@ -332,7 +348,11 @@ function DataSetBindingRowBlock({
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">asset_column</Label>
             {useColumnSelects ? (
-              <Select modal={false} value={row.asset_column.trim() || undefined} onValueChange={(v) => v && updateBinding(index, { asset_column: v })}>
+              <Select
+                modal={false}
+                value={row.asset_column.trim() || undefined}
+                onValueChange={(v) => v && updateBinding(index, { asset_column: v })}
+              >
                 <SelectTrigger className="w-full font-mono text-xs">
                   <SelectValue placeholder="选择列" />
                 </SelectTrigger>
@@ -360,7 +380,8 @@ function DataSetBindingRowBlock({
         <div className="space-y-2">
           <Label>依赖字段与映射</Label>
           <p className="text-xs text-muted-foreground">
-            在数据集里配置逻辑字段名（因子 dependencies）到数据源真实列名的映射。单数据源时可一个都不启用，表示运行时使用因子全部 dependencies；
+            在数据集里配置逻辑字段名（因子
+            dependencies）到数据源真实列名的映射。单数据源时可一个都不启用，表示运行时使用因子全部 dependencies；
             多数据源时须至少启用一项来区分字段归属。
           </p>
           <BindingDependencyMessages loading={loading} noDataColumns={noDataColumns} extras={extras} />
@@ -370,7 +391,10 @@ function DataSetBindingRowBlock({
             onChangeRows={(rows) => updateBinding(index, { alias_rows: rows })}
             onAddRow={() =>
               updateBinding(index, {
-                alias_rows: [...(row.alias_rows.length ? row.alias_rows : [{ factor: '', column: '', enabled: true }]), { factor: '', column: '', enabled: true }],
+                alias_rows: [
+                  ...(row.alias_rows.length ? row.alias_rows : [{ factor: '', column: '', enabled: true }]),
+                  { factor: '', column: '', enabled: true },
+                ],
               })
             }
             onRemoveRow={(removeIndex) =>
@@ -393,8 +417,12 @@ type Props = {
 export function DataSetForm({ mode, dataSetId }: Props) {
   const router = useRouter();
   const [datasources, setDatasources] = useState<DataSourcePublic[]>([]);
-  const [preprocessingWorkflowTemplate, setPreprocessingWorkflowTemplate] = useState<WorkflowGraphPersisted | null>(null);
-  const [form, setForm] = useState<DataSetFormState>(() => (mode === 'create' ? emptyDataSetForm() : { ...emptyDataSetForm(), name: '', description: '' }));
+  const [preprocessingWorkflowTemplate, setPreprocessingWorkflowTemplate] = useState<WorkflowGraphPersisted | null>(
+    null,
+  );
+  const [form, setForm] = useState<DataSetFormState>(() =>
+    mode === 'create' ? emptyDataSetForm() : { ...emptyDataSetForm(), name: '', description: '' },
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(mode === 'edit');
   const [formError, setFormError] = useState<string | null>(null);
@@ -523,7 +551,12 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       // override graph edits made directly on the canvas.
       const liveGraph = canvasRef.current?.getGraph();
       const baseWorkflow = liveGraph ?? prev.preprocessing_workflow;
-      const syncedWorkflow = syncSystemPreprocessingWorkflow(baseWorkflow, datasourceIds, datasourceNameById, preprocessingWorkflowTemplate);
+      const syncedWorkflow = syncSystemPreprocessingWorkflow(
+        baseWorkflow,
+        datasourceIds,
+        datasourceNameById,
+        preprocessingWorkflowTemplate,
+      );
       if (sameWorkflowGraph(prev.preprocessing_workflow, syncedWorkflow) && !liveGraph) {
         return prev;
       }
@@ -624,14 +657,22 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     <Page
       gap="none"
       title={<FactorEditPageTitle name={form.name} onNameChange={(n) => set({ name: n })} nameAriaLabel="数据集名称" />}
-      description={<FactorEditPageDescription description={form.description} onDescriptionChange={(d) => set({ description: d })} descriptionAriaLabel="数据集说明" />}
+      description={
+        <FactorEditPageDescription
+          description={form.description}
+          onDescriptionChange={(d) => set({ description: d })}
+          descriptionAriaLabel="数据集说明"
+        />
+      }
       headerClassName="mb-8"
       action={
         <PageFormHeaderActions
           formId={DATA_SET_MAIN_FORM_ID}
           submitting={submitting}
           submitDisabled={bindingDatasources.length === 0 || !form.name.trim()}
-          cancelHref={mode === 'edit' && dataSetId ? `/data/data-sets/${encodeURIComponent(dataSetId)}` : '/data/data-sets'}
+          cancelHref={
+            mode === 'edit' && dataSetId ? `/data/data-sets/${encodeURIComponent(dataSetId)}` : '/data/data-sets'
+          }
         />
       }
     >
@@ -650,14 +691,18 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           </Alert>
         ) : null}
 
-        <p className="text-sm text-muted-foreground">可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。</p>
+        <p className="text-sm text-muted-foreground">
+          可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。
+        </p>
 
         <Card>
           <CardHeader>
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <CardTitle>数据源绑定</CardTitle>
-                <CardDescription>每条绑定对应一个数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。</CardDescription>
+                <CardDescription>
+                  每条绑定对应一个数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
+                </CardDescription>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={addBinding}>
                 <Plus className="size-4" />
@@ -682,18 +727,12 @@ export function DataSetForm({ mode, dataSetId }: Props) {
             ))}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>预处理工作流</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="min-h-[420px] h-[520px]">
-              <PreprocessingWorkflowEditorBlock workflow={form.preprocessing_workflow} canvasKey={canvasKey} canvasRef={canvasRef} />
-            </div>
-          </CardContent>
-        </Card>
-
+        <PreprocessingWorkflowEditorBlock
+          className="h-[80vh]"
+          workflow={form.preprocessing_workflow}
+          canvasKey={canvasKey}
+          canvasRef={canvasRef}
+        />
         <Card>
           <CardHeader>
             <CardTitle>评价区间与参数</CardTitle>
@@ -702,11 +741,23 @@ export function DataSetForm({ mode, dataSetId }: Props) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="ts-start">开始日期</Label>
-                <DatePicker id="ts-start" value={form.start} onChange={(v) => set({ start: v })} placeholder="选择开始日期" required />
+                <DatePicker
+                  id="ts-start"
+                  value={form.start}
+                  onChange={(v) => set({ start: v })}
+                  placeholder="选择开始日期"
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ts-end">结束日期</Label>
-                <DatePicker id="ts-end" value={form.end} onChange={(v) => set({ end: v })} placeholder="选择结束日期" required />
+                <DatePicker
+                  id="ts-end"
+                  value={form.end}
+                  onChange={(v) => set({ end: v })}
+                  placeholder="选择结束日期"
+                  required
+                />
               </div>
             </div>
             <div className="space-y-2">
