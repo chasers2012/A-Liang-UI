@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import { useAtomValue, useSetAtom } from "jotai";
 import { useRouter } from "next/navigation";
 
+import { deleteNode } from "@/api";
 import { CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -15,7 +18,7 @@ import {
   setNodesDetailSourceDraftAtomFamily,
   startNodesDetailEditAtomFamily,
 } from "@/models/nodes/detail.atom";
-import { PLUGIN_SOURCE_MARKER } from "@/models/nodes/browse.atom";
+import { refreshNodesListAtom } from "@/models/nodes/list-detail.atom";
 import { NodeDetailCardHeader } from "./panel-header";
 import { NodeDetailEditToolbarButton } from "./panel-edit-toolbar-button";
 import { PanelPreviewTab } from "./panel-preview-tab";
@@ -37,9 +40,13 @@ export function PanelViewNodeTabs(props: {
   const setEditDescription = useSetAtom(setNodesDetailEditDescriptionAtomFamily(stateKey));
   const setSourceDraft = useSetAtom(setNodesDetailSourceDraftAtomFamily(stateKey));
   const saveDetail = useSetAtom(saveNodesDetailAtomFamily(stateKey));
+  const refreshNodesList = useSetAtom(refreshNodesListAtom);
+  const [deleting, setDeleting] = useState(false);
 
   const isCreate = effectiveNodeId === NEW_NODE_DETAIL_KEY;
-  const canEdit = detail != null && detail.source_path !== PLUGIN_SOURCE_MARKER;
+  const isPluginNode = detail?.is_plugin === true;
+  const canEdit = detail != null && !isPluginNode;
+  const canDelete = !isCreate && detail != null;
   const editActive = canEdit && editing;
 
   const handleSaveSource = async () => {
@@ -49,6 +56,17 @@ export function PanelViewNodeTabs(props: {
   const handleCancelEdit = () => {
     if (isCreate) return void router.push("/nodes");
     cancelEdit();
+  };
+  const handleDeleteNode = async () => {
+    if (!canDelete || isPluginNode || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteNode(detail.id);
+      await refreshNodesList();
+      router.push("/nodes");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -69,16 +87,16 @@ export function PanelViewNodeTabs(props: {
               <TabsTrigger value="source" className={TAB_TRIGGER_CLASS}>源码</TabsTrigger>
             </TabsList>
             <NodeDetailEditToolbarButton
-              canEdit={canEdit}
+              canEdit={detail != null}
+              editDisabled={isPluginNode}
               editing={editing}
               saving={editActive ? saving : false}
               saveDisabled={editActive ? !editName.trim() : true}
-              cancelLabel={isCreate ? "取消" : undefined}
-              saveLabel={isCreate ? "创建" : undefined}
-              savingLabel={isCreate ? "创建中…" : undefined}
               onStartEdit={startEdit}
               onCancelEdit={handleCancelEdit}
               onSave={editActive ? () => void handleSaveSource() : undefined}
+              onDelete={canDelete ? () => void handleDeleteNode() : undefined}
+              deleteDisabled={deleting || isPluginNode}
             />
           </div>
           <TabsContent value="preview" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden">

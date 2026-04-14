@@ -106,6 +106,7 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
           id: NEW_NODE_DETAIL_KEY,
           name,
           description: "",
+          is_plugin: false,
           source: "",
           source_path: "",
           created_at: "",

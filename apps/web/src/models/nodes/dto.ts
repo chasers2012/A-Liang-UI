@@ -28,6 +28,7 @@ export interface NodeSummaryPublic {
   id: string;
   name: string;
   description: string;
+  is_plugin: boolean;
   source_path: string;
   created_at: string;
   updated_at: string;

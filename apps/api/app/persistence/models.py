@@ -63,7 +63,7 @@ class WorkflowNodeVisibilityRow(SQLModel, table=True):
     domain: str = Field(primary_key=True)
     hidden_node_ids: list[str] = Field(
         default_factory=list,
-        sa_column=Column("blocked_node_ids", JsonText),
+        sa_column=Column("hidden_node_ids", JsonText),
     )
 
 

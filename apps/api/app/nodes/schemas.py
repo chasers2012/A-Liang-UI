@@ -59,6 +59,7 @@ class WorkflowNodeSummaryPublic(BaseModel):
     id: str
     name: str
     description: str
+    is_plugin: bool = False
     source_path: str
     created_at: str
     updated_at: str

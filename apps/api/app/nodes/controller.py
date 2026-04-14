@@ -39,6 +39,7 @@ def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSu
         id=rec.id,
         name=rec.name,
         description=rec.description,
+        is_plugin=rec.is_plugin,
         source_path=rec.source_path,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
