@@ -143,4 +143,13 @@ class DataSetRow(SQLModel, table=True):
     updated_at: str
 
 
+class ChatToolRow(SQLModel, table=True):
+    __tablename__ = "chat_tools"
+
+    id: str = Field(primary_key=True)
+    category: str = ""
+    updated_at: str
+    disabled: bool = False
+
+
 Index("ix_chat_messages_session_created", ChatMessageRow.session_id, ChatMessageRow.created_at)

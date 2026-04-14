@@ -9,4 +9,4 @@ def register_datasource_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in DATASOURCE_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="datasources")

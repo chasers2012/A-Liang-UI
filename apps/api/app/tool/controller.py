@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.persistence.models import ChatToolRow
+from app.persistence.sqlite_db import get_session
 from app.tool.registry import ChatToolRegistry
 
 
@@ -35,6 +37,12 @@ class ToolController:
         tool_name = (name or "").strip()
         if not tool_name:
             raise ValueError("tool name 不能为空")
+
+        with get_session() as session:
+            rec = session.get(ChatToolRow, tool_name)
+            if rec is not None and bool(rec.disabled):
+                raise ValueError(f"工具已被禁用：{tool_name}")
+
         tool = self.get_tools().get(tool_name)
         if tool is None:
             raise ValueError(f"不允许调用工具：{tool_name}")

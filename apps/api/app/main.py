@@ -21,6 +21,7 @@ from app.factors import api as factors_router
 from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.startup_jobs import STARTUP_JOBS
+from app.tool import api as tools_router
 from app.uploads import api as uploads_router
 
 
@@ -83,6 +84,7 @@ app.include_router(evaluation_runs_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
 app.include_router(preprocessors_router.router)
+app.include_router(tools_router.router)
 app.include_router(uploads_router.router)
 
 _origins = os.getenv("CORS_ORIGINS", "*")

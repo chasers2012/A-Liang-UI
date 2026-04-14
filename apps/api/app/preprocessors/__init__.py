@@ -11,4 +11,4 @@ def register_preprocessor_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in PREPROCESSOR_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="preprocessors")

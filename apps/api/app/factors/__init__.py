@@ -9,4 +9,4 @@ def register_factor_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in FACTOR_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="factors")

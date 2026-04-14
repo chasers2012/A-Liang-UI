@@ -23,7 +23,7 @@ def register_evaluation_scheme_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in EVALUATION_SCHEME_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="evaluation_profile")
 
 
 @register_startup_job

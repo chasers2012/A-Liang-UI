@@ -1,26 +1,22 @@
-"use client";
+'use client';
 
-import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import type { FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import {
-  listDatasources,
-  listDatasourcePlugins,
-  type DatasourcePluginPublic,
-  type DataSourcePublic,
-} from "@/api";
-import { defaultNewName } from "@/lib/default-new-name";
+import { listDatasources, listDatasourcePlugins, type DatasourcePluginPublic, type DataSourcePublic } from '@/api';
+import { defaultNewName } from '@/lib/default-new-name';
 
-import { commitDatasourceForm } from "../commit-datasource";
-import { emptyForm, type FormState } from "../form-model";
-import { DatasourceForm } from "../ui/datasource-form";
+import { commitDatasourceForm } from '../commit-datasource';
+import { emptyForm, type FormState } from '../form-model';
+import { DatasourceForm } from '../ui/datasource-form';
 
 export default function NewDatasourcePage() {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(() => ({
     ...emptyForm(),
-    name: defaultNewName("新数据源"),
+    // Avoid hydration mismatch: timestamped defaults must be generated client-side.
+    name: '',
   }));
   const [items, setItems] = useState<DataSourcePublic[] | null>(null);
   const [plugins, setPlugins] = useState<DatasourcePluginPublic[]>([]);
@@ -28,8 +24,16 @@ export default function NewDatasourcePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    void listDatasources().then(setItems).catch(() => setItems([]));
-    void listDatasourcePlugins().then(setPlugins).catch(() => setPlugins([]));
+    void listDatasources()
+      .then(setItems)
+      .catch(() => setItems([]));
+    void listDatasourcePlugins()
+      .then(setPlugins)
+      .catch(() => setPlugins([]));
+  }, []);
+
+  useEffect(() => {
+    setForm((f) => (f.name.trim() ? f : { ...f, name: defaultNewName('新数据源') }));
   }, []);
 
   useEffect(() => {
@@ -43,12 +47,7 @@ export default function NewDatasourcePage() {
       setFormError(null);
       setSubmitting(true);
       try {
-        const result = await commitDatasourceForm(
-          "create",
-          null,
-          form,
-          items,
-        );
+        const result = await commitDatasourceForm('create', null, form, items);
         if (result) {
           router.push(`/data/datasources/${encodeURIComponent(result.id)}`);
         }

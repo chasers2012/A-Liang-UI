@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 set -e
-pnpm run lint:fix
+pnpm exec lint-staged
 
 tmp=$(mktemp)
 trap 'rm -f "$tmp"' EXIT

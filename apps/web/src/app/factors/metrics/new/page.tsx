@@ -1,30 +1,22 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Label } from "@/components/ui/label";
-import { createEvaluationMetric, getEvaluationMetricTemplate } from "@/api";
-import { defaultNewName } from "@/lib/default-new-name";
+import { PageFormHeaderActions } from '@/components/page-form-header-actions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { createEvaluationMetric, getEvaluationMetricTemplate } from '@/api';
+import { defaultNewName } from '@/lib/default-new-name';
 
-import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
-import { CodeJar } from "@/components/ui/code-jar";
-import { Page } from "@/components/page";
+import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { CodeJar } from '@/components/ui/code-jar';
+import { Page } from '@/components/page';
 
-const EVALUATION_METRIC_NEW_FORM_ID = "evaluation-metric-new-form";
+const EVALUATION_METRIC_NEW_FORM_ID = 'evaluation-metric-new-form';
 
-function EvaluationMetricSourceEditor({
-  template,
-  sourceRef,
-  name,
-}: {
-  template: string;
-  sourceRef: React.MutableRefObject<string>;
-  name: string;
-}) {
+function EvaluationMetricSourceEditor({ template, sourceRef, name }: { template: string; sourceRef: React.MutableRefObject<string>; name: string }) {
   const [source, setSource] = useState(template);
 
   useEffect(() => {
@@ -33,18 +25,13 @@ function EvaluationMetricSourceEditor({
 
   const trimmedName = name.trim();
   const applyNameToWorkflowNodeLabel = (src: string, label: string) => {
-    const escaped = label
-      .replace(/\\/g, "\\\\")
-      .replace(/"/g, '\\"');
+    const escaped = label.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 
     // Template format: @workflow_node( ... label="...",
     // Only replace the label value inside the workflow_node decorator.
-    return src.replace(
-      /(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/,
-      (_, prefix: string, _oldLabel: string, suffix: string) => {
-        return `${prefix}${escaped}${suffix}`;
-      },
-    );
+    return src.replace(/(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/, (_, prefix: string, _oldLabel: string, suffix: string) => {
+      return `${prefix}${escaped}${suffix}`;
+    });
   };
 
   const displaySource = useMemo(() => {
@@ -74,12 +61,13 @@ function EvaluationMetricSourceEditor({
 
 export default function NewEvaluationMetricPage() {
   const router = useRouter();
-  const [name, setName] = useState(() => defaultNewName("新节点"));
-  const [description, setDescription] = useState("");
+  // Avoid hydration mismatch: timestamped defaults must be generated client-side.
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const sourceRef = useRef("");
+  const sourceRef = useRef('');
   const [template, setTemplate] = useState<string | null>(null);
   const [templateLoading, setTemplateLoading] = useState(true);
   const [templateError, setTemplateError] = useState<string | null>(null);
@@ -92,9 +80,7 @@ export default function NewEvaluationMetricPage() {
         if (!cancelled) setTemplate(t);
       } catch (e) {
         if (!cancelled) {
-          setTemplateError(
-            e instanceof Error ? e.message : "无法加载节点源码模板",
-          );
+          setTemplateError(e instanceof Error ? e.message : '无法加载节点源码模板');
         }
       } finally {
         if (!cancelled) setTemplateLoading(false);
@@ -105,6 +91,10 @@ export default function NewEvaluationMetricPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setName((n) => (n.trim() ? n : defaultNewName('新节点')));
+  }, []);
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -113,9 +103,7 @@ export default function NewEvaluationMetricPage() {
       const created = await createEvaluationMetric({
         name: name.trim(),
         description: description.trim(),
-        ...(sourceRef.current.trim()
-          ? { source: sourceRef.current.trim() }
-          : {}),
+        ...(sourceRef.current.trim() ? { source: sourceRef.current.trim() } : {}),
       });
       router.push(`/factors/metrics/${encodeURIComponent(created.id)}`);
     } catch (err) {
@@ -127,20 +115,8 @@ export default function NewEvaluationMetricPage() {
 
   return (
     <Page
-      title={
-        <FactorEditPageTitle
-          name={name}
-          onNameChange={setName}
-          nameAriaLabel="节点名称"
-        />
-      }
-      description={
-        <FactorEditPageDescription
-          description={description}
-          onDescriptionChange={setDescription}
-          descriptionAriaLabel="节点描述"
-        />
-      }
+      title={<FactorEditPageTitle name={name} onNameChange={setName} nameAriaLabel="节点名称" />}
+      description={<FactorEditPageDescription description={description} onDescriptionChange={setDescription} descriptionAriaLabel="节点描述" />}
       action={
         <PageFormHeaderActions
           formId={EVALUATION_METRIC_NEW_FORM_ID}
@@ -152,11 +128,7 @@ export default function NewEvaluationMetricPage() {
         />
       }
     >
-      <form
-        id={EVALUATION_METRIC_NEW_FORM_ID}
-        className="flex flex-col gap-6"
-        onSubmit={(e) => void onSubmit(e)}
-      >
+      <form id={EVALUATION_METRIC_NEW_FORM_ID} className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
         {templateError && (
           <Alert variant="destructive">
             <AlertTitle>无法加载模板</AlertTitle>
@@ -171,18 +143,8 @@ export default function NewEvaluationMetricPage() {
         )}
         <div className="space-y-2">
           <Label>源码</Label>
-          {templateLoading && (
-            <div className="text-sm text-muted-foreground">
-              正在加载源码模板…
-            </div>
-          )}
-          {template != null && (
-            <EvaluationMetricSourceEditor
-              template={template}
-              sourceRef={sourceRef}
-              name={name}
-            />
-          )}
+          {templateLoading && <div className="text-sm text-muted-foreground">正在加载源码模板…</div>}
+          {template != null && <EvaluationMetricSourceEditor template={template} sourceRef={sourceRef} name={name} />}
         </div>
       </form>
     </Page>

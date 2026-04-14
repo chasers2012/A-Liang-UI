@@ -11,4 +11,4 @@ def register_workflow_node_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in WORKFLOW_NODE_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="nodes")

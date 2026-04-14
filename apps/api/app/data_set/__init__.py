@@ -24,4 +24,4 @@ def register_data_set_chat_tools() -> None:
     from app.tool.registry import ChatToolRegistry
 
     for tool in DATA_SET_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool)
+        ChatToolRegistry.instance().register_tool(tool, category="data_sets")
