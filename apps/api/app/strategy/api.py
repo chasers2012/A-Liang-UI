@@ -5,22 +5,15 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasource.schemas import utc_now_iso
-from app.strategy.constants import empty_workflow_template_dict
-from app.strategy.controller import (
-    get_strategy_workflow_io_spec,
-    list_strategy_node_types_public,
-    validate_strategy_workflow_only,
-)
+from app.strategy.controller import validate_strategy_workflow_only
 from app.strategy.registry import StrategyRegistry
 from app.strategy.schemas import (
     StrategyCreate,
-    StrategyNodeTypePublic,
     StrategyPatch,
     StrategyPreviewResponse,
     StrategyPublic,
     StrategyRecord,
     StrategyValidateResponse,
-    WorkflowIOSpecPublic,
     workflow_public_dict,
 )
 
@@ -50,21 +43,6 @@ def _merge_strategy_patch(
     if "workflow" in data and body.workflow is not None:
         rec.workflow = json.dumps(body.workflow, ensure_ascii=False)
     rec.updated_at = utc_now_iso()
-
-
-@router.get("/node-types", response_model=list[StrategyNodeTypePublic])
-def list_node_types() -> list[StrategyNodeTypePublic]:
-    return list_strategy_node_types_public()
-
-
-@router.get("/workflow-io", response_model=WorkflowIOSpecPublic)
-def get_workflow_io() -> WorkflowIOSpecPublic:
-    return get_strategy_workflow_io_spec()
-
-
-@router.get("/workflow-template", response_model=dict)
-def get_workflow_template() -> dict:
-    return empty_workflow_template_dict()
 
 
 @router.get("", response_model=list[StrategyPublic])
@@ -117,5 +95,4 @@ def preview_strategy(strategy_id: str) -> StrategyPreviewResponse:
     rec = StrategyRegistry.get_by_id(strategy_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="策略不存在")
-    # Engine-backed preview is implemented together with backtest engine.
     return StrategyPreviewResponse(ok=True, preview={})

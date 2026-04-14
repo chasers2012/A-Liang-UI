@@ -1,4 +1,4 @@
-import type { StrategyNodeTypeCatalogItemPublic, StrategyPublic, WorkflowIOSpecPublic } from '@/models';
+import type { StrategyPublic } from '@/models';
 import { apiFetchJson } from './client';
 
 export function listStrategies(): Promise<StrategyPublic[]> {
@@ -29,16 +29,8 @@ export function deleteStrategy(id: string): Promise<void> {
   });
 }
 
-export function listStrategyNodeTypes(): Promise<StrategyNodeTypeCatalogItemPublic[]> {
-  return apiFetchJson<StrategyNodeTypeCatalogItemPublic[]>('/strategies/node-types');
-}
-
-export function getStrategyWorkflowIO(): Promise<WorkflowIOSpecPublic> {
-  return apiFetchJson<WorkflowIOSpecPublic>('/strategies/workflow-io');
-}
-
-export function getStrategyWorkflowTemplate(): Promise<Record<string, unknown>> {
-  return apiFetchJson<Record<string, unknown>>('/strategies/workflow-template');
+export function listStrategyNodeTypes(): Promise<unknown[]> {
+  return apiFetchJson<unknown[]>(`/nodes?domain=${encodeURIComponent('strategy')}`);
 }
 
 export function validateStrategy(id: string): Promise<{ ok: boolean; errors: string[] }> {

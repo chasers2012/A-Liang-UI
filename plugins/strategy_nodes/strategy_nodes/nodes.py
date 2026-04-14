@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import pandas as pd
 from factor.data_set import DataSet
 from workflow import Socket, WorkflowNodeLoader, workflow_node
 from workflow.node_types import BooleanNodeParam, NumberNodeParam, OptionsNodeParam
 
+from app.data_set.controller import get_data_set
 from app.data_set.redistry import DataSetsStore
 from app.factors.controller import get_factor
 from app.factors.registry import FactorItemsRegistry
-from app.nodes.registry import WorkflowNodesRegistry
 
 
 def _wide_from_panel(panel: pd.DataFrame, *, field: str) -> pd.DataFrame:
@@ -55,8 +55,6 @@ class LoadDataSetNode:
             ds_id = str(raw or "").strip()
             if not ds_id:
                 raise ValueError("data_set 不能为空")
-            from app.data_set.controller import get_data_set
-
             ds = get_data_set(ds_id)
             if ds is None:
                 raise ValueError("数据集不存在")
@@ -68,20 +66,14 @@ class LoadDataSetNode:
 
 
 @workflow_node(
-    input_sockets=[
-        Socket("data_set", required=True, value_type="data_set", label="数据集"),
-    ],
-    output_sockets=[
-        Socket("factor", required=True, value_type="factor_df", label="因子矩阵"),
-    ],
+    input_sockets=[Socket("data_set", required=True, value_type="data_set", label="数据集")],
+    output_sockets=[Socket("factor", required=True, value_type="factor_df", label="因子矩阵")],
     workflow_parameters=[
         OptionsNodeParam(
             name="factor_id",
             label="因子",
             description="选择因子 ID",
-            options=lambda: [
-                {"label": f.name, "value": f.id} for f in FactorItemsRegistry.list_items()
-            ],
+            options=lambda: [{"label": f.name, "value": f.id} for f in FactorItemsRegistry.list_items()],
         )
     ],
     label="因子引用",
@@ -101,11 +93,7 @@ class FactorRefNode:
             raise ValueError("数据集缺少 end_date")
         resolver = ds.create_resolver()
         factor = factor_cls(dependency_resolver=resolver)
-        # Use dataset date range unless overridden by backtest params later.
-        df = factor.calculate(
-            start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes
-        )
-        # df is MultiIndex (date, asset) with column == factor.name
+        df = factor.calculate(start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes)
         col = df.columns[0] if len(df.columns) else factor.name
         wide = df[col].unstack("asset")
         wide.index.name = "date"
@@ -136,9 +124,7 @@ class ThresholdSignalNode:
     def execute(self, **kwargs: Any) -> pd.DataFrame:
         x: pd.DataFrame = kwargs["x"]
         thr = float(kwargs.get("threshold") or 0.0)
-        direction: Literal["gt", "lt"] = (
-            "gt" if str(kwargs.get("direction") or "gt") == "gt" else "lt"
-        )
+        direction: Literal["gt", "lt"] = "gt" if str(kwargs.get("direction") or "gt") == "gt" else "lt"
         if direction == "gt":
             return (x > thr).fillna(False)
         return (x < thr).fillna(False)
@@ -162,7 +148,6 @@ class RankTopKNode:
         ascending = bool(kwargs.get("ascending") or False)
         if k <= 0:
             raise ValueError("k 必须 > 0")
-        # rank per row; pick top-k (or bottom-k if ascending)
         ranks = f.rank(axis=1, method="first", ascending=ascending)
         return (ranks <= k).fillna(False)
 
@@ -213,12 +198,7 @@ class RebalanceNode:
         if freq == "D":
             return w2
         if freq == "W":
-            # rebalance on week start (Monday) by default
-            mask = (
-                idx.to_series()
-                .dt.isocalendar()
-                .week.ne(idx.to_series().shift(1).dt.isocalendar().week)
-            )
+            mask = idx.to_series().dt.isocalendar().week.ne(idx.to_series().shift(1).dt.isocalendar().week)
         elif freq == "M":
             mask = idx.to_series().dt.to_period("M").ne(idx.to_series().shift(1).dt.to_period("M"))
         else:
@@ -256,9 +236,7 @@ class BacktestInputs:
         Socket("close", required=True, value_type="price_df", label="收盘价"),
         Socket("weights", required=True, value_type="weights_df", label="权重"),
     ],
-    output_sockets=[
-        Socket("backtest_inputs", required=True, value_type="backtest_inputs", label="回测输入")
-    ],
+    output_sockets=[Socket("backtest_inputs", required=True, value_type="backtest_inputs", label="回测输入")],
     label="输出回测输入",
     description="将 close + weights 打包。",
     category="strategy",
@@ -270,30 +248,14 @@ class ToBacktestInputsNode:
         return BacktestInputs(close=close, weights=weights)
 
 
-def register_strategy_engine_nodes() -> None:
-    loader = WorkflowNodeLoader.instance()
-    # Stable short keys for UI + stored graphs.
-    loader.register_node("LoadDataSet", LoadDataSetNode)
-    loader.register_node("FactorRef", FactorRefNode)
-    loader.register_node("ThresholdSignal", ThresholdSignalNode)
-    loader.register_node("RankTopK", RankTopKNode)
-    loader.register_node("EqualWeight", EqualWeightNode)
-    loader.register_node("Rebalance", RebalanceNode)
-    loader.register_node("Lag", LagNode)
-    loader.register_node("ToBacktestInputs", ToBacktestInputsNode)
-
-
-def register_strategy_engine_plugin_nodes() -> None:
-    # Also sync strategy engine nodes into generic workflow node registry,
-    # so they are visible on `/nodes` page.
-    for type_key, node_cls in (
-        ("LoadDataSet", LoadDataSetNode),
-        ("FactorRef", FactorRefNode),
-        ("ThresholdSignal", ThresholdSignalNode),
-        ("RankTopK", RankTopKNode),
-        ("EqualWeight", EqualWeightNode),
-        ("Rebalance", RebalanceNode),
-        ("Lag", LagNode),
-        ("ToBacktestInputs", ToBacktestInputsNode),
-    ):
-        WorkflowNodesRegistry.register_plugin_node(type_key, node_cls)
+__all__: ClassVar[list[str]] = [
+    "LoadDataSetNode",
+    "FactorRefNode",
+    "ThresholdSignalNode",
+    "RankTopKNode",
+    "EqualWeightNode",
+    "RebalanceNode",
+    "LagNode",
+    "BacktestInputs",
+    "ToBacktestInputsNode",
+]

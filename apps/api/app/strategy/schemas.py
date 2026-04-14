@@ -124,15 +124,6 @@ class StrategyPublic(BaseModel):
     updated_at: str
 
 
-class StrategyNodeTypePublic(BaseModel):
-    type: str
-    label: str
-    description: str
-    category: str | None = None
-    inputs: list[dict] = Field(default_factory=list)
-    outputs: list[dict] = Field(default_factory=list)
-
-
 class WorkflowIOSpecPublic(BaseModel):
     workflow_inputs: list[dict]
     workflow_outputs: list[dict]
