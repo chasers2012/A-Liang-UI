@@ -231,3 +231,91 @@ class LlmSettings(BaseModel):
         if isinstance(v, str) and v.strip():
             return int(v.strip(), 10)
         return -1
+
+    @classmethod
+    def rjsf_schema_and_ui_schema(cls) -> tuple[dict[str, Any], dict[str, Any]]:
+        defaults = cls().model_dump(mode="json")
+        schema: dict[str, Any] = {
+            "type": "object",
+            "title": "模型与密钥",
+            "properties": {
+                "provider": {
+                    "title": "提供方",
+                    "type": "string",
+                    "enum": ["ollama", "openai"],
+                    "enumNames": ["Ollama（本地）", "OpenAI"],
+                    "default": defaults["provider"],
+                },
+                "model": {
+                    "title": "模型名",
+                    "type": "string",
+                    "default": defaults["model"],
+                },
+                "temperature": {
+                    "title": "Temperature",
+                    "type": "number",
+                    "default": defaults["temperature"],
+                },
+            },
+            "required": ["provider", "model", "temperature"],
+            "dependencies": {
+                "provider": {
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "provider": {"enum": ["ollama"]},
+                                "ollama_base_url": {
+                                    "title": "Ollama 地址",
+                                    "type": "string",
+                                    "default": defaults["ollama_base_url"],
+                                },
+                                "ollama_timeout": {
+                                    "title": "Ollama 超时时间（秒）",
+                                    "type": "number",
+                                    "default": defaults["ollama_timeout"],
+                                },
+                                "ollama_num_predict": {
+                                    "title": "Ollama num_predict",
+                                    "type": "number",
+                                    "default": defaults["ollama_num_predict"],
+                                },
+                                "ollama_reasoning": {
+                                    "title": "Ollama reasoning",
+                                    "type": "boolean",
+                                    "default": defaults["ollama_reasoning"],
+                                },
+                            },
+                            "required": [
+                                "ollama_base_url",
+                                "ollama_timeout",
+                                "ollama_num_predict",
+                            ],
+                        },
+                        {
+                            "properties": {
+                                "provider": {"enum": ["openai"]},
+                                "openai_base_url": {
+                                    "title": "OpenAI API 基址（可选）",
+                                    "type": "string",
+                                    "default": defaults["openai_base_url"],
+                                },
+                                "api_key": {
+                                    "title": "API Key",
+                                    "type": "string",
+                                    "default": defaults["api_key"],
+                                },
+                            },
+                        },
+                    ]
+                }
+            },
+        }
+        ui_schema: dict[str, Any] = {
+            "ui:submitButtonOptions": {"norender": True},
+            "model": {"ui:placeholder": "qwen3.5:9b"},
+            "ollama_base_url": {"ui:placeholder": "http://127.0.0.1:11434"},
+            "openai_base_url": {"ui:placeholder": "默认 api.openai.com"},
+            "api_key": {"ui:widget": "password", "ui:placeholder": "sk-..."},
+            "ollama_reasoning": {"ui:help": "未设置时使用 Ollama 默认行为。"},
+        }
+        return schema, ui_schema

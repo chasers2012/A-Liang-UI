@@ -14,10 +14,17 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def workspace_config_path(filename: str) -> Path:
-    """Resolve *filename* relative to the workspace root, ensuring its parent dir exists."""
-    path = workspace_path(filename)
+    """Resolve *filename* under workspace ``config/``, ensuring parent directory exists."""
+    normalized = str(filename or "").strip().lstrip("/\\")
+    path = workspace_path(f"config/{normalized}")
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _legacy_workspace_config_path(filename: str) -> Path:
+    """Legacy location (workspace root) kept for one-way read compatibility."""
+    normalized = str(filename or "").strip().lstrip("/\\")
+    return workspace_path(normalized)
 
 
 def load_workspace_config(
@@ -34,7 +41,11 @@ def load_workspace_config(
     """
     path = workspace_config_path(filename)
     if not path.is_file():
-        return default_factory()
+        legacy_path = _legacy_workspace_config_path(filename)
+        if legacy_path.is_file():
+            path = legacy_path
+        else:
+            return default_factory()
     raw = path.read_text(encoding="utf-8")
     if not raw.strip():
         return default_factory()

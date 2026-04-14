@@ -7,6 +7,7 @@ import queue
 import threading
 import uuid
 from collections.abc import Iterator
+from contextlib import suppress
 from typing import Any
 
 from app.chat.agent import stream_event_iter_for_chat
@@ -42,11 +43,13 @@ from app.chat.schemas import (
 )
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
-from app.workspace_config import load_workspace_config, save_workspace_config
+from app.config import controller as config_controller
+from app.config import register_config_spec
+from app.config.schema import ConfigModuleSpec
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
 
-_CONFIG_FILE = "agent/llm.json"
+_LLM_CONFIG_MODULE = "agent_llm"
 MAX_SESSION_MESSAGES = 200
 _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
 
@@ -63,7 +66,7 @@ def build_chat_model_from_workspace_settings(
         if not api_key:
             raise ValueError(
                 "OpenAI 提供方需要 API 密钥：在 Web Agent 页面保存 api_key"
-                "（写入 config/agent_llm.json）。"
+                "（写入 config/agent/llm.json）。"
             )
         openai_kwargs: dict[str, Any] = {
             "temperature": temperature,
@@ -92,16 +95,25 @@ def build_chat_model_from_workspace_settings(
     return init_chat_model(f"ollama:{model}", **kwargs)
 
 
-def _defaults() -> LlmSettings:
-    return LlmSettings()
+def _register_llm_settings_module() -> None:
+    defaults = LlmSettings().model_dump(mode="json")
+    rjsf_schema, rjsf_ui_schema = LlmSettings.rjsf_schema_and_ui_schema()
+    spec = ConfigModuleSpec(
+        key=_LLM_CONFIG_MODULE,
+        title="模型与密钥",
+        description="配置因子挖掘智能体使用的 LLM。",
+        filename="agent/llm.json",
+        default_values=defaults,
+        json_schema=rjsf_schema,
+        ui_schema=rjsf_ui_schema,
+    )
+    # Module reload may execute this file repeatedly in dev mode.
+    with suppress(ValueError):
+        register_config_spec(spec)
 
 
 def _build_llm_from_workspace():
-    settings = load_workspace_config(
-        _CONFIG_FILE,
-        LlmSettings,
-        default_factory=_defaults,
-    )
+    settings = get_llm_settings()
     return build_chat_model_from_workspace_settings(settings)
 
 
@@ -242,16 +254,19 @@ def _persist_user_messages_on_receive(session_id: str, message: ChatMessageIn) -
 
 
 def get_llm_settings() -> LlmSettings:
-    return load_workspace_config(
-        _CONFIG_FILE,
-        LlmSettings,
-        default_factory=_defaults,
-    )
+    values = config_controller.get_module_config(_LLM_CONFIG_MODULE)
+    return LlmSettings.model_validate(values)
 
 
 def put_llm_settings(body: LlmSettings) -> LlmSettings:
-    save_workspace_config(_CONFIG_FILE, body)
-    return body
+    values = config_controller.put_module_config(
+        _LLM_CONFIG_MODULE,
+        body.model_dump(mode="json", exclude_none=False),
+    )
+    return LlmSettings.model_validate(values)
+
+
+_register_llm_settings_module()
 
 
 def stream(body: ChatRequest) -> Iterator[str]:

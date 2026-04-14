@@ -1,4 +1,5 @@
 export * from "./chat";
+export * from "./config";
 export * from "./llm";
 export * from "./agent-workflows";
 export * from "./client";
