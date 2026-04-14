@@ -16,8 +16,7 @@ def redact_config(
     If ``schema`` is None or has no secret fields, returns a deep copy unchanged.
     """
 
-    fields = (schema.fields or []) if schema else []
-    secret_keys = frozenset(f.key for f in fields if f.secret)
+    secret_keys = frozenset((schema.secret_keys or []) if schema else [])
 
     def _walk(d: dict[str, Any], *, at_root: bool) -> dict[str, Any]:
         out: dict[str, Any] = {}

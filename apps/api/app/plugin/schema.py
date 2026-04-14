@@ -1,66 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import Any
 
 
-@dataclass(frozen=True, slots=True)
-class PluginFieldOption:
-    value: str
-    label: str
-
-
-@dataclass(frozen=True, slots=True)
-class PluginConfigField:
-    key: str
-    label: str
-    required: bool = False
-    secret: bool = False
-    placeholder: str | None = None
-    help_text: str | None = None
-
-    kind: ClassVar[str] = "string"
-
-
-@dataclass(frozen=True, slots=True)
-class StringConfigField(PluginConfigField):
-    kind: ClassVar[str] = "string"
-
-
-@dataclass(frozen=True, slots=True)
-class NumberConfigField(PluginConfigField):
-    kind: ClassVar[str] = "number"
-
-
-@dataclass(frozen=True, slots=True)
-class BooleanConfigField(PluginConfigField):
-    kind: ClassVar[str] = "boolean"
-
-
-@dataclass(frozen=True, slots=True)
-class PasswordConfigField(PluginConfigField):
-    kind: ClassVar[str] = "password"
-
-
-@dataclass(frozen=True, slots=True)
-class JsonConfigField(PluginConfigField):
-    kind: ClassVar[str] = "json"
-
-
-@dataclass(frozen=True, slots=True)
-class SelectConfigField(PluginConfigField):
-    options: list[PluginFieldOption] = field(default_factory=list)
-    kind: ClassVar[str] = "select"
-
-
-@dataclass(frozen=True, slots=True)
-class FileConfigField(PluginConfigField):
-    file_types: list[str] = field(default_factory=list)
-    kind: ClassVar[str] = "file"
-
-
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class PluginConfigSchema:
+    """
+    Schema for rendering plugin config forms in the frontend via react-jsonschema-form (RJSF).
+
+    - `json_schema`: RJSF JSON Schema (draft-07-ish object schema).
+    - `ui_schema`: RJSF UI Schema (widgets, placeholders, help text, ordering, etc.).
+    - `secret_keys`: top-level config keys that should be redacted when returning config to clients.
+    """
+
     title: str
     description: str | None = None
-    fields: list[PluginConfigField] | None = None
+    json_schema: dict[str, Any] = field(default_factory=dict)
+    ui_schema: dict[str, Any] = field(default_factory=dict)
+    secret_keys: list[str] = field(default_factory=list)

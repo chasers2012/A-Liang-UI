@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
-from app.plugin import FileConfigField, JsonConfigField, PluginConfigSchema
+from app.plugin import PluginConfigSchema
 from datasources import CsvDataSource
 from pydantic import BaseModel, Field, model_validator
 from workspace import get_workspace_root
@@ -35,19 +35,30 @@ class CsvDataSourcePlugin(DataSourcePlugin):
     config = PluginConfigSchema(
         title="CSV 数据源",
         description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
-        fields=[
-            FileConfigField(
-                key="path",
-                label="文件路径",
-                required=True,
-                file_types=[".csv", "text/csv"],
-            ),
-            JsonConfigField(
-                key="read_csv_kwargs",
-                label="read_csv_kwargs（JSON）",
-                placeholder="{}",
-            ),
-        ],
+        json_schema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "title": "文件路径"},
+                "read_csv_kwargs": {
+                    "type": "object",
+                    "title": "read_csv_kwargs（JSON）",
+                    "default": {},
+                },
+            },
+            "required": ["path"],
+        },
+        ui_schema={
+            "path": {
+                "ui:widget": "file",
+                "ui:options": {"accept": ".csv,text/csv"},
+                "ui:help": "可填写绝对路径，或相对于 workspace 根目录的相对路径。",
+            },
+            "read_csv_kwargs": {
+                "ui:widget": "textarea",
+                "ui:options": {"rows": 6},
+                "ui:placeholder": "{}",
+            },
+        },
     )
 
     @staticmethod

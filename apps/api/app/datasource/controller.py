@@ -8,8 +8,6 @@ from app.datasource.schemas import (
     DataSourceCreate,
     DatasourceDependencyFieldsResponse,
     DataSourcePatch,
-    DatasourcePluginFieldOptionPublic,
-    DatasourcePluginFieldPublic,
     DatasourcePluginPublic,
     DataSourcePublic,
     DataSourceRecord,
@@ -68,31 +66,13 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     out: list[DatasourcePluginPublic] = []
     for ds_type, plugin in reg.list_registered_by_category("datasource"):
         schema = plugin.get_config_schema()
-        fields: list[DatasourcePluginFieldPublic] = []
-        if schema and schema.fields:
-            fields = [
-                DatasourcePluginFieldPublic(
-                    key=f.key,
-                    label=f.label,
-                    kind=f.kind,
-                    required=f.required,
-                    secret=f.secret,
-                    placeholder=f.placeholder,
-                    help_text=f.help_text,
-                    options=[
-                        DatasourcePluginFieldOptionPublic(value=o.value, label=o.label)
-                        for o in getattr(f, "options", [])
-                    ],
-                    file_types=list(getattr(f, "file_types", [])),
-                )
-                for f in schema.fields
-            ]
         out.append(
             DatasourcePluginPublic(
                 type=ds_type,
                 title=schema.title if schema else ds_type.upper(),
                 description=schema.description if schema else None,
-                fields=fields,
+                json_schema=dict(schema.json_schema or {}) if schema else {},
+                ui_schema=dict(schema.ui_schema or {}) if schema else {},
             )
         )
     return out

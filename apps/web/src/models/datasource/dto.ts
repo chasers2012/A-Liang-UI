@@ -31,36 +31,12 @@ export interface SqlTableColumnsResponseBody {
   columns: string[];
 }
 
-export interface DatasourcePluginFieldOptionPublic {
-  value: string;
-  label: string;
-}
-
-export interface DatasourcePluginFieldPublic {
-  key: string;
-  label: string;
-  kind:
-    | "string"
-    | "number"
-    | "boolean"
-    | "password"
-    | "json"
-    | "select"
-    | "file";
-  required: boolean;
-  /** 与后端脱敏一致：公开 API 中对应 config 键会被替换为 "***" */
-  secret: boolean;
-  placeholder: string | null;
-  help_text: string | null;
-  options: DatasourcePluginFieldOptionPublic[];
-  file_types: string[];
-}
-
 export interface DatasourcePluginPublic {
   type: string;
   title: string;
   description: string | null;
-  fields: DatasourcePluginFieldPublic[];
+  json_schema: Record<string, unknown>;
+  ui_schema: Record<string, unknown>;
 }
 
 /** `/uploads/file` 响应。 */

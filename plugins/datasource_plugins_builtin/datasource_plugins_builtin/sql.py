@@ -3,14 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
-from app.plugin import (
-    NumberConfigField,
-    PasswordConfigField,
-    PluginConfigSchema,
-    PluginFieldOption,
-    SelectConfigField,
-    StringConfigField,
-)
+from app.plugin import PluginConfigSchema
 from datasources import SqlDataSource
 from pydantic import BaseModel, Field, model_validator
 from sqlmodel import create_engine, inspect, text
@@ -77,48 +70,36 @@ class SqlDataSourcePlugin(DataSourcePlugin):
     config = PluginConfigSchema(
         title="SQL 数据源",
         description="配置数据库连接和数据表信息。",
-        fields=[
-            SelectConfigField(
-                key="db_driver",
-                label="数据库类型",
-                required=True,
-                options=[
-                    PluginFieldOption(value="postgresql", label="PostgreSQL"),
-                    PluginFieldOption(value="mysql", label="MySQL / MariaDB"),
-                ],
-            ),
-            StringConfigField(
-                key="db_host",
-                label="主机（IP）",
-                required=True,
-                placeholder="127.0.0.1",
-            ),
-            NumberConfigField(
-                key="db_port",
-                label="端口",
-                placeholder="留空使用默认端口",
-            ),
-            StringConfigField(
-                key="db_username",
-                label="用户名",
-            ),
-            PasswordConfigField(
-                key="db_password",
-                label="密码",
-                secret=True,
-                help_text="编辑时留空表示保持原密码（由后端合并）。",
-            ),
-            StringConfigField(
-                key="db_name",
-                label="数据库名",
-                required=True,
-            ),
-            StringConfigField(
-                key="table",
-                label="表名（可含 schema）",
-                required=True,
-            ),
-        ],
+        json_schema={
+            "type": "object",
+            "properties": {
+                "db_driver": {
+                    "title": "数据库类型",
+                    "type": "string",
+                    "default": "postgresql",
+                    "oneOf": [
+                        {"const": "postgresql", "title": "PostgreSQL"},
+                        {"const": "mysql", "title": "MySQL / MariaDB"},
+                    ],
+                },
+                "db_host": {"type": "string", "title": "主机（IP）"},
+                "db_port": {"type": ["integer", "null"], "title": "端口"},
+                "db_username": {"type": "string", "title": "用户名"},
+                "db_password": {"type": "string", "title": "密码"},
+                "db_name": {"type": "string", "title": "数据库名"},
+                "table": {"type": "string", "title": "表名"},
+            },
+            "required": ["db_driver", "db_host", "db_name", "table"],
+        },
+        ui_schema={
+            "db_host": {"ui:placeholder": "127.0.0.1"},
+            "db_port": {"ui:placeholder": "留空使用默认端口"},
+            "db_password": {
+                "ui:widget": "password",
+                "ui:help": "编辑时留空表示保持原密码。",
+            },
+        },
+        secret_keys=["db_password"],
     )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:

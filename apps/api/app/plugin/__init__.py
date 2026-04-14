@@ -6,33 +6,13 @@ from app.plugin.registry import (
     PluginRegistry,
     load_plugins_from_entry_points,
 )
-from app.plugin.schema import (
-    BooleanConfigField,
-    FileConfigField,
-    JsonConfigField,
-    NumberConfigField,
-    PasswordConfigField,
-    PluginConfigField,
-    PluginConfigSchema,
-    PluginFieldOption,
-    SelectConfigField,
-    StringConfigField,
-)
+from app.plugin.schema import PluginConfigSchema
 from app.startup_jobs import register_startup_job
 
 __all__ = [
-    "BooleanConfigField",
-    "FileConfigField",
-    "JsonConfigField",
-    "NumberConfigField",
-    "PasswordConfigField",
     "Plugin",
-    "PluginConfigField",
     "PluginConfigSchema",
-    "PluginFieldOption",
     "PluginRegistry",
-    "SelectConfigField",
-    "StringConfigField",
     "load_plugins_from_entry_points",
     "redact_config",
 ]

@@ -123,25 +123,9 @@ class DatasourceDependencyFieldsResponse(BaseModel):
     fields: list[str]
 
 
-class DatasourcePluginFieldOptionPublic(BaseModel):
-    value: str
-    label: str
-
-
-class DatasourcePluginFieldPublic(BaseModel):
-    key: str
-    label: str
-    kind: str = "string"
-    required: bool = False
-    secret: bool = False
-    placeholder: str | None = None
-    help_text: str | None = None
-    options: list[DatasourcePluginFieldOptionPublic] = Field(default_factory=list)
-    file_types: list[str] = Field(default_factory=list)
-
-
 class DatasourcePluginPublic(BaseModel):
     type: str
     title: str
     description: str | None = None
-    fields: list[DatasourcePluginFieldPublic] = Field(default_factory=list)
+    json_schema: dict[str, Any] = Field(default_factory=dict)
+    ui_schema: dict[str, Any] = Field(default_factory=dict)
