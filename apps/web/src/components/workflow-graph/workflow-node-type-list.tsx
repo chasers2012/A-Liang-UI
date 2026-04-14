@@ -177,7 +177,7 @@ export function WorkflowNodeTypeList(props: {
       </div>
       <div
         className={cn(
-          "min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-3 pr-1",
+          "min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-1 pr-1",
           listClassName,
         )}
       >

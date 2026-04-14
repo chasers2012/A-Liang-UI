@@ -60,7 +60,6 @@ export function PreprocessingWorkflowEditorBlock(props: {
 
   return (
     <div className={cn("flex h-full min-h-0 flex-1 flex-col gap-3", className)}>
-      <Label className="">预处理工作流</Label>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
@@ -68,6 +67,7 @@ export function PreprocessingWorkflowEditorBlock(props: {
           <WorkflowNodeTypeList
             items={listCatalog}
             onSelectType={(type) => canvasRef.current?.addNode(type)}
+            className="w-[300px]"
           />
           <WorkflowGraphCanvas
             key={canvasKey}

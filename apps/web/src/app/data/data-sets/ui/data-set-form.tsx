@@ -817,14 +817,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <CardTitle>预处理工作流</CardTitle>
-                <CardDescription>
-                  把每个预处理器作为工作流节点，通过连线串联并输出最终 frames。
-                </CardDescription>
-              </div>
-            </div>
+            <CardTitle>预处理工作流</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="min-h-[420px] h-[520px]">
