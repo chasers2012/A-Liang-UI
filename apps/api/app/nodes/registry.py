@@ -9,7 +9,6 @@ from workflow import Node
 from workflow.node_loader import WorkflowNodeLoader
 from workspace import ensure_dir
 
-from app.common.id import create_id_generator
 from app.nodes.constants import (
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
@@ -20,12 +19,6 @@ from app.persistence.sqlite_db import get_session
 
 
 class WorkflowNodesRegistry:
-    id_generator = create_id_generator("WorkflowNodesRegistry")
-
-    @classmethod
-    def generate_id(cls, name: str | None = None) -> str:
-        return cls.id_generator(name)
-
     @classmethod
     def register_plugin_node(cls, type_key: str, node_cls: type[Node]) -> None:
         tk = type_key.strip()

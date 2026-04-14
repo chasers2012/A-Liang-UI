@@ -17,10 +17,13 @@ from app.persistence.models import WorkflowNodeRow
 from app.visibility.registry import WorkflowDomainNodesRegistry
 
 
-def create_workflow_node(body: WorkflowNodeCreate, id_name: str | None = None) -> WorkflowNodeRow:
-    nid = WorkflowNodesRegistry.generate_id(id_name)
-    if id_name and WorkflowNodesRegistry.get_item(nid) is not None:
-        raise ValueError(f"Workflow node {id_name} already exists")
+def create_workflow_node(body: WorkflowNodeCreate) -> WorkflowNodeRow:
+    node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(body.source)
+    nid = workflow_node_type_key(node_cls).strip()
+    if not nid:
+        raise ValueError("workflow node id cannot be empty")
+    if WorkflowNodesRegistry.get_item(nid) is not None:
+        raise ValueError(f"Workflow node {nid} already exists")
     now = utc_now_iso()
     rec = body.to_record(nid, now, WorkflowNodePackageManager.get_source_path(nid))
     WorkflowNodePackageManager.write_node_package(nid, body.source)

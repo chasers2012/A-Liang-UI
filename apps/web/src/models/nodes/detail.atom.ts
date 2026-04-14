@@ -24,6 +24,32 @@ function applyNameToWorkflowNodeLabel(src: string, label: string) {
   );
 }
 
+function applyTimestampSuffixToWorkflowNodeClassName(src: string, now = new Date()) {
+  const toPascalCase = (raw: string) =>
+    raw
+      .replace(/[^a-zA-Z0-9]+/g, " ")
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join("");
+  const timestamp = [
+    now.getFullYear().toString(),
+    (now.getMonth() + 1).toString().padStart(2, "0"),
+    now.getDate().toString().padStart(2, "0"),
+    now.getHours().toString().padStart(2, "0"),
+    now.getMinutes().toString().padStart(2, "0"),
+    now.getSeconds().toString().padStart(2, "0"),
+  ].join("");
+
+  return src.replace(
+    /^(\s*class\s+)([A-Za-z_][A-Za-z0-9_]*)(\s*(?:\(|:))/m,
+    (_: string, prefix: string, oldName: string, suffix: string) => {
+      const normalized = toPascalCase(oldName) || "WorkflowNode";
+      return `${prefix}${normalized}${timestamp}${suffix}`;
+    },
+  );
+}
+
 export function getNodesDetailStateKey(nodeId: string | null | undefined) {
   return nodeId || EMPTY_NODE_DETAIL_KEY;
 }
@@ -74,7 +100,8 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
     }));
     try {
       if (key === NEW_NODE_DETAIL_KEY) {
-        const name = defaultNewName("新节点");
+        const now = new Date();
+        const name = defaultNewName("新节点", now);
         const baseDetail: NodeDetailPublic = {
           id: NEW_NODE_DETAIL_KEY,
           name,
@@ -103,7 +130,10 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
           saving: false,
         });
         const template = await getNodeTemplate();
-        const sourceDraft = applyNameToWorkflowNodeLabel(template, name.trim());
+        const sourceDraft = applyTimestampSuffixToWorkflowNodeClassName(
+          applyNameToWorkflowNodeLabel(template, name.trim()),
+          now,
+        );
         set(nodesDetailPanelStateAtomFamily(key), {
           loading: false,
           detail: { ...baseDetail, source: sourceDraft },
