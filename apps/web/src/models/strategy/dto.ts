@@ -12,13 +12,4 @@ export interface StrategyPublic {
   updated_at: string;
 }
 
-export interface StrategyNodeTypeCatalogItemPublic {
-  type: string;
-  label: string;
-  description: string;
-  category: string | null;
-  inputs: NodeTypeSocketPublic[];
-  outputs: NodeTypeSocketPublic[];
-}
-
 export type { NodeTypeSocketPublic, WorkflowIOSpecPublic };

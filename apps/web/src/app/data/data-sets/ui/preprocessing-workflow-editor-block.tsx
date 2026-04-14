@@ -1,33 +1,18 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 
-import { cn } from "@/lib/utils";
-import {
-  listPreprocessorNodeTypes,
-  type EvaluationNodeTypeCatalogItemPublic,
-} from "@/api";
+import { cn } from '@/lib/utils';
 
 import {
   WorkflowGraphCanvas,
   WorkflowNodeTypeList,
   type WorkflowGraphCanvasHandle,
-  type WorkflowNodeTypeDefinition,
-} from "@/components/workflow-graph";
-import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
-
-function toWorkflowNodeTypes(
-  catalog: EvaluationNodeTypeCatalogItemPublic[],
-): WorkflowNodeTypeDefinition[] {
-  return catalog.map((c) => ({
-    type: c.type,
-    label: c.label,
-    description: c.description,
-    category: c.category ?? undefined,
-    inputs: c.inputs,
-    outputs: c.outputs,
-  }));
-}
+  toWorkflowNodeTypes,
+} from '@/components/workflow-graph';
+import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+import { NodeSummaryPublic } from '@/models/nodes/dto';
+import { listNodes } from '@/api/nodes';
 
 export function PreprocessingWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
@@ -37,13 +22,11 @@ export function PreprocessingWorkflowEditorBlock(props: {
 }) {
   const { workflow, canvasKey, canvasRef, className } = props;
 
-  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>(
-    [],
-  );
+  const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
 
   useEffect(() => {
-    void listPreprocessorNodeTypes()
+    listNodes('preprocessors')
       .then(setCatalog)
       .catch(() => {
         // Ignore, UI falls back to empty sidebar.
@@ -51,20 +34,16 @@ export function PreprocessingWorkflowEditorBlock(props: {
       .finally(() => setWfMetaLoading(false));
   }, []);
 
-  const nodeTypes = useMemo(
-    () => toWorkflowNodeTypes(catalog),
-    [catalog],
-  );
-  const listCatalog = useMemo(() => catalog, [catalog]);
+  const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
-    <div className={cn("flex h-full min-h-0 flex-1 flex-col gap-3", className)}>
+    <div className={cn('flex h-full min-h-0 flex-1 flex-col gap-3', className)}>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
         <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
-            items={listCatalog}
+            items={nodeTypes}
             onSelectType={(type) => canvasRef.current?.addNode(type)}
             className="w-[300px]"
           />
@@ -80,4 +59,3 @@ export function PreprocessingWorkflowEditorBlock(props: {
     </div>
   );
 }
-

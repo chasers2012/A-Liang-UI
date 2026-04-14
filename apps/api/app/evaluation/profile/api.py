@@ -8,11 +8,9 @@ from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.constants import empty_workflow_template_dict
 from app.evaluation.profile.controller import (
     get_evaluation_profile_workflow_io_spec,
-    list_evaluation_profile_node_types_public,
 )
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
-    EvaluationNodeTypePublic,
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
@@ -49,11 +47,6 @@ def _merge_evaluation_profile_patch(
     if "workflow" in data and body.workflow is not None:
         rec.workflow = json.dumps(body.workflow, ensure_ascii=False)
     rec.updated_at = utc_now_iso()
-
-
-@router.get("/node-types", response_model=list[EvaluationNodeTypePublic])
-def list_node_types() -> list[EvaluationNodeTypePublic]:
-    return list_evaluation_profile_node_types_public()
 
 
 @router.get("/workflow-io", response_model=WorkflowIOSpecPublic)

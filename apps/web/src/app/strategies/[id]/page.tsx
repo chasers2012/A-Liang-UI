@@ -10,8 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { WorkflowGraphCanvas, type WorkflowNodeTypeDefinition } from '@/components/workflow-graph';
-import type { StrategyNodeTypeCatalogItemPublic } from '@/models';
+import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
 import {
   deleteStrategyAtomFamily,
   loadStrategyDetailAtomFamily,
@@ -19,17 +18,7 @@ import {
   strategyDetailAtomFamily,
   strategyNodeTypesAtom,
 } from '@/models/strategy/list-detail.atom';
-
-function toWorkflowNodeTypes(catalog: StrategyNodeTypeCatalogItemPublic[]): WorkflowNodeTypeDefinition[] {
-  return catalog.map((c) => ({
-    type: c.type,
-    label: c.label,
-    description: c.description,
-    category: c.category ?? undefined,
-    inputs: c.inputs,
-    outputs: c.outputs,
-  }));
-}
+import { NodeSummaryPublic } from '@/models/nodes/dto';
 
 function StrategyDetailContent({
   id,
@@ -43,7 +32,7 @@ function StrategyDetailContent({
   id: string | undefined;
   data: { name: string; description?: string | null; workflow: unknown; updated_at: string } | null;
   error: string | null;
-  catalog: StrategyNodeTypeCatalogItemPublic[] | null;
+  catalog: NodeSummaryPublic[] | null;
   catalogError: string | null;
   deleting: boolean;
   onDelete: () => Promise<void>;
@@ -77,7 +66,10 @@ function StrategyDetailContent({
       action={
         <div className="flex items-center gap-2">
           {id && id !== 'undefined' ? (
-            <Link href={`/strategies/${encodeURIComponent(id)}/edit`} className={cn(buttonVariants({ variant: 'default' }))}>
+            <Link
+              href={`/strategies/${encodeURIComponent(id)}/edit`}
+              className={cn(buttonVariants({ variant: 'default' }))}
+            >
               编辑
             </Link>
           ) : null}
@@ -100,7 +92,13 @@ function StrategyDetailContent({
               <AlertDescription>{catalogError}</AlertDescription>
             </Alert>
           ) : (
-            <WorkflowGraphCanvas key={data.updated_at} nodeTypes={nodeTypes} initialGraph={data.workflow} readOnly className="h-[560px] w-full" />
+            <WorkflowGraphCanvas
+              key={data.updated_at}
+              nodeTypes={nodeTypes}
+              initialGraph={data.workflow}
+              readOnly
+              className="h-[560px] w-full"
+            />
           )}
         </CardContent>
       </Card>
@@ -141,5 +139,15 @@ export default function StrategyDetailPage() {
     }
   };
 
-  return <StrategyDetailContent id={id} data={data} error={error} catalog={catalog} catalogError={catalogError} deleting={deleting} onDelete={onDelete} />;
+  return (
+    <StrategyDetailContent
+      id={id}
+      data={data}
+      error={error}
+      catalog={catalog}
+      catalogError={catalogError}
+      deleting={deleting}
+      onDelete={onDelete}
+    />
+  );
 }

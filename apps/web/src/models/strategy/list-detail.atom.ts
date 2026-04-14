@@ -3,7 +3,8 @@ import { atomFamily } from 'jotai-family';
 
 import { deleteStrategy, getStrategy, listStrategies } from '@/api';
 import { listNodes } from '@/api/nodes';
-import type { StrategyNodeTypeCatalogItemPublic, StrategyPublic } from './dto';
+import type { StrategyPublic } from './dto';
+import { NodeSummaryPublic } from '../nodes/dto';
 
 export type StrategiesListState = {
   items: StrategyPublic[] | null;
@@ -65,7 +66,7 @@ export const deleteStrategyAtomFamily = atomFamily((id: string) =>
 );
 
 export type StrategyNodeTypesState = {
-  items: StrategyNodeTypeCatalogItemPublic[] | null;
+  items: NodeSummaryPublic[] | null;
   error: string | null;
 };
 
@@ -78,7 +79,7 @@ export const refreshStrategyNodeTypesAtom = atom(null, async (_get, set) => {
   set(strategyNodeTypesAtom, (s) => ({ ...s, error: null }));
   try {
     const items = await listNodes('strategy');
-    set(strategyNodeTypesAtom, { items: items as StrategyNodeTypeCatalogItemPublic[], error: null });
+    set(strategyNodeTypesAtom, { items: items as NodeSummaryPublic[], error: null });
   } catch (e) {
     set(strategyNodeTypesAtom, {
       items: null,

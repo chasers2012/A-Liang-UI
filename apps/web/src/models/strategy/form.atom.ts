@@ -1,9 +1,8 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { createStrategy, getStrategy, getStrategyWorkflowTemplate, patchStrategy } from '@/api';
+import { createStrategy, getStrategy, patchStrategy } from '@/api';
 import { defaultNewName } from '@/lib/default-new-name';
-import { parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph';
 import { EMPTY_WORKFLOW } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 
@@ -66,26 +65,13 @@ export const initStrategyFormAtomFamily = atomFamily((key: string) =>
       return;
     }
 
-    // New strategy: prefill name + template workflow.
+    // New strategy: prefill name and start from an empty workflow.
     set(strategyFormStateAtomFamily(key), (s) => ({
       ...s,
       name: s.name.trim() ? s.name : defaultNewName('新策略'),
+      templateLoading: false,
+      workflow: EMPTY_WORKFLOW,
     }));
-
-    try {
-      const tpl = await getStrategyWorkflowTemplate();
-      set(strategyFormStateAtomFamily(key), (s) => ({
-        ...s,
-        templateLoading: false,
-        workflow: parsePersistedWorkflowGraphPayload(tpl),
-      }));
-    } catch (_e) {
-      set(strategyFormStateAtomFamily(key), (s) => ({
-        ...s,
-        templateLoading: false,
-        workflow: EMPTY_WORKFLOW,
-      }));
-    }
   }),
 );
 

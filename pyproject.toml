@@ -20,6 +20,7 @@ datasource-plugins-builtin = { workspace = true }
 echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
 evaluation-nodes = { workspace = true }
+strategy-nodes = { workspace = true }
 alphalens-nodes = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }

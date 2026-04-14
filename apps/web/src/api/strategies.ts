@@ -29,14 +29,15 @@ export function deleteStrategy(id: string): Promise<void> {
   });
 }
 
-export function listStrategyNodeTypes(): Promise<unknown[]> {
-  return apiFetchJson<unknown[]>(`/nodes?domain=${encodeURIComponent('strategy')}`);
-}
-
 export function validateStrategy(id: string): Promise<{ ok: boolean; errors: string[] }> {
-  return apiFetchJson<{ ok: boolean; errors: string[] }>(`/strategies/${encodeURIComponent(id)}/validate`, { method: 'POST' });
+  return apiFetchJson<{ ok: boolean; errors: string[] }>(`/strategies/${encodeURIComponent(id)}/validate`, {
+    method: 'POST',
+  });
 }
 
 export function previewStrategy(id: string): Promise<{ ok: boolean; preview: Record<string, unknown> }> {
-  return apiFetchJson<{ ok: boolean; preview: Record<string, unknown> }>(`/strategies/${encodeURIComponent(id)}/preview`, { method: 'POST' });
+  return apiFetchJson<{ ok: boolean; preview: Record<string, unknown> }>(
+    `/strategies/${encodeURIComponent(id)}/preview`,
+    { method: 'POST' },
+  );
 }

@@ -9,7 +9,6 @@ from langchain_core.tools import tool
 
 from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.constants import empty_workflow_template_dict
-from app.evaluation.profile.controller import list_evaluation_profile_node_types_public
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationProfileCreate,
@@ -56,16 +55,6 @@ def _merge_evaluation_profile_patch(
 )
 def get_evaluation_profile_workflow_template() -> str:
     return json.dumps(empty_workflow_template_dict(), ensure_ascii=False)
-
-
-@tool(
-    description=(
-        "列出评价方案工作流可用的节点类型（内置节点与各评价指标节点），"
-        "含 type、label、inputs、outputs 等，用于拼装 workflow.nodes。"
-    )
-)
-def list_evaluation_profile_node_types() -> list[dict[str, Any]]:
-    return [n.model_dump() for n in list_evaluation_profile_node_types_public()]
 
 
 @tool(
@@ -129,7 +118,6 @@ def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
 
 EVALUATION_SCHEME_CHAT_TOOLS = [
     get_evaluation_profile_workflow_template,
-    list_evaluation_profile_node_types,
     get_workflow_node_types_source,
     create_evaluation_profile,
     get_evaluation_profile_detail,

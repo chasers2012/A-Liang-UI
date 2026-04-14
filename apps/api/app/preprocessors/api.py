@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.common.datetime_utils import utc_now_iso
-from app.evaluation.profile.schemas import EvaluationNodeTypePublic, WorkflowIOSpecPublic
+from app.evaluation.profile.schemas import WorkflowIOSpecPublic
 from app.preprocessors.constants import DEFAULT_PREPROCESSOR_SOURCE
 from app.preprocessors.controller import (
     apply_preprocessor_patch,
@@ -29,7 +29,6 @@ from app.preprocessors.schemas import (
 )
 from app.preprocessors.workflow_node_types import (
     get_preprocessor_workflow_io_spec,
-    list_preprocessor_node_types_public,
 )
 
 router = APIRouter(prefix="/preprocessors", tags=["preprocessors"])
@@ -55,13 +54,6 @@ def create_preprocessor(body: PreprocessorCreate) -> PreprocessorDetailPublic:
     if detail is None:
         raise HTTPException(status_code=500, detail="预处理器创建后加载失败")
     return detail
-
-
-@router.get("/node-types", response_model=list[EvaluationNodeTypePublic])
-def list_node_types() -> list[EvaluationNodeTypePublic]:
-    # NOTE: this must appear before `/{preprocessor_id}` routes,
-    # otherwise `node-types` can be matched as a `preprocessor_id` and return 404.
-    return list_preprocessor_node_types_public()
 
 
 @router.get("/workflow-io", response_model=WorkflowIOSpecPublic)

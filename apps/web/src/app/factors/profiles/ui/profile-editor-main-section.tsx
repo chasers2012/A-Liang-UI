@@ -1,34 +1,19 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import {
-  listEvaluationNodeTypes,
-  type EvaluationNodeTypeCatalogItemPublic,
-} from "@/api";
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { listNodes } from '@/api';
 
 import {
   WorkflowGraphCanvas,
   WorkflowNodeTypeList,
   type WorkflowGraphCanvasHandle,
-  type WorkflowNodeTypeDefinition,
-} from "@/components/workflow-graph";
-import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
-
-function toWorkflowNodeTypes(
-  catalog: EvaluationNodeTypeCatalogItemPublic[],
-): WorkflowNodeTypeDefinition[] {
-  return catalog.map((c) => ({
-    type: c.type,
-    label: c.label,
-    description: c.description,
-    category: c.category ?? undefined,
-    inputs: c.inputs,
-    outputs: c.outputs,
-  }));
-}
+  toWorkflowNodeTypes,
+} from '@/components/workflow-graph';
+import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+import { NodeSummaryPublic } from '@/models/nodes/dto';
 
 export function ProfileWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
@@ -38,20 +23,20 @@ export function ProfileWorkflowEditorBlock(props: {
 }) {
   const { workflow, canvasKey, canvasRef, className } = props;
 
-  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
+  const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
 
   useEffect(() => {
-    void listEvaluationNodeTypes()
+    void listNodes('evaluation-profile')
       .then(setCatalog)
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setWfMetaLoading(false));
   }, []);
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
-    <div className={cn("flex flex-col min-h-0 flex-1 gap-3", className)}>
+    <div className={cn('flex flex-col min-h-0 flex-1 gap-3', className)}>
       <Label className="">工作流</Label>
       {wfMetaLoading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
@@ -59,7 +44,7 @@ export function ProfileWorkflowEditorBlock(props: {
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
             className="w-[300px]"
-            items={catalog}
+            items={nodeTypes}
             onSelectType={(type) => canvasRef.current?.addNode(type)}
           />
           <WorkflowGraphCanvas
@@ -69,7 +54,6 @@ export function ProfileWorkflowEditorBlock(props: {
             initialGraph={workflow}
             className="h-full flex-1"
           />
-
         </div>
       )}
     </div>

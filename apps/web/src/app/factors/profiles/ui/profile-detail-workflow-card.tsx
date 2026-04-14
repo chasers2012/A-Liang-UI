@@ -1,28 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { cn } from "@/lib/utils";
-import {
-  listEvaluationNodeTypes,
-  type EvaluationProfilePublic,
-  type EvaluationNodeTypeCatalogItemPublic,
-} from "@/api";
+import { cn } from '@/lib/utils';
+import { type EvaluationProfilePublic, listNodes } from '@/api';
 
-import { WorkflowGraphCanvas, type WorkflowNodeTypeDefinition } from "@/components/workflow-graph";
-
-function toWorkflowNodeTypes(
-  catalog: EvaluationNodeTypeCatalogItemPublic[],
-): WorkflowNodeTypeDefinition[] {
-  return catalog.map((c) => ({
-    type: c.type,
-    label: c.label,
-    description: c.description,
-    category: c.category ?? undefined,
-    inputs: c.inputs,
-    outputs: c.outputs,
-  }));
-}
+import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
+import { NodeSummaryPublic } from '@/models/nodes/dto';
 
 export function ProfileDetailWorkflowCard(props: {
   profile: EvaluationProfilePublic;
@@ -30,24 +14,18 @@ export function ProfileDetailWorkflowCard(props: {
   className?: string;
 }) {
   const { profile, profileId, className } = props;
-  const [catalog, setCatalog] = useState<EvaluationNodeTypeCatalogItemPublic[]>([]);
+  const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   useEffect(() => {
-    void listEvaluationNodeTypes()
+    listNodes('evaluation-profile')
       .then(setCatalog)
       .catch(() => setCatalog([]));
   }, []);
 
   return (
-    <section
-      className={cn("flex min-h-0 flex-1 flex-col gap-2", className)}
-      aria-labelledby="profile-workflow-heading"
-    >
-      <h2
-        id="profile-workflow-heading"
-        className="shrink-0 text-sm font-semibold leading-none tracking-tight"
-      >
+    <section className={cn('flex min-h-0 flex-1 flex-col gap-2', className)} aria-labelledby="profile-workflow-heading">
+      <h2 id="profile-workflow-heading" className="shrink-0 text-sm font-semibold leading-none tracking-tight">
         工作流
       </h2>
       <div className="flex min-h-0 flex-1 flex-col">

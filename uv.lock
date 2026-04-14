@@ -30,6 +30,7 @@ members = [
     "factor",
     "quant-agent",
     "quant-agent-api",
+    "strategy-nodes",
     "workflow",
     "workspace",
 ]
@@ -2718,6 +2719,7 @@ dependencies = [
     { name = "evaluation-nodes" },
     { name = "quant-agent-api" },
     { name = "sqlmodel" },
+    { name = "strategy-nodes" },
 ]
 
 [package.dev-dependencies]
@@ -2743,6 +2745,7 @@ requires-dist = [
     { name = "evaluation-nodes", editable = "plugins/evaluation_nodes" },
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
+    { name = "strategy-nodes", editable = "plugins/strategy_nodes" },
 ]
 
 [package.metadata.requires-dev]
@@ -3415,6 +3418,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/34/0e/2408735aca9e764643196212f9069912100151414dd617d39ffc72d77eee/statsmodels-0.14.6-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3414e40c073d725007a6603a18247ab7af3467e1af4a5e5a24e4c27bc26673b4", size = 10337587, upload-time = "2025-12-05T23:13:37.597Z" },
     { url = "https://files.pythonhosted.org/packages/0f/36/4d44f7035ab3c0b2b6a4c4ebb98dedf36246ccbc1b3e2f51ebcd7ac83abb/statsmodels-0.14.6-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:a518d3f9889ef920116f9fa56d0338069e110f823926356946dae83bc9e33e19", size = 10363350, upload-time = "2025-12-05T23:13:53.08Z" },
     { url = "https://files.pythonhosted.org/packages/26/33/f1652d0c59fa51de18492ee2345b65372550501ad061daa38f950be390b6/statsmodels-0.14.6-cp314-cp314-win_amd64.whl", hash = "sha256:151b73e29f01fe619dbce7f66d61a356e9d1fe5e906529b78807df9189c37721", size = 9588010, upload-time = "2025-12-05T23:14:07.28Z" },
+]
+
+[[package]]
+name = "strategy-nodes"
+version = "0.1.0"
+source = { editable = "plugins/strategy_nodes" }
+dependencies = [
+    { name = "factor" },
+    { name = "quant-agent-api" },
+    { name = "workflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "factor", editable = "lib/factor" },
+    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "workflow", editable = "lib/workflow" },
 ]
 
 [[package]]
