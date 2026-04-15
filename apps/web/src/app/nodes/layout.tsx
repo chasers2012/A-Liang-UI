@@ -7,9 +7,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useMemo, useState, type ReactNode } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { WorkflowNodeTypeList } from '@/components/workflow-graph/workflow-node-type-list';
 import {
   Popover,
@@ -279,7 +278,7 @@ function NodesListFilterPopover(props: {
 export function NodesLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { items, error } = useAtomValue(nodesListAtom);
+  const { items } = useAtomValue(nodesListAtom);
   const refresh = useSetAtom(refreshNodesListAtom);
   const { searchQuery, sourceFilter } = useAtomValue(nodesBrowseStateAtom);
   const includedCategories = useAtomValue(nodesIncludedCategoriesSetAtom);
@@ -353,20 +352,20 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
         className="h-full min-h-0 w-[300px]"
         items={
           domainFilteredItems?.map((m) => ({
-            type: m.id,
+            id: m.id,
             label: m.name,
             description: m.description,
             category: m.category,
           })) ?? null
         }
-        selectedType={highlightId}
+        selectedId={highlightId}
         searchPlaceholder="搜索节点"
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         emptyText={
           (items?.length ?? 0) === 0 ? '暂无节点。请使用上方「新增节点」开始配置。' : '没有符合当前筛选条件的节点。'
         }
-        onSelectType={onSelectNode}
+        onSelectId={onSelectNode}
         toolbarRight={
           <>
             <NodesListFilterPopover
