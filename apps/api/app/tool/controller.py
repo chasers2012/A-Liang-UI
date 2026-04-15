@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.persistence.models import ChatToolRow
 from app.persistence.sqlite_db import get_session
+from app.tool.models import ChatToolRow
 from app.tool.registry import ChatToolRegistry
 
 

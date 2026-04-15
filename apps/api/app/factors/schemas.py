@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from app.common import datetime_utils
 from app.common.id import create_id_generator
+from app.factors.models import FactorRow
 
 FACTORS_DIR = "factors/source"
 
@@ -15,26 +16,9 @@ def source_relative_path(factor_id: str) -> str:
     return f"{FACTORS_DIR}/{factor_id}.py"
 
 
-class FactorRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str = Field(description="因子的id, 格式是UUID")
-    name: str = Field(description="因子名称")
-    group: str = Field(description="因子组")
-    description: str = Field(description="因子描述")
-    max_window: int = Field(description="因子最大窗口", default=1)
-    dependencies: list[str] = Field(
-        description="因子依赖的列这些列会在data中传给因子calc方法",
-        default_factory=lambda: ["close"],
-    )
-    source_path: str = Field(description="因子源码路径")
-    created_at: str = Field(description="因子创建时间")
-    updated_at: str = Field(description="因子更新时间")
-
-
 class FactorRegistryFile(BaseModel):
     version: int = Field(description="因子注册文件版本", default=1)
-    items: list[FactorRecord] = Field(description="因子注册文件中的因子列表", default_factory=list)
+    items: list[FactorRow] = Field(description="因子注册文件中的因子列表", default_factory=list)
 
 
 class FactorCreate(BaseModel):
@@ -67,8 +51,8 @@ class FactorCreate(BaseModel):
             raise ValueError("max_window 须 >= 1")
         return self.model_copy(update={"dependencies": deps})
 
-    def to_record(self, factor_id: str, now: str) -> FactorRecord:
-        return FactorRecord(
+    def to_row(self, factor_id: str, now: str) -> FactorRow:
+        return FactorRow(
             id=factor_id,
             name=self.name.strip(),
             group=self.group.strip(),
@@ -108,17 +92,17 @@ class FactorDetailPublic(FactorSummaryPublic):
     source: str
 
 
-def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
+def row_to_summary(row: FactorRow) -> FactorSummaryPublic:
     return FactorSummaryPublic(
-        id=rec.id,
-        name=rec.name,
-        group=rec.group,
-        description=rec.description,
-        max_window=rec.max_window,
-        dependencies=list(rec.dependencies),
-        source_path=rec.source_path,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        group=row.group,
+        description=row.description,
+        max_window=row.max_window,
+        dependencies=list(row.dependencies),
+        source_path=row.source_path,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 

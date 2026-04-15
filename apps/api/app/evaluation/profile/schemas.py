@@ -12,6 +12,7 @@ from app.evaluation.profile.constants import (
     EVALUATION_EMPTY_WORKFLOW_TEMPLATE,
     empty_workflow_template_dict,
 )
+from app.evaluation.profile.models import EvaluationProfileRow
 
 EvaluationWorkflow = WorkflowGraph
 
@@ -46,7 +47,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
 
 
 def _stored_workflow_str(v: object) -> str:
-    """Normalize workflow for :class:`EvaluationProfileRecord` (disk / in-memory record)."""
+    """Normalize workflow for storage rows."""
     if isinstance(v, str):
         s = v.strip()
         if not s:
@@ -68,20 +69,6 @@ def _coerce_workflow_dict(v: object, *, allow_none: bool) -> dict[str, Any] | No
     raise TypeError("workflow 须为 JSON 对象")
 
 
-class EvaluationProfileRecord(BaseModel):
-    id: str
-    name: str
-    description: str = ""
-    workflow: str
-    created_at: str
-    updated_at: str
-
-    @field_validator("workflow", mode="before")
-    @classmethod
-    def _workflow_record(cls, v: object) -> str:
-        return _stored_workflow_str(v)
-
-
 class EvaluationProfileCreate(BaseModel):
     name: str
     description: str = ""
@@ -100,11 +87,11 @@ class EvaluationProfileCreate(BaseModel):
     def _workflow_create(cls, v: object) -> dict[str, Any] | None:
         return _coerce_workflow_dict(v, allow_none=True)
 
-    def to_record(self) -> EvaluationProfileRecord:
+    def to_row(self) -> EvaluationProfileRow:
         now = utc_now_iso()
         rid = str(uuid4())
         wf = self.workflow if self.workflow is not None else empty_workflow_template_dict()
-        return EvaluationProfileRecord(
+        return EvaluationProfileRow(
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),

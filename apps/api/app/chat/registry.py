@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.chat.models import ChatMessageRow, ChatRow
 from app.chat.schemas import (
     AssistantBlockPublic,
     ChatArchivedSummaryPublic,
@@ -10,7 +11,6 @@ from app.chat.schemas import (
     ChatSummaryPublic,
 )
 from app.common.datetime_utils import utc_now_iso
-from app.persistence.models import ChatMessageRow, ChatRow
 from app.persistence.sqlite_db import get_session
 from sqlmodel import select
 

@@ -5,6 +5,7 @@ from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
 from app.common.datetime_utils import utc_now_iso
+from app.nodes.models import WorkflowNodeRow
 from app.nodes.package_manager import WorkflowNodePackageManager
 from app.nodes.registry import WorkflowNodesRegistry
 from app.nodes.schemas import (
@@ -13,7 +14,6 @@ from app.nodes.schemas import (
     WorkflowNodePatch,
     WorkflowNodeSummaryPublic,
 )
-from app.persistence.models import WorkflowNodeRow
 from app.visibility.registry import WorkflowDomainNodesRegistry
 
 

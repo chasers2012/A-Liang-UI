@@ -29,8 +29,8 @@ def ensure_example_strategy() -> None:
     The strategy is inserted only if missing (idempotent).
     """
 
-    from app.persistence.models import StrategyRow
     from app.persistence.sqlite_db import get_session
+    from app.strategy.models import StrategyRow
 
     with get_session() as session:
         if session.get(StrategyRow, EXAMPLE_STRATEGY_ID) is not None:

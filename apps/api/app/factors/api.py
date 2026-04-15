@@ -5,9 +5,9 @@ import contextlib
 from fastapi import APIRouter, HTTPException
 
 from app.evaluation.run.controller import delete_evaluation_runs_for_factor
+from app.evaluation.run.models import EvaluationRunRow
 from app.evaluation.run.redistry import EvaluationRunsStore
 from app.evaluation.run.schemas import (
-    EvaluationRunRecord,
     EvaluationRunRowPublic,
     EvaluationRunsAggregatePublic,
     EvaluationRunsSummaryPublic,
@@ -47,7 +47,7 @@ def evaluation_runs_summary() -> EvaluationRunsSummaryPublic:
     rows: list[EvaluationRunRowPublic] = []
     ic_for_avg: list[float] = []
     evaluated_ok = 0
-    latest_eval_runs_by_factor_id: dict[str, EvaluationRunRecord] = {}
+    latest_eval_runs_by_factor_id: dict[str, EvaluationRunRow] = {}
     for run in EvaluationRunsStore.list_items():
         current = latest_eval_runs_by_factor_id.get(run.factor_id)
         if current is None or run.end_at > current.end_at:

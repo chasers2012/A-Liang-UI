@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from factor import FactorDataSource
 
+from app.datasource.models import DataSourceRow
 from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
@@ -10,11 +11,10 @@ from app.datasource.schemas import (
     DataSourcePatch,
     DatasourcePluginPublic,
     DataSourcePublic,
-    DataSourceRecord,
     InspectColumnsRequest,
     InspectColumnsResponse,
     TestResult,
-    record_to_public,
+    row_to_public,
     utc_now_iso,
 )
 from app.datasource.verify import verify_datasource
@@ -58,7 +58,7 @@ def get_datasource(id: str) -> FactorDataSource | None:
 
 
 def list_datasources() -> list[DataSourcePublic]:
-    return [record_to_public(i) for i in DataSourceItemsRegistry.list_items()]
+    return [row_to_public(i) for i in DataSourceItemsRegistry.list_items()]
 
 
 def list_datasource_plugins() -> list[DatasourcePluginPublic]:
@@ -111,37 +111,37 @@ def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsRe
 
 
 def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
-    rec = DataSourceItemsRegistry.get_item(ds_id)
-    if rec is None:
+    row = DataSourceItemsRegistry.get_item(ds_id)
+    if row is None:
         return None
-    return record_to_public(rec)
+    return row_to_public(row)
 
 
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
     plugin = get_datasource_plugin(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
-    new_rec = body.to_record()
-    new_rec.config = validated
-    DataSourceItemsRegistry.add_item(new_rec)
-    return record_to_public(new_rec)
+    new_row = body.to_row()
+    new_row.config = validated
+    DataSourceItemsRegistry.add_item(new_row)
+    return row_to_public(new_row)
 
 
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | None:
-    def _apply(rec: DataSourceRecord) -> None:
+    def _apply(row: DataSourceRow) -> None:
         data = body.model_dump(exclude_unset=True)
         if "name" in data:
             _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
-            rec.name = data["name"]
+            row.name = data["name"]
         if "config" in data:
-            plugin = get_datasource_plugin(str(rec.type))
-            rec.config = plugin.validate_config(dict(data["config"] or {}))
-        rec.updated_at = utc_now_iso()
+            plugin = get_datasource_plugin(str(row.type))
+            row.config = plugin.validate_config(dict(data["config"] or {}))
+        row.updated_at = utc_now_iso()
 
-    rec = DataSourceItemsRegistry.update_item(ds_id, _apply)
-    if rec is None:
+    row = DataSourceItemsRegistry.update_item(ds_id, _apply)
+    if row is None:
         return None
-    return record_to_public(rec)
+    return row_to_public(row)
 
 
 def delete_datasource(ds_id: str) -> bool:

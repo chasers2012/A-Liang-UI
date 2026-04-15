@@ -8,21 +8,21 @@ from custom_code import SourceFiles, validate_identifier_name, validate_source_s
 from factor import Factor
 
 from app.common.datetime_utils import utc_now_iso
+from app.factors.models import FactorRow
 from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
     FactorPatch,
-    FactorRecord,
     FactorSummaryPublic,
     generate_id,
-    record_to_summary,
+    row_to_summary,
 )
 
 resolve_source_path = SourceFiles.resolve_source_path
 
 
-def merge_factor_patch(rec: FactorRecord, patch: FactorPatch) -> None:
+def merge_factor_patch(rec: FactorRow, patch: FactorPatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data:
         v = data["name"]
@@ -45,7 +45,7 @@ def merge_factor_patch(rec: FactorRecord, patch: FactorPatch) -> None:
 
 
 def patch_factor_validate_and_merge(
-    rec: FactorRecord,
+    rec: FactorRow,
     body: FactorPatch,
     unset: dict,
 ) -> None:
@@ -60,21 +60,21 @@ def patch_factor_validate_and_merge(
     merge_factor_patch(rec, body)
 
 
-def create_factor(body: FactorCreate) -> FactorRecord:
+def create_factor(body: FactorCreate) -> FactorRow:
     validate_identifier_name(body.name)
 
     fid = generate_id()
     now = utc_now_iso()
-    rec = body.to_record(fid, now)
+    rec = body.to_row(fid, now)
     SourceFiles.write_source_text(rec.source_path, body.source, validators=[validate_source_syntax])
     FactorItemsRegistry.add_item(rec)
     return rec
 
 
-def update_factor(factor_id: str, body: FactorPatch) -> FactorRecord:
+def update_factor(factor_id: str, body: FactorPatch) -> FactorRow:
     unset = body.model_dump(exclude_unset=True)
 
-    def _apply(rec: FactorRecord) -> None:
+    def _apply(rec: FactorRow) -> None:
         patch_factor_validate_and_merge(rec, body, unset)
         if "source" in unset and body.source is not None:
             SourceFiles.write_source_text(
@@ -119,18 +119,18 @@ def get_factor(factor_id: str) -> type[Factor] | None:
         return None
 
 
-def read_factor_source(rec: FactorRecord) -> str:
+def read_factor_source(rec: FactorRow) -> str:
     return SourceFiles.read_source_text(rec.source_path)
 
 
-def delete_factor_source_file(rec: FactorRecord) -> None:
+def delete_factor_source_file(rec: FactorRow) -> None:
     SourceFiles.delete_source_text_file(rec.source_path)
 
 
-def factor_detail(rec: FactorRecord) -> FactorDetailPublic:
-    summary = record_to_summary(rec)
+def factor_detail(rec: FactorRow) -> FactorDetailPublic:
+    summary = row_to_summary(rec)
     return FactorDetailPublic(**summary.model_dump(), source=read_factor_source(rec))
 
 
 def list_factors() -> list[FactorSummaryPublic]:
-    return [record_to_summary(i) for i in FactorItemsRegistry.list_items()]
+    return [row_to_summary(i) for i in FactorItemsRegistry.list_items()]

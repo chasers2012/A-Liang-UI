@@ -4,9 +4,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from sqlmodel import select
 
-from app.persistence.models import ChatToolRow
 from app.persistence.sqlite_db import get_session
 from app.tool.controller import ToolController
+from app.tool.models import ChatToolRow
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 

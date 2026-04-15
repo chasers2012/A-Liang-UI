@@ -4,13 +4,13 @@ from custom_code import SourceFiles, validate_source_syntax
 from factor import DataPreprocessorBase
 
 from app.common.datetime_utils import utc_now_iso
+from app.preprocessors.models import PreprocessorRow
 from app.preprocessors.package_manager import PreprocessorPackageManager
 from app.preprocessors.registry import PreprocessorsRegistry
 from app.preprocessors.schemas import (
     PreprocessorCreate,
     PreprocessorDetailPublic,
     PreprocessorPatch,
-    PreprocessorRecord,
     PreprocessorSummaryPublic,
 )
 
@@ -40,15 +40,13 @@ def _load_preprocessor_from_file(source_path: str) -> type[DataPreprocessorBase]
     return None
 
 
-def create_preprocessor(
-    body: PreprocessorCreate, *, id_name: str | None = None
-) -> PreprocessorRecord:
+def create_preprocessor(body: PreprocessorCreate, *, id_name: str | None = None) -> PreprocessorRow:
     pid = PreprocessorsRegistry.generate_id((id_name or "").strip() or None)
     if PreprocessorsRegistry.get_item(pid) is not None:
         raise ValueError(f"Preprocessor {pid} already exists")
 
     now = utc_now_iso()
-    rec = body.to_record(pid, now)
+    rec = body.to_row(pid, now)
     src = body.source or ""
     PreprocessorPackageManager.write_preprocessor_package(
         pid,
@@ -72,15 +70,15 @@ def create_preprocessor(
     return rec
 
 
-def list_preprocessor_records() -> list[PreprocessorRecord]:
+def list_preprocessor_records() -> list[PreprocessorRow]:
     return PreprocessorsRegistry.list_items()
 
 
-def get_preprocessor_record(pid: str) -> PreprocessorRecord | None:
+def get_preprocessor_record(pid: str) -> PreprocessorRow | None:
     return PreprocessorsRegistry.get_item(pid)
 
 
-def read_preprocessor_source(rec: PreprocessorRecord) -> str:
+def read_preprocessor_source(rec: PreprocessorRow) -> str:
     return SourceFiles.read_source_text(rec.source_path)
 
 
@@ -113,11 +111,11 @@ def load_preprocessor_detail(pid: str) -> PreprocessorDetailPublic | None:
     )
 
 
-def update_preprocessor_record(pid: str, apply_fn) -> PreprocessorRecord | None:  # type: ignore[no-untyped-def]
+def update_preprocessor_record(pid: str, apply_fn) -> PreprocessorRow | None:  # type: ignore[no-untyped-def]
     return PreprocessorsRegistry.update_item(pid, apply_fn)
 
 
-def write_preprocessor_source(rec: PreprocessorRecord, source: str) -> None:
+def write_preprocessor_source(rec: PreprocessorRow, source: str) -> None:
     PreprocessorPackageManager.write_preprocessor_package(
         rec.id,
         source,
@@ -125,7 +123,7 @@ def write_preprocessor_source(rec: PreprocessorRecord, source: str) -> None:
     )
 
 
-def sync_preprocessor_metadata_from_source(rec: PreprocessorRecord) -> None:
+def sync_preprocessor_metadata_from_source(rec: PreprocessorRow) -> None:
     cls = _load_preprocessor_from_file(rec.source_path)
     if cls is None:
         return
@@ -134,7 +132,7 @@ def sync_preprocessor_metadata_from_source(rec: PreprocessorRecord) -> None:
         rec.name = label.strip()
 
 
-def apply_preprocessor_patch(rec: PreprocessorRecord, patch: PreprocessorPatch) -> None:
+def apply_preprocessor_patch(rec: PreprocessorRow, patch: PreprocessorPatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
         rec.name = str(data["name"]).strip()
@@ -142,7 +140,7 @@ def apply_preprocessor_patch(rec: PreprocessorRecord, patch: PreprocessorPatch) 
         rec.description = "" if data["description"] is None else str(data["description"]).strip()
 
 
-def delete_preprocessor(pid: str) -> PreprocessorRecord | None:
+def delete_preprocessor(pid: str) -> PreprocessorRow | None:
     rec = PreprocessorsRegistry.get_item(pid)
     if rec is None:
         return None

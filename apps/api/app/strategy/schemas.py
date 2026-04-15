@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.datasource.schemas import utc_now_iso
 from app.strategy.constants import empty_workflow_template_dict
+from app.strategy.models import StrategyRow
 
 
 def _validate_strategy_workflow_dict(workflow: dict[str, Any]) -> None:
@@ -58,20 +59,6 @@ def _coerce_workflow_dict(v: object, *, allow_none: bool) -> dict[str, Any] | No
     raise TypeError("workflow 须为 JSON 对象")
 
 
-class StrategyRecord(BaseModel):
-    id: str
-    name: str
-    description: str = ""
-    workflow: str
-    created_at: str
-    updated_at: str
-
-    @field_validator("workflow", mode="before")
-    @classmethod
-    def _workflow_record(cls, v: object) -> str:
-        return _stored_workflow_str(v)
-
-
 class StrategyCreate(BaseModel):
     name: str
     description: str = ""
@@ -90,11 +77,11 @@ class StrategyCreate(BaseModel):
     def _workflow_create(cls, v: object) -> dict[str, Any] | None:
         return _coerce_workflow_dict(v, allow_none=True)
 
-    def to_record(self) -> StrategyRecord:
+    def to_row(self) -> StrategyRow:
         now = utc_now_iso()
         rid = str(uuid4())
         wf = self.workflow if self.workflow is not None else empty_workflow_template_dict()
-        return StrategyRecord(
+        return StrategyRow(
             id=rid,
             name=self.name.strip(),
             description=self.description.strip(),

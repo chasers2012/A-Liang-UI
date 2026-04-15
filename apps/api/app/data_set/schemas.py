@@ -11,6 +11,7 @@ from app.data_set.constants import (
     PREPROCESSING_EMPTY_WORKFLOW,
     empty_preprocessing_workflow_dict,
 )
+from app.data_set.models import DataSetRow
 from app.datasource.schemas import utc_now_iso
 
 generate_id = create_id_generator("data_sets")
@@ -35,7 +36,7 @@ def _validate_preprocessing_workflow_dict(workflow: dict[str, Any]) -> None:
 
 
 def _stored_workflow_str(v: object) -> str:
-    """Normalize workflow for :class:`DataSetRecord` (disk / in-memory record)."""
+    """Normalize workflow for storage rows."""
     if isinstance(v, dict):
         _validate_preprocessing_workflow_dict(v)
         return json.dumps(dict(v), ensure_ascii=False)
@@ -70,44 +71,6 @@ class DataSetDatasourceBindingStored(SQLModel):
     alias: dict[str, str] | None = None
     date_column: str = ""
     asset_column: str = ""
-
-
-class DataSetRecord(SQLModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    name: str
-    description: str = ""
-    datasource_bindings: list[DataSetDatasourceBindingStored] = Field(default_factory=list)
-    preprocessing_workflow: str = ""
-    preprocessors: list[str] = Field(default_factory=list)
-    start: str
-    end: str
-    instrument_codes: list[str] = Field(default_factory=list)
-    created_at: str
-    updated_at: str
-
-    @field_validator("preprocessing_workflow", mode="before")
-    @classmethod
-    def _workflow_record(cls, v: object) -> str:
-        return _stored_workflow_str(v)
-
-    @field_validator("preprocessors", mode="before")
-    @classmethod
-    def _normalize_preprocessors(cls, v: object) -> list[str]:
-        if v is None:
-            return []
-        if not isinstance(v, list):
-            raise TypeError("preprocessors must be a list")
-        out: list[str] = []
-        seen: set[str] = set()
-        for x in v:
-            pid = str(x).strip()
-            if not pid or pid in seen:
-                continue
-            seen.add(pid)
-            out.append(pid)
-        return out
 
 
 class DataSetDatasourceBindingInput(SQLModel):
@@ -184,21 +147,12 @@ class DataSetCreate(SQLModel):
         _validate_preprocessing_workflow_dict(v)
         return v
 
-    def to_record(self) -> DataSetRecord:
+    def to_row(self) -> DataSetRow:
         now = utc_now_iso()
         rid = str(generate_id())
-        bindings = [
-            DataSetDatasourceBindingStored(
-                datasource_id=b.datasource_id.strip(),
-                dependencies=list(b.dependencies),
-                alias=(dict(b.alias) if b.alias else None),
-                date_column=b.date_column.strip(),
-                asset_column=b.asset_column.strip(),
-            )
-            for b in self.datasource_bindings
-        ]
+        bindings = [_binding_to_stored_dict(b) for b in self.datasource_bindings]
         _validate_preprocessing_workflow_dict(self.preprocessing_workflow)
-        return DataSetRecord(
+        return DataSetRow(
             id=rid,
             name=self.name.strip(),
             description=(self.description or "").strip(),
@@ -213,6 +167,18 @@ class DataSetCreate(SQLModel):
             created_at=now,
             updated_at=now,
         )
+
+
+def _binding_to_stored_dict(
+    binding: DataSetDatasourceBindingInput | DataSetDatasourceBindingStored,
+) -> dict[str, Any]:
+    return {
+        "datasource_id": binding.datasource_id.strip(),
+        "dependencies": [x.strip() for x in binding.dependencies if str(x).strip()],
+        "alias": (dict(binding.alias) if binding.alias else None),
+        "date_column": binding.date_column.strip(),
+        "asset_column": binding.asset_column.strip(),
+    }
 
 
 class DataSetPatch(SQLModel):

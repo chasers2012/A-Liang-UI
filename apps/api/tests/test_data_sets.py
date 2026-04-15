@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from app.data_set.models import DataSetRow
 from app.evaluation.profile.constants import EVALUATION_WORKFLOW_INPUTS
-from app.persistence.models import DataSetRow
 from app.persistence.sqlite_db import get_session
 from sqlmodel import select
 

@@ -4,6 +4,7 @@ from factor.data_set import DataSet, DataSourceBinding
 from fastapi import HTTPException
 
 from app.data_set.constants import empty_preprocessing_workflow_dict
+from app.data_set.models import DataSetRow
 from app.data_set.redistry import DataSetsStore
 from app.data_set.schemas import (
     _EMPTY_WORKFLOW,
@@ -13,23 +14,23 @@ from app.data_set.schemas import (
     DataSetDatasourceBindingStored,
     DataSetPatch,
     DataSetPublic,
-    DataSetRecord,
+    _binding_to_stored_dict,
     _stored_workflow_str,
     workflow_public_dict,
 )
 from app.datasource.controller import get_datasource
 from app.datasource.registry import DataSourceItemsRegistry
-from app.datasource.schemas import DataSourceRecord, utc_now_iso
+from app.datasource.schemas import utc_now_iso
 from app.preprocessors.controller import list_preprocessor_records
 
 
 def get_data_set(id: str) -> DataSet | None:
-    rec = DataSetsStore.get_item(id)
-    if rec is None:
+    row = DataSetsStore.get_item(id)
+    if row is None:
         return None
 
     bindings: list[DataSourceBinding] = []
-    for b in rec.datasource_bindings:
+    for b in _row_bindings(row):
         ds = get_datasource(b.datasource_id)
         if ds is None:
             continue
@@ -47,12 +48,12 @@ def get_data_set(id: str) -> DataSet | None:
             )
         )
 
-    start = (rec.start or "").strip() or None
-    end = (rec.end or "").strip() or None
-    codes = [c.strip() for c in (rec.instrument_codes or []) if str(c).strip()]
+    start = (row.start or "").strip() or None
+    end = (row.end or "").strip() or None
+    codes = [c.strip() for c in (row.instrument_codes or []) if str(c).strip()]
     return DataSet(
         data_source_bindings=bindings,
-        preprocessing_workflow=rec.preprocessing_workflow,
+        preprocessing_workflow=row.preprocessing_workflow,
         start_date=start,
         end_date=end,
         instrument_codes=codes or None,
@@ -86,27 +87,31 @@ def _bindings_to_public(
     return out
 
 
-def to_public(rec: DataSetRecord) -> DataSetPublic:
+def _row_bindings(row: DataSetRow) -> list[DataSetDatasourceBindingStored]:
+    raw = row.datasource_bindings or []
+    return [DataSetDatasourceBindingStored.model_validate(x) for x in raw]
+
+
+def to_public(row: DataSetRow) -> DataSetPublic:
     return DataSetPublic(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        datasource_bindings=_bindings_to_public(rec.datasource_bindings),
-        preprocessing_workflow=workflow_public_dict(rec.preprocessing_workflow),
-        preprocessors=list(rec.preprocessors),
-        start=rec.start,
-        end=rec.end,
-        instrument_codes=list(rec.instrument_codes),
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        description=row.description,
+        datasource_bindings=_bindings_to_public(_row_bindings(row)),
+        preprocessing_workflow=workflow_public_dict(row.preprocessing_workflow),
+        preprocessors=list(row.preprocessors or []),
+        start=row.start,
+        end=row.end,
+        instrument_codes=list(row.instrument_codes or []),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
-def _validate_datasource_exists(ds_id: str) -> DataSourceRecord:
-    rec = DataSourceItemsRegistry.get_item(ds_id)
-    if rec is None:
+def _validate_datasource_exists(ds_id: str) -> None:
+    row = DataSourceItemsRegistry.get_item(ds_id)
+    if row is None:
         raise HTTPException(status_code=400, detail="数据源不存在")
-    return rec
 
 
 def _validate_binding_alias(alias: dict | None) -> None:
@@ -187,21 +192,6 @@ def _validate_bindings_inputs(
         )
 
 
-def _inputs_to_stored(
-    bindings: list[DataSetDatasourceBindingInput],
-) -> list[DataSetDatasourceBindingStored]:
-    return [
-        DataSetDatasourceBindingStored(
-            datasource_id=b.datasource_id.strip(),
-            dependencies=[x.strip() for x in b.dependencies if str(x).strip()],
-            alias=(dict(b.alias) if b.alias else None),
-            date_column=b.date_column.strip(),
-            asset_column=b.asset_column.strip(),
-        )
-        for b in bindings
-    ]
-
-
 def _validate_and_touch_datasources(
     bindings: list[DataSetDatasourceBindingInput],
 ) -> None:
@@ -210,27 +200,27 @@ def _validate_and_touch_datasources(
         _validate_datasource_exists(b.datasource_id.strip())
 
 
-def _merge_patch(rec: DataSetRecord, patch: DataSetPatch) -> None:
+def _merge_patch(row: DataSetRow, patch: DataSetPatch) -> None:
     data = patch.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
-        rec.name = str(data["name"]).strip()
+        row.name = str(data["name"]).strip()
     if "description" in data:
-        rec.description = "" if data["description"] is None else str(data["description"]).strip()
+        row.description = "" if data["description"] is None else str(data["description"]).strip()
     if "datasource_bindings" in data and data["datasource_bindings"] is not None:
         raw = data["datasource_bindings"]
         inputs = [DataSetDatasourceBindingInput.model_validate(x) for x in raw]
-        rec.datasource_bindings = _inputs_to_stored(inputs)
+        row.datasource_bindings = [_binding_to_stored_dict(x) for x in inputs]
     if "preprocessing_workflow" in data:
         wf = data["preprocessing_workflow"]
         wf_obj = dict(_EMPTY_WORKFLOW) if wf is None else wf
-        rec.preprocessing_workflow = _stored_workflow_str(wf_obj)
-        rec.preprocessors = _extract_preprocessors_from_workflow(dict(wf_obj))
+        row.preprocessing_workflow = _stored_workflow_str(wf_obj)
+        row.preprocessors = _extract_preprocessors_from_workflow(dict(wf_obj))
     if "start" in data and data["start"] is not None:
-        rec.start = str(data["start"]).strip()
+        row.start = str(data["start"]).strip()
     if "end" in data and data["end"] is not None:
-        rec.end = str(data["end"]).strip()
+        row.end = str(data["end"]).strip()
     if "instrument_codes" in data and data["instrument_codes"] is not None:
-        rec.instrument_codes = [c.strip() for c in data["instrument_codes"] if str(c).strip()]
+        row.instrument_codes = [c.strip() for c in data["instrument_codes"] if str(c).strip()]
 
 
 def list_data_sets() -> list[DataSetPublic]:
@@ -238,31 +228,31 @@ def list_data_sets() -> list[DataSetPublic]:
 
 
 def get_data_set_detail(data_set_id: str) -> DataSetPublic | None:
-    rec = DataSetsStore.get_item(data_set_id)
-    if rec is None:
+    row = DataSetsStore.get_item(data_set_id)
+    if row is None:
         return None
-    return to_public(rec)
+    return to_public(row)
 
 
 def create_data_set(body: DataSetCreate) -> DataSetPublic:
     if not body.name.strip():
         raise HTTPException(status_code=400, detail="名称不能为空")
     _validate_and_touch_datasources(list(body.datasource_bindings))
-    new_rec = body.to_record()
-    new_rec.preprocessors = _extract_preprocessors_from_workflow(dict(body.preprocessing_workflow))
-    DataSetsStore.add_item(new_rec)
-    return to_public(new_rec)
+    new_row = body.to_row()
+    new_row.preprocessors = _extract_preprocessors_from_workflow(dict(body.preprocessing_workflow))
+    DataSetsStore.add_item(new_row)
+    return to_public(new_row)
 
 
 def update_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic | None:
 
-    def _apply(rec: DataSetRecord) -> None:
+    def _apply(row: DataSetRow) -> None:
         if body.datasource_bindings is not None:
             _validate_and_touch_datasources(list(body.datasource_bindings))
-        _merge_patch(rec, body)
-        if not rec.name:
+        _merge_patch(row, body)
+        if not row.name:
             raise HTTPException(status_code=400, detail="名称不能为空")
-        if not rec.datasource_bindings:
+        if not row.datasource_bindings:
             raise HTTPException(status_code=400, detail="至少保留一条数据源绑定")
         _validate_bindings_inputs(
             [
@@ -273,17 +263,17 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic | Non
                     date_column=b.date_column,
                     asset_column=b.asset_column,
                 )
-                for b in rec.datasource_bindings
+                for b in _row_bindings(row)
             ]
         )
-        for b in rec.datasource_bindings:
+        for b in _row_bindings(row):
             _validate_datasource_exists(b.datasource_id)
-        rec.updated_at = utc_now_iso()
+        row.updated_at = utc_now_iso()
 
-    rec = DataSetsStore.update_item(data_set_id, _apply)
-    if rec is None:
+    row = DataSetsStore.update_item(data_set_id, _apply)
+    if row is None:
         return None
-    return to_public(rec)
+    return to_public(row)
 
 
 def delete_data_set(data_set_id: str) -> bool:

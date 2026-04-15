@@ -42,7 +42,19 @@ def get_engine():
 
 def create_db_and_tables() -> None:
     # Ensure all SQLModel table classes are imported and registered.
-    from app.persistence import models as _models  # noqa: F401
+    from app.agent_workflows import models as _agent_models  # noqa: F401
+    from app.backtest import models as _backtest_models  # noqa: F401
+    from app.chat import models as _chat_models  # noqa: F401
+    from app.data_set import models as _dataset_models  # noqa: F401
+    from app.datasource import models as _datasource_models  # noqa: F401
+    from app.evaluation.profile import models as _evaluation_profile_models  # noqa: F401
+    from app.evaluation.run import models as _evaluation_run_models  # noqa: F401
+    from app.factors import models as _factor_models  # noqa: F401
+    from app.nodes import models as _node_models  # noqa: F401
+    from app.preprocessors import models as _preprocessor_models  # noqa: F401
+    from app.strategy import models as _strategy_models  # noqa: F401
+    from app.tool import models as _tool_models  # noqa: F401
+    from app.visibility import models as _visibility_models  # noqa: F401
 
     engine = get_engine()
     SQLModel.metadata.create_all(engine)

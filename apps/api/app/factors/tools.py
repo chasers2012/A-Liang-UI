@@ -82,7 +82,10 @@ def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
 
 @tool(description="删除因子，返回所删除的因子详情")
 def delete_factor(factor_id: str) -> dict[str, Any]:
-    return FactorItemsRegistry.delete_item(factor_id)
+    rec = FactorItemsRegistry.delete_item(factor_id)
+    if rec is None:
+        raise ValueError(f"因子 {factor_id} 不存在")
+    return rec.model_dump()
 
 
 FACTOR_CHAT_TOOLS = [

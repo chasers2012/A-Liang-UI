@@ -3,26 +3,16 @@ from __future__ import annotations
 from typing import Any
 
 from custom_code import validate_source_syntax
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from app.preprocessors.constants import DEFAULT_PREPROCESSOR_SOURCE
+from app.preprocessors.models import PreprocessorRow
 from app.preprocessors.package_manager import PreprocessorPackageManager
-
-
-class PreprocessorRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore", arbitrary_types_allowed=True)
-
-    id: str
-    name: str
-    description: str = ""
-    source_path: str
-    created_at: str
-    updated_at: str
 
 
 class PreprocessorRegistryFile(BaseModel):
     version: int = 1
-    items: list[PreprocessorRecord] = Field(default_factory=list)
+    items: list[PreprocessorRow] = Field(default_factory=list)
 
 
 class PreprocessorCreate(BaseModel):
@@ -38,8 +28,8 @@ class PreprocessorCreate(BaseModel):
         # Further validation (must load DataPreprocessorBase subclass) happens in controller.
         return s
 
-    def to_record(self, preprocessor_id: str, now: str) -> PreprocessorRecord:
-        return PreprocessorRecord(
+    def to_row(self, preprocessor_id: str, now: str) -> PreprocessorRow:
+        return PreprocessorRow(
             id=preprocessor_id,
             name=preprocessor_id,
             description="",

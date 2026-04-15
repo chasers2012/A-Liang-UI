@@ -2,24 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any, Literal
-from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 BacktestRunStatus = Literal["queued", "running", "success", "failed", "cancelled"]
-
-
-class BacktestRunRecord(BaseModel):
-    id: str = Field(default_factory=lambda: uuid4().hex)
-    strategy_id: str
-    data_set_id: str
-    status: BacktestRunStatus = "queued"
-    queued_at: datetime
-    start_at: datetime | None = None
-    end_at: datetime | None = None
-    params: dict[str, Any] = Field(default_factory=dict)
-    error: str | None = None
-    results: Any = None
 
 
 class BacktestRunPublic(BaseModel):

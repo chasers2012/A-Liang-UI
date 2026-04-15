@@ -4,8 +4,8 @@ from typing import ClassVar
 
 from sqlmodel import select
 
-from app.persistence.models import WorkflowNodeVisibilityRow
 from app.persistence.sqlite_db import create_db_and_tables, get_session
+from app.visibility.models import WorkflowNodeVisibilityRow
 
 
 class WorkflowDomainNodesRegistry:

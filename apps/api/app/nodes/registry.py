@@ -13,7 +13,7 @@ from app.nodes.constants import (
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
 )
-from app.persistence.models import WorkflowNodeRow
+from app.nodes.models import WorkflowNodeRow
 from app.persistence.sqlite_db import get_session
 
 

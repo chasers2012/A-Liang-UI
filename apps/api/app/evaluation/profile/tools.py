@@ -9,41 +9,41 @@ from langchain_core.tools import tool
 
 from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.constants import empty_workflow_template_dict
+from app.evaluation.profile.models import EvaluationProfileRow
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
     EvaluationProfileCreate,
     EvaluationProfilePatch,
     EvaluationProfilePublic,
-    EvaluationProfileRecord,
     workflow_public_dict,
 )
 
 
-def _to_public(rec: EvaluationProfileRecord) -> EvaluationProfilePublic:
+def _to_public(row: EvaluationProfileRow) -> EvaluationProfilePublic:
     return EvaluationProfilePublic(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        workflow=workflow_public_dict(rec.workflow),
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        description=row.description,
+        workflow=workflow_public_dict(row.workflow),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
 def _merge_evaluation_profile_patch(
-    rec: EvaluationProfileRecord,
+    row: EvaluationProfileRow,
     body: EvaluationProfilePatch,
     data: dict[str, object],
 ) -> None:
     if "name" in data:
         if body.name is None or not str(body.name).strip():
             raise ValueError("name 不能为空")
-        rec.name = str(body.name).strip()
+        row.name = str(body.name).strip()
     if "description" in data:
-        rec.description = (body.description or "").strip()
+        row.description = (body.description or "").strip()
     if "workflow" in data and body.workflow is not None:
-        rec.workflow = json.dumps(body.workflow, ensure_ascii=False)
-    rec.updated_at = utc_now_iso()
+        row.workflow = json.dumps(body.workflow, ensure_ascii=False)
+    row.updated_at = utc_now_iso()
 
 
 @tool(
@@ -76,17 +76,17 @@ def get_workflow_node_types_source() -> str:
     )
 )
 def create_evaluation_profile(body: EvaluationProfileCreate) -> dict[str, Any]:
-    rec = body.to_record()
-    EvaluationProfilesRegistry.save(rec)
-    return _to_public(rec).model_dump()
+    row = body.to_row()
+    EvaluationProfilesRegistry.save(row)
+    return _to_public(row).model_dump()
 
 
 @tool(description="获取评价方案详情，返回所获取方案的详情（含 workflow 对象）")
 def get_evaluation_profile_detail(profile_id: str) -> dict[str, Any]:
-    rec = EvaluationProfilesRegistry.get_by_id(profile_id)
-    if rec is None:
+    row = EvaluationProfilesRegistry.get_by_id(profile_id)
+    if row is None:
         raise ValueError(f"评价方案 {profile_id} 不存在")
-    return _to_public(rec).model_dump()
+    return _to_public(row).model_dump()
 
 
 @tool(description="获取评价方案列表，返回所获取方案的详情列表")
@@ -96,21 +96,21 @@ def get_evaluation_profile_list() -> list[dict[str, Any]]:
 
 @tool(description="更新评价方案，返回所更新方案的详情（含 workflow 对象）")
 def update_evaluation_profile(profile_id: str, body: EvaluationProfilePatch) -> dict[str, Any]:
-    rec = EvaluationProfilesRegistry.get_by_id(profile_id)
-    if rec is None:
+    row = EvaluationProfilesRegistry.get_by_id(profile_id)
+    if row is None:
         raise ValueError(f"评价方案 {profile_id} 不存在")
     data = body.model_dump(exclude_unset=True)
-    _merge_evaluation_profile_patch(rec, body, data)
-    EvaluationProfilesRegistry.save(rec)
-    return _to_public(rec).model_dump()
+    _merge_evaluation_profile_patch(row, body, data)
+    EvaluationProfilesRegistry.save(row)
+    return _to_public(row).model_dump()
 
 
 @tool(description="删除评价方案，返回被删除方案的详情（删除前快照）")
 def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
-    rec = EvaluationProfilesRegistry.get_by_id(profile_id)
-    if rec is None:
+    row = EvaluationProfilesRegistry.get_by_id(profile_id)
+    if row is None:
         raise ValueError(f"评价方案 {profile_id} 不存在")
-    public = _to_public(rec).model_dump()
+    public = _to_public(row).model_dump()
     if not EvaluationProfilesRegistry.delete_by_id(profile_id):
         raise ValueError(f"评价方案 {profile_id} 不存在")
     return public

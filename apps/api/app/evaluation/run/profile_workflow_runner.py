@@ -5,14 +5,14 @@ from __future__ import annotations
 import traceback
 from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
 from workflow import WorkflowExecutor
 
 from app.data_set.controller import get_data_set
-from app.evaluation.profile.schemas import EvaluationProfileRecord
+from app.evaluation.profile.models import EvaluationProfileRow
+from app.evaluation.run.models import EvaluationRunRow
 from app.factors.controller import get_factor
-
-from .schemas import EvaluationRunRecord
 
 
 def _to_jsonable_pandas(value: Any) -> Any | None:
@@ -87,10 +87,10 @@ def _to_jsonable(value: Any) -> Any:
 
 def run_evaluation_profile_workflow(
     factor_id: str,
-    profile: EvaluationProfileRecord,
+    profile: EvaluationProfileRow,
     *,
     data_set_id: str | None = None,
-) -> EvaluationRunRecord:
+) -> EvaluationRunRow:
     started_at = datetime.now(timezone.utc)
 
     factor = get_factor(factor_id)
@@ -114,7 +114,8 @@ def run_evaluation_profile_workflow(
         )
         final_result = _to_jsonable((workflow_result or {}).get("result"))
     except ValueError as e:
-        return EvaluationRunRecord(
+        return EvaluationRunRow(
+            id=uuid4().hex,
             start_at=started_at,
             end_at=datetime.now(timezone.utc),
             factor_id=factor_id,
@@ -123,7 +124,8 @@ def run_evaluation_profile_workflow(
         )
     except Exception as e:
         tb = traceback.format_exc()
-        return EvaluationRunRecord(
+        return EvaluationRunRow(
+            id=uuid4().hex,
             start_at=started_at,
             end_at=datetime.now(timezone.utc),
             factor_id=factor_id,
@@ -131,7 +133,8 @@ def run_evaluation_profile_workflow(
             evaluation_profile_id=profile.id,
         )
 
-    return EvaluationRunRecord(
+    return EvaluationRunRow(
+        id=uuid4().hex,
         start_at=started_at,
         end_at=datetime.now(timezone.utc),
         factor_id=factor_id,

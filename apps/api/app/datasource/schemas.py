@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
+from app.datasource.models import DataSourceRow
 from app.datasource.plugins import UnknownDataSourceTypeError, get_datasource_plugin
 from app.plugin import redact_config
 
@@ -14,20 +15,9 @@ DataSourceType = str
 generate_id = create_id_generator("datasources")
 
 
-class DataSourceRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    name: str
-    type: DataSourceType
-    config: dict[str, Any] = Field(default_factory=dict)
-    created_at: str
-    updated_at: str
-
-
 class RegistryFile(BaseModel):
     version: int = 1
-    items: list[DataSourceRecord] = Field(default_factory=list)
+    items: list[DataSourceRow] = Field(default_factory=list)
 
 
 # --- API payloads ---
@@ -48,10 +38,10 @@ class DataSourceCreate(BaseModel):
             raise ValueError("config is required")
         return self
 
-    def to_record(self) -> DataSourceRecord:
+    def to_row(self) -> DataSourceRow:
         now = utc_now_iso()
         rid = generate_id()
-        return DataSourceRecord(
+        return DataSourceRow(
             id=rid,
             name=self.name,
             type=str(self.type).strip(),
@@ -78,20 +68,20 @@ class DataSourcePublic(BaseModel):
     updated_at: str
 
 
-def record_to_public(rec: DataSourceRecord) -> DataSourcePublic:
+def row_to_public(row: DataSourceRow) -> DataSourcePublic:
     schema = None
     try:
-        plugin = get_datasource_plugin(str(rec.type))
+        plugin = get_datasource_plugin(str(row.type))
         schema = plugin.get_config_schema()
     except UnknownDataSourceTypeError:
         schema = None
     return DataSourcePublic(
-        id=rec.id,
-        name=rec.name,
-        type=str(rec.type),
-        config=redact_config(dict(rec.config or {}), schema),
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        type=str(row.type),
+        config=redact_config(dict(row.config or {}), schema),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 

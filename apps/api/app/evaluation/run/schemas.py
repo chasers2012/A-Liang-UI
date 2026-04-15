@@ -2,25 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 
-class EvaluationRunRecord(BaseModel):
-    id: str = Field(default_factory=lambda: uuid4().hex)
-    start_at: datetime
-    end_at: datetime
-    factor_id: str
-
-    error: str | None = None
-    evaluation_profile_id: str | None = None
-    results: Any = None
-
-
 class EvaluationRunsFile(BaseModel):
     version: int = 1
-    items: list[EvaluationRunRecord] = Field(default_factory=list)
+    items: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class EvaluationRunRowPublic(BaseModel):

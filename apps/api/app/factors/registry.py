@@ -2,99 +2,64 @@ from __future__ import annotations
 
 from sqlmodel import select
 
+from app.factors.models import FactorRow
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
     FactorPatch,
-    FactorRecord,
     FactorSummaryPublic,
 )
-from app.persistence.models import FactorRow
 from app.persistence.sqlite_db import get_session
 
 FACTORS_REGISTRY_FILENAME = "factors/registry.json"
 
 
-def _row_to_record(row: FactorRow) -> FactorRecord:
-    return FactorRecord(
-        id=row.id,
-        name=row.name,
-        group=row.group,
-        description=row.description,
-        max_window=row.max_window,
-        dependencies=list(row.dependencies or []),
-        source_path=row.source_path,
-        created_at=row.created_at,
-        updated_at=row.updated_at,
-    )
-
-
-def _record_to_row(rec: FactorRecord) -> FactorRow:
-    return FactorRow(
-        id=rec.id,
-        name=rec.name,
-        group=rec.group,
-        description=rec.description,
-        max_window=rec.max_window,
-        dependencies=list(rec.dependencies),
-        source_path=rec.source_path,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
-    )
-
-
 class FactorItemsRegistry:
     @classmethod
-    def list_items(cls) -> list[FactorRecord]:
+    def list_items(cls) -> list[FactorRow]:
         with get_session() as session:
-            rows = list(session.exec(select(FactorRow)))
-        return [_row_to_record(r) for r in rows]
+            return list(session.exec(select(FactorRow)))
 
     @classmethod
-    def get_item(cls, item_id: str) -> FactorRecord | None:
+    def get_item(cls, item_id: str) -> FactorRow | None:
         with get_session() as session:
-            row = session.get(FactorRow, item_id)
-            if row is None:
-                return None
-            return _row_to_record(row)
+            return session.get(FactorRow, item_id)
 
     @classmethod
-    def add_item(cls, item: FactorRecord) -> None:
+    def add_item(cls, item: FactorRow) -> None:
         with get_session() as session:
-            session.add(_record_to_row(item))
+            session.add(item)
             session.commit()
 
     @classmethod
-    def update_item(cls, item_id: str, fn) -> FactorRecord | None:  # type: ignore[no-untyped-def]
+    def update_item(cls, item_id: str, fn) -> FactorRow | None:  # type: ignore[no-untyped-def]
         with get_session() as session:
             row = session.get(FactorRow, item_id)
             if row is None:
                 return None
-            rec = _row_to_record(row)
-            fn(rec)
-            session.merge(_record_to_row(rec))
+            fn(row)
+            session.merge(row)
             session.commit()
-            return rec
+            return row
 
     @classmethod
-    def delete_item(cls, item_id: str) -> FactorRecord | None:
+    def delete_item(cls, item_id: str) -> FactorRow | None:
         with get_session() as session:
             row = session.get(FactorRow, item_id)
             if row is None:
                 return None
-            rec = _row_to_record(row)
             session.delete(row)
             session.commit()
-            return rec
+            return row
 
     @classmethod
-    def create_factor(cls, body: FactorCreate) -> FactorRecord:
+    def create_factor(cls, body: FactorCreate) -> FactorRow:
         from app.factors.controller import create_factor as create_factor_controller
 
         return create_factor_controller(body)
 
     @classmethod
-    def update_factor(cls, factor_id: str, body: FactorPatch) -> FactorRecord:
+    def update_factor(cls, factor_id: str, body: FactorPatch) -> FactorRow:
         from app.factors.controller import update_factor as update_factor_controller
 
         return update_factor_controller(factor_id, body)
@@ -106,19 +71,19 @@ class FactorItemsRegistry:
         return get_factor_controller(factor_id)
 
 
-def factor_detail(rec: FactorRecord) -> FactorDetailPublic:
+def factor_detail(rec: FactorRow) -> FactorDetailPublic:
     from app.factors.controller import factor_detail as factor_detail_controller
 
     return factor_detail_controller(rec)
 
 
-def read_source(rec: FactorRecord) -> str:
+def read_source(rec: FactorRow) -> str:
     from app.factors.controller import read_factor_source
 
     return read_factor_source(rec)
 
 
-def delete_source_file(rec: FactorRecord) -> None:
+def delete_source_file(rec: FactorRow) -> None:
     from app.factors.controller import delete_factor_source_file
 
     delete_factor_source_file(rec)

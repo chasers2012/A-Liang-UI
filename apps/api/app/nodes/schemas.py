@@ -4,7 +4,7 @@ from custom_code import validate_identifier_name, validate_source_syntax
 from pydantic import BaseModel, Field, field_validator
 from workflow.node_loader import WorkflowNodeLoader
 
-from app.persistence.models import WorkflowNodeRow
+from app.nodes.models import WorkflowNodeRow
 
 
 class WorkflowNodeCreate(BaseModel):

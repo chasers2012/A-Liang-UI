@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 from app.datasource.schemas import utc_now_iso
+from app.evaluation.profile.models import EvaluationProfileRow
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
-from app.evaluation.profile.schemas import EvaluationProfileRecord
 
 
 def _examples_dir() -> Path:
@@ -44,7 +44,7 @@ def seed_evaluation_profile_examples() -> None:
         if existing is not None and not overwrite:
             continue
 
-        record = EvaluationProfileRecord(
+        row = EvaluationProfileRow(
             id=profile_id,
             name=_display_name_from_stem(path.stem),
             description=f"Seeded from {path.name}",
@@ -52,4 +52,4 @@ def seed_evaluation_profile_examples() -> None:
             created_at=(existing.created_at if existing is not None else now),
             updated_at=now,
         )
-        EvaluationProfilesRegistry.save(record)
+        EvaluationProfilesRegistry.save(row)

@@ -6,14 +6,14 @@ from langchain_core.tools import tool
 
 from app.common.datetime_utils import utc_now_iso
 from app.datasource.api import list_datasources
+from app.datasource.models import DataSourceRow
 from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
     DataSourcePatch,
-    DataSourceRecord,
     TestResult,
-    record_to_public,
+    row_to_public,
 )
 from app.datasource.verify import verify_datasource
 
@@ -27,18 +27,18 @@ from app.datasource.verify import verify_datasource
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     plugin = get_datasource_plugin(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
-    new_rec = body.to_record()
-    new_rec.config = validated
-    DataSourceItemsRegistry.add_item(new_rec)
-    return record_to_public(new_rec).model_dump()
+    new_row = body.to_row()
+    new_row.config = validated
+    DataSourceItemsRegistry.add_item(new_row)
+    return row_to_public(new_row).model_dump()
 
 
 @tool(description="获取单个数据源详情，入参 datasource_id 为数据源 id")
 def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
-    rec = DataSourceItemsRegistry.get_item(datasource_id)
-    if rec is None:
+    row = DataSourceItemsRegistry.get_item(datasource_id)
+    if row is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return record_to_public(rec).model_dump()
+    return row_to_public(row).model_dump()
 
 
 @tool(description="获取工作区内全部数据源列表")
@@ -54,35 +54,35 @@ def get_datasource_list() -> list[dict[str, Any]]:
 )
 def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, Any]:
 
-    def _apply(rec: DataSourceRecord) -> None:
+    def _apply(row: DataSourceRow) -> None:
         data = body.model_dump(exclude_unset=True)
         if "name" in data:
-            rec.name = data["name"]
+            row.name = data["name"]
         if "config" in data:
-            plugin = get_datasource_plugin(str(rec.type))
-            rec.config = plugin.validate_config(dict(data["config"] or {}))
-        rec.updated_at = utc_now_iso()
+            plugin = get_datasource_plugin(str(row.type))
+            row.config = plugin.validate_config(dict(data["config"] or {}))
+        row.updated_at = utc_now_iso()
 
-    rec = DataSourceItemsRegistry.update_item(datasource_id, _apply)
-    if rec is None:
+    row = DataSourceItemsRegistry.update_item(datasource_id, _apply)
+    if row is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return record_to_public(rec).model_dump()
+    return row_to_public(row).model_dump()
 
 
 @tool(description="删除数据源，成功时返回被删除记录的公开信息；不存在则报错")
 def delete_datasource(datasource_id: str) -> dict[str, Any]:
-    rec = DataSourceItemsRegistry.delete_item(datasource_id)
-    if rec is None:
+    row = DataSourceItemsRegistry.delete_item(datasource_id)
+    if row is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return record_to_public(rec).model_dump()
+    return row_to_public(row).model_dump()
 
 
 @tool(description="测试数据源连通性（读表或读 CSV），返回 ok 与 message")
 def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
-    rec = DataSourceItemsRegistry.get_item(datasource_id)
-    if rec is None:
+    row = DataSourceItemsRegistry.get_item(datasource_id)
+    if row is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    ok, msg = verify_datasource(rec)
+    ok, msg = verify_datasource(row)
     return TestResult(ok=ok, message=msg).model_dump()
 
 

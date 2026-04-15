@@ -4,21 +4,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from app.agent_workflows.models import AgentWorkflowRow
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
 
 generate_id = create_id_generator("agent_workflows")
-
-
-class AgentWorkflowRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    name: str
-    description: str = ""
-    graph: str | None = None
-    created_at: str
-    updated_at: str
 
 
 class AgentWorkflowCreate(BaseModel):
@@ -28,9 +18,9 @@ class AgentWorkflowCreate(BaseModel):
     description: str = ""
     graph: str | None = None
 
-    def to_record(self) -> AgentWorkflowRecord:
+    def to_row(self) -> AgentWorkflowRow:
         now = utc_now_iso()
-        return AgentWorkflowRecord(
+        return AgentWorkflowRow(
             id=str(generate_id()),
             name=self.name,
             description=self.description,
@@ -65,22 +55,22 @@ class AgentWorkflowDetailPublic(BaseModel):
     updated_at: str
 
 
-def record_to_summary(rec: AgentWorkflowRecord) -> AgentWorkflowSummaryPublic:
+def row_to_summary(row: AgentWorkflowRow) -> AgentWorkflowSummaryPublic:
     return AgentWorkflowSummaryPublic(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        description=row.description,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
-def record_to_detail(rec: AgentWorkflowRecord) -> AgentWorkflowDetailPublic:
+def row_to_detail(row: AgentWorkflowRow) -> AgentWorkflowDetailPublic:
     return AgentWorkflowDetailPublic(
-        id=rec.id,
-        name=rec.name,
-        description=rec.description,
-        graph=rec.graph or '{"nodes":[],"links":[]}',
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        description=row.description,
+        graph=row.graph or '{"nodes":[],"links":[]}',
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )

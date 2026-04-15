@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from app.data_set.controller import get_data_set
 from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
-from app.evaluation.profile.schemas import EvaluationProfileRecord
+from app.evaluation.profile.models import EvaluationProfileRow
+from app.evaluation.run.models import EvaluationRunRow
 from app.factors.registry import FactorItemsRegistry
 
 from .profile_workflow_runner import run_evaluation_profile_workflow
@@ -13,7 +14,6 @@ from .redistry import (
 )
 from .schemas import (
     EvaluationRunDetailPublic,
-    EvaluationRunRecord,
     EvaluationRunRowPublic,
 )
 
@@ -26,10 +26,10 @@ class EvaluationRunNotFoundError(ValueError):
 
 def execute_and_persist_evaluation_run(
     factor_id: str,
-    evaluation_profile: EvaluationProfileRecord,
+    evaluation_profile: EvaluationProfileRow,
     *,
     data_set_id: str | None = None,
-) -> EvaluationRunRecord:
+) -> EvaluationRunRow:
     """Execute one evaluation run and append one run record (registry.json)."""
     eval_rec = run_evaluation_profile_workflow(
         factor_id,
@@ -76,7 +76,7 @@ def run_evaluation_run(
     )
 
 
-def _to_detail_public(run: EvaluationRunRecord) -> EvaluationRunDetailPublic:
+def _to_detail_public(run: EvaluationRunRow) -> EvaluationRunDetailPublic:
     factor_name = None
     factor_rec = FactorItemsRegistry.get_item(run.factor_id)
     if factor_rec is not None:

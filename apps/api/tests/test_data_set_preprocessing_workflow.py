@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from app.data_set.controller import get_data_set
-from app.persistence.models import DataSetRow
+from app.data_set.models import DataSetRow
 from app.persistence.sqlite_db import get_session
 from sqlmodel import select
 

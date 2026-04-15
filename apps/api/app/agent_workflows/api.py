@@ -10,8 +10,8 @@ from app.agent_workflows.schemas import (
     AgentWorkflowDetailPublic,
     AgentWorkflowPatch,
     AgentWorkflowSummaryPublic,
-    record_to_detail,
-    record_to_summary,
+    row_to_detail,
+    row_to_summary,
 )
 from app.common.datetime_utils import utc_now_iso
 
@@ -20,40 +20,40 @@ router = APIRouter(prefix="/agent/workflows", tags=["agent"])
 
 @router.get("", response_model=list[AgentWorkflowSummaryPublic])
 def list_workflows() -> list[AgentWorkflowSummaryPublic]:
-    return [record_to_summary(r) for r in AgentWorkflowRegistry.list_all()]
+    return [row_to_summary(r) for r in AgentWorkflowRegistry.list_all()]
 
 
 @router.get("/{wf_id}", response_model=AgentWorkflowDetailPublic)
 def get_workflow(wf_id: str) -> AgentWorkflowDetailPublic:
-    rec = AgentWorkflowRegistry.get_by_id(wf_id)
-    if rec is None:
+    row = AgentWorkflowRegistry.get_by_id(wf_id)
+    if row is None:
         raise HTTPException(status_code=404, detail="工作流不存在")
-    return record_to_detail(rec)
+    return row_to_detail(row)
 
 
 @router.post("", response_model=AgentWorkflowDetailPublic)
 def create_workflow(body: AgentWorkflowCreate) -> AgentWorkflowDetailPublic:
-    new_rec = body.to_record()
-    AgentWorkflowRegistry.save(new_rec)
-    return record_to_detail(new_rec)
+    new_row = body.to_row()
+    AgentWorkflowRegistry.save(new_row)
+    return row_to_detail(new_row)
 
 
 @router.patch("/{wf_id}", response_model=AgentWorkflowDetailPublic)
 def patch_workflow(wf_id: str, body: AgentWorkflowPatch) -> AgentWorkflowDetailPublic:
-    rec = AgentWorkflowRegistry.get_by_id(wf_id)
-    if rec is None:
+    row = AgentWorkflowRegistry.get_by_id(wf_id)
+    if row is None:
         raise HTTPException(status_code=404, detail="工作流不存在")
 
     data = body.model_dump(exclude_unset=True)
     if "name" in data:
-        rec.name = data["name"]
+        row.name = data["name"]
     if "description" in data:
-        rec.description = data["description"]
+        row.description = data["description"]
     if "graph" in data and body.graph is not None:
-        rec.graph = body.graph
-    rec.updated_at = utc_now_iso()
-    AgentWorkflowRegistry.save(rec)
-    return record_to_detail(rec)
+        row.graph = body.graph
+    row.updated_at = utc_now_iso()
+    AgentWorkflowRegistry.save(row)
+    return row_to_detail(row)
 
 
 @router.delete("/{wf_id}", status_code=204)
