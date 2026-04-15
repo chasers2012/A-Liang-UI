@@ -30,8 +30,10 @@ def _http_error_detail(exc: HTTPException) -> str:
 
 @tool(
     description=(
-        "创建并保存一个数据集：名称、描述、日期区间、标的代码列表，以及至少一条数据源绑定。"
-        "多数据源时每条绑定需填写 dependencies（因子依赖字段名，如 close、volume），且同一字段不能重复出现在多条绑定中。"
+        "创建数据集并持久化。"
+        "入参 body 包含名称、描述、日期区间、标的列表及数据源绑定；"
+        "至少需要一条绑定，多数据源时 dependencies 字段名不得重复。"
+        "返回创建后的数据集详情。"
     )
 )
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
@@ -42,7 +44,7 @@ def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     return created.model_dump()
 
 
-@tool(description="获取单个数据集详情，入参 data_set_id 为数据集 id")
+@tool(description="按 data_set_id 查询单个数据集详情；不存在时报错。")
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     rec = get_data_set_detail_controller(data_set_id)
     if rec is None:
@@ -50,14 +52,16 @@ def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@tool(description="获取工作区内全部数据集列表")
+@tool(description="获取当前工作区的数据集列表。")
 def get_data_set_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_data_sets_controller()]
 
 
 @tool(
     description=(
-        "更新数据集（名称、描述、数据源绑定、起止日期、标的代码等），行为与 PATCH /data-sets/{id} 一致。"
+        "更新数据集。"
+        "入参 data_set_id 与 body（DataSetPatch）；仅更新传入字段，"
+        "语义与 PATCH /data-sets/{id} 保持一致。返回更新后的数据集详情。"
     )
 )
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
@@ -70,7 +74,7 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@tool(description="删除数据集，成功时返回被删除记录的公开信息；不存在则报错")
+@tool(description="删除数据集并返回删除前快照；不存在时报错。")
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
     rec = get_data_set_detail_controller(data_set_id)
     if rec is None or not delete_data_set_controller(data_set_id):

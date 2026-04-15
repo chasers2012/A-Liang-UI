@@ -25,15 +25,16 @@ from app.preprocessors.controller import (
 from app.preprocessors.schemas import PreprocessorCreate, PreprocessorPatch
 
 
-@tool(description="获取新预处理器源码模板（DEFAULT_PREPROCESSOR_SOURCE）。")
+@tool(description="获取预处理器源码模板（DEFAULT_PREPROCESSOR_SOURCE）。")
 def get_new_preprocessor_template() -> str:
     return DEFAULT_PREPROCESSOR_SOURCE
 
 
 @tool(
     description=(
-        "创建并保存一个预处理器。入参 body 需提供 source（完整 Python 源码字符串）；"
-        "若省略或为空则使用内置模板。"
+        "创建预处理器并持久化。"
+        "入参 body 可提供 source（完整 Python 源码）；为空时自动使用内置模板。"
+        "返回创建后的预处理器详情。"
     )
 )
 def create_preprocessor(body: dict[str, Any]) -> dict[str, Any]:
@@ -52,7 +53,7 @@ def create_preprocessor(body: dict[str, Any]) -> dict[str, Any]:
     return loaded.model_dump()
 
 
-@tool(description="获取预处理器详情（含完整 source）")
+@tool(description="按 preprocessor_id 查询预处理器详情（含完整 source）；不存在时报错。")
 def get_preprocessor_detail(preprocessor_id: str) -> dict[str, Any]:
     detail = load_preprocessor_detail(preprocessor_id)
     if detail is None:
@@ -60,7 +61,7 @@ def get_preprocessor_detail(preprocessor_id: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@tool(description="获取预处理器列表")
+@tool(description="获取预处理器列表。")
 def get_preprocessor_list() -> list[dict[str, Any]]:
     return [
         x.model_dump()
@@ -69,7 +70,7 @@ def get_preprocessor_list() -> list[dict[str, Any]]:
     ]
 
 
-@tool(description="更新预处理器")
+@tool(description="更新预处理器并返回更新后的详情；支持更新 metadata 与 source。")
 def update_preprocessor(preprocessor_id: str, body: PreprocessorPatch) -> dict[str, Any]:
     unset = body.model_dump(exclude_unset=True)
 
@@ -89,7 +90,7 @@ def update_preprocessor(preprocessor_id: str, body: PreprocessorPatch) -> dict[s
     return loaded.model_dump()
 
 
-@tool(description="删除预处理器")
+@tool(description="删除预处理器并返回删除记录；不存在时报错。")
 def delete_preprocessor(preprocessor_id: str) -> dict[str, Any]:
     rec = get_preprocessor_record(preprocessor_id)
     if rec is None:

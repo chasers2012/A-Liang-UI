@@ -20,8 +20,9 @@ from app.datasource.verify import verify_datasource
 
 @tool(
     description=(
-        "创建并保存一个数据源（插件化），返回创建后的数据源详情（对外展示结构，敏感字段会脱敏）。"
-        "入参 body：name、type（如 sql/csv）、config（插件定义的 JSON）。"
+        "创建数据源并持久化。"
+        "入参 body：name、type（如 sql/csv）、config（插件定义的 JSON 配置）。"
+        "返回创建后的数据源详情（公开视图，敏感字段已脱敏）。"
     )
 )
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
@@ -33,7 +34,7 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     return row_to_public(created_row).model_dump()
 
 
-@tool(description="获取单个数据源详情，入参 datasource_id 为数据源 id")
+@tool(description="按 datasource_id 查询单个数据源详情；不存在时报错。")
 def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.get_item(datasource_id)
     if row is None:
@@ -41,15 +42,16 @@ def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@tool(description="获取工作区内全部数据源列表")
+@tool(description="获取当前工作区的数据源列表（公开视图）。")
 def get_datasource_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_datasources()]
 
 
 @tool(
     description=(
-        "更新数据源字段（名称、config），返回更新后的详情。"
-        "入参 datasource_id 与 body（DataSourcePatch，按需填写字段；config 为 replace 语义）。"
+        "更新数据源。"
+        "入参 datasource_id 与 body（DataSourcePatch）；仅更新传入字段。"
+        "当提供 config 时按整体替换语义处理。返回更新后的数据源详情。"
     )
 )
 def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, Any]:
@@ -69,7 +71,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
     return row_to_public(row).model_dump()
 
 
-@tool(description="删除数据源，成功时返回被删除记录的公开信息；不存在则报错")
+@tool(description="删除数据源并返回删除前的公开信息；不存在时报错。")
 def delete_datasource(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.delete_item(datasource_id)
     if row is None:
@@ -77,7 +79,7 @@ def delete_datasource(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@tool(description="测试数据源连通性（读表或读 CSV），返回 ok 与 message")
+@tool(description="测试数据源连通性（如读表/读 CSV）；返回 {ok, message}。")
 def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.get_item(datasource_id)
     if row is None:

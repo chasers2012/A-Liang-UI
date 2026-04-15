@@ -69,3 +69,12 @@ def ensure_example_strategy() -> None:
     with get_session() as session:
         session.merge(row)
         session.commit()
+
+
+@register_startup_job
+def register_strategy_chat_tools() -> None:
+    from app.strategy.tools import STRATEGY_CHAT_TOOLS
+    from app.tool.registry import ChatToolRegistry
+
+    for tool in STRATEGY_CHAT_TOOLS:
+        ChatToolRegistry.instance().register_tool(tool, category="strategies")

@@ -24,10 +24,10 @@ from app.evaluation.run.controller import (
 
 @tool(
     description=(
-        "对指定因子执行一次评价方案工作流并写入最新评价结果（与 API "
-        "POST /evaluation-profiles/{profile_id}/factors/{factor_id}/evaluations/run 一致）。"
-        "入参 profile_id 为评价方案 id，factor_id 为因子 id；"
-        "返回字典含 id、factor_id、name、has_evaluation、evaluated_at（对应 run.end_at）、error、evaluation_profile_id、results。"
+        "执行一次因子评价运行（run）。"
+        "入参 profile_id（评价方案 id）与 factor_id（因子 id），"
+        "行为与 POST /evaluation-profiles/{profile_id}/factors/{factor_id}/evaluations/run 一致。"
+        "返回本次评价结果摘要与 results 负载。"
     )
 )
 def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
@@ -42,8 +42,9 @@ def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
 
 @tool(
     description=(
-        "列出评价运行记录。可按 factor_id 过滤，并可通过 limit 限制返回数量。"
-        "返回数组，每项含 id、factor_id、factor_name、start_at、end_at、error、evaluation_profile_id、results。"
+        "查询评价运行记录列表。"
+        "可按 factor_id 过滤，并通过 limit 限制数量。"
+        "返回每条 run 的时间、状态错误信息和 results 等字段。"
     )
 )
 def list_evaluation_runs(
@@ -54,12 +55,7 @@ def list_evaluation_runs(
     return [row.model_dump(mode="json") for row in rows]
 
 
-@tool(
-    description=(
-        "按评价运行记录 id 查询详情。"
-        "返回字段含 id、factor_id、factor_name、start_at、end_at、error、evaluation_profile_id、results。"
-    )
-)
+@tool(description=("按 run_id 查询评价运行详情；不存在时报错。"))
 def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     try:
         row = get_evaluation_run_detail_controller(run_id)
@@ -68,7 +64,7 @@ def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     return row.model_dump(mode="json")
 
 
-@tool(description="按评价运行记录 id 删除一条 run；成功无返回。")
+@tool(description="按 run_id 删除评价运行记录；不存在时报错，成功无返回。")
 def delete_evaluation_run(run_id: str) -> None:
     try:
         delete_evaluation_run_controller(run_id)
