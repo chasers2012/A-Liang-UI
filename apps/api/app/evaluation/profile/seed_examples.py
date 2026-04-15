@@ -28,7 +28,7 @@ def seed_evaluation_profile_examples() -> None:
     if not examples_dir.is_dir():
         return
 
-    overwrite = _is_truthy(os.getenv("EVALUATION_PROFILE_SEED_OVERWRITE", "false"))
+    overwrite = _is_truthy(os.getenv("OVERWRITE_EXAMPLES", "false"))
     now = utc_now_iso()
     for path in sorted(examples_dir.glob("*.json")):
         try:
