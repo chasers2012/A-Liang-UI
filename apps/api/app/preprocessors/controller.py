@@ -66,8 +66,7 @@ def create_preprocessor(body: PreprocessorCreate, *, id_name: str | None = None)
             else rec.description
         )
 
-    PreprocessorsRegistry.add_item(rec)
-    return rec
+    return PreprocessorsRegistry.add_item(rec)
 
 
 def list_preprocessor_records() -> list[PreprocessorRow]:

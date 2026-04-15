@@ -10,7 +10,7 @@ from strategy_nodes.nodes import (
     RankTopKNode,
     RebalanceNode,
     ThresholdSignalNode,
-    ToBacktestInputsNode,
+    ToPositionNode,
 )
 
 
@@ -25,5 +25,5 @@ class StrategyNodesPlugin(NodePlugin):
         EqualWeightNode,
         RebalanceNode,
         LagNode,
-        ToBacktestInputsNode,
+        ToPositionNode,
     ]

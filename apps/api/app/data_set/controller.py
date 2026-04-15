@@ -240,8 +240,8 @@ def create_data_set(body: DataSetCreate) -> DataSetPublic:
     _validate_and_touch_datasources(list(body.datasource_bindings))
     new_row = body.to_row()
     new_row.preprocessors = _extract_preprocessors_from_workflow(dict(body.preprocessing_workflow))
-    DataSetsStore.add_item(new_row)
-    return to_public(new_row)
+    created_row = DataSetsStore.add_item(new_row)
+    return to_public(created_row)
 
 
 def update_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic | None:

@@ -20,10 +20,13 @@ class DataSetsStore:
             return session.get(DataSetRow, item_id)
 
     @classmethod
-    def add_item(cls, item: DataSetRow) -> None:
+    def add_item(cls, item: DataSetRow) -> DataSetRow:
         with get_session() as session:
             session.add(item)
             session.commit()
+            session.refresh(item)
+            session.expunge(item)
+            return item
 
     @classmethod
     def update_item(cls, item_id: str, fn) -> DataSetRow | None:  # type: ignore[no-untyped-def]
@@ -34,6 +37,8 @@ class DataSetsStore:
             fn(row)
             session.merge(row)
             session.commit()
+            session.refresh(row)
+            session.expunge(row)
             return row
 
     @classmethod

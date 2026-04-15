@@ -29,9 +29,9 @@ class RunBacktestRequest(BaseModel):
     start: str | None = None
     end: str | None = None
 
-    initial_cash: float = 1_000_000.0
-    fees: float = 0.0003
-    slippage: float = 0.0000
+    initial_cash: float = Field(gt=0)
+    fees: float = Field(ge=0)
+    slippage: float = Field(ge=0)
     signal_lag: int = 1
     execution_price: Literal["close", "open"] = "close"
 

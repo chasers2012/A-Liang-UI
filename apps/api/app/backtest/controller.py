@@ -47,9 +47,9 @@ def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunPublic:
         queued_at=now,
         params=body.model_dump(mode="json"),
     )
-    BacktestRunsStore.append(row)
-    enqueue_backtest(row.id)
-    return _to_public(row)
+    created_row = BacktestRunsStore.append(row)
+    enqueue_backtest(created_row.id)
+    return _to_public(created_row)
 
 
 def list_backtest_runs(

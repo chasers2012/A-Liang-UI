@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
 
 import pandas as pd
@@ -8,7 +7,6 @@ from app.data_set.controller import get_data_set
 from app.data_set.redistry import DataSetsStore
 from app.factors.controller import get_factor
 from app.factors.registry import FactorItemsRegistry
-from factor.data_set import DataSet
 from workflow import Socket, workflow_node
 from workflow.node_types import BooleanNodeParam, NumberNodeParam, OptionsNodeParam
 
@@ -46,17 +44,13 @@ def _wide_from_panel(panel: pd.DataFrame, *, field: str) -> pd.DataFrame:
     category="strategy",
 )
 class LoadDataSetNode:
-    def execute(self, **kwargs: Any) -> tuple[DataSet, pd.DataFrame, pd.DataFrame]:
-        raw = kwargs.get("data_set")
-        if isinstance(raw, DataSet):
-            ds = raw
-        else:
-            ds_id = str(raw or "").strip()
-            if not ds_id:
-                raise ValueError("data_set 不能为空")
-            ds = get_data_set(ds_id)
-            if ds is None:
-                raise ValueError("数据集不存在")
+    def execute(self, **kwargs: Any) -> tuple[Any, pd.DataFrame, pd.DataFrame]:
+        ds_id = str(kwargs.get("data_set") or "").strip()
+        if not ds_id:
+            raise ValueError("data_set 不能为空")
+        ds = get_data_set(ds_id)
+        if ds is None:
+            raise ValueError("数据集不存在")
 
         panel = ds.get_panel(fields=["close", "open"], window=1)
         close = _wide_from_panel(panel, field="close")
@@ -83,7 +77,7 @@ class LoadDataSetNode:
 )
 class FactorRefNode:
     def execute(self, **kwargs: Any) -> pd.DataFrame:
-        ds: DataSet = kwargs["data_set"]
+        ds: Any = kwargs["data_set"]
         factor_id = str(kwargs.get("factor_id") or "").strip()
         if not factor_id:
             raise ValueError("factor_id 不能为空")
@@ -236,33 +230,36 @@ class LagNode:
         return w.shift(bars).fillna(0.0)
 
 
-@dataclass(frozen=True)
-class BacktestInputs:
-    close: pd.DataFrame
-    weights: pd.DataFrame
+def _weights_to_position(weights: pd.DataFrame) -> pd.DataFrame:
+    if weights.empty:
+        idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
+        return pd.DataFrame(index=idx, data={"position": []})
+
+    w = weights.copy()
+    w.index = pd.to_datetime(w.index)
+    w.index.name = "date"
+    w.columns = [str(c) for c in w.columns]
+    position = w.stack(dropna=False).rename("position").fillna(0.0).to_frame()
+    position.index = position.index.set_names(["date", "asset"])
+    return position.sort_index()
 
 
 @workflow_node(
     input_sockets=[
-        Socket("close", required=True, value_type="price_df", label="收盘价"),
         Socket("weights", required=True, value_type="weights_df", label="权重"),
     ],
-    output_sockets=[
-        Socket("backtest_inputs", required=True, value_type="backtest_inputs", label="回测输入")
-    ],
-    label="输出回测输入",
-    description="将 close + weights 打包。",
+    output_sockets=[Socket("position", required=True, value_type="position_df", label="持仓")],
+    label="输出持仓",
+    description="将宽表权重转换为 MultiIndex(date, asset) 的持仓矩阵。",
     category="strategy",
 )
-class ToBacktestInputsNode:
-    def execute(self, **kwargs: Any) -> BacktestInputs:
-        close: pd.DataFrame = kwargs["close"]
+class ToPositionNode:
+    def execute(self, **kwargs: Any) -> pd.DataFrame:
         weights: pd.DataFrame = kwargs["weights"]
-        return BacktestInputs(close=close, weights=weights)
+        return _weights_to_position(weights)
 
 
 __all__: ClassVar[list[str]] = [
-    "BacktestInputs",
     "EqualWeightNode",
     "FactorRefNode",
     "LagNode",
@@ -270,5 +267,5 @@ __all__: ClassVar[list[str]] = [
     "RankTopKNode",
     "RebalanceNode",
     "ThresholdSignalNode",
-    "ToBacktestInputsNode",
+    "ToPositionNode",
 ]

@@ -47,15 +47,6 @@ def _worker_loop() -> None:
 def start_backtest_worker() -> None:
     global _WORKER_THREAD
 
-    # Ensure strategy engine nodes are visible in generic node catalog.
-    from app.backtest.engine.nodes import (
-        register_strategy_engine_nodes,
-        register_strategy_engine_plugin_nodes,
-    )
-
-    register_strategy_engine_nodes()
-    register_strategy_engine_plugin_nodes()
-
     if _WORKER_THREAD is not None and _WORKER_THREAD.is_alive():
         return
     t = threading.Thread(target=_worker_loop, name="backtest-worker", daemon=True)

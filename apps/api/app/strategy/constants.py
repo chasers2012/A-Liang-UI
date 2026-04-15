@@ -10,8 +10,8 @@ STRATEGY_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
         "name": "data_set",
         "required": True,
-        "label": "数据集",
-        "description": "策略计算与回测使用的数据集",
+        "label": "数据集ID",
+        "description": "策略计算与回测使用的数据集 ID",
         "value_type": "data_set",
         "render_type": "socket",
     },
@@ -19,11 +19,11 @@ STRATEGY_WORKFLOW_INPUTS: list[dict[str, Any]] = [
 
 STRATEGY_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
     {
-        "name": "backtest_inputs",
+        "name": "position",
         "required": True,
-        "label": "回测输入",
-        "description": "标准化回测输入（price + weights/signals）。",
-        "value_type": "backtest_inputs",
+        "label": "持仓",
+        "description": "MultiIndex(date, asset) 的持仓矩阵。",
+        "value_type": "position_df",
         "render_type": "socket",
     },
 ]

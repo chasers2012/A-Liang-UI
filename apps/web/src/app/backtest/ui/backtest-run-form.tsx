@@ -7,24 +7,32 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   backtestRunCatalogAtom,
   backtestRunFormAtom,
   loadBacktestRunCatalogAtom,
   setBacktestRunDataSetIdAtom,
+  setBacktestRunFeesAtom,
+  setBacktestRunInitialCashAtom,
+  setBacktestRunSlippageAtom,
   setBacktestRunStrategyIdAtom,
   submitBacktestRunAtom,
 } from '@/models/backtest/list-detail.atom';
 import { useEffect } from 'react';
 
 export function BacktestRunForm() {
-  const { strategyId, dataSetId, submitting, catalogLoading, error } = useAtomValue(backtestRunFormAtom);
+  const { strategyId, dataSetId, initialCash, fees, slippage, submitting, catalogLoading, error } =
+    useAtomValue(backtestRunFormAtom);
   const { strategies, dataSets } = useAtomValue(backtestRunCatalogAtom);
 
   const loadCatalog = useSetAtom(loadBacktestRunCatalogAtom);
   const setStrategyId = useSetAtom(setBacktestRunStrategyIdAtom);
   const setDataSetId = useSetAtom(setBacktestRunDataSetIdAtom);
+  const setInitialCash = useSetAtom(setBacktestRunInitialCashAtom);
+  const setFees = useSetAtom(setBacktestRunFeesAtom);
+  const setSlippage = useSetAtom(setBacktestRunSlippageAtom);
   const submit = useSetAtom(submitBacktestRunAtom);
 
   useEffect(() => {
@@ -103,6 +111,35 @@ export function BacktestRunForm() {
             <Button type="submit" disabled={submitDisabled}>
               {submitting ? '提交中…' : '提交'}
             </Button>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="initial_cash">initial_cash</Label>
+            <Input
+              id="initial_cash"
+              type="number"
+              min={0.0000001}
+              step="any"
+              value={initialCash}
+              onChange={(e) => setInitialCash(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="fees">fees</Label>
+            <Input id="fees" type="number" min={0} step="any" value={fees} onChange={(e) => setFees(e.target.value)} />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="slippage">slippage</Label>
+            <Input
+              id="slippage"
+              type="number"
+              min={0}
+              step="any"
+              value={slippage}
+              onChange={(e) => setSlippage(e.target.value)}
+            />
           </div>
         </form>
       </CardContent>

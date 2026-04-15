@@ -67,8 +67,7 @@ def create_factor(body: FactorCreate) -> FactorRow:
     now = utc_now_iso()
     rec = body.to_row(fid, now)
     SourceFiles.write_source_text(rec.source_path, body.source, validators=[validate_source_syntax])
-    FactorItemsRegistry.add_item(rec)
-    return rec
+    return FactorItemsRegistry.add_item(rec)
 
 
 def update_factor(factor_id: str, body: FactorPatch) -> FactorRow:

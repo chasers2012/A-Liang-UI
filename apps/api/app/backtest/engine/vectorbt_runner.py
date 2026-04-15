@@ -26,6 +26,8 @@ def run_portfolio_from_target_weights(
         px,
         size=w,
         size_type="targetpercent",
+        group_by=True,
+        cash_sharing=True,
         init_cash=float(initial_cash),
         fees=float(fees),
         slippage=float(slippage),

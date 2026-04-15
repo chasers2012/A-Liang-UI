@@ -5,11 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAtomValue, useSetAtom } from 'jotai';
 
-import { backtestDetailAtomFamily, deleteBacktestAtomFamily, loadBacktestDetailAtomFamily } from '@/models/backtest/list-detail.atom';
+import {
+  backtestDetailAtomFamily,
+  deleteBacktestAtomFamily,
+  loadBacktestDetailAtomFamily,
+} from '@/models/backtest/list-detail.atom';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
@@ -31,6 +36,43 @@ function asEquitySeries(equity_curve: Array<Record<string, unknown>>): Array<[nu
   return out;
 }
 
+function fmtValue(v: unknown): string {
+  if (v == null) return '-';
+  if (typeof v === 'number') {
+    if (!Number.isFinite(v)) return String(v);
+    const abs = Math.abs(v);
+    if (abs >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    return v.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+  if (typeof v === 'string') return v;
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  return String(v);
+}
+
+function asStatsEntries(stats: unknown): Array<{ key: string; value: unknown }> {
+  if (!stats) return [];
+  if (Array.isArray(stats)) {
+    const out: Array<{ key: string; value: unknown }> = [];
+    for (const row of stats) {
+      if (!isRecord(row)) continue;
+      const keyRaw = row['index'] ?? row['metric'] ?? row['name'] ?? row['key'];
+      const valRaw = row['value'];
+      if (keyRaw == null) continue;
+      out.push({ key: String(keyRaw), value: valRaw });
+    }
+    return out;
+  }
+  if (isRecord(stats)) {
+    return Object.entries(stats).map(([key, value]) => ({ key, value }));
+  }
+  return [];
+}
+
+function asTradeRows(trades: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(trades)) return [];
+  return trades.filter((x): x is Record<string, unknown> => isRecord(x));
+}
+
 function BacktestRunDetailContent({
   invalidRunId,
   run,
@@ -49,6 +91,18 @@ function BacktestRunDetailContent({
   onDelete: () => Promise<void>;
 }) {
   const equitySeries = useMemo(() => asEquitySeries(equity?.equity_curve ?? []), [equity]);
+  const statsEntries = useMemo(() => {
+    const payload = isRecord(run?.results) ? run.results['stats'] : null;
+    return asStatsEntries(payload);
+  }, [run]);
+  const tradeRows = useMemo(() => asTradeRows(trades?.trades ?? []), [trades]);
+  const tradeColumns = useMemo(() => {
+    const cols = new Set<string>();
+    for (const row of tradeRows) {
+      for (const k of Object.keys(row)) cols.add(k);
+    }
+    return Array.from(cols);
+  }, [tradeRows]);
   const option = useMemo(
     () => ({
       tooltip: { trigger: 'axis' },
@@ -103,7 +157,10 @@ function BacktestRunDetailContent({
       action={
         <div className="flex items-center gap-2">
           {run.strategy_id ? (
-            <Link href={`/strategies/${encodeURIComponent(run.strategy_id)}`} className={cn(buttonVariants({ variant: 'outline' }))}>
+            <Link
+              href={`/strategies/${encodeURIComponent(run.strategy_id)}`}
+              className={cn(buttonVariants({ variant: 'outline' }))}
+            >
               查看策略
             </Link>
           ) : (
@@ -138,18 +195,50 @@ function BacktestRunDetailContent({
           <CardTitle>统计</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="max-h-[320px] overflow-auto rounded-md bg-muted p-3 text-xs">
-            {JSON.stringify(isRecord(run.results) && 'stats' in run.results ? (run.results as Record<string, unknown>)['stats'] : run.results, null, 2)}
-          </pre>
+          {statsEntries.length ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {statsEntries.map((item) => (
+                <div key={item.key} className="rounded-md border bg-muted/30 p-3">
+                  <div className="text-xs text-muted-foreground">{item.key}</div>
+                  <div className="mt-1 text-sm font-medium">{fmtValue(item.value)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">暂无统计数据</p>
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>交易摘要</CardTitle>
+          <CardTitle>交易记录</CardTitle>
         </CardHeader>
         <CardContent>
-          <pre className="max-h-[320px] overflow-auto rounded-md bg-muted p-3 text-xs">{JSON.stringify(trades?.trades ?? [], null, 2)}</pre>
+          {tradeRows.length && tradeColumns.length ? (
+            <Table compact>
+              <TableHeader>
+                <TableRow>
+                  {tradeColumns.map((col) => (
+                    <TableHead key={col}>{col}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tradeRows.map((row, idx) => (
+                  <TableRow key={String(row['id'] ?? row['Trade Id'] ?? idx)}>
+                    {tradeColumns.map((col) => (
+                      <TableCell key={`${idx}-${col}`} className="font-mono">
+                        {fmtValue(row[col])}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-sm text-muted-foreground">暂无交易记录</p>
+          )}
         </CardContent>
       </Card>
     </Page>
@@ -185,5 +274,15 @@ export default function BacktestRunDetailPage() {
     }
   };
 
-  return <BacktestRunDetailContent invalidRunId={invalidRunId} run={run} equity={equity} trades={trades} error={error} deleting={deleting} onDelete={onDelete} />;
+  return (
+    <BacktestRunDetailContent
+      invalidRunId={invalidRunId}
+      run={run}
+      equity={equity}
+      trades={trades}
+      error={error}
+      deleting={deleting}
+      onDelete={onDelete}
+    />
+  );
 }

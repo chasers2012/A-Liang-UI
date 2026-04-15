@@ -8,10 +8,13 @@ from app.persistence.sqlite_db import get_session
 
 class BacktestRunsStore:
     @classmethod
-    def append(cls, row: BacktestRunRow) -> None:
+    def append(cls, row: BacktestRunRow) -> BacktestRunRow:
         with get_session() as session:
             session.add(row)
             session.commit()
+            session.refresh(row)
+            session.expunge(row)
+            return row
 
     @classmethod
     def save(cls, row: BacktestRunRow) -> None:

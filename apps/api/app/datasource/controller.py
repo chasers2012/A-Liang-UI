@@ -123,8 +123,8 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
     new_row.config = validated
-    DataSourceItemsRegistry.add_item(new_row)
-    return row_to_public(new_row)
+    created_row = DataSourceItemsRegistry.add_item(new_row)
+    return row_to_public(created_row)
 
 
 def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | None:

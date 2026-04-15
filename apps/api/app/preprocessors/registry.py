@@ -26,10 +26,13 @@ class PreprocessorsRegistry:
             return session.get(PreprocessorRow, item_id)
 
     @classmethod
-    def add_item(cls, item: PreprocessorRow) -> None:
+    def add_item(cls, item: PreprocessorRow) -> PreprocessorRow:
         with get_session() as session:
             session.add(item)
             session.commit()
+            session.refresh(item)
+            session.expunge(item)
+            return item
 
     @classmethod
     def update_item(cls, item_id: str, fn) -> PreprocessorRow | None:  # type: ignore[no-untyped-def]
@@ -40,6 +43,8 @@ class PreprocessorsRegistry:
             fn(row)
             session.merge(row)
             session.commit()
+            session.refresh(row)
+            session.expunge(row)
             return row
 
     @classmethod

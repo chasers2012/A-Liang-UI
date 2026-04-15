@@ -2,7 +2,35 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pandas as pd
+
 from app.backtest.registry import BacktestRunsStore
+
+
+def _position_to_target_weights(position: pd.DataFrame) -> pd.DataFrame:
+    if not isinstance(position.index, pd.MultiIndex):
+        raise ValueError("策略输出 position 必须是 MultiIndex(date, asset)")
+    if len(position.index.names) < 2:
+        raise ValueError("策略输出 position 的索引必须包含 date、asset 两级")
+
+    level_names = list(position.index.names)
+    try:
+        date_level = level_names.index("date")
+        asset_level = level_names.index("asset")
+    except ValueError as exc:
+        raise ValueError("策略输出 position 的索引名必须为 date、asset") from exc
+
+    if position.shape[1] == 0:
+        raise ValueError("策略输出 position 必须至少包含一列持仓值")
+    value_col = position.columns[0]
+
+    weights = position[value_col].unstack(level=asset_level)
+    if date_level != 0:
+        weights = weights.sort_index()
+
+    weights.index.name = "date"
+    weights.columns = [str(c) for c in weights.columns]
+    return weights.fillna(0.0)
 
 
 def run_backtest_and_persist(run_id: str) -> None:
@@ -15,10 +43,7 @@ def run_backtest_and_persist(run_id: str) -> None:
 
     from workflow import WorkflowExecutor
 
-    from app.backtest.engine.nodes import (
-        BacktestInputs,
-        register_strategy_engine_nodes,
-    )
+    from app.backtest.engine.market_data import load_market_data
     from app.backtest.engine.serialize import portfolio_to_results_dict
     from app.backtest.engine.vectorbt_runner import (
         run_portfolio_from_target_weights,
@@ -27,8 +52,6 @@ def run_backtest_and_persist(run_id: str) -> None:
     from app.strategy.registry import StrategyRegistry
 
     try:
-        register_strategy_engine_nodes()
-
         strategy = StrategyRegistry.get_by_id(rec.strategy_id)
         if strategy is None:
             raise ValueError("策略不存在")
@@ -45,24 +68,28 @@ def run_backtest_and_persist(run_id: str) -> None:
         executor = WorkflowExecutor()
         node_results = executor.execute(
             strategy.workflow,
-            workflow_inputs={"data_set": ds},
+            workflow_inputs={"data_set": rec.data_set_id},
         )
         wf_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
         )
-        bt_inputs = (wf_out or {}).get("backtest_inputs")
-        if not isinstance(bt_inputs, BacktestInputs):
-            raise ValueError("策略未输出 backtest_inputs")
+        position = (wf_out or {}).get("position")
+        if position is None:
+            # Backward compatible fallback for older workflow output key.
+            position = (wf_out or {}).get("backtest_inputs")
+        if not isinstance(position, pd.DataFrame):
+            raise ValueError("策略未输出 position")
 
-        price = bt_inputs.close
-        # (Open price wiring can be added by extending BacktestInputs later.)
+        target_weights = _position_to_target_weights(position)
+
+        price = load_market_data(ds).close
 
         pf = run_portfolio_from_target_weights(
             price=price,
-            target_weights=bt_inputs.weights,
-            initial_cash=float(params.get("initial_cash") or 1_000_000.0),
-            fees=float(params.get("fees") or 0.0003),
-            slippage=float(params.get("slippage") or 0.0),
+            target_weights=target_weights,
+            initial_cash=float(params["initial_cash"]),
+            fees=float(params["fees"]),
+            slippage=float(params["slippage"]),
         )
         rec.results = portfolio_to_results_dict(pf)
         rec.status = "success"  # type: ignore[assignment]

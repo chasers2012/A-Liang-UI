@@ -29,8 +29,8 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
     new_row.config = validated
-    DataSourceItemsRegistry.add_item(new_row)
-    return row_to_public(new_row).model_dump()
+    created_row = DataSourceItemsRegistry.add_item(new_row)
+    return row_to_public(created_row).model_dump()
 
 
 @tool(description="获取单个数据源详情，入参 datasource_id 为数据源 id")
