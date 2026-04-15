@@ -21,13 +21,9 @@ from app.datasource.controller import get_datasource
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import DataSourceRecord, utc_now_iso
 from app.preprocessors.controller import list_preprocessor_records
-from app.preprocessors.workflow_node_types import (
-    ensure_preprocessor_workflow_nodes_registered,
-)
 
 
 def get_data_set(id: str) -> DataSet | None:
-    ensure_preprocessor_workflow_nodes_registered()
     rec = DataSetsStore.get_item(id)
     if rec is None:
         return None
@@ -259,6 +255,7 @@ def create_data_set(body: DataSetCreate) -> DataSetPublic:
 
 
 def update_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic | None:
+
     def _apply(rec: DataSetRecord) -> None:
         if body.datasource_bindings is not None:
             _validate_and_touch_datasources(list(body.datasource_bindings))

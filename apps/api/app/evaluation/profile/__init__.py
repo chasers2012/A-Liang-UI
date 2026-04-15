@@ -27,23 +27,6 @@ def register_evaluation_scheme_chat_tools() -> None:
 
 
 @register_startup_job
-def _register_evaluation_scheme_workflow_node_segment() -> None:
-    # Avoid registering workflow node segments in forked/spawned worker processes.
-    if parent_process() is not None:
-        return
-
-    from workflow import WorkflowNodeLoader, workflow_node_type_key
-
-    from app.evaluation.profile.internal_nodes import INTERNAL_NODES
-
-    loader = WorkflowNodeLoader.instance()
-    for node_cls in INTERNAL_NODES:
-        type_key = getattr(node_cls, "type", "") or workflow_node_type_key(node_cls)
-        if isinstance(type_key, str) and type_key.strip():
-            loader.register_node(type_key, node_cls)
-
-
-@register_startup_job
 def _seed_evaluation_profile_examples() -> None:
     # Avoid duplicated seed execution in forked/spawned worker processes.
     if parent_process() is not None:

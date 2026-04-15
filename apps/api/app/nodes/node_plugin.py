@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from workflow import Node, workflow_node_type_key
+from workflow import Node
 
 from app.nodes.registry import WorkflowNodesRegistry
 from app.plugin import Plugin
@@ -19,7 +19,7 @@ class NodePlugin(Plugin):
         )
         configured_domains = tuple[str, ...](list_domain_node_visibility_configs().keys())
         for node_cls in self.nodes:
-            type_key = getattr(node_cls, "type", "") or workflow_node_type_key(node_cls)
+            type_key = getattr(node_cls, "type", "")
             if not isinstance(type_key, str) or not type_key.strip():
                 continue
             WorkflowNodesRegistry.register_plugin_node(type_key, node_cls)

@@ -15,6 +15,7 @@ from workflow import (
 )
 
 from .echarts_common import (
+    VALUE_DECIMAL_PLACES_DEFAULT,
     apply_chrome,
     coerce_to_dataframe,
     finalize_figure_option,
@@ -81,7 +82,7 @@ from .echarts_common import (
         NumberNodeParam(
             "value_decimal_places",
             required=False,
-            default=2,
+            default=VALUE_DECIMAL_PLACES_DEFAULT,
             minimum=0,
             maximum=15,
             label="数值小数位数",
@@ -117,7 +118,7 @@ class EchartsTreemapNode:
         show_legend: bool = True,
         show_tooltip: bool = True,
         value_axes_scale_to_data: bool = True,
-        value_decimal_places: int | float = 2,
+        value_decimal_places: int | float = VALUE_DECIMAL_PLACES_DEFAULT,
         extra_options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         df = coerce_to_dataframe(data)

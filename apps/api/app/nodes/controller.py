@@ -32,9 +32,10 @@ def create_workflow_node(body: WorkflowNodeCreate) -> WorkflowNodeRow:
 
 
 def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSummaryPublic:
-    type_key = getattr(node_cls, "type", "") or workflow_node_type_key(node_cls)
+    type_key = getattr(node_cls, "type", "")
     category_raw = getattr(node_cls, "category", None)
     category = category_raw.strip() or None if isinstance(category_raw, str) else None
+
     return WorkflowNodeSummaryPublic(
         id=rec.id,
         name=rec.name,
@@ -53,6 +54,8 @@ def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSu
 
 def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
     node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
+    if node_cls is None:
+        return None
     return _node_cls_to_summary(rec, node_cls)
 
 

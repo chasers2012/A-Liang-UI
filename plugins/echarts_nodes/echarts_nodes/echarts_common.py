@@ -9,6 +9,8 @@ from typing import Any
 import echartsy as ec
 import pandas as pd
 
+VALUE_DECIMAL_PLACES_DEFAULT = 4
+
 
 def _format_x_axis_tick(value: Any) -> Any:
     """缩短刻度文本：日频时间戳用 YYYY-MM-DD，避免整段 ISO 挤在一起。"""
@@ -230,7 +232,7 @@ def merge_extra_and_pack(
     option: dict[str, Any],
     extra_options: dict[str, Any] | None,
     *,
-    value_decimal_places: int = 2,
+    value_decimal_places: int = VALUE_DECIMAL_PLACES_DEFAULT,
     value_axes_scale_to_data: bool = True,
 ) -> dict[str, Any]:
     if value_axes_scale_to_data:

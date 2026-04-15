@@ -29,7 +29,6 @@ agent = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
 workflow = { workspace = true }
-evaluation-workflow-nodes = { workspace = true }
 agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]

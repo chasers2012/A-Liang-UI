@@ -26,7 +26,6 @@ members = [
     "echarts-nodes",
     "evaluate",
     "evaluation-nodes",
-    "evaluation-workflow-nodes",
     "factor",
     "quant-agent",
     "quant-agent-api",
@@ -734,25 +733,6 @@ requires-dist = [
     { name = "evaluate", editable = "lib/evaluate" },
     { name = "factor", editable = "lib/factor" },
     { name = "quant-agent-api", editable = "apps/api" },
-    { name = "workflow", editable = "lib/workflow" },
-]
-
-[[package]]
-name = "evaluation-workflow-nodes"
-version = "0.1.0"
-source = { editable = "lib/evaluation_workflow_nodes" }
-dependencies = [
-    { name = "echartsy" },
-    { name = "evaluate" },
-    { name = "factor" },
-    { name = "workflow" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "echartsy", specifier = ">=0.7.4" },
-    { name = "evaluate", editable = "lib/evaluate" },
-    { name = "factor", editable = "lib/factor" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -2772,7 +2752,6 @@ dependencies = [
     { name = "custom-code" },
     { name = "datasources" },
     { name = "evaluate" },
-    { name = "evaluation-workflow-nodes" },
     { name = "factor" },
     { name = "fastapi" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2794,7 +2773,6 @@ requires-dist = [
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "datasources", editable = "lib/datasources" },
     { name = "evaluate", editable = "lib/evaluate" },
-    { name = "evaluation-workflow-nodes", editable = "lib/evaluation_workflow_nodes" },
     { name = "factor", editable = "lib/factor" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "numpy", specifier = ">=1.26.0" },
