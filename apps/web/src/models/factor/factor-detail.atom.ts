@@ -1,21 +1,10 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import {
-  getFactor,
-  getFactorEvaluationsSummary,
-  listDataSets,
-  listEvaluationMetrics,
-  listEvaluationProfiles,
-} from "@/api";
-import type { DataSetPublic } from "@/models/data-set/dto";
-import type { EvaluationMetricSummaryPublic } from "../evaluation-metric/dto";
-import type { EvaluationProfilePublic } from "../evaluation-profile/dto";
-import type {
-  FactorDetailPublic,
-  FactorEvaluationRowPublic,
-  FactorSummaryPublic,
-} from "./dto";
+import { getFactor, getFactorEvaluationsSummary, listDataSets, listEvaluationProfiles } from '@/api';
+import type { DataSetPublic } from '@/models/data-set/dto';
+import type { EvaluationProfilePublic } from '../evaluation-profile/dto';
+import type { FactorDetailPublic, FactorEvaluationRowPublic, FactorSummaryPublic } from './dto';
 
 export type FactorDetailPageState = {
   loading: boolean;
@@ -24,7 +13,6 @@ export type FactorDetailPageState = {
   evalRow: FactorEvaluationRowPublic | null;
   profiles: EvaluationProfilePublic[];
   dataSets: DataSetPublic[];
-  evaluationMetrics: EvaluationMetricSummaryPublic[];
   runProfileId: string | null;
   runDataSetId: string | null;
   deleteTarget: FactorSummaryPublic | null;
@@ -39,7 +27,6 @@ function initialFactorDetailState(): FactorDetailPageState {
     evalRow: null,
     profiles: [],
     dataSets: [],
-    evaluationMetrics: [],
     runProfileId: null,
     runDataSetId: null,
     deleteTarget: null,
@@ -58,7 +45,7 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
       set(factorDetailStateAtomFamily(factorId), {
         ...initialFactorDetailState(),
         loading: false,
-        loadError: "无效的因子 id",
+        loadError: '无效的因子 id',
       });
       return;
     }
@@ -68,12 +55,11 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
       loading: true,
     }));
     try {
-      const [d, summary, pr, dataSets, metrics] = await Promise.all([
+      const [d, summary, pr, dataSets] = await Promise.all([
         getFactor(factorId),
         getFactorEvaluationsSummary(),
         listEvaluationProfiles(),
         listDataSets(),
-        listEvaluationMetrics(),
       ]);
       set(factorDetailStateAtomFamily(factorId), (prev) => {
         const runProfileId = (() => {
@@ -94,7 +80,6 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
           evalRow: summary.rows.find((r) => r.factor_id === factorId) ?? null,
           profiles: pr,
           dataSets,
-          evaluationMetrics: metrics,
           runProfileId,
           runDataSetId,
         };

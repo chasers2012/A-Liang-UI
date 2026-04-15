@@ -103,12 +103,9 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
           description: '',
           is_plugin: false,
           source: '',
-          source_path: '',
           created_at: '',
           updated_at: '',
-          type: '',
           category: null,
-          entry: '',
           inputs: [],
           outputs: [],
         };

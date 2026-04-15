@@ -60,12 +60,10 @@ class WorkflowNodeSummaryPublic(BaseModel):
     name: str
     description: str
     is_plugin: bool = False
-    source_path: str
     created_at: str
     updated_at: str
     type: str
     category: str | None = None
-    entry: str
     inputs: list[dict]
     outputs: list[dict]
 

@@ -10,7 +10,6 @@ from app.nodes.controller import (
     delete_workflow_node,
     get_node_record,
     list_nodes,
-    list_nodes_by_domain,
     load_node_detail,
     update_node_record,
 )
@@ -29,7 +28,7 @@ router.include_router(domains_router)
 
 @router.get("", response_model=list[WorkflowNodeSummaryPublic])
 def get_nodes(domain: str | None = None) -> list[WorkflowNodeSummaryPublic]:
-    rows = list_nodes_by_domain(domain) if domain else list_nodes()
+    rows = list_nodes(domain=domain)
     loader = WorkflowNodeLoader.instance()
     for row in rows:
         try:

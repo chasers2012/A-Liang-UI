@@ -27,12 +27,9 @@ export interface NodeSummaryPublic {
   name: string;
   description: string;
   is_plugin: boolean;
-  source_path: string;
   created_at: string;
   updated_at: string;
-  type: string;
   category: string | null;
-  entry: string;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
 }

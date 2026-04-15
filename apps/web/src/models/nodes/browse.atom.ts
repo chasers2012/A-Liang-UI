@@ -1,13 +1,13 @@
-import { atom } from "jotai";
+import { atom } from 'jotai';
 
-import { nodesListAtom } from "@/models/nodes/list-detail.atom";
-import type { NodeSummaryPublic } from "@/models/nodes/dto";
+import { nodesListAtom } from '@/models/nodes/list-detail.atom';
+import type { NodeSummaryPublic } from '@/models/nodes/dto';
 
 /** 与后端 ``PLUGIN_NODE_SOURCE_SENTINEL`` 一致 */
-export const PLUGIN_SOURCE_MARKER = "__plugin__";
-export const UNCATEGORIZED_KEY = "__uncategorized__";
+export const PLUGIN_SOURCE_MARKER = '__plugin__';
+export const UNCATEGORIZED_KEY = '__uncategorized__';
 
-export type NodesSourceFilter = "all" | "user" | "plugin";
+export type NodesSourceFilter = 'all' | 'user' | 'plugin';
 
 export type NodesBrowseState = {
   searchQuery: string;
@@ -16,17 +16,17 @@ export type NodesBrowseState = {
 };
 
 export const nodesBrowseStateAtom = atom<NodesBrowseState>({
-  searchQuery: "",
-  sourceFilter: "all",
+  searchQuery: '',
+  sourceFilter: 'all',
   includedCategories: [],
 });
 
 export function parseNodesDetailRouteId(pathname: string): string | null {
-  if (pathname === "/nodes/new") return null;
+  if (pathname === '/nodes/new') return null;
   const detail = /^\/nodes\/([^/]+)$/.exec(pathname);
   if (!detail) return null;
   const id = detail[1];
-  if (id === "new") return null;
+  if (id === 'new') return null;
   return decodeURIComponent(id);
 }
 
@@ -36,44 +36,35 @@ export function categoryKey(m: NodeSummaryPublic): string {
 }
 
 export function categoryLabel(key: string): string {
-  return key === UNCATEGORIZED_KEY ? "未分类" : key;
+  return key === UNCATEGORIZED_KEY ? '未分类' : key;
 }
 
-export const setNodesSearchQueryAtom = atom(
-  null,
-  (_get, set, searchQuery: string) => {
-    set(nodesBrowseStateAtom, (s) => ({ ...s, searchQuery }));
-  },
-);
+export const setNodesSearchQueryAtom = atom(null, (_get, set, searchQuery: string) => {
+  set(nodesBrowseStateAtom, (s) => ({ ...s, searchQuery }));
+});
 
-export const setNodesSourceFilterAtom = atom(
-  null,
-  (_get, set, sourceFilter: NodesSourceFilter) => {
-    set(nodesBrowseStateAtom, (s) => ({ ...s, sourceFilter }));
-  },
-);
+export const setNodesSourceFilterAtom = atom(null, (_get, set, sourceFilter: NodesSourceFilter) => {
+  set(nodesBrowseStateAtom, (s) => ({ ...s, sourceFilter }));
+});
 
-export const toggleNodesCategoryFilterAtom = atom(
-  null,
-  (get, set, key: string) => {
-    const prev = get(nodesBrowseStateAtom).includedCategories;
-    if (prev.length === 0) {
-      set(nodesBrowseStateAtom, (s) => ({ ...s, includedCategories: [key] }));
-      return;
-    }
-    if (prev.includes(key)) {
-      set(nodesBrowseStateAtom, (s) => ({
-        ...s,
-        includedCategories: s.includedCategories.filter((v) => v !== key),
-      }));
-      return;
-    }
+export const toggleNodesCategoryFilterAtom = atom(null, (get, set, key: string) => {
+  const prev = get(nodesBrowseStateAtom).includedCategories;
+  if (prev.length === 0) {
+    set(nodesBrowseStateAtom, (s) => ({ ...s, includedCategories: [key] }));
+    return;
+  }
+  if (prev.includes(key)) {
     set(nodesBrowseStateAtom, (s) => ({
       ...s,
-      includedCategories: [...s.includedCategories, key],
+      includedCategories: s.includedCategories.filter((v) => v !== key),
     }));
-  },
-);
+    return;
+  }
+  set(nodesBrowseStateAtom, (s) => ({
+    ...s,
+    includedCategories: [...s.includedCategories, key],
+  }));
+});
 
 export const clearNodesCategoryFiltersAtom = atom(null, (_get, set) => {
   set(nodesBrowseStateAtom, (s) => ({ ...s, includedCategories: [] }));
@@ -81,15 +72,13 @@ export const clearNodesCategoryFiltersAtom = atom(null, (_get, set) => {
 
 export const resetNodesBrowseFiltersAtom = atom(null, (_get, set) => {
   set(nodesBrowseStateAtom, {
-    searchQuery: "",
-    sourceFilter: "all",
+    searchQuery: '',
+    sourceFilter: 'all',
     includedCategories: [],
   });
 });
 
-export const nodesIncludedCategoriesSetAtom = atom(
-  (get) => new Set(get(nodesBrowseStateAtom).includedCategories),
-);
+export const nodesIncludedCategoriesSetAtom = atom((get) => new Set(get(nodesBrowseStateAtom).includedCategories));
 
 export const nodesCategoryOptionKeysAtom = atom((get) => {
   const items = get(nodesListAtom).items;
@@ -98,31 +87,27 @@ export const nodesCategoryOptionKeysAtom = atom((get) => {
   for (const m of items) {
     keys.add(categoryKey(m));
   }
-  return [...keys].sort((a, b) =>
-    categoryLabel(a).localeCompare(categoryLabel(b), "zh-Hans-CN"),
-  );
+  return [...keys].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b), 'zh-Hans-CN'));
 });
 
 export const filteredNodesAtom = atom((get) => {
   const items = get(nodesListAtom).items;
-  const { searchQuery, sourceFilter, includedCategories } =
-    get(nodesBrowseStateAtom);
+  const { searchQuery, sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
   if (!items) return null;
   const q = searchQuery.trim().toLowerCase();
   const categorySet = new Set(includedCategories);
   return items.filter((m) => {
-    if (sourceFilter === "user" && m.source_path === PLUGIN_SOURCE_MARKER) {
+    if (sourceFilter === 'user' && m.is_plugin) {
       return false;
     }
-    if (sourceFilter === "plugin" && m.source_path !== PLUGIN_SOURCE_MARKER) {
+    if (sourceFilter === 'plugin' && !m.is_plugin) {
       return false;
     }
     if (categorySet.size > 0 && !categorySet.has(categoryKey(m))) {
       return false;
     }
     if (q) {
-      const hay =
-        `${m.name}\n${m.description}\n${m.type}\n${m.id}`.toLowerCase();
+      const hay = `${m.name}\n${m.description}\n${m.id}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -131,7 +116,7 @@ export const filteredNodesAtom = atom((get) => {
 
 export const nodesFilterPopoverActiveAtom = atom((get) => {
   const { sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
-  return sourceFilter !== "all" || includedCategories.length > 0;
+  return sourceFilter !== 'all' || includedCategories.length > 0;
 });
 
 export const nodesDefaultSelectedIdAtom = atom((get) => {

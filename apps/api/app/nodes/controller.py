@@ -31,39 +31,22 @@ def create_workflow_node(body: WorkflowNodeCreate) -> WorkflowNodeRow:
     return rec
 
 
-def _node_cls_to_summary(rec: WorkflowNodeRow, node_cls: type) -> WorkflowNodeSummaryPublic:
-    type_key = getattr(node_cls, "type", "")
-    category_raw = getattr(node_cls, "category", None)
-    category = category_raw.strip() or None if isinstance(category_raw, str) else None
+def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
+    node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
+    if node_cls is None:
+        return None
 
     return WorkflowNodeSummaryPublic(
         id=rec.id,
         name=rec.name,
         description=rec.description,
         is_plugin=rec.is_plugin,
-        source_path=rec.source_path,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
-        type=type_key,
-        category=category,
-        entry=getattr(node_cls, "entry", "execute"),
+        category=node_cls.category,
         inputs=[Parser.serialize_socket(s) for s in node_cls.inputs],
         outputs=[Parser.serialize_socket(s) for s in node_cls.outputs],
     )
-
-
-def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
-    node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
-    if node_cls is None:
-        return None
-    return _node_cls_to_summary(rec, node_cls)
-
-
-def load_node(node_id: str) -> WorkflowNodeSummaryPublic | None:
-    rec = WorkflowNodesRegistry.get_item(node_id)
-    if rec is None:
-        return None
-    return _to_summary(rec)
 
 
 def load_node_detail(node_id: str) -> WorkflowNodeDetailPublic | None:
@@ -71,46 +54,40 @@ def load_node_detail(node_id: str) -> WorkflowNodeDetailPublic | None:
     if rec is None:
         return None
     summary = _to_summary(rec)
+    if summary is None:
+        return None
     return WorkflowNodeDetailPublic(
         **summary.model_dump(), source=WorkflowNodesRegistry.read_source(rec)
     )
 
 
-def list_node_records() -> list[WorkflowNodeRow]:
-    return WorkflowNodesRegistry.list_items()
-
-
-def list_nodes() -> list[WorkflowNodeSummaryPublic]:
-    ret = []
-    for rec in list_node_records():
-        try:
-            summary = _to_summary(rec)
-            if summary is not None:
-                ret.append(summary)
-        except Exception:
-            print("Failed to load node summary for %s", rec.id)
-            continue
-    return ret
-
-
-def list_nodes_by_domain(domain: str) -> list[WorkflowNodeSummaryPublic]:
+def list_nodes(domain: str | None = None) -> list[WorkflowNodeSummaryPublic]:
     """
-    List nodes usable in a given domain.
+    List nodes, optionally filtered by domain visibility.
 
     Behavior matches WorkflowDomainNodesRegistry:
     - If the domain is not configured, all nodes are allowed.
     - Otherwise, only configured node ids are blocked (blacklist).
     """
-    hidden_ids = WorkflowDomainNodesRegistry.get_hidden_node_ids(domain)
-    if hidden_ids is None:
-        return list_nodes()
+    hidden_ids: set[str] | None = None
+    if domain:
+        hidden_ids = WorkflowDomainNodesRegistry.get_hidden_node_ids(domain)
 
-    db_recs = list_node_records()
+    db_recs = WorkflowNodesRegistry.list_items()
     out: list[WorkflowNodeSummaryPublic] = []
     for rec in db_recs:
-        if rec.id in hidden_ids:
+        if hidden_ids is not None and rec.id in hidden_ids:
             continue
-        out.append(_to_summary(rec))
+        try:
+            summary = _to_summary(rec)
+            if summary is not None:
+                out.append(summary)
+            else:
+                print(f"Failed to load node summary for {rec.id}")
+                continue
+        except Exception:
+            print(f"Failed to load node summary for {rec.id}")
+            continue
     return out
 
 
