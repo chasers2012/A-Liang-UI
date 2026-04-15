@@ -36,10 +36,12 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
             label="去均值参考(可选)",
             description="可选传入用于去均值的基准样本集合",
         ),
-    ],
-    workflow_parameters=[
         NumberNodeParam(
-            "before", required=False, default=10, label="事件前窗口", description="事件日前回溯期数"
+            "before",
+            required=False,
+            default=10,
+            label="事件前窗口",
+            description="事件日前回溯期数",
         ),
         NumberNodeParam(
             "after", required=False, default=15, label="事件后窗口", description="事件日后观察期数"

@@ -20,8 +20,6 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             label="清洗后因子数据",
             description="由`计算因子`节点输出",
         ),
-    ],
-    workflow_parameters=[
         BooleanNodeParam(
             "by_date",
             required=False,

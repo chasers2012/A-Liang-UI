@@ -28,8 +28,6 @@ from workflow import BooleanNodeParam, Socket, workflow_node
             label="因子收益(可选)",
             description="可选上游 factor_returns 输出",
         ),
-    ],
-    workflow_parameters=[
         BooleanNodeParam(
             "demeaned",
             required=False,

@@ -81,7 +81,16 @@ def list_node_records() -> list[WorkflowNodeRow]:
 
 
 def list_nodes() -> list[WorkflowNodeSummaryPublic]:
-    return [_to_summary(rec) for rec in list_node_records()]
+    ret = []
+    for rec in list_node_records():
+        try:
+            summary = _to_summary(rec)
+            if summary is not None:
+                ret.append(summary)
+        except Exception:
+            print("Failed to load node summary for %s", rec.id)
+            continue
+    return ret
 
 
 def list_nodes_by_domain(domain: str) -> list[WorkflowNodeSummaryPublic]:

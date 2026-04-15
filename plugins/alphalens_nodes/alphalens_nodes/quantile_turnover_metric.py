@@ -27,8 +27,6 @@ from workflow import NumberNodeParam, Socket, workflow_node
             label="分位序列(可选)",
             description="可选传入因子分位序列（factor_quantile）",
         ),
-    ],
-    workflow_parameters=[
         NumberNodeParam(
             "quantile",
             required=False,

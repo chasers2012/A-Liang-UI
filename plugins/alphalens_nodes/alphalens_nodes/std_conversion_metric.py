@@ -20,8 +20,6 @@ from workflow import Socket, StringNodeParam, workflow_node
             label="多周期标准差",
             description="包含标准差或标准误差值的 DataFrame，列标题表示重现期。",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "base_period",
             required=False,

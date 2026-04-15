@@ -20,8 +20,6 @@ from workflow import Socket, StringNodeParam, workflow_node
             label="多周期收益",
             description="包含收益率值的 DataFrame，列标题表示收益率周期。",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "base_period",
             required=False,

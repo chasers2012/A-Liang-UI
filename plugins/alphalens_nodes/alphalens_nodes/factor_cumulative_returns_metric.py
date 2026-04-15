@@ -50,8 +50,6 @@ def _coerce_groups_filter_arg(raw: Any) -> Any:
             label="清洗后因子数据",
             description="由`计算因子`节点输出",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "period",
             required=False,
@@ -120,7 +118,6 @@ class FactorCumulativeReturnsMetric:
 
         # input_sockets
         clean_factor: pd.DataFrame = kwargs.pop("clean_factor")
-        # workflow_parameters
         period = str(kwargs.pop("period", "1D"))
         long_short = bool(kwargs.pop("long_short", True))
         group_neutral = bool(kwargs.pop("group_neutral", False))

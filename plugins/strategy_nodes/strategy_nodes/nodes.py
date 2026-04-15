@@ -4,14 +4,13 @@ from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
 
 import pandas as pd
-from factor.data_set import DataSet
-from workflow import Socket, WorkflowNodeLoader, workflow_node
-from workflow.node_types import BooleanNodeParam, NumberNodeParam, OptionsNodeParam
-
 from app.data_set.controller import get_data_set
 from app.data_set.redistry import DataSetsStore
 from app.factors.controller import get_factor
 from app.factors.registry import FactorItemsRegistry
+from factor.data_set import DataSet
+from workflow import Socket, workflow_node
+from workflow.node_types import BooleanNodeParam, NumberNodeParam, OptionsNodeParam
 
 
 def _wide_from_panel(panel: pd.DataFrame, *, field: str) -> pd.DataFrame:
@@ -66,16 +65,18 @@ class LoadDataSetNode:
 
 
 @workflow_node(
-    input_sockets=[Socket("data_set", required=True, value_type="data_set", label="数据集")],
-    output_sockets=[Socket("factor", required=True, value_type="factor_df", label="因子矩阵")],
-    workflow_parameters=[
+    input_sockets=[
+        Socket("data_set", required=True, value_type="data_set", label="数据集"),
         OptionsNodeParam(
             name="factor_id",
             label="因子",
             description="选择因子 ID",
-            options=lambda: [{"label": f.name, "value": f.id} for f in FactorItemsRegistry.list_items()],
-        )
+            options=lambda: [
+                {"label": f.name, "value": f.id} for f in FactorItemsRegistry.list_items()
+            ],
+        ),
     ],
+    output_sockets=[Socket("factor", required=True, value_type="factor_df", label="因子矩阵")],
     label="因子引用",
     description="加载并计算因子，输出 time×asset 矩阵。",
     category="strategy",
@@ -93,7 +94,9 @@ class FactorRefNode:
             raise ValueError("数据集缺少 end_date")
         resolver = ds.create_resolver()
         factor = factor_cls(dependency_resolver=resolver)
-        df = factor.calculate(start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes)
+        df = factor.calculate(
+            start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes
+        )
         col = df.columns[0] if len(df.columns) else factor.name
         wide = df[col].unstack("asset")
         wide.index.name = "date"
@@ -102,9 +105,8 @@ class FactorRefNode:
 
 
 @workflow_node(
-    input_sockets=[Socket("x", required=True, value_type="factor_df", label="X")],
-    output_sockets=[Socket("signal", required=True, value_type="signal_df", label="信号")],
-    workflow_parameters=[
+    input_sockets=[
+        Socket("x", required=True, value_type="factor_df", label="X"),
         NumberNodeParam("threshold", required=True, default=0.0, label="阈值"),
         OptionsNodeParam(
             name="direction",
@@ -116,6 +118,7 @@ class FactorRefNode:
             ],
         ),
     ],
+    output_sockets=[Socket("signal", required=True, value_type="signal_df", label="信号")],
     label="阈值信号",
     description="按阈值生成布尔信号矩阵。",
     category="strategy",
@@ -124,19 +127,21 @@ class ThresholdSignalNode:
     def execute(self, **kwargs: Any) -> pd.DataFrame:
         x: pd.DataFrame = kwargs["x"]
         thr = float(kwargs.get("threshold") or 0.0)
-        direction: Literal["gt", "lt"] = "gt" if str(kwargs.get("direction") or "gt") == "gt" else "lt"
+        direction: Literal["gt", "lt"] = (
+            "gt" if str(kwargs.get("direction") or "gt") == "gt" else "lt"
+        )
         if direction == "gt":
             return (x > thr).fillna(False)
         return (x < thr).fillna(False)
 
 
 @workflow_node(
-    input_sockets=[Socket("factor", required=True, value_type="factor_df", label="因子")],
-    output_sockets=[Socket("selected", required=True, value_type="signal_df", label="选中")],
-    workflow_parameters=[
+    input_sockets=[
+        Socket("factor", required=True, value_type="factor_df", label="因子"),
         NumberNodeParam("k", required=True, default=10, label="TopK"),
         BooleanNodeParam("ascending", required=False, default=False, label="升序(小值优先)"),
     ],
+    output_sockets=[Socket("selected", required=True, value_type="signal_df", label="选中")],
     label="TopK 选股",
     description="按截面排序选前 K。",
     category="strategy",
@@ -168,9 +173,8 @@ class EqualWeightNode:
 
 
 @workflow_node(
-    input_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
-    output_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
-    workflow_parameters=[
+    input_sockets=[
+        Socket("weights", required=True, value_type="weights_df", label="权重"),
         OptionsNodeParam(
             name="freq",
             label="调仓频率",
@@ -180,8 +184,9 @@ class EqualWeightNode:
                 {"label": "每周(W)", "value": "W"},
                 {"label": "每月(M)", "value": "M"},
             ],
-        )
+        ),
     ],
+    output_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
     label="调仓频率",
     description="按频率更新权重（非调仓日沿用上一期）。",
     category="strategy",
@@ -198,7 +203,11 @@ class RebalanceNode:
         if freq == "D":
             return w2
         if freq == "W":
-            mask = idx.to_series().dt.isocalendar().week.ne(idx.to_series().shift(1).dt.isocalendar().week)
+            mask = (
+                idx.to_series()
+                .dt.isocalendar()
+                .week.ne(idx.to_series().shift(1).dt.isocalendar().week)
+            )
         elif freq == "M":
             mask = idx.to_series().dt.to_period("M").ne(idx.to_series().shift(1).dt.to_period("M"))
         else:
@@ -209,9 +218,11 @@ class RebalanceNode:
 
 
 @workflow_node(
-    input_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
+    input_sockets=[
+        Socket("weights", required=True, value_type="weights_df", label="权重"),
+        NumberNodeParam("bars", required=True, default=1, label="bars"),
+    ],
     output_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
-    workflow_parameters=[NumberNodeParam("bars", required=True, default=1, label="bars")],
     label="信号滞后",
     description="将权重右移 bars，避免未来函数。",
     category="strategy",
@@ -236,7 +247,9 @@ class BacktestInputs:
         Socket("close", required=True, value_type="price_df", label="收盘价"),
         Socket("weights", required=True, value_type="weights_df", label="权重"),
     ],
-    output_sockets=[Socket("backtest_inputs", required=True, value_type="backtest_inputs", label="回测输入")],
+    output_sockets=[
+        Socket("backtest_inputs", required=True, value_type="backtest_inputs", label="回测输入")
+    ],
     label="输出回测输入",
     description="将 close + weights 打包。",
     category="strategy",
@@ -249,13 +262,13 @@ class ToBacktestInputsNode:
 
 
 __all__: ClassVar[list[str]] = [
-    "LoadDataSetNode",
-    "FactorRefNode",
-    "ThresholdSignalNode",
-    "RankTopKNode",
-    "EqualWeightNode",
-    "RebalanceNode",
-    "LagNode",
     "BacktestInputs",
+    "EqualWeightNode",
+    "FactorRefNode",
+    "LagNode",
+    "LoadDataSetNode",
+    "RankTopKNode",
+    "RebalanceNode",
+    "ThresholdSignalNode",
     "ToBacktestInputsNode",
 ]

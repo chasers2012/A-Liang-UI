@@ -20,8 +20,6 @@ from workflow import NumberNodeParam, Socket, workflow_node
             label="清洗后因子数据",
             description="由计算因子节点输出",
         ),
-    ],
-    workflow_parameters=[
         NumberNodeParam(
             "period", required=False, default=1, label="滞后期", description="秩自相关的滞后期长度"
         ),

@@ -20,8 +20,6 @@ from workflow import Socket, StringNodeParam, workflow_node
             label="分位日收益",
             description="按 (factor_quantile, date) 组织的 MultiIndex DataFrame",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "period",
             required=False,

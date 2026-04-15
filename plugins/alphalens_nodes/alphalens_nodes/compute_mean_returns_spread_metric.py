@@ -27,8 +27,6 @@ from workflow import NumberNodeParam, Socket, workflow_node
             label="标准误",
             description="可选，mean_return_by_quantile_std_error",
         ),
-    ],
-    workflow_parameters=[
         NumberNodeParam(
             "upper_quant",
             required=False,

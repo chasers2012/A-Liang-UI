@@ -28,8 +28,6 @@ from workflow import BooleanNodeParam, NumberNodeParam, Socket, workflow_node
             label="收益矩阵",
             description="index=date, columns=asset 的宽表收益",
         ),
-    ],
-    workflow_parameters=[
         NumberNodeParam(
             "periods_before",
             required=False,

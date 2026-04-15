@@ -27,8 +27,6 @@ from workflow import (
             label="清洗后因子数据",
             description="由计算因子节点输出的 factor_data_clean",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "period",
             required=False,

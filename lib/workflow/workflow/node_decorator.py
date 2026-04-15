@@ -7,7 +7,7 @@ import types
 from collections.abc import Callable
 from typing import TypeVar
 
-from .node_types import Node, NodeParam, Socket
+from .node_types import Node, Socket
 
 _T = TypeVar("_T")
 
@@ -27,7 +27,6 @@ def workflow_node(
     *,
     input_sockets: list[Socket],
     output_sockets: list[Socket],
-    workflow_parameters: list[NodeParam] | None = None,
     category: str = "",
     entry: str = "execute",
     label: str = "",
@@ -38,7 +37,8 @@ def workflow_node(
     The node type string is :func:`workflow_node_type_key` (``module.qualname``).
     The returned class stores node-definition fields on class attributes:
     ``type``, ``label``, ``description``, ``inputs``, ``outputs``.
-    ``workflow_parameters`` are appended to ``inputs`` (same tuple as wire sockets).
+    Node params (subclasses of :class:`~workflow.node_types.Socket`, e.g. :class:`~workflow.node_types.NodeParam`)
+    should be included directly in ``input_sockets`` (same tuple as wire sockets).
 
     If ``entry="evaluate"`` (typical for evaluation metric classes),
     :class:`~workflow.executor.WorkflowExecutor` resolves the class from ``node.type``,
@@ -61,11 +61,6 @@ def workflow_node(
 
     input_specs = _socket_tuple(input_sockets)
     output_specs = _socket_tuple(output_sockets)
-    _wp = workflow_parameters if workflow_parameters is not None else []
-    param_specs: tuple[NodeParam, ...] = tuple(
-        p for p in _wp if (getattr(p, "name", None) or "").strip()
-    )
-    combined_inputs: tuple[Socket, ...] = input_specs + param_specs
 
     def decorate(cls: type[_T]) -> type[_T]:
         return type(  # type: ignore[return-value]
@@ -91,7 +86,7 @@ def workflow_node(
                 "description": description,
                 "category": category,
                 "entry": entry,
-                "inputs": combined_inputs,
+                "inputs": input_specs,
                 "outputs": output_specs,
             },
         )

@@ -1,21 +1,16 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import {
-  createNode,
-  getNode,
-  getNodeTemplate,
-  patchNode,
-} from "@/api";
-import { defaultNewName } from "@/lib/default-new-name";
-import { refreshNodesListAtom } from "@/models/nodes/list-detail.atom";
-import type { NodeDetailPublic } from "@/models/nodes/dto";
+import { createNode, getNode, getNodeTemplate, patchNode } from '@/api';
+import { defaultNewName } from '@/lib/default-new-name';
+import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
+import type { NodeDetailPublic } from '@/models/nodes/dto';
 
-export const EMPTY_NODE_DETAIL_KEY = "__none__";
-export const NEW_NODE_DETAIL_KEY = "__new__";
+export const EMPTY_NODE_DETAIL_KEY = '__none__';
+export const NEW_NODE_DETAIL_KEY = '__new__';
 
 function applyNameToWorkflowNodeLabel(src: string, label: string) {
-  const escaped = label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const escaped = label.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   return src.replace(
     /(@workflow_node\([\s\S]*?\blabel=")([^"]*)(")/,
     (_: string, prefix: string, _oldLabel: string, suffix: string) => {
@@ -27,24 +22,24 @@ function applyNameToWorkflowNodeLabel(src: string, label: string) {
 function applyTimestampSuffixToWorkflowNodeClassName(src: string, now = new Date()) {
   const toPascalCase = (raw: string) =>
     raw
-      .replace(/[^a-zA-Z0-9]+/g, " ")
-      .split(" ")
+      .replace(/[^a-zA-Z0-9]+/g, ' ')
+      .split(' ')
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join("");
+      .join('');
   const timestamp = [
     now.getFullYear().toString(),
-    (now.getMonth() + 1).toString().padStart(2, "0"),
-    now.getDate().toString().padStart(2, "0"),
-    now.getHours().toString().padStart(2, "0"),
-    now.getMinutes().toString().padStart(2, "0"),
-    now.getSeconds().toString().padStart(2, "0"),
-  ].join("");
+    (now.getMonth() + 1).toString().padStart(2, '0'),
+    now.getDate().toString().padStart(2, '0'),
+    now.getHours().toString().padStart(2, '0'),
+    now.getMinutes().toString().padStart(2, '0'),
+    now.getSeconds().toString().padStart(2, '0'),
+  ].join('');
 
   return src.replace(
     /^(\s*class\s+)([A-Za-z_][A-Za-z0-9_]*)(\s*(?:\(|:))/m,
     (_: string, prefix: string, oldName: string, suffix: string) => {
-      const normalized = toPascalCase(oldName) || "WorkflowNode";
+      const normalized = toPascalCase(oldName) || 'WorkflowNode';
       return `${prefix}${normalized}${timestamp}${suffix}`;
     },
   );
@@ -72,9 +67,9 @@ function initialNodesDetailPanelState(): NodesDetailPanelState {
     detail: null,
     loadError: null,
     editing: false,
-    editName: "",
-    editDescription: "",
-    sourceDraft: "",
+    editName: '',
+    editDescription: '',
+    sourceDraft: '',
     saveError: null,
     saving: false,
   };
@@ -101,22 +96,21 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
     try {
       if (key === NEW_NODE_DETAIL_KEY) {
         const now = new Date();
-        const name = defaultNewName("新节点", now);
+        const name = defaultNewName('新节点', now);
         const baseDetail: NodeDetailPublic = {
           id: NEW_NODE_DETAIL_KEY,
           name,
-          description: "",
+          description: '',
           is_plugin: false,
-          source: "",
-          source_path: "",
-          created_at: "",
-          updated_at: "",
-          type: "",
+          source: '',
+          source_path: '',
+          created_at: '',
+          updated_at: '',
+          type: '',
           category: null,
-          entry: "",
+          entry: '',
           inputs: [],
           outputs: [],
-          workflow_parameters: [],
         };
         // 先落一个可编辑的空壳，避免 UI 在模板加载期间处于无 detail 状态
         set(nodesDetailPanelStateAtomFamily(key), {
@@ -125,8 +119,8 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
           loadError: null,
           editing: true,
           editName: name,
-          editDescription: "",
-          sourceDraft: "",
+          editDescription: '',
+          sourceDraft: '',
           saveError: null,
           saving: false,
         });
@@ -141,7 +135,7 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
           loadError: null,
           editing: true,
           editName: name,
-          editDescription: "",
+          editDescription: '',
           sourceDraft,
           saveError: null,
           saving: false,
@@ -155,7 +149,7 @@ export const loadNodesDetailPanelAtomFamily = atomFamily((key: string) =>
         loadError: null,
         editing: false,
         editName: detail.name,
-        editDescription: detail.description ?? "",
+        editDescription: detail.description ?? '',
         sourceDraft: detail.source,
         saveError: null,
         saving: false,
@@ -192,9 +186,9 @@ export const cancelNodesDetailEditAtomFamily = atomFamily((key: string) =>
       ...s,
       editing: false,
       saveError: null,
-      editName: state.detail?.name ?? "",
-      editDescription: state.detail?.description ?? "",
-      sourceDraft: state.detail?.source ?? "",
+      editName: state.detail?.name ?? '',
+      editDescription: state.detail?.description ?? '',
+      sourceDraft: state.detail?.source ?? '',
     }));
   }),
 );
@@ -202,9 +196,7 @@ export const cancelNodesDetailEditAtomFamily = atomFamily((key: string) =>
 export const setNodesDetailEditNameAtomFamily = atomFamily((key: string) =>
   atom(null, (get, set, name: string) => {
     const prev = get(nodesDetailPanelStateAtomFamily(key));
-    const sourceDraft = name.trim()
-      ? applyNameToWorkflowNodeLabel(prev.sourceDraft, name.trim())
-      : prev.sourceDraft;
+    const sourceDraft = name.trim() ? applyNameToWorkflowNodeLabel(prev.sourceDraft, name.trim()) : prev.sourceDraft;
     set(nodesDetailPanelStateAtomFamily(key), (s) => ({
       ...s,
       editName: name,
@@ -246,9 +238,7 @@ export const saveNodesDetailAtomFamily = atomFamily((key: string) =>
           ? await createNode({
               name: state.editName.trim(),
               description: state.editDescription.trim(),
-              ...(state.sourceDraft.trim()
-                ? { source: state.sourceDraft.trim() }
-                : {}),
+              ...(state.sourceDraft.trim() ? { source: state.sourceDraft.trim() } : {}),
             })
           : await patchNode(state.detail.id, {
               source: state.sourceDraft.trim(),
@@ -260,7 +250,7 @@ export const saveNodesDetailAtomFamily = atomFamily((key: string) =>
         loadError: null,
         editing: false,
         editName: detail.name,
-        editDescription: detail.description ?? "",
+        editDescription: detail.description ?? '',
         sourceDraft: detail.source,
         saveError: null,
         saving: false,

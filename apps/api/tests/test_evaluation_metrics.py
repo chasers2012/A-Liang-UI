@@ -30,43 +30,6 @@ def test_evaluation_metrics_crud(client):
     assert r5.status_code == 404
 
 
-def test_evaluation_metric_workflow_parameters_patch(client):
-    r = client.post("/evaluation-metrics", json={"name": "em_wp"})
-    assert r.status_code == 200
-    mid = r.json()["id"]
-    r2 = client.patch(
-        f"/evaluation-metrics/{mid}",
-        json={
-            "workflow_parameters": [
-                {
-                    "key": "alpha",
-                    "label": "α",
-                    "type": "number",
-                    "default": 1.5,
-                    "minimum": 0,
-                    "maximum": 10,
-                },
-                {
-                    "key": "mode",
-                    "label": "模式",
-                    "type": "string",
-                    "default": "a",
-                },
-            ],
-        },
-    )
-    assert r2.status_code == 200
-    body = r2.json()
-    assert len(body["workflow_parameters"]) == 2
-    assert body["workflow_parameters"][0]["key"] == "alpha"
-
-    r_bad = client.patch(
-        f"/evaluation-metrics/{mid}",
-        json={"workflow_parameters": [{"key": "quantiles", "type": "number"}]},
-    )
-    assert r_bad.status_code == 422
-
-
 def test_evaluation_profiles_node_types(client):
     r = client.get("/evaluation-profiles/node-types")
     assert r.status_code == 200

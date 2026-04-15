@@ -20,8 +20,6 @@ from workflow import NodeParam, Socket, StringNodeParam, workflow_node
             label="资产权重",
             description="因子权重或策略权重序列",
         ),
-    ],
-    workflow_parameters=[
         StringNodeParam(
             "period",
             required=False,

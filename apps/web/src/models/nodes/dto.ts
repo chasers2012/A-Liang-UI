@@ -1,4 +1,4 @@
-import type { NodeTypeSocketPublic } from "../evaluation-profile/dto";
+import type { NodeTypeSocketPublic } from '../evaluation-profile/dto';
 
 /** 与后端 ``workflow.NodeParamModel``（JSON）一致；用于工作流节点 ``evaluate`` 的额外 kwargs。 */
 export interface NodeParamModel {
@@ -18,9 +18,7 @@ export interface NodeParamModel {
   /** render_type=textarea 时后端 TextareaNodeParam.rows */
   rows?: number | null;
   /** 仅当 render_type=select 时可能存在 */
-  options?: Array<
-    string | number | { label: string | number; value: string | number }
-  > | null;
+  options?: Array<string | number | { label: string | number; value: string | number }> | null;
 }
 
 /** 与后端 ``WorkflowNodeSummaryPublic``（``GET /nodes``）一致。 */
@@ -37,8 +35,6 @@ export interface NodeSummaryPublic {
   entry: string;
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
-  /** 若后端扩展返回 evaluate 参数模型时使用；当前 ``GET /nodes`` 通常不返回。 */
-  workflow_parameters?: NodeParamModel[];
 }
 
 export interface NodeDetailPublic extends NodeSummaryPublic {
