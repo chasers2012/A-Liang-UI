@@ -44,7 +44,7 @@ export function PreprocessingWorkflowEditorBlock(props: {
         <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
             items={nodeTypes}
-            onSelectType={(type) => canvasRef.current?.addNode(type)}
+            onSelectId={(id) => canvasRef.current?.addNode(id)}
             className="w-[300px]"
           />
           <WorkflowGraphCanvas

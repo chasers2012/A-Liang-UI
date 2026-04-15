@@ -13,7 +13,6 @@ from app.nodes.constants import (
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
 )
-from app.nodes.schemas import WorkflowNodesRegistryFile
 from app.persistence.models import WorkflowNodeRow
 from app.persistence.sqlite_db import get_session
 
@@ -24,7 +23,6 @@ class WorkflowNodesRegistry:
         tk = type_key.strip()
         if not tk:
             raise ValueError("plugin workflow node type_key must be non-empty")
-        WorkflowNodeLoader.instance().register_node(tk, node_cls)
         with get_session() as session:
             session.merge(
                 WorkflowNodeRow(
@@ -41,16 +39,16 @@ class WorkflowNodesRegistry:
 
     @classmethod
     def resolve_node_class(cls, rec: WorkflowNodeRow) -> type[Node]:
-        loader = WorkflowNodeLoader.instance()
         try:
-            return loader.resolve(rec.id)
+            return WorkflowNodeLoader.resolve(rec.id)
         except Exception:
             if rec.is_plugin:
                 raise
             source = cls.read_source(rec)
-            node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
-            loader.register_node(rec.id, node_cls)
-            return loader.resolve(rec.id)
+            module_name = rec.id.rsplit(".", 1)[0] if "." in rec.id else "__workflow_node_source__"
+            return WorkflowNodeLoader.load_workflow_node_class_from_source(
+                source, module_name=module_name
+            )
 
     @classmethod
     def list_items(cls) -> list[WorkflowNodeRow]:
@@ -94,10 +92,6 @@ class WorkflowNodesRegistry:
             session.delete(row)
             session.commit()
             return rec
-
-    @classmethod
-    def load(cls) -> WorkflowNodesRegistryFile:
-        return WorkflowNodesRegistryFile(items=cls.list_items())
 
     @staticmethod
     def nodes_dir_path() -> Path:

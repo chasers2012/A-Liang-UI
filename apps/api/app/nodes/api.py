@@ -1,19 +1,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from workflow.node_loader import WorkflowNodeLoader
 
 from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
-    apply_node_patch,
     create_workflow_node,
     delete_workflow_node,
-    get_node_record,
     list_nodes,
     load_node_detail,
     update_node_record,
 )
-from app.nodes.registry import WorkflowNodesRegistry
 from app.nodes.schemas import (
     WorkflowNodeCreate,
     WorkflowNodeDetailPublic,
@@ -28,19 +24,7 @@ router.include_router(domains_router)
 
 @router.get("", response_model=list[WorkflowNodeSummaryPublic])
 def get_nodes(domain: str | None = None) -> list[WorkflowNodeSummaryPublic]:
-    rows = list_nodes(domain=domain)
-    loader = WorkflowNodeLoader.instance()
-    for row in rows:
-        try:
-            rec = WorkflowNodesRegistry.get_item(row.id)
-            if rec is None or rec.is_plugin:
-                continue
-            source = WorkflowNodesRegistry.read_source(rec)
-            node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
-            loader.register_node(row.id, node_cls)
-        except Exception:
-            continue
-    return rows
+    return list_nodes(domain=domain)
 
 
 @router.get("/template", response_model=str)
@@ -72,7 +56,7 @@ def get_node(node_id: str) -> WorkflowNodeDetailPublic:
 @router.patch("/{node_id}", response_model=WorkflowNodeDetailPublic)
 def patch_node(node_id: str, body: WorkflowNodePatch) -> WorkflowNodeDetailPublic:
     try:
-        rec = update_node_record(node_id, lambda r: apply_node_patch(r, body))
+        rec = update_node_record(node_id, body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -87,7 +71,5 @@ def patch_node(node_id: str, body: WorkflowNodePatch) -> WorkflowNodeDetailPubli
 
 @router.delete("/{node_id}", status_code=204)
 def delete_node(node_id: str) -> None:
-    if get_node_record(node_id) is None:
-        raise HTTPException(status_code=404, detail="节点不存在")
     if delete_workflow_node(node_id) is None:
         raise HTTPException(status_code=404, detail="节点不存在")

@@ -9,11 +9,10 @@ import { SectionHeader } from '@/components/section-header';
 import { cn } from '@/lib/utils';
 
 import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from './workflow-graph-canvas';
-import { NodeSummaryPublic } from '@/models/nodes/dto';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 
 export type WorkflowNodeTypeListItem = {
-  type: string;
+  id: string;
   label: string;
   description?: string | null;
   category?: string | null;
@@ -21,36 +20,36 @@ export type WorkflowNodeTypeListItem = {
 
 function NodeItem(props: {
   item: WorkflowNodeTypeListItem;
-  selectedType?: string | null;
+  selectedId?: string | null;
   description: string;
-  onSelectType?: (type: string) => void;
+  onSelectId?: (type: string) => void;
   draggable: boolean;
   dragMime: string;
 }) {
-  const { item, selectedType, description, onSelectType, draggable, dragMime } = props;
+  const { item, selectedId, description, onSelectId, draggable, dragMime } = props;
   return (
     <Item
-      key={item.type}
+      key={item.id}
       variant="outline"
       className={cn({
-        'border-primary bg-muted/50 ring-1 ring-primary/35': item.type === selectedType,
+        'border-primary bg-muted/50 ring-1 ring-primary/35': item.id === selectedId,
       })}
       render={
         <div
           role="button"
           tabIndex={0}
           className="w-full cursor-pointer text-left outline-none"
-          onClick={() => onSelectType?.(item.type)}
+          onClick={() => onSelectId?.(item.id)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              onSelectType?.(item.type);
+              onSelectId?.(item.id);
             }
           }}
           draggable={draggable}
           onDragStart={(e) => {
             if (!draggable) return;
-            e.dataTransfer.setData(dragMime, item.type);
+            e.dataTransfer.setData(dragMime, item.id);
             e.dataTransfer.effectAllowed = 'copy';
           }}
         />
@@ -98,14 +97,14 @@ export function WorkflowNodeTypeList(props: {
   searchPlaceholder?: string;
   searchQuery?: string;
   onSearchQueryChange?: (value: string) => void;
-  selectedType?: string | null;
+  selectedId?: string | null;
   error?: string | null;
   loadingText?: string;
   emptyText?: string;
   className?: string;
   listClassName?: string;
   toolbarRight?: ReactNode;
-  onSelectType?: (type: string) => void;
+  onSelectId?: (id: string) => void;
   draggable?: boolean;
   dragMime?: string;
 }) {
@@ -114,14 +113,14 @@ export function WorkflowNodeTypeList(props: {
     searchPlaceholder = '搜索名称/描述',
     searchQuery,
     onSearchQueryChange,
-    selectedType,
+    selectedId,
     error,
     loadingText = '加载中…',
     emptyText = '暂无节点',
     className,
     listClassName,
     toolbarRight,
-    onSelectType,
+    onSelectId,
     draggable = true,
     dragMime = WORKFLOW_GRAPH_NODE_DRAG_MIME,
   } = props;
@@ -193,11 +192,11 @@ export function WorkflowNodeTypeList(props: {
                     const description = toPlainTextFirstLinePreview(item.description);
                     return (
                       <NodeItem
-                        key={item.type}
+                        key={item.id}
                         item={item}
-                        selectedType={selectedType}
+                        selectedId={selectedId}
                         description={description}
-                        onSelectType={onSelectType}
+                        onSelectId={onSelectId}
                         draggable={draggable}
                         dragMime={dragMime}
                       />

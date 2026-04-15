@@ -1,14 +1,7 @@
-"use client";
+'use client';
 
-import { AlertTriangle, Maximize2, Minus, Plus, Trash2 } from "lucide-react";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-} from "react";
+import { AlertTriangle, Maximize2, Minus, Plus, Trash2 } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -21,47 +14,40 @@ import {
   type IsValidConnection,
   type Node,
   type ReactFlowInstance,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
-} from "./reactflow/workflow-graph-reactflow-defaults";
-import { resolveCollisions } from "./reactflow/resolve-collisions";
-import {
-  WorkflowGraphContextProvider,
-  useWorkflowGraphContext,
-} from "./workflow-graph-context";
+} from './reactflow/workflow-graph-reactflow-defaults';
+import { resolveCollisions } from './reactflow/resolve-collisions';
+import { WorkflowGraphContextProvider, useWorkflowGraphContext } from './workflow-graph-context';
 import {
   toPersistedWorkflowGraph,
   toReactFlowEdges,
   toReactFlowNodes,
   WORKFLOW_INPUT_NODE_ID,
   WORKFLOW_OUTPUT_NODE_ID,
-} from "./reactflow/serialize";
-import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
+} from './reactflow/serialize';
+import { normalizeAppendableHandle } from './reactflow/appendable-handle';
 
-import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
-import { WorkflowGraphPersisted } from "./reactflow/types";
-import { ErrorBoundary } from "next/dist/client/components/error-boundary";
-
+import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from './types';
+import { WorkflowGraphPersisted } from './reactflow/types';
+import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 
 /** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
-export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
-  "application/x-workflow-graph-node-type";
+export const WORKFLOW_GRAPH_NODE_DRAG_MIME = 'application/x-workflow-graph-node-type';
 
 function isProtectedPreprocessingNode(node: Node): boolean {
   return node.id === WORKFLOW_INPUT_NODE_ID || node.id === WORKFLOW_OUTPUT_NODE_ID;
 }
 
-
 export function WorkflowGraphZoomToolbar() {
-  const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } =
-    useReactFlow();
+  const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } = useReactFlow();
   const { readOnly } = useWorkflowGraphContext();
   const hasDeletableSelection = useStore(
     useCallback(
@@ -74,9 +60,7 @@ export function WorkflowGraphZoomToolbar() {
 
   const onDeleteSelected = useCallback(() => {
     if (readOnly) return;
-    const deletableNodes = getNodes().filter(
-      (node) => node.selected && !isProtectedPreprocessingNode(node),
-    );
+    const deletableNodes = getNodes().filter((node) => node.selected && !isProtectedPreprocessingNode(node));
     deleteElements({
       nodes: deletableNodes,
       edges: getEdges().filter((e) => e.selected),
@@ -143,10 +127,7 @@ export function WorkflowGraphZoomToolbar() {
 export type WorkflowGraphCanvasHandle = {
   getGraph: () => WorkflowGraphPersisted;
   /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
-  addNode: (
-    typeKey: string,
-    opts?: { position?: { x: number; y: number } },
-  ) => void;
+  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => void;
 };
 
 export type WorkflowGraphCanvasProps = {
@@ -157,11 +138,7 @@ export type WorkflowGraphCanvasProps = {
   readOnly?: boolean;
 };
 
-function pickConnectionNodes(
-  rf: ReactFlowInstance | null,
-  sourceId: string,
-  targetId: string,
-) {
+function pickConnectionNodes(rf: ReactFlowInstance | null, sourceId: string, targetId: string) {
   if (!rf) return { sourceNode: undefined, targetNode: undefined };
   const allNodes = rf.getNodes();
   return {
@@ -170,21 +147,14 @@ function pickConnectionNodes(
   };
 }
 
-
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="m-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive">
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">工作流渲染出错，请检查工作流文件</p>
-          <p className="mt-1 text-xs break-all opacity-90">{error.message || ""}</p>
+          <p className="mt-1 text-xs break-all opacity-90">{error.message || ''}</p>
         </div>
         <Button
           type="button"
@@ -199,15 +169,12 @@ export default function Error({
     </div>
   );
 }
-export const WorkflowGraphCanvas = forwardRef<
-  WorkflowGraphCanvasHandle,
-  WorkflowGraphCanvasProps
->(
-  function WorkflowGraphCanvas(
-    { className, nodeTypes, initialGraph, readOnly = false },
-    ref,
-  ) {
-    const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
+export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps>(
+  function WorkflowGraphCanvas({ className, nodeTypes, initialGraph, readOnly = false }, ref) {
+    const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(
+      () => Object.fromEntries(nodeTypes.map((d) => [d.id, d])),
+      [nodeTypes],
+    );
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
     const initialNodes = useMemo(
       () => toReactFlowNodes(initialGraph, catalog, { readOnly }),
@@ -245,58 +212,52 @@ export const WorkflowGraphCanvas = forwardRef<
       [readOnly],
     );
 
-    const onConnect = useCallback((c: Connection) => {
-      if (readOnly) return;
-      if (!c.target || !c.targetHandle) return;
-      const rf = reactFlowRef.current;
-      if (!rf) return;
-      rf.setEdges((eds) => {
-        const withoutSameInputHandle = eds.filter(
-          (e) =>
-            !(e.target === c.target && e.targetHandle === c.targetHandle),
-        );
-        return addEdge(
-          {
-            ...c,
-            id: crypto.randomUUID(),
-            type: "default",
-          },
-          withoutSameInputHandle,
-        );
-      });
-    }, [readOnly]);
-
-    const isValidConnection: IsValidConnection = useCallback(
-      (c) => {
-        // 仅允许 “输出 -> 输入” 且两端 value_type 相同
-        if (!c.source || !c.target) return false;
-        if (!c.sourceHandle || !c.targetHandle) return false;
-
-        const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
-        const targetHandle = normalizeAppendableHandle(c.targetHandle);
-
-        const { sourceNode, targetNode } = pickConnectionNodes(
-          reactFlowRef.current,
-          c.source,
-          c.target,
-        );
-        const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
-          ?.outputs;
-        const targetInputs = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)
-          ?.inputs ?? [];
-
-        const out = sourceOutputs?.find((s) => s.name === sourceHandle);
-        const inp = targetInputs.find((s) => s.name === targetHandle);
-        if (!out || !inp) return false;
-
-        // 对于 param（内联字段）常见 value_type 为空；此时视为“任意类型可接入”，
-        // 由后续将 param 提升为 socket 后再按节点真实输入类型约束。
-        if (!inp.value_type || !out.value_type) return true;
-
-        return out.value_type === inp.value_type;
+    const onConnect = useCallback(
+      (c: Connection) => {
+        if (readOnly) return;
+        if (!c.target || !c.targetHandle) return;
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setEdges((eds) => {
+          const withoutSameInputHandle = eds.filter(
+            (e) => !(e.target === c.target && e.targetHandle === c.targetHandle),
+          );
+          return addEdge(
+            {
+              ...c,
+              id: crypto.randomUUID(),
+              type: 'default',
+            },
+            withoutSameInputHandle,
+          );
+        });
       },
-      [],
+      [readOnly],
     );
+
+    const isValidConnection: IsValidConnection = useCallback((c) => {
+      // 仅允许 “输出 -> 输入” 且两端 value_type 相同
+      if (!c.source || !c.target) return false;
+      if (!c.sourceHandle || !c.targetHandle) return false;
+
+      const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
+      const targetHandle = normalizeAppendableHandle(c.targetHandle);
+
+      const { sourceNode, targetNode } = pickConnectionNodes(reactFlowRef.current, c.source, c.target);
+      const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
+        ?.outputs;
+      const targetInputs = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)?.inputs ?? [];
+
+      const out = sourceOutputs?.find((s) => s.name === sourceHandle);
+      const inp = targetInputs.find((s) => s.name === targetHandle);
+      if (!out || !inp) return false;
+
+      // 对于 param（内联字段）常见 value_type 为空；此时视为“任意类型可接入”，
+      // 由后续将 param 提升为 socket 后再按节点真实输入类型约束。
+      if (!inp.value_type || !out.value_type) return true;
+
+      return out.value_type === inp.value_type;
+    }, []);
 
     const addNode = useCallback(
       (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
@@ -313,7 +274,7 @@ export const WorkflowGraphCanvas = forwardRef<
           const position = opts?.position ?? fallbackPos;
           const node = {
             id: crypto.randomUUID(),
-            type: "workflowStep",
+            type: 'workflowStep',
             position,
             data: {
               backendType: typeKey,
@@ -344,65 +305,60 @@ export const WorkflowGraphCanvas = forwardRef<
       return toPersistedWorkflowGraph(rf.getNodes(), rf.getEdges());
     }, [initialEdges, initialNodes]);
 
-    useImperativeHandle(
-      ref,
-      () => ({ getGraph, addNode }),
-      [getGraph, addNode],
+    useImperativeHandle(ref, () => ({ getGraph, addNode }), [getGraph, addNode]);
+
+    const onDragOver = useCallback(
+      (e: React.DragEvent) => {
+        if (readOnly) return;
+        const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+        if (!has) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      },
+      [readOnly],
     );
 
-    const onDragOver = useCallback((e: React.DragEvent) => {
-      if (readOnly) return;
-      const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
-      if (!has) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-    }, [readOnly]);
+    const onDrop = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        if (readOnly) return;
+        const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+        if (!typeKey) return;
+        e.preventDefault();
 
-    const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-      if (readOnly) return;
-      const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
-      if (!typeKey) return;
-      e.preventDefault();
-
-      const rf = reactFlowRef.current;
-      const el = e.currentTarget;
-      if (!rf) {
-        addNode(typeKey);
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      const clientPoint = { x: e.clientX, y: e.clientY };
-      const flowPos = rf.screenToFlowPosition(clientPoint);
-      if (
-        clientPoint.x < rect.left ||
-        clientPoint.x > rect.right ||
-        clientPoint.y < rect.top ||
-        clientPoint.y > rect.bottom
-      ) {
-        addNode(typeKey);
-        return;
-      }
-      addNode(typeKey, { position: flowPos });
-    }, [addNode, readOnly]);
+        const rf = reactFlowRef.current;
+        const el = e.currentTarget;
+        if (!rf) {
+          addNode(typeKey);
+          return;
+        }
+        const rect = el.getBoundingClientRect();
+        const clientPoint = { x: e.clientX, y: e.clientY };
+        const flowPos = rf.screenToFlowPosition(clientPoint);
+        if (
+          clientPoint.x < rect.left ||
+          clientPoint.x > rect.right ||
+          clientPoint.y < rect.top ||
+          clientPoint.y > rect.bottom
+        ) {
+          addNode(typeKey);
+          return;
+        }
+        addNode(typeKey, { position: flowPos });
+      },
+      [addNode, readOnly],
+    );
 
     return (
-      <div
-        data-slot="workflow-graph-layout"
-        className={cn(
-          "flex h-full min-h-0 flex-col gap-3",
-          className,
-        )}
-      >
+      <div data-slot="workflow-graph-layout" className={cn('flex h-full min-h-0 flex-col gap-3', className)}>
         <div
           className={cn(
-            "workflow-graph-canvas-root relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
-            readOnly && "workflow-graph-canvas-root--readonly",
+            'workflow-graph-canvas-root relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40',
+            readOnly && 'workflow-graph-canvas-root--readonly',
           )}
           onDragOver={onDragOver}
           onDrop={onDrop}
         >
           <WorkflowGraphContextProvider readOnly={readOnly}>
-
             <ErrorBoundary errorComponent={Error}>
               <ReactFlow
                 defaultNodes={initialNodes}
@@ -415,7 +371,7 @@ export const WorkflowGraphCanvas = forwardRef<
                 isValidConnection={readOnly ? undefined : isValidConnection}
                 fitView
                 fitViewOptions={fitViewOptions}
-                deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+                deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
                 nodesDraggable={!readOnly}
                 nodesConnectable={!readOnly}
                 elementsSelectable={!readOnly}
@@ -435,9 +391,9 @@ export const WorkflowGraphCanvas = forwardRef<
                 <WorkflowGraphZoomToolbar />
               </ReactFlow>
             </ErrorBoundary>
-
           </WorkflowGraphContextProvider>
         </div>
       </div>
     );
-  });
+  },
+);

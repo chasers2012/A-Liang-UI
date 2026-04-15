@@ -45,7 +45,7 @@ export function ProfileWorkflowEditorBlock(props: {
           <WorkflowNodeTypeList
             className="w-[300px]"
             items={nodeTypes}
-            onSelectType={(type) => canvasRef.current?.addNode(type)}
+            onSelectId={(id) => canvasRef.current?.addNode(id)}
           />
           <WorkflowGraphCanvas
             key={canvasKey}

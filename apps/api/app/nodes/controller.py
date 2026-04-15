@@ -85,14 +85,11 @@ def list_nodes(domain: str | None = None) -> list[WorkflowNodeSummaryPublic]:
             else:
                 print(f"Failed to load node summary for {rec.id}")
                 continue
-        except Exception:
+        except Exception as e:
             print(f"Failed to load node summary for {rec.id}")
+            print(e)
             continue
     return out
-
-
-def get_node_record(node_id: str) -> WorkflowNodeRow | None:
-    return WorkflowNodesRegistry.get_item(node_id)
 
 
 def read_node_source(rec: WorkflowNodeRow) -> str:
@@ -103,8 +100,20 @@ def write_node_source(rec: WorkflowNodeRow, source: str) -> None:
     WorkflowNodesRegistry.write_source(rec, source)
 
 
-def update_node_record(node_id: str, apply_fn) -> WorkflowNodeRow | None:
-    return WorkflowNodesRegistry.update_item(node_id, apply_fn)
+def _apply_node_patch(rec: WorkflowNodeRow, patch: WorkflowNodePatch) -> None:
+    if rec.is_plugin:
+        raise ValueError("cannot patch plugin workflow node")
+    data = patch.model_dump(exclude_unset=True)
+    if "source" in data and patch.source is not None:
+        write_node_source(rec, patch.source)
+        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(patch.source)
+        rec.name = getattr(node_cls, "label", rec.name)
+        rec.description = getattr(node_cls, "description", rec.description) or ""
+    rec.updated_at = utc_now_iso()
+
+
+def update_node_record(node_id: str, patch: WorkflowNodePatch) -> WorkflowNodeRow | None:
+    return WorkflowNodesRegistry.update_item(node_id, lambda r: _apply_node_patch(r, patch))
 
 
 def delete_workflow_node(node_id: str) -> WorkflowNodeRow | None:
@@ -115,15 +124,3 @@ def delete_workflow_node(node_id: str) -> WorkflowNodeRow | None:
         return None
     WorkflowNodePackageManager.delete_node_package(node_id)
     return WorkflowNodesRegistry.delete_item(node_id)
-
-
-def apply_node_patch(rec: WorkflowNodeRow, patch: WorkflowNodePatch) -> None:
-    if rec.is_plugin:
-        raise ValueError("cannot patch plugin workflow node")
-    data = patch.model_dump(exclude_unset=True)
-    if "source" in data and patch.source is not None:
-        write_node_source(rec, patch.source)
-        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(patch.source)
-        rec.name = getattr(node_cls, "label", rec.name)
-        rec.description = getattr(node_cls, "description", rec.description) or ""
-    rec.updated_at = utc_now_iso()

@@ -6,10 +6,8 @@ from langchain_core.tools import tool
 
 from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
-    apply_node_patch,
     create_workflow_node,
     delete_workflow_node,
-    get_node_record,
     list_nodes,
     load_node_detail,
     update_node_record,
@@ -49,7 +47,7 @@ def get_workflow_node_list() -> list[dict[str, Any]]:
 
 @tool(description="更新节点，返回更新后的详情。")
 def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any]:
-    rec = update_node_record(node_id, lambda r: apply_node_patch(r, body))
+    rec = update_node_record(node_id, body)
     if rec is None:
         raise ValueError(f"节点 {node_id} 不存在")
     detail = load_node_detail(rec.id)
@@ -60,9 +58,6 @@ def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any
 
 @tool(description="删除节点。")
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
-    rec = get_node_record(node_id)
-    if rec is None:
-        raise ValueError(f"节点 {node_id} 不存在")
     deleted = delete_workflow_node(node_id)
     if deleted is None:
         raise ValueError(f"节点 {node_id} 不存在")

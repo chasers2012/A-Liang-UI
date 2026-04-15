@@ -7,11 +7,6 @@ from workflow.node_loader import WorkflowNodeLoader
 from app.persistence.models import WorkflowNodeRow
 
 
-class WorkflowNodesRegistryFile(BaseModel):
-    version: int = 1
-    items: list[WorkflowNodeRow] = Field(default_factory=list)
-
-
 class WorkflowNodeCreate(BaseModel):
     source: str
 
@@ -62,7 +57,6 @@ class WorkflowNodeSummaryPublic(BaseModel):
     is_plugin: bool = False
     created_at: str
     updated_at: str
-    type: str
     category: str | None = None
     inputs: list[dict]
     outputs: list[dict]

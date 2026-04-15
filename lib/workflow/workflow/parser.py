@@ -143,7 +143,7 @@ class Parser:
         if not isinstance(type_key, str) or not type_key.strip():
             raise ValueError("node payload missing string field 'type'")
 
-        node_cls = WorkflowNodeLoader.instance().resolve(type_key)
+        node_cls = WorkflowNodeLoader.resolve(type_key)
 
         try:
             node_obj = node_cls()  # type: ignore[call-arg]

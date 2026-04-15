@@ -17,7 +17,7 @@ export { WorkflowNodeTypeList, type WorkflowNodeTypeListItem } from './workflow-
 
 export function toWorkflowNodeTypes(catalog: NodeSummaryPublic[]): WorkflowNodeTypeDefinition[] {
   return catalog.map((c) => ({
-    type: c.type,
+    id: c.id,
     label: c.name,
     description: c.description,
     category: c.category ?? undefined,
