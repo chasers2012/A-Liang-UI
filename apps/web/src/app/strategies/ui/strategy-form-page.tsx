@@ -79,31 +79,14 @@ export function StrategyFormPage(props: Props) {
   }
 
   return (
-    <Page
-      title={<FactorEditPageTitle name={state.name} onNameChange={setName} nameAriaLabel="策略名称" />}
-      description={<FactorEditPageDescription description={state.description} onDescriptionChange={setDescription} descriptionAriaLabel="策略描述" />}
-      className={'max-w-full flex-1 min-h-0 h-full overflow-hidden'}
-      gap="sm"
-      action={
-        <PageFormHeaderActions
-          formId={formId}
-          submitting={state.submitting}
-          submitDisabled={!state.name.trim()}
-          submitLabel={isEdit ? undefined : '创建'}
-          submittingLabel={isEdit ? undefined : '创建中…'}
-          cancelHref={cancelHref}
-        />
-      }
-    >
-      <form id={formId} className="flex min-h-0 flex-1 flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
-        {state.formError && (
-          <Alert variant="destructive" className="shrink-0">
-            <AlertTitle>无法保存</AlertTitle>
-            <AlertDescription>{state.formError}</AlertDescription>
-          </Alert>
-        )}
-        <StrategyWorkflowEditorBlock workflow={state.workflow} canvasKey={canvasKey} canvasRef={canvasRef} />
-      </form>
-    </Page>
+    <form id={formId} className="flex min-h-0 flex-1 flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+      {state.formError && (
+        <Alert variant="destructive" className="shrink-0">
+          <AlertTitle>无法保存</AlertTitle>
+          <AlertDescription>{state.formError}</AlertDescription>
+        </Alert>
+      )}
+      <StrategyWorkflowEditorBlock workflow={state.workflow} canvasKey={canvasKey} canvasRef={canvasRef} />
+    </form>
   );
 }

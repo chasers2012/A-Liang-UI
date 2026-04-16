@@ -44,6 +44,10 @@ def empty_workflow_template_dict() -> dict[str, Any]:
     return _deep_copy_json_object(STRATEGY_EMPTY_WORKFLOW_TEMPLATE)
 
 
+def strategy_workflow_template_dict() -> dict[str, Any]:
+    return empty_workflow_template_dict()
+
+
 def strategy_workflow_io_spec_dict() -> dict[str, list[dict[str, Any]]]:
     return {
         "workflow_inputs": _deep_copy_json_object({"workflow_inputs": STRATEGY_WORKFLOW_INPUTS})[

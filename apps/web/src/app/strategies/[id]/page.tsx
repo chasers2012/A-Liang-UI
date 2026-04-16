@@ -2,17 +2,17 @@
 
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { Pencil } from 'lucide-react';
 
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
+import { cn } from '@/lib/utils';
 import {
-  deleteStrategyAtomFamily,
   loadStrategyDetailAtomFamily,
   refreshStrategyNodeTypesAtom,
   strategyDetailAtomFamily,
@@ -20,40 +20,23 @@ import {
 } from '@/models/strategy/list-detail.atom';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
 
-function StrategyDetailContent({
-  id,
-  data,
-  error,
-  catalog,
-  catalogError,
-  deleting,
-  onDelete,
-}: {
-  id: string | undefined;
+function StrategyDetailContent(props: {
+  id: string;
   data: { name: string; description?: string | null; workflow: unknown; updated_at: string } | null;
   error: string | null;
   catalog: NodeSummaryPublic[] | null;
   catalogError: string | null;
-  deleting: boolean;
-  onDelete: () => Promise<void>;
 }) {
+  const { id, data, error, catalog, catalogError } = props;
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog ?? []), [catalog]);
   const catalogLoading = !catalog && !catalogError;
 
-  if (!data && !error) {
-    return (
-      <Page title="策略">
-        <p className="text-sm text-muted-foreground">加载中…</p>
-      </Page>
-    );
-  }
-
   if (error || !data) {
     return (
-      <Page title="策略">
-        <Alert variant="destructive">
-          <AlertTitle>加载失败</AlertTitle>
-          <AlertDescription>{error ?? '未知错误'}</AlertDescription>
+      <Page>
+        <Alert variant={error ? 'destructive' : 'default'}>
+          <AlertTitle>{error ? '加载失败' : '加载中…'}</AlertTitle>
+          {error ? <AlertDescription>{error}</AlertDescription> : null}
         </Alert>
       </Page>
     );
@@ -62,46 +45,35 @@ function StrategyDetailContent({
   return (
     <Page
       title={data.name}
-      description={data.description || '策略详情'}
+      description={data.description || '无描述'}
+      className="max-w-full"
+      gap="sm"
       action={
-        <div className="flex items-center gap-2">
-          {id && id !== 'undefined' ? (
-            <Link
-              href={`/strategies/${encodeURIComponent(id)}/edit`}
-              className={cn(buttonVariants({ variant: 'default' }))}
-            >
-              编辑
-            </Link>
-          ) : null}
-          <Button type="button" variant="destructive" onClick={() => void onDelete()} disabled={deleting}>
-            删除
-          </Button>
-        </div>
+        <Link
+          href={`/strategies/${encodeURIComponent(id)}/edit`}
+          className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
+        >
+          <Pencil className="size-4" />
+          编辑
+        </Link>
       }
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>工作流</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {catalogLoading ? (
-            <p className="text-sm text-muted-foreground">加载节点类型…</p>
-          ) : catalogError ? (
-            <Alert variant="destructive">
-              <AlertTitle>加载失败</AlertTitle>
-              <AlertDescription>{catalogError}</AlertDescription>
-            </Alert>
-          ) : (
-            <WorkflowGraphCanvas
-              key={data.updated_at}
-              nodeTypes={nodeTypes}
-              initialGraph={data.workflow}
-              readOnly
-              className="h-[560px] w-full"
-            />
-          )}
-        </CardContent>
-      </Card>
+      {catalogLoading ? (
+        <p className="text-sm text-muted-foreground">加载节点类型…</p>
+      ) : catalogError ? (
+        <Alert variant="destructive">
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>{catalogError}</AlertDescription>
+        </Alert>
+      ) : (
+        <WorkflowGraphCanvas
+          key={data.updated_at}
+          nodeTypes={nodeTypes}
+          initialGraph={data.workflow}
+          readOnly
+          className="flex-1 w-full"
+        />
+      )}
     </Page>
   );
 }
@@ -110,12 +82,9 @@ export default function StrategyDetailPage() {
   const params = useParams<{ id?: string | string[] }>();
   const rawId = params?.id;
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
-  const router = useRouter();
-  const [deleting, setDeleting] = useState(false);
   const invalidId = !id || id === 'undefined';
   const { row: data, error } = useAtomValue(strategyDetailAtomFamily(id ?? ''));
   const loadDetail = useSetAtom(loadStrategyDetailAtomFamily(id ?? ''));
-  const doDelete = useSetAtom(deleteStrategyAtomFamily(id ?? ''));
   const { items: catalog, error: catalogError } = useAtomValue(strategyNodeTypesAtom);
   const refreshCatalog = useSetAtom(refreshStrategyNodeTypesAtom);
 
@@ -128,26 +97,15 @@ export default function StrategyDetailPage() {
     void refreshCatalog();
   }, [refreshCatalog]);
 
-  const onDelete = async () => {
-    setDeleting(true);
-    try {
-      if (!id || id === 'undefined') throw new Error('无效策略 ID');
-      await doDelete();
-      router.push('/strategies');
-    } finally {
-      setDeleting(false);
-    }
-  };
+  if (invalidId) {
+    return (
+      <Page>
+        <Alert variant="destructive">
+          <AlertTitle>无效 id</AlertTitle>
+        </Alert>
+      </Page>
+    );
+  }
 
-  return (
-    <StrategyDetailContent
-      id={id}
-      data={data}
-      error={error}
-      catalog={catalog}
-      catalogError={catalogError}
-      deleting={deleting}
-      onDelete={onDelete}
-    />
-  );
+  return <StrategyDetailContent id={id} data={data} error={error} catalog={catalog} catalogError={catalogError} />;
 }

@@ -36,7 +36,6 @@ export function StrategyWorkflowEditorBlock(props: {
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col gap-3', className)}>
-      <Label>策略工作流</Label>
       {loading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (

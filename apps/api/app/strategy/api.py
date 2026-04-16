@@ -5,6 +5,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from app.datasource.schemas import utc_now_iso
+from app.strategy.constants import strategy_workflow_template_dict
 from app.strategy.controller import validate_strategy_workflow_only
 from app.strategy.models import StrategyRow
 from app.strategy.registry import StrategyRegistry
@@ -41,6 +42,11 @@ def _merge_strategy_patch(row: StrategyRow, body: StrategyPatch, data: dict[str,
     if "workflow" in data and body.workflow is not None:
         row.workflow = json.dumps(body.workflow, ensure_ascii=False)
     row.updated_at = utc_now_iso()
+
+
+@router.get("/workflow-template", response_model=dict)
+def get_workflow_template() -> dict:
+    return strategy_workflow_template_dict()
 
 
 @router.get("", response_model=list[StrategyPublic])

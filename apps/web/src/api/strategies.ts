@@ -9,6 +9,10 @@ export function getStrategy(id: string): Promise<StrategyPublic> {
   return apiFetchJson<StrategyPublic>(`/strategies/${encodeURIComponent(id)}`);
 }
 
+export function getStrategyWorkflowTemplate(): Promise<Record<string, unknown>> {
+  return apiFetchJson<Record<string, unknown>>('/strategies/workflow-template');
+}
+
 export function createStrategy(body: unknown): Promise<StrategyPublic> {
   return apiFetchJson<StrategyPublic>('/strategies', {
     method: 'POST',
