@@ -119,9 +119,3 @@ class WorkflowIOSpecPublic(BaseModel):
 class StrategyValidateResponse(BaseModel):
     ok: bool
     errors: list[str] = Field(default_factory=list)
-
-
-class StrategyPreviewResponse(BaseModel):
-    ok: bool
-    # Small, UI-friendly preview payload; filled by engine later.
-    preview: dict[str, Any] = Field(default_factory=dict)
