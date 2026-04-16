@@ -38,10 +38,3 @@ export function validateStrategy(id: string): Promise<{ ok: boolean; errors: str
     method: 'POST',
   });
 }
-
-export function previewStrategy(id: string): Promise<{ ok: boolean; preview: Record<string, unknown> }> {
-  return apiFetchJson<{ ok: boolean; preview: Record<string, unknown> }>(
-    `/strategies/${encodeURIComponent(id)}/preview`,
-    { method: 'POST' },
-  );
-}
