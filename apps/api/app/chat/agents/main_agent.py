@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from app.tool.controller import ToolController
 from langchain.agents import AgentState, create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
+from langchain_core.messages import SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from pydantic import BaseModel, Field
 
 
 class PlanExecuteState(AgentState[Any], total=False):
@@ -17,66 +17,36 @@ class PlanExecuteState(AgentState[Any], total=False):
     completed_steps: list[str]
 
 
-def _extract_text(message: BaseMessage | None) -> str:
-    if not isinstance(message, AIMessage):
-        return ""
-    content = message.content
-    if isinstance(content, str):
-        return content.strip()
-    if isinstance(content, list):
-        parts: list[str] = []
-        for block in content:
-            if isinstance(block, str):
-                parts.append(block)
-            elif isinstance(block, dict) and block.get("type") == "text":
-                text = block.get("text")
-                if isinstance(text, str):
-                    parts.append(text)
-        return "\n".join(part for part in parts if part.strip())
-    return ""
+class PlannerPlanOutput(BaseModel):
+    """Planner 输出结构。"""
 
-
-def _parse_plan(text: str) -> list[str]:
-    if text.strip() == "完成":
-        return []
-    steps: list[str] = []
-    for raw_line in text.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        while line and line[0] in "-•*0123456789.、)（( ":
-            line = line[1:].lstrip()
-        if line:
-            steps.append(line)
-    return steps
+    plan: list[str] = Field(
+        ...,
+        description="按顺序执行的计划步骤列表；每个元素是纯文本步骤描述。",
+        min_length=1,
+    )
 
 
 def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecuteState:
     tool_block = (
         "\n".join(f"- {name}" for name in ToolController().list_tool_names()) or "- 无可用工具"
     )
-    planner = create_agent(
-        model=model,
-        tools=[],
-        system_prompt=(
-            "你是一个 planning agent。你的职责是分析用户目标并生成一个简洁、可执行的计划。"
-            "\n要求："
-            "\n1. 只输出计划，不要执行。"
-            "\n2. 每个步骤尽量独立、原子化。"
-            "\n3. 如果需要调用工具，优先把工具调用安排到相应步骤中。"
-            '\n4. 返回一个json数组，每个元素都是一个纯文本描述的步骤。形如：["步骤1","步骤2"]'
-            f"\n\n可用工具：\n{tool_block}"
-        ),
-    )
     messages = state.get("messages", [])
     try:
-        result = planner.invoke({"messages": messages})
-        plan_text = _extract_text(
-            result.get("messages", [])[-1]
-            if isinstance(result, dict) and result.get("messages")
-            else None
+        system_prompt = (
+            "你是一个 planning agent。你的职责是分析用户目标并生成一个简洁、可执行的计划。\n"
+            "要求：\n"
+            "1. 只输出计划，不要执行。\n"
+            "2. 每个步骤尽量独立、原子化。\n"
+            "3. 如果需要调用工具，优先把工具调用安排到相应步骤中。\n"
+            "4. 按结构化输出生成：plan 为 list[str]，每个元素是纯文本步骤描述。\n"
+            f"\n可用工具：\n{tool_block}"
         )
-        plan = json.loads(plan_text)
+        structured_planner = model.with_structured_output(PlannerPlanOutput)
+        structured_result = structured_planner.invoke(
+            [SystemMessage(content=system_prompt), *messages]
+        )
+        plan = structured_result.plan
     except Exception as e:
         print(e)
         plan = None
