@@ -19,13 +19,13 @@ def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
         "nodes": [
             {
                 "id": "load",
-                "type": "strategy_nodes.nodes.LoadDataSetNode",
+                "type": "common_nodes.load_data_set.LoadDataSet",
                 "pos": [0, 0],
                 "params": {},
             },
             {
                 "id": "factor",
-                "type": "strategy_nodes.nodes.FactorRefNode",
+                "type": "common_nodes.factor_ref.FactorRefNode",
                 "pos": [300, 0],
                 "params": {"factor_id": ""},
             },

@@ -3,99 +3,8 @@ from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
 import pandas as pd
-from app.data_set.controller import get_data_set
-from app.data_set.redistry import DataSetsStore
-from app.factors.controller import get_factor
-from app.factors.registry import FactorItemsRegistry
 from workflow import Socket, workflow_node
 from workflow.node_types import BooleanNodeParam, NumberNodeParam, OptionsNodeParam
-
-
-def _wide_from_panel(panel: pd.DataFrame, *, field: str) -> pd.DataFrame:
-    if panel.empty:
-        return pd.DataFrame()
-    if not isinstance(panel.index, pd.MultiIndex):
-        raise ValueError("panel must have MultiIndex (date, asset)")
-    if field not in panel.columns:
-        raise ValueError(f"panel missing field {field!r}")
-    s = panel[field]
-    out = s.unstack("asset")
-    out.index.name = "date"
-    out.columns = [str(c) for c in out.columns]
-    return out.sort_index()
-
-
-@workflow_node(
-    input_sockets=[
-        OptionsNodeParam(
-            name="data_set",
-            label="数据集",
-            description="选择要加载的数据集 ID",
-            options=lambda: [{"label": s.name, "value": s.id} for s in DataSetsStore.list_items()],
-        )
-    ],
-    output_sockets=[
-        Socket("data_set", required=True, value_type="data_set", label="数据集"),
-        Socket("close", required=True, value_type="price_df", label="收盘价"),
-        Socket("open", required=False, value_type="price_df", label="开盘价"),
-    ],
-    label="加载数据集(策略)",
-    description="加载 DataSet 并输出价格矩阵（close/open）。",
-    category="strategy",
-)
-class LoadDataSetNode:
-    def execute(self, **kwargs: Any) -> tuple[Any, pd.DataFrame, pd.DataFrame]:
-        ds_id = str(kwargs.get("data_set") or "").strip()
-        if not ds_id:
-            raise ValueError("data_set 不能为空")
-        ds = get_data_set(ds_id)
-        if ds is None:
-            raise ValueError("数据集不存在")
-
-        panel = ds.get_panel(fields=["close", "open"], window=1)
-        close = _wide_from_panel(panel, field="close")
-        open_ = _wide_from_panel(panel, field="open")
-        return ds, close, open_
-
-
-@workflow_node(
-    input_sockets=[
-        Socket("data_set", required=True, value_type="data_set", label="数据集"),
-        OptionsNodeParam(
-            name="factor_id",
-            label="因子",
-            description="选择因子 ID",
-            options=lambda: [
-                {"label": f.name, "value": f.id} for f in FactorItemsRegistry.list_items()
-            ],
-        ),
-    ],
-    output_sockets=[Socket("factor", required=True, value_type="factor_df", label="因子矩阵")],
-    label="因子引用",
-    description="加载并计算因子，输出 time×asset 矩阵。",
-    category="strategy",
-)
-class FactorRefNode:
-    def execute(self, **kwargs: Any) -> pd.DataFrame:
-        ds: Any = kwargs["data_set"]
-        factor_id = str(kwargs.get("factor_id") or "").strip()
-        if not factor_id:
-            raise ValueError("factor_id 不能为空")
-        factor_cls = get_factor(factor_id)
-        if factor_cls is None:
-            raise ValueError("因子不存在或无法加载")
-        if not ds.end_date:
-            raise ValueError("数据集缺少 end_date")
-        resolver = ds.create_resolver()
-        factor = factor_cls(dependency_resolver=resolver)
-        df = factor.calculate(
-            start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes
-        )
-        col = df.columns[0] if len(df.columns) else factor.name
-        wide = df[col].unstack("asset")
-        wide.index.name = "date"
-        wide.columns = [str(c) for c in wide.columns]
-        return wide.sort_index()
 
 
 @workflow_node(
@@ -131,7 +40,7 @@ class ThresholdSignalNode:
 
 @workflow_node(
     input_sockets=[
-        Socket("factor", required=True, value_type="factor_df", label="因子"),
+        Socket("factor", required=True, value_type="factor", label="因子"),
         NumberNodeParam("k", required=True, default=10, label="TopK"),
         BooleanNodeParam("ascending", required=False, default=False, label="升序(小值优先)"),
     ],
@@ -261,9 +170,7 @@ class ToPositionNode:
 
 __all__: ClassVar[list[str]] = [
     "EqualWeightNode",
-    "FactorRefNode",
     "LagNode",
-    "LoadDataSetNode",
     "RankTopKNode",
     "RebalanceNode",
     "ThresholdSignalNode",

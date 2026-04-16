@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from workflow import workflow_node_type_key
 from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
@@ -47,6 +49,53 @@ def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
         inputs=[Parser.serialize_socket(s) for s in node_cls.inputs],
         outputs=[Parser.serialize_socket(s) for s in node_cls.outputs],
     )
+
+
+def _default_workflow_node_params(node_cls: type) -> dict[str, Any]:
+    defaults: dict[str, Any] = {}
+    for socket in getattr(node_cls, "inputs", ()):
+        payload = Parser.serialize_socket(socket)
+        name = payload.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if "default" in payload:
+            defaults[name] = payload["default"]
+    return defaults
+
+
+def build_workflow_node_for_graph(
+    node_id: str,
+    instance_id: str | None = None,
+    pos: list[float] | None = None,
+) -> dict[str, Any] | None:
+    """
+    Build a workflow-ready node payload that can be inserted into workflow.nodes.
+    """
+    rec = WorkflowNodesRegistry.get_item(node_id)
+    if rec is None:
+        return None
+    node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
+    if node_cls is None:
+        return None
+
+    p = pos or [0.0, 0.0]
+    try:
+        node_pos = [float(p[0]), float(p[1])]
+    except (TypeError, ValueError, IndexError):
+        node_pos = [0.0, 0.0]
+
+    node_instance_id = (instance_id or "").strip() or rec.id
+    return {
+        "id": node_instance_id,
+        "type": rec.id,
+        "label": rec.name,
+        "description": rec.description,
+        "category": getattr(node_cls, "category", ""),
+        "inputs": [Parser.serialize_socket(s) for s in node_cls.inputs],
+        "outputs": [Parser.serialize_socket(s) for s in node_cls.outputs],
+        "pos": node_pos,
+        "params": _default_workflow_node_params(node_cls),
+    }
 
 
 def load_node_detail(node_id: str) -> WorkflowNodeDetailPublic | None:

@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 
 from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
+    build_workflow_node_for_graph,
     create_workflow_node,
     delete_workflow_node,
     list_nodes,
@@ -45,6 +46,23 @@ def get_workflow_node_list() -> list[dict[str, Any]]:
     return [x.model_dump() for x in list_nodes()]
 
 
+@tool(description="按 node_id 获取可直接放入 workflow.nodes 的格式化节点。")
+def get_formatted_workflow_node(
+    node_id: str,
+    instance_id: str = "",
+    pos_x: float = 0.0,
+    pos_y: float = 0.0,
+) -> dict[str, Any]:
+    node = build_workflow_node_for_graph(
+        node_id=node_id,
+        instance_id=instance_id or None,
+        pos=[pos_x, pos_y],
+    )
+    if node is None:
+        raise ValueError(f"节点 {node_id} 不存在")
+    return node
+
+
 @tool(description="更新节点并返回更新后的详情；不存在时报错。")
 def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any]:
     rec = update_node_record(node_id, body)
@@ -69,6 +87,7 @@ WORKFLOW_NODE_CHAT_TOOLS = [
     create_workflow_node_tool,
     get_workflow_node_detail,
     get_workflow_node_list,
+    get_formatted_workflow_node,
     update_workflow_node,
     delete_workflow_node_tool,
 ]

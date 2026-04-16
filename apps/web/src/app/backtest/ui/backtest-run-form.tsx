@@ -22,6 +22,47 @@ import {
 } from '@/models/backtest/list-detail.atom';
 import { useEffect } from 'react';
 
+type NamedOption = { id: string; name: string };
+
+function BacktestCatalogSelect(props: {
+  id: string;
+  label: string;
+  value: string;
+  onValueChange: (v: string) => void;
+  loading: boolean;
+  placeholder: string;
+  emptyText: string;
+  options: NamedOption[];
+}) {
+  const { id, label, value, onValueChange, loading, placeholder, emptyText, options } = props;
+  const selectedLabel = options.find((o) => o.id === value)?.name ?? '';
+
+  return (
+    <div className="grid gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={(v) => v && onValueChange(v)}>
+        <SelectTrigger id={id} className="w-full">
+          <SelectValue placeholder={loading ? '加载中…' : placeholder}>{selectedLabel || undefined}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {options.length ? (
+            options.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                <span className="truncate">{o.name}</span>
+                <span className="ml-2 font-mono text-xs text-muted-foreground">{o.id}</span>
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value={`__empty__${id}__`} disabled>
+              {emptyText}
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export function BacktestRunForm() {
   const { strategyId, dataSetId, initialCash, fees, slippage, submitting, catalogLoading, error } =
     useAtomValue(backtestRunFormAtom);
@@ -61,51 +102,27 @@ export function BacktestRunForm() {
         )}
 
         <form className="grid gap-3 md:grid-cols-3" onSubmit={(e) => void onRun(e)}>
-          <div className="grid gap-1.5">
-            <Label htmlFor="strategy_id">strategy_id</Label>
-            <Select value={strategyId} onValueChange={(v) => v && setStrategyId(v)}>
-              <SelectTrigger id="strategy_id" className="w-full">
-                <SelectValue placeholder={catalogLoading ? '加载中…' : '选择策略'} />
-              </SelectTrigger>
-              <SelectContent>
-                {strategies.length ? (
-                  strategies.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      <span className="truncate">{s.name}</span>
-                      <span className="ml-2 font-mono text-xs text-muted-foreground">{s.id}</span>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="__empty_strategies__" disabled>
-                    暂无策略
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          <BacktestCatalogSelect
+            id="strategy_id"
+            label="strategy_id"
+            value={strategyId}
+            onValueChange={setStrategyId}
+            loading={catalogLoading}
+            placeholder="选择策略"
+            emptyText="暂无策略"
+            options={strategies}
+          />
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="data_set_id">data_set_id</Label>
-            <Select value={dataSetId} onValueChange={(v) => v && setDataSetId(v)}>
-              <SelectTrigger id="data_set_id" className="w-full">
-                <SelectValue placeholder={catalogLoading ? '加载中…' : '选择数据集'} />
-              </SelectTrigger>
-              <SelectContent>
-                {dataSets.length ? (
-                  dataSets.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      <span className="truncate">{d.name}</span>
-                      <span className="ml-2 font-mono text-xs text-muted-foreground">{d.id}</span>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="__empty_datasets__" disabled>
-                    暂无数据集
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+          <BacktestCatalogSelect
+            id="data_set_id"
+            label="data_set_id"
+            value={dataSetId}
+            onValueChange={setDataSetId}
+            loading={catalogLoading}
+            placeholder="选择数据集"
+            emptyText="暂无数据集"
+            options={dataSets}
+          />
 
           <div className="flex items-end">
             <Button type="submit" disabled={submitDisabled}>

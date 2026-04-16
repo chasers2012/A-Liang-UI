@@ -2,7 +2,10 @@ from typing import ClassVar
 
 from app.nodes.node_plugin import NodePlugin
 
+from common_nodes.calculate_factor_value import CalculateFactorValueNode
+from common_nodes.factor_ref import FactorRefNode
 from common_nodes.json_nodes import JsonParseNode, JsonToDataframeNode, LongTextParamsNode
+from common_nodes.load_data_set import LoadDataSet
 from common_nodes.param_input_nodes import (
     BooleanParamsNode,
     DateParamsNode,
@@ -10,11 +13,15 @@ from common_nodes.param_input_nodes import (
     NumberParamsNode,
     StringParamsNode,
 )
+from common_nodes.table_index_nodes import MultiIndexToWideNode, WideToMultiIndexNode
 
 
 class CommonNodesPlugin(NodePlugin):
     name = "common"
     nodes: ClassVar[list[type]] = [
+        LoadDataSet,
+        FactorRefNode,
+        CalculateFactorValueNode,
         NumberParamsNode,
         BooleanParamsNode,
         StringParamsNode,
@@ -23,4 +30,6 @@ class CommonNodesPlugin(NodePlugin):
         JsonToDataframeNode,
         JsonParseNode,
         LongTextParamsNode,
+        WideToMultiIndexNode,
+        MultiIndexToWideNode,
     ]

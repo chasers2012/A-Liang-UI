@@ -4,7 +4,7 @@ from app.evaluation.metrics.controller import ensure_metrics_loaded
 from app.evaluation.profile.schemas import EvaluationWorkflow
 from workflow import Node, WorkflowLink
 
-_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
+_CALC = "common_nodes.calculate_factor_value.CalculateFactorValueNode"
 _MIC = "evaluation_workflow_nodes.mean_ic.MeanIC"
 
 

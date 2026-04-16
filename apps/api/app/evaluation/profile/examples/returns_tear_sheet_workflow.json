@@ -2,13 +2,13 @@
   "nodes": [
     {
       "id": "load",
-      "type": "evaluation_nodes.load_data_set.LoadDataSet",
+      "type": "common_nodes.load_data_set.LoadDataSet",
       "pos": [0, 0],
       "params": {}
     },
     {
       "id": "calc",
-      "type": "evaluation_nodes.calculate_factor_value.CalculateFactorValueNode",
+      "type": "common_nodes.calculate_factor_value.CalculateFactorValueNode",
       "pos": [260, 0],
       "params": {
         "quantiles": 5

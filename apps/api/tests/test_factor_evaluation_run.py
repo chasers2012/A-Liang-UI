@@ -2,7 +2,7 @@ from __future__ import annotations
 
 MIN_SOURCE = "x = 1\n"
 
-_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
+_CALC = "common_nodes.calculate_factor_value.CalculateFactorValueNode"
 
 
 def _profile_workflow_missing_data_set() -> dict:

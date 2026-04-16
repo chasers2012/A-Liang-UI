@@ -9,8 +9,8 @@ from sqlmodel import select
 
 MIN_SOURCE = "x = 1\n"
 
-_CALC = "evaluation_workflow_nodes.calculate_factor_value.CalculateFactorValueNode"
-_LOAD = "evaluation_workflow_nodes.load_data_set.LoadDataSet"
+_CALC = "common_nodes.calculate_factor_value.CalculateFactorValueNode"
+_LOAD = "common_nodes.load_data_set.LoadDataSet"
 
 
 def _factor_source_for_name(name: str) -> str:
