@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { useAtomValue, useSetAtom, useStore } from "jotai";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useAtomValue, useSetAtom, useStore } from 'jotai';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { ChatSummaryPublic } from "@/models";
-import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from "@/models/chat/session";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { ChatSummaryPublic } from '@/models';
+import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from '@/models/chat/session';
 
-import { ChatTabItem } from "./chat-session-tab-item";
+import { ChatTabItem } from './chat-session-tab-item';
 
 const TabScrollChevronButton = memo(function TabScrollChevronButton({
   direction,
@@ -17,12 +17,12 @@ const TabScrollChevronButton = memo(function TabScrollChevronButton({
   onPress,
   ariaLabel,
 }: {
-  direction: "left" | "right";
+  direction: 'left' | 'right';
   disabled: boolean;
   onPress: () => void;
   ariaLabel: string;
 }) {
-  const Icon = direction === "left" ? ChevronLeft : ChevronRight;
+  const Icon = direction === 'left' ? ChevronLeft : ChevronRight;
   return (
     <Button
       type="button"
@@ -52,13 +52,12 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
   const onTabListKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (disabled || sessions.length === 0) return;
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
       const activeId = store.get(activeSessionIdAtom);
-      const cur =
-        activeId != null ? sessions.findIndex((s) => s.id === activeId) : -1;
+      const cur = activeId != null ? sessions.findIndex((s) => s.id === activeId) : -1;
       const i = cur >= 0 ? cur : 0;
-      const delta = e.key === "ArrowRight" ? 1 : -1;
+      const delta = e.key === 'ArrowRight' ? 1 : -1;
       const next = sessions[(i + delta + sessions.length) % sessions.length];
       if (next) onSelectSession(next.id);
     },
@@ -66,11 +65,7 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
   );
 
   return (
-    <div
-      role="tablist"
-      className="flex min-w-max items-end gap-1 pr-1 h-full"
-      onKeyDown={onTabListKeyDown}
-    >
+    <div role="tablist" className="flex min-w-max items-end gap-1 pr-1 h-full" onKeyDown={onTabListKeyDown}>
       {sessions.map((s) => (
         <ChatTabItem
           key={s.id}
@@ -113,24 +108,24 @@ export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
     const el = scrollerRef.current;
     if (!el) return;
     const onScroll = () => updateScrollButtons();
-    el.addEventListener("scroll", onScroll, { passive: true });
+    el.addEventListener('scroll', onScroll, { passive: true });
     const ro = new ResizeObserver(() => updateScrollButtons());
     ro.observe(el);
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener('scroll', onScroll);
       ro.disconnect();
     };
   }, [sessions.length, updateScrollButtons]);
 
-  const scrollByTabs = useCallback((dir: "left" | "right") => {
+  const scrollByTabs = useCallback((dir: 'left' | 'right') => {
     const el = scrollerRef.current;
     if (!el) return;
     const amount = Math.max(180, Math.floor(el.clientWidth * 0.7));
-    el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
+    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
   }, []);
 
-  const onScrollLeft = useCallback(() => scrollByTabs("left"), [scrollByTabs]);
-  const onScrollRight = useCallback(() => scrollByTabs("right"), [scrollByTabs]);
+  const onScrollLeft = useCallback(() => scrollByTabs('left'), [scrollByTabs]);
+  const onScrollRight = useCallback(() => scrollByTabs('right'), [scrollByTabs]);
 
   return (
     <div className="min-w-0 flex items-stretch gap-1">
@@ -144,15 +139,12 @@ export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
       <div
         ref={scrollerRef}
         className={cn(
-          "min-w-0 flex-1 overflow-x-auto overflow-y-hidden",
-          "items-end justify-end",
+          'min-w-0 flex-1 overflow-x-auto overflow-y-hidden',
+          '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+          'items-end justify-end',
         )}
       >
-        <ChatTabsTabList
-          sessions={sessions}
-          disabled={isBusy}
-          onSelectSession={selectSession}
-        />
+        <ChatTabsTabList sessions={sessions} disabled={isBusy} onSelectSession={selectSession} />
       </div>
 
       <TabScrollChevronButton
