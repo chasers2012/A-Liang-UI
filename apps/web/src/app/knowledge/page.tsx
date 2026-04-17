@@ -17,8 +17,10 @@ import {
   knowledgePageAtom,
   refreshKnowledgePageAtom,
   reindexKnowledgeDocumentAtom,
+  searchKnowledgeAtom,
   setKnowledgeCreateFieldAtom,
   setKnowledgeFileAtom,
+  setKnowledgeSearchQueryAtom,
 } from '@/models/knowledge/list-detail.atom';
 
 function toLocalTime(v: string): string {
@@ -31,8 +33,10 @@ type KnowledgeActions = {
   createDoc: () => void;
   reindexDoc: (id: string) => void;
   deleteDoc: (id: string) => void;
+  search: () => void;
   setCreateField: (payload: { key: 'name' | 'source_path'; value: string }) => void;
   setFile: (file: File) => void;
+  setSearchQuery: (value: string) => void;
 };
 
 function CreateDocumentCard({
@@ -170,14 +174,64 @@ function DocumentsCard({
   );
 }
 
+function SearchCard({
+  query,
+  hits,
+  loading,
+  actions,
+}: {
+  query: string;
+  hits: Array<{ chunk_id: string; document_name: string; document_id: string; score: number; content: string }>;
+  loading: boolean;
+  actions: KnowledgeActions;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>知识检索</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 space-y-2">
+            <Label htmlFor="knowledge-search">Query</Label>
+            <Input id="knowledge-search" value={query} onChange={(e) => actions.setSearchQuery(e.target.value)} />
+          </div>
+          <Button variant="outline" onClick={() => actions.search()} disabled={loading}>
+            检索
+          </Button>
+        </div>
+        {!hits.length ? (
+          <p className="text-sm text-muted-foreground">暂无命中结果。</p>
+        ) : (
+          <div className="space-y-2">
+            {hits.map((hit) => (
+              <Card key={hit.chunk_id}>
+                <CardContent className="space-y-1 p-4">
+                  <div className="text-sm">
+                    <span className="font-medium">{hit.document_name || hit.document_id}</span>
+                    <span className="ml-2 text-muted-foreground">score: {hit.score.toFixed(3)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{hit.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function KnowledgePage() {
-  const { documents, loading, error, busyDocumentId, createForm } = useAtomValue(knowledgePageAtom);
+  const { documents, hits, loading, error, busyDocumentId, createForm, searchForm } = useAtomValue(knowledgePageAtom);
   const refresh = useSetAtom(refreshKnowledgePageAtom);
   const createDoc = useSetAtom(createKnowledgeDocumentAtom);
   const reindexDoc = useSetAtom(reindexKnowledgeDocumentAtom);
   const deleteDoc = useSetAtom(deleteKnowledgeDocumentAtom);
+  const search = useSetAtom(searchKnowledgeAtom);
   const setCreateField = useSetAtom(setKnowledgeCreateFieldAtom);
   const setFile = useSetAtom(setKnowledgeFileAtom);
+  const setSearchQuery = useSetAtom(setKnowledgeSearchQueryAtom);
 
   useEffect(() => {
     void refresh();
@@ -187,12 +241,14 @@ export default function KnowledgePage() {
     createDoc: () => void createDoc(),
     reindexDoc: (id) => void reindexDoc(id),
     deleteDoc: (id) => void deleteDoc(id),
+    search: () => void search(),
     setCreateField: (payload) => setCreateField(payload),
     setFile: (file) => void setFile(file),
+    setSearchQuery: (value) => setSearchQuery(value),
   };
 
   return (
-    <Page title="知识库" description="管理 RAG 文档。">
+    <Page title="知识库" description="管理 RAG 文档与检索结果。">
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
@@ -201,6 +257,7 @@ export default function KnowledgePage() {
       ) : null}
       <CreateDocumentCard loading={loading} createForm={createForm} actions={actions} />
       <DocumentsCard documents={documents} busyDocumentId={busyDocumentId} actions={actions} />
+      <SearchCard query={searchForm.query} hits={hits} loading={loading} actions={actions} />
     </Page>
   );
 }
