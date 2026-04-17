@@ -23,9 +23,6 @@ from app.strategy.controller import (
     patch_strategy as patch_strategy_service,
 )
 from app.strategy.controller import (
-    to_strategy_public_dict,
-)
-from app.strategy.controller import (
     validate_strategy as validate_strategy_service,
 )
 from app.strategy.schemas import StrategyCreate, StrategyPatch
@@ -40,31 +37,31 @@ def get_strategy_workflow_template() -> dict[str, Any]:
     description="创建策略并持久化；入参 body（name、description、workflow），返回创建后的策略详情。"
 )
 def create_strategy(body: StrategyCreate) -> dict[str, Any]:
-    return to_strategy_public_dict(create_strategy_service(body))
+    return create_strategy_service(body)
 
 
 @tool(description="按 strategy_id 查询策略详情；不存在时报错。")
 def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
-    return to_strategy_public_dict(get_strategy_service(strategy_id))
+    return get_strategy_service(strategy_id)
 
 
 @tool(description="获取当前工作区的策略列表。")
 def get_strategy_list() -> list[dict[str, Any]]:
-    return [to_strategy_public_dict(row) for row in list_strategies_service()]
+    return list_strategies_service()
 
 
 @tool(
     description="更新策略并返回更新后的详情；仅更新传入字段，语义与 PATCH /strategies/{id} 一致。"
 )
 def update_strategy(strategy_id: str, body: StrategyPatch) -> dict[str, Any]:
-    return to_strategy_public_dict(patch_strategy_service(strategy_id, body))
+    return patch_strategy_service(strategy_id, body)
 
 
 @tool(description="删除策略并返回删除前记录；不存在时报错。")
 def delete_strategy(strategy_id: str) -> dict[str, Any]:
     row = get_strategy_service(strategy_id)
     delete_strategy_service(strategy_id)
-    return to_strategy_public_dict(row)
+    return row
 
 
 @tool(description="校验策略 workflow；入参 strategy_id，返回 {ok, errors}。")
