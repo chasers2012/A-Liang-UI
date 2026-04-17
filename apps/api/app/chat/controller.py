@@ -34,7 +34,6 @@ from app.chat.schemas import (
     ChatCreateBody,
     ChatDetailPublic,
     ChatMessageIn,
-    ChatMessagePublic,
     ChatRecord,
     ChatRenameBody,
     ChatRequest,
@@ -48,7 +47,6 @@ from app.common.id import create_id_generator
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
-from app.knowledge import controller as knowledge_controller
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -289,26 +287,17 @@ _register_llm_settings_module()
 
 def _build_chat_context_messages(
     session_id: str,
-    incoming_user: ChatMessagePublic,
-) -> tuple[list[ChatMessagePublic], list[ChatMessagePublic]]:
+    incoming_user: ChatMessageIn,
+) -> tuple[list[ChatMessageIn], list[ChatMessageIn]]:
     history_messages = ChatRegistry.get_messages(session_id) or []
     persisted_context_messages = [*history_messages, incoming_user]
     context_messages = list(persisted_context_messages)
-    user_text = "".join((b.content or "") for b in incoming_user.blocks if b.kind == "text").strip()
-    if user_text:
-        try:
-            rag_ctx = knowledge_controller.retrieve_for_chat(user_text)
-            if rag_ctx.message is not None:
-                context_messages = [*history_messages, rag_ctx.message, incoming_user]
-        except Exception:
-            # Retrieval failures should not block normal chat flow.
-            context_messages = list(persisted_context_messages)
     return persisted_context_messages, context_messages
 
 
 def _prepare_chat_stream(
     body: ChatRequest,
-) -> tuple[str, ChatMessagePublic, list[ChatMessagePublic], list[ChatMessagePublic]]:
+) -> tuple[str, ChatMessageIn, list[ChatMessageIn], list[ChatMessageIn]]:
     session = get_active_chat(body.session_id)
     if session is None:
         raise ValueError("会话不存在或已归档")
