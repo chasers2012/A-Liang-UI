@@ -1,6 +1,6 @@
 /** 与后端 ``TextBlockPublic`` / assistant 消息中文本块一致。 */
 export type TextBlockPublic = {
-  kind: "text";
+  kind: 'text';
   content: string;
   completed?: boolean;
 };
@@ -10,7 +10,7 @@ export type ChatToolCallDisplay = {
   id: string;
   name: string;
   args?: unknown;
-  status: "running" | "ok" | "error";
+  status: 'running' | 'ok' | 'error';
   result?: unknown;
   error?: string;
 };
@@ -18,4 +18,5 @@ export type ChatToolCallDisplay = {
 /** 前端聊天 UI 消息块（与 ``AssistantBlockPublic`` 对齐）。 */
 export type AssistantBlock =
   | TextBlockPublic
-  | { kind: "tool"; call: ChatToolCallDisplay };
+  | { kind: 'reasoning'; content: string }
+  | { kind: 'tool'; call: ChatToolCallDisplay };

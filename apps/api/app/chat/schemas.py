@@ -24,13 +24,13 @@ class ChatToolCallPublic(BaseModel):
 
 
 class AssistantBlockPublic(BaseModel):
-    kind: Literal["text", "tool"]
+    kind: Literal["text", "reasoning", "tool"]
     content: str | None = None
     call: ChatToolCallPublic | None = None
 
     @model_validator(mode="after")
     def check_shape(self) -> AssistantBlockPublic:
-        if self.kind == "text":
+        if self.kind in ("text", "reasoning"):
             if self.content is None:
                 self.content = ""
             self.call = None

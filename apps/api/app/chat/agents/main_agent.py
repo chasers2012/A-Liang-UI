@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from app.tool.controller import ToolController
+from app.tool.tools import list_available_tools
 from langchain.agents import AgentState, create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
@@ -35,37 +36,33 @@ def _format_plan_message(plan: list[str]) -> str:
     return "\n".join(lines)
 
 
-def _strip_echoed_input_messages(
-    result_messages: list[BaseMessage], input_messages: list[BaseMessage]
-) -> list[BaseMessage]:
-    if (
-        len(result_messages) >= len(input_messages)
-        and result_messages[: len(input_messages)] == input_messages
-    ):
-        return result_messages[len(input_messages) :]
-    return result_messages
-
-
 def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecuteState:
-    tool_block = (
-        "\n".join(f"- {name}" for name in ToolController().list_tool_names()) or "- 无可用工具"
-    )
+
     messages = state.get("messages", [])
     try:
         system_prompt = (
-            "你是一个 planning agent。你的职责是分析用户目标并生成一个简洁、可执行的计划。\n"
+            "你是一个 planning agent。你的职责是分析用户目标并生成一个简洁、可执行的计划，计划将会交给executor执行。\n"
             "要求：\n"
             "1. 只输出计划，不要执行。\n"
-            "2. 每个步骤尽量独立、原子化。\n"
-            "3. 不要扩展任务范围。"
-            "4. 如果需要调用工具，优先把工具调用安排到相应步骤中。\n"
-            f"\n可用工具：\n{tool_block}"
+            "2. 每个步骤独立、原子化，但对于一次工具调用的结果处理要在一个步骤内完成\n"
+            "3. 不要扩展任务范围。\n"
+            "4. 你可以获取工具列表并安排executor调用，而不是你自己调用。\n"
+            "5. 不要把信息展示和告知作为单独的步骤"
         )
-        structured_planner = model.with_structured_output(PlannerPlanOutput)
-        structured_result = structured_planner.invoke(
-            [SystemMessage(content=system_prompt), *messages]
+        planner = create_agent(
+            model=model,
+            tools=[list_available_tools],
+            system_prompt=system_prompt,
+            response_format=PlannerPlanOutput,
         )
-        plan = structured_result.plan
+        structured_result = planner.invoke(
+            {"messages": messages},
+            config={"recursion_limit": 20},
+        )
+        structured_response = structured_result.get("structured_response")
+        plan = (
+            structured_response.plan if isinstance(structured_response, PlannerPlanOutput) else None
+        )
     except Exception as e:
         print(e)
         plan = None
@@ -106,21 +103,17 @@ def _execute_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanEx
     try:
         result = executor.invoke({"messages": step_messages})
         result_messages = result.get("messages", [])
-        new_messages = (
-            _strip_echoed_input_messages(result_messages, step_messages)
-            if isinstance(result_messages, list)
-            else []
-        )
-        next_messages = messages + new_messages
+        next_messages = result_messages
+        current_step += 1
+        completed_steps.append(step)
     except Exception as e:
         print(e)
         next_messages = [*messages, SystemMessage(content=f"执行失败: {e}")]
 
-    completed_steps.append(step)
     return {
         "messages": next_messages,
         "plan": plan,
-        "current_step": current_step + 1,
+        "current_step": current_step,
         "completed_steps": completed_steps,
     }
 

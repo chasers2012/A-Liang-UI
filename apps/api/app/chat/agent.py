@@ -10,6 +10,7 @@ from app.chat.events import (
     DeltaEvent,
     DoneEvent,
     ErrorEvent,
+    ReasoningEvent,
     StreamEventAny,
     ToolEvent,
     ToolPayload,
@@ -71,6 +72,26 @@ def _messages_from_updates_payload(payload: Any) -> list[BaseMessage]:
     return messages
 
 
+def _ai_message_reasoning_content(message: AIMessage) -> str:
+    raw = message.additional_kwargs.get("reasoning_content")
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, list):
+        parts: list[str] = []
+        for item in raw:
+            if isinstance(item, str):
+                parts.append(item)
+                continue
+            if (
+                isinstance(item, dict)
+                and item.get("type") in ("text", "reasoning")
+                and isinstance(item.get("text"), str)
+            ):
+                parts.append(item["text"])
+        return "".join(parts)
+    return ""
+
+
 def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseMessage]:
     lc_messages: list[BaseMessage] = []
     for m in messages:
@@ -99,55 +120,63 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
         return
 
     for msg in _messages_from_updates_payload(data):
-        if isinstance(msg, AIMessage):
-            for tc in msg.tool_calls:
-                name = tc.get("name") or ""
-                tc_id = str(tc.get("id") or "") or name or "tool_call"
-                pending_tool_names[tc_id] = name
-                event_key = ("start", tc_id)
-                if event_key in emitted_tool_event_keys:
-                    continue
-                emitted_tool_event_keys.add(event_key)
-                yield ToolEvent(
-                    payload=ToolPayload(
-                        stage="start",
-                        name=name,
-                        id=tc_id,
-                        args=tc.get("args"),
+        try:
+            if isinstance(msg, AIMessage):
+                reasoning = _ai_message_reasoning_content(msg)
+                if reasoning:
+                    yield ReasoningEvent(payload=reasoning)
+                for tc in msg.tool_calls:
+                    name = tc.get("name") or ""
+                    tc_id = str(tc.get("id") or "") or name or "tool_call"
+                    pending_tool_names[tc_id] = name
+                    event_key = ("start", tc_id)
+                    if event_key in emitted_tool_event_keys:
+                        continue
+                    emitted_tool_event_keys.add(event_key)
+                    yield ToolEvent(
+                        payload=ToolPayload(
+                            stage="start",
+                            name=name,
+                            id=tc_id,
+                            args=tc.get("args"),
+                        )
                     )
-                )
-            continue
 
-        if isinstance(msg, ToolMessage):
-            tc_id = msg.tool_call_id
-            name = pending_tool_names.get(tc_id, "")
-            if msg.status == "error":
-                event_key = ("error", tc_id or name or "tool_call")
-                if event_key in emitted_tool_event_keys:
-                    continue
-                emitted_tool_event_keys.add(event_key)
-                yield ToolEvent(
-                    payload=ToolPayload(
-                        stage="error",
-                        name=name,
-                        id=tc_id or name or "tool_call",
-                        error=str(msg.content),
+                continue
+
+            if isinstance(msg, ToolMessage):
+                tc_id = msg.tool_call_id
+                name = pending_tool_names.get(tc_id, "")
+                if msg.status == "error":
+                    event_key = ("error", tc_id or name or "tool_call")
+                    if event_key in emitted_tool_event_keys:
+                        continue
+                    emitted_tool_event_keys.add(event_key)
+                    yield ToolEvent(
+                        payload=ToolPayload(
+                            stage="error",
+                            name=name,
+                            id=tc_id or name or "tool_call",
+                            error=str(msg.content),
+                        )
                     )
-                )
-            else:
-                result = msg.artifact if msg.artifact is not None else msg.content
-                event_key = ("result", tc_id or name or "tool_call")
-                if event_key in emitted_tool_event_keys:
-                    continue
-                emitted_tool_event_keys.add(event_key)
-                yield ToolEvent(
-                    payload=ToolPayload(
-                        stage="result",
-                        name=name,
-                        id=tc_id or name or "tool_call",
-                        result=result,
+                else:
+                    result = msg.artifact if msg.artifact is not None else msg.content
+                    event_key = ("result", tc_id or name or "tool_call")
+                    if event_key in emitted_tool_event_keys:
+                        continue
+                    emitted_tool_event_keys.add(event_key)
+                    yield ToolEvent(
+                        payload=ToolPayload(
+                            stage="result",
+                            name=name,
+                            id=tc_id or name or "tool_call",
+                            result=result,
+                        )
                     )
-                )
+        except Exception as e:
+            print(e)
+            continue
 
 
 def stream_event_iter_for_chat(

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 StreamEventPayloadT = TypeVar("StreamEventPayloadT")
 
-EventType = Literal["message_ids", "delta", "tool", "done", "error"]
+EventType = Literal["message_ids", "delta", "reasoning", "tool", "done", "error"]
 
 
 class ToolPayload(BaseModel):
@@ -38,6 +38,10 @@ class MessageIdsEvent(StreamEvent[MessageIdsPayload]):
 
 class DeltaEvent(StreamEvent[str]):
     type: Literal["delta"] = "delta"
+
+
+class ReasoningEvent(StreamEvent[str]):
+    type: Literal["reasoning"] = "reasoning"
 
 
 class ToolEvent(StreamEvent[ToolPayload]):

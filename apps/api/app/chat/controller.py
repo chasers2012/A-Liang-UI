@@ -17,6 +17,7 @@ from app.chat.events import (
     ErrorEvent,
     MessageIdsEvent,
     MessageIdsPayload,
+    ReasoningEvent,
     StreamEventAny,
     ToolEvent,
     ToolPayload,
@@ -128,6 +129,17 @@ def _append_delta_block(blocks: list[AssistantBlockPublic], delta: str) -> None:
         blocks.append(AssistantBlockPublic(kind="text", content=delta))
 
 
+def _append_reasoning_block(blocks: list[AssistantBlockPublic], delta: str) -> None:
+    if not blocks:
+        blocks.append(AssistantBlockPublic(kind="reasoning", content=delta))
+        return
+    last = blocks[-1]
+    if last.kind == "reasoning":
+        last.content = (last.content or "") + delta
+    else:
+        blocks.append(AssistantBlockPublic(kind="reasoning", content=delta))
+
+
 def _patch_tool_block(
     blocks: list[AssistantBlockPublic],
     tc_id: str,
@@ -190,6 +202,10 @@ def _apply_stream_event_to_blocks(
         return
     if isinstance(event, DeltaEvent):
         _append_delta_block(blocks, event.payload)
+        return
+
+    if isinstance(event, ReasoningEvent):
+        _append_reasoning_block(blocks, event.payload)
         return
 
     if isinstance(event, ToolEvent):

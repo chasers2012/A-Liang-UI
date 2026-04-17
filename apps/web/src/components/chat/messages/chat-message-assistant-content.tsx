@@ -1,20 +1,14 @@
-"use client";
+'use client';
 
-import { memo } from "react";
-import { useAtomValue } from "jotai";
+import { memo } from 'react';
+import { useAtomValue } from 'jotai';
 
-import { replyOfMessageAtomFamily } from "@/models/chat/session";
-import { AiChatMarkdown } from "./ai-chat-markdown";
-import { ChatToolCallCard } from "./chat-tool-call-card";
+import { replyOfMessageAtomFamily } from '@/models/chat/session';
+import { AiChatMarkdown } from './ai-chat-markdown';
+import { ChatReasoningCard } from './chat-reasoning-card';
+import { ChatToolCallCard } from './chat-tool-call-card';
 
-
-
-
-export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({
-  mid,
-}: {
-  mid: string;
-}) {
+export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({ mid }: { mid: string }) {
   const message = useAtomValue(replyOfMessageAtomFamily(mid));
 
   if (!message) return null;
@@ -23,9 +17,12 @@ export const ChatMessageAssistantContent = memo(function ChatMessageAssistantCon
     <div className="flex flex-col gap-1" id={`reply-${mid}`}>
       <span className="sr-only">助手：</span>
       {(message.blocks || []).map((b, i) => {
-        if (b.kind === "text") {
+        if (b.kind === 'text') {
           if (!b.content.trim()) return null;
           return <AiChatMarkdown key={`t-${i}`} content={b.content} />;
+        }
+        if (b.kind === 'reasoning') {
+          return <ChatReasoningCard key={`r-${i}`} content={b.content} />;
         }
         return <ChatToolCallCard key={b.call.id} call={b.call} />;
       })}

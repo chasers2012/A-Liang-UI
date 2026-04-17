@@ -1,5 +1,5 @@
-import { atom, type Setter } from "jotai";
-import { startTransition } from "react";
+import { atom, type Setter } from 'jotai';
+import { startTransition } from 'react';
 
 import {
   ApiError,
@@ -8,32 +8,28 @@ import {
   listAgentChats,
   postAgentChatStream,
   renameAgentChat,
-} from "@/api";
-import type { ChatMessagePublic } from "@/models";
-import {
-  chatErrorAtom,
-  chatHydratedAtom,
-  chatInputAtom,
-  chatIsSendingAtom,
-} from "./atoms.base";
+} from '@/api';
+import type { ChatMessagePublic } from '@/models';
+import { chatErrorAtom, chatHydratedAtom, chatInputAtom, chatIsSendingAtom } from './atoms.base';
 
-import { CHAT_DEFAULT_TITLE } from "./constants";
+import { CHAT_DEFAULT_TITLE } from './constants';
 import {
   appendAssistantDelta,
+  appendAssistantReasoning,
   applyToolStart,
   extractTextFromBlocks,
   patchToolInBlocks,
   summarizeFirstUserMessage,
   toApiMessage,
   upsertSummary,
-} from "./helpers";
+} from './helpers';
 import {
   activeSessionIdAtom,
   activeUserMessageIdsAtom,
   chatSessionSummaryAtomFamily,
   hasValidActiveChatAtom,
   isActiveChatAtomFamily,
-} from "./active-session";
+} from './active-session';
 import {
   messagesAtomFamily,
   removeSessionMessageAtom,
@@ -43,16 +39,9 @@ import {
   sessionUserMessageIdsAtomFamily,
   userMessageReplieIdsAtomFamily,
   userMessageTextAtomFamily,
-} from "./session-detail";
-import {
-  segmentOpenAtomFamily,
-  toggleSegmentOpenAtomFamily,
-} from "./segment-open";
-import {
-  chatSessionsAtom,
-  refetchChatsListAtom,
-  selectChatAtom,
-} from "./session-list";
+} from './session-detail';
+import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily } from './segment-open';
+import { chatSessionsAtom, refetchChatsListAtom, selectChatAtom } from './session-list';
 
 export {
   activeUserMessageIdsAtom,
@@ -92,10 +81,7 @@ const remapPendingChatMessageIdsAtom = atom(
   ) => {
     const { sessionId, fromUser, toUser, fromAssistant, toAssistant } = payload;
 
-    set(
-      sessionUserMessageIdsAtomFamily(sessionId),
-      (prev) => prev?.map((id) => (id === fromUser ? toUser : id)) ?? [],
-    );
+    set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => prev?.map((id) => (id === fromUser ? toUser : id)) ?? []);
     const u = get(messagesAtomFamily(fromUser));
     const a = get(messagesAtomFamily(fromAssistant));
     if (u) set(messagesAtomFamily(toUser), { ...u, id: toUser });
@@ -109,15 +95,8 @@ const remapPendingChatMessageIdsAtom = atom(
   },
 );
 
-function rollbackOptimisticSend(
-  set: Setter,
-  targetSessionId: string,
-  userId: string,
-  assistantId: string,
-): void {
-  set(sessionUserMessageIdsAtomFamily(targetSessionId), (prev) =>
-    (prev ?? []).filter((id) => id !== userId),
-  );
+function rollbackOptimisticSend(set: Setter, targetSessionId: string, userId: string, assistantId: string): void {
+  set(sessionUserMessageIdsAtomFamily(targetSessionId), (prev) => (prev ?? []).filter((id) => id !== userId));
   set(messagesAtomFamily(userId), undefined);
   set(messagesAtomFamily(assistantId), undefined);
   userMessageReplieIdsAtomFamily.remove(userId);
@@ -133,9 +112,7 @@ const patchAssistantMessageAtom = atom(
       patch,
     }: {
       mid: string;
-      patch: (
-        message: ChatMessagePublic | undefined,
-      ) => ChatMessagePublic | undefined;
+      patch: (message: ChatMessagePublic | undefined) => ChatMessagePublic | undefined;
     },
   ) => {
     startTransition(() => {
@@ -181,37 +158,31 @@ export const createChatAtom = atom(null, async (get, set) => {
   set(activeSessionIdAtom, detail.id);
 });
 
-export const renameChatAtom = atom(
-  null,
-  async (get, set, payload: { sessionId: string; title: string }) => {
-    const detail = await renameAgentChat(payload.sessionId, {
-      title: payload.title,
-    });
-    set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-    const activeId = get(activeSessionIdAtom);
-    if (activeId === payload.sessionId) {
-      set(activeSessionIdAtom, detail.id);
-    }
-  },
-);
+export const renameChatAtom = atom(null, async (get, set, payload: { sessionId: string; title: string }) => {
+  const detail = await renameAgentChat(payload.sessionId, {
+    title: payload.title,
+  });
+  set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+  const activeId = get(activeSessionIdAtom);
+  if (activeId === payload.sessionId) {
+    set(activeSessionIdAtom, detail.id);
+  }
+});
 
-export const archiveChatAtom = atom(
-  null,
-  async (get, set, sessionId: string) => {
-    const sessions = get(chatSessionsAtom);
-    await archiveAgentChat(sessionId);
+export const archiveChatAtom = atom(null, async (get, set, sessionId: string) => {
+  const sessions = get(chatSessionsAtom);
+  await archiveAgentChat(sessionId);
 
-    const nextSessions = sessions.filter((s) => s.id !== sessionId);
-    set(chatSessionsAtom, nextSessions);
-    set(removeSessionMessageAtom, sessionId);
+  const nextSessions = sessions.filter((s) => s.id !== sessionId);
+  set(chatSessionsAtom, nextSessions);
+  set(removeSessionMessageAtom, sessionId);
 
-    if (get(activeSessionIdAtom) !== sessionId) return;
+  if (get(activeSessionIdAtom) !== sessionId) return;
 
-    const fallback = nextSessions[0]?.id ?? null;
-    set(activeSessionIdAtom, fallback);
-    if (fallback) await set(sessionDetailAtomFamily(fallback));
-  },
-);
+  const fallback = nextSessions[0]?.id ?? null;
+  set(activeSessionIdAtom, fallback);
+  if (fallback) await set(sessionDetailAtomFamily(fallback));
+});
 
 export const sendChatMessageAtom = atom(null, async (get, set) => {
   const trimmed = get(chatInputAtom).trim();
@@ -228,33 +199,30 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   if (!targetSessionId) return;
   const sessionId = targetSessionId;
 
-  const sessionSummary =
-    get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
+  const sessionSummary = get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
   const shouldAutoTitle =
     !!sessionSummary &&
-    (sessionSummary.title || "").trim() === CHAT_DEFAULT_TITLE &&
+    (sessionSummary.title || '').trim() === CHAT_DEFAULT_TITLE &&
     (sessionSummary.message_count ?? 0) === 0;
 
   const provisionalUserId = crypto.randomUUID();
   const provisionalAssistantId = crypto.randomUUID();
-  const userTurn: ChatMessagePublic & { role: "user" } = {
+  const userTurn: ChatMessagePublic & { role: 'user' } = {
     id: provisionalUserId,
-    role: "user",
-    blocks: [{ kind: "text", content: trimmed }],
+    role: 'user',
+    blocks: [{ kind: 'text', content: trimmed }],
   };
   let streamUserId = provisionalUserId;
   let streamAssistantId = provisionalAssistantId;
 
   set(chatErrorAtom, null);
-  set(chatInputAtom, "");
+  set(chatInputAtom, '');
   set(chatIsSendingAtom, true);
-  set(sessionUserMessageIdsAtomFamily(sessionId), (prev) =>
-    (prev ?? []).concat(userTurn.id),
-  );
+  set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
   set(messagesAtomFamily(userTurn.id), userTurn);
   set(messagesAtomFamily(provisionalAssistantId), {
     id: provisionalAssistantId,
-    role: "assistant",
+    role: 'assistant',
     blocks: [],
   });
   set(userMessageReplieIdsAtomFamily(userTurn.id), [provisionalAssistantId]);
@@ -283,6 +251,12 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
             patch: (message) => appendAssistantDelta(message, delta),
           });
         },
+        onReasoning: (reasoning) => {
+          set(patchAssistantMessageAtom, {
+            mid: streamAssistantId,
+            patch: (message) => appendAssistantReasoning(message, reasoning),
+          });
+        },
         onToolStart: (payload) => {
           set(patchAssistantMessageAtom, {
             mid: streamAssistantId,
@@ -294,7 +268,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
             mid: streamAssistantId,
             patch: (message) =>
               patchToolInBlocks(message, payload.id, {
-                status: "ok",
+                status: 'ok',
                 result: payload.result,
               }),
           });
@@ -304,7 +278,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
             mid: streamAssistantId,
             patch: (message) =>
               patchToolInBlocks(message, payload.id, {
-                status: "error",
+                status: 'error',
                 error: payload.error,
               }),
           });
@@ -315,19 +289,14 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     if (shouldAutoTitle) {
       try {
         await renameAgentChat(sessionId, {
-          title: summarizeFirstUserMessage(
-            extractTextFromBlocks(userTurn.blocks),
-          ),
+          title: summarizeFirstUserMessage(extractTextFromBlocks(userTurn.blocks)),
         });
       } catch {
         // ignore title failures; chat content is already persisted.
       }
     }
   } catch (e) {
-    set(
-      chatErrorAtom,
-      e instanceof ApiError ? e.message : "请求失败，请检查 API 与网络。",
-    );
+    set(chatErrorAtom, e instanceof ApiError ? e.message : '请求失败，请检查 API 与网络。');
     rollbackOptimisticSend(set, sessionId, streamUserId, streamAssistantId);
     set(chatInputAtom, trimmed);
   } finally {
