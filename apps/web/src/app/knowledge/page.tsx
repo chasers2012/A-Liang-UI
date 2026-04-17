@@ -17,12 +17,8 @@ import {
   knowledgePageAtom,
   refreshKnowledgePageAtom,
   reindexKnowledgeDocumentAtom,
-  saveKnowledgeSettingsAtom,
-  searchKnowledgeAtom,
   setKnowledgeCreateFieldAtom,
   setKnowledgeFileAtom,
-  setKnowledgeSearchQueryAtom,
-  setKnowledgeSettingFieldAtom,
 } from '@/models/knowledge/list-detail.atom';
 
 function toLocalTime(v: string): string {
@@ -35,12 +31,8 @@ type KnowledgeActions = {
   createDoc: () => void;
   reindexDoc: (id: string) => void;
   deleteDoc: (id: string) => void;
-  search: () => void;
-  saveSettings: () => void;
-  setCreateField: (payload: { key: 'name' | 'source_path' | 'auto_index'; value: string | boolean }) => void;
+  setCreateField: (payload: { key: 'name' | 'source_path'; value: string }) => void;
   setFile: (file: File) => void;
-  setSearchQuery: (value: string) => void;
-  setSettingField: (payload: { key: string; value: string | number | boolean }) => void;
 };
 
 function CreateDocumentCard({
@@ -178,140 +170,14 @@ function DocumentsCard({
   );
 }
 
-function SearchCard({
-  query,
-  hits,
-  loading,
-  actions,
-}: {
-  query: string;
-  hits: Array<{ chunk_id: string; document_name: string; document_id: string; score: number; content: string }>;
-  loading: boolean;
-  actions: KnowledgeActions;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>知识检索</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-end gap-2">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="knowledge-search">Query</Label>
-            <Input id="knowledge-search" value={query} onChange={(e) => actions.setSearchQuery(e.target.value)} />
-          </div>
-          <Button variant="outline" onClick={() => actions.search()} disabled={loading}>
-            检索
-          </Button>
-        </div>
-        {!hits.length ? (
-          <p className="text-sm text-muted-foreground">暂无命中结果。</p>
-        ) : (
-          <div className="space-y-2">
-            {hits.map((hit) => (
-              <Card key={hit.chunk_id}>
-                <CardContent className="space-y-1 p-4">
-                  <div className="text-sm">
-                    <span className="font-medium">{hit.document_name || hit.document_id}</span>
-                    <span className="ml-2 text-muted-foreground">score: {hit.score.toFixed(3)}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{hit.content}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SettingsCard({
-  settings,
-  loading,
-  actions,
-}: {
-  settings: {
-    enabled: boolean;
-    top_k: number;
-    threshold: number;
-    chunk_size: number;
-    chunk_overlap: number;
-    embedding_dim: number;
-    collection_name: string;
-  } | null;
-  loading: boolean;
-  actions: KnowledgeActions;
-}) {
-  const numericFields = [
-    { key: 'top_k', label: 'Top K', id: 'knowledge-topk', step: undefined, fallback: 4 },
-    { key: 'threshold', label: 'Threshold', id: 'knowledge-threshold', step: '0.01', fallback: 0.2 },
-    { key: 'chunk_size', label: 'Chunk Size', id: 'knowledge-chunk-size', step: undefined, fallback: 800 },
-    { key: 'chunk_overlap', label: 'Chunk Overlap', id: 'knowledge-chunk-overlap', step: undefined, fallback: 120 },
-    { key: 'embedding_dim', label: 'Embedding Dim', id: 'knowledge-embed-dim', step: undefined, fallback: 256 },
-  ] as const;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>检索设置</CardTitle>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="knowledge-enabled">启用检索</Label>
-          <select
-            id="knowledge-enabled"
-            className="h-9 rounded-md border px-3 text-sm"
-            value={settings?.enabled ? 'true' : 'false'}
-            onChange={(e) => actions.setSettingField({ key: 'enabled', value: e.target.value === 'true' })}
-          >
-            <option value="true">是</option>
-            <option value="false">否</option>
-          </select>
-        </div>
-        {numericFields.map((field) => (
-          <div className="space-y-2" key={field.key}>
-            <Label htmlFor={field.id}>{field.label}</Label>
-            <Input
-              id={field.id}
-              type="number"
-              step={field.step}
-              value={Number(settings?.[field.key] ?? field.fallback)}
-              onChange={(e) => actions.setSettingField({ key: field.key, value: Number(e.target.value || 0) })}
-            />
-          </div>
-        ))}
-        <div className="space-y-2">
-          <Label htmlFor="knowledge-collection-name">Collection</Label>
-          <Input
-            id="knowledge-collection-name"
-            value={settings?.collection_name ?? ''}
-            onChange={(e) => actions.setSettingField({ key: 'collection_name', value: e.target.value })}
-          />
-        </div>
-        <div className="flex items-end">
-          <Button onClick={() => actions.saveSettings()} disabled={loading || !settings}>
-            保存设置
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function KnowledgePage() {
-  const { documents, hits, settings, loading, error, busyDocumentId, createForm, searchForm } =
-    useAtomValue(knowledgePageAtom);
+  const { documents, loading, error, busyDocumentId, createForm } = useAtomValue(knowledgePageAtom);
   const refresh = useSetAtom(refreshKnowledgePageAtom);
   const createDoc = useSetAtom(createKnowledgeDocumentAtom);
   const reindexDoc = useSetAtom(reindexKnowledgeDocumentAtom);
   const deleteDoc = useSetAtom(deleteKnowledgeDocumentAtom);
-  const search = useSetAtom(searchKnowledgeAtom);
-  const saveSettings = useSetAtom(saveKnowledgeSettingsAtom);
   const setCreateField = useSetAtom(setKnowledgeCreateFieldAtom);
   const setFile = useSetAtom(setKnowledgeFileAtom);
-  const setSearchQuery = useSetAtom(setKnowledgeSearchQueryAtom);
-  const setSettingField = useSetAtom(setKnowledgeSettingFieldAtom);
 
   useEffect(() => {
     void refresh();
@@ -321,16 +187,12 @@ export default function KnowledgePage() {
     createDoc: () => void createDoc(),
     reindexDoc: (id) => void reindexDoc(id),
     deleteDoc: (id) => void deleteDoc(id),
-    search: () => void search(),
-    saveSettings: () => void saveSettings(),
     setCreateField: (payload) => setCreateField(payload),
     setFile: (file) => void setFile(file),
-    setSearchQuery: (value) => setSearchQuery(value),
-    setSettingField: (payload) => setSettingField(payload as never),
   };
 
   return (
-    <Page title="知识库" description="管理 RAG 文档、检索结果与知识注入参数。">
+    <Page title="知识库" description="管理 RAG 文档。">
       {error ? (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
@@ -339,8 +201,6 @@ export default function KnowledgePage() {
       ) : null}
       <CreateDocumentCard loading={loading} createForm={createForm} actions={actions} />
       <DocumentsCard documents={documents} busyDocumentId={busyDocumentId} actions={actions} />
-      <SearchCard query={searchForm.query} hits={hits} loading={loading} actions={actions} />
-      <SettingsCard settings={settings} loading={loading} actions={actions} />
     </Page>
   );
 }
