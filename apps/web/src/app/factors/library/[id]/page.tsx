@@ -1,60 +1,43 @@
-"use client";
+'use client';
 
-import { useMemo } from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { Loader2, Pencil, Trash2 } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { cn } from "@/lib/utils";
-import {
-  deleteFactor,
-  runFactorEvaluation,
-  type FactorEvaluationRowPublic,
-  type FactorSummaryPublic,
-} from "@/api";
-import type { DataSetPublic } from "@/models";
-import type { EvaluationProfilePublic } from "@/models/evaluation-profile/dto";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { cn } from '@/lib/utils';
+import { deleteFactor } from '@/api/factors';
+import { runFactorEvaluation } from '@/api/evaluation-profiles';
+import type { DataSetPublic } from '@/models/data-set/dto';
+import type { FactorEvaluationRowPublic, FactorSummaryPublic } from '@/models/factor/dto';
+import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
 import {
   factorDetailStateAtomFamily,
   factorEvaluationRunningAtom,
   loadFactorDetailAtomFamily,
   refreshFactorEvalRowAtomFamily,
-} from "@/models/factor";
+} from '@/models/factor';
 
-import { DeleteFactorDialog } from "@/app/factors/ui/delete-factor-dialog";
-import {
-  EvaluationProfileMetricResultsPanel,
-} from "@/app/factors/ui/evaluation-profile-metric-results";
-import { Page } from "@/components/page";
+import { DeleteFactorDialog } from '@/app/factors/ui/delete-factor-dialog';
+import { EvaluationProfileMetricResultsPanel } from '@/app/factors/ui/evaluation-profile-metric-results';
+import { Page } from '@/components/page';
 
 function formatIso(iso: string): string {
-  return iso.replace("T", " ").replace("+00:00", " UTC");
+  return iso.replace('T', ' ').replace('+00:00', ' UTC');
 }
 
 function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
   const r = row.results;
   if (r === null || r === undefined) return false;
   if (Array.isArray(r)) return r.length > 0;
-  if (typeof r === "object") return Object.keys(r as Record<string, unknown>).length > 0;
+  if (typeof r === 'object') return Object.keys(r as Record<string, unknown>).length > 0;
   return true;
 }
 
@@ -101,18 +84,14 @@ function FactorEvaluationRunControls(props: {
         <Select
           modal={false}
           items={profileSelectItems}
-          value={runProfileId ?? ""}
+          value={runProfileId ?? ''}
           onValueChange={(v) => {
             if (!v) return;
             onProfileSelectValue(v);
           }}
           disabled={selectDisabled || profiles.length === 0}
         >
-          <SelectTrigger
-            id="factor-eval-profile-card"
-            size="sm"
-            className="w-full min-w-0"
-          >
+          <SelectTrigger id="factor-eval-profile-card" size="sm" className="w-full min-w-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -134,18 +113,14 @@ function FactorEvaluationRunControls(props: {
         <Select
           modal={false}
           items={dataSetSelectItems}
-          value={runDataSetId ?? ""}
+          value={runDataSetId ?? ''}
           onValueChange={(v) => {
             if (!v) return;
             onDataSetSelectValue(v);
           }}
           disabled={selectDisabled || dataSets.length === 0}
         >
-          <SelectTrigger
-            id="factor-eval-dataset-card"
-            size="sm"
-            className="w-full min-w-0"
-          >
+          <SelectTrigger id="factor-eval-dataset-card" size="sm" className="w-full min-w-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -162,17 +137,11 @@ function FactorEvaluationRunControls(props: {
         variant="secondary"
         className="w-full gap-1.5 sm:w-auto"
         disabled={selectDisabled}
-        title={
-          evaluatingOther
-            ? `「${otherEvaluatingFactorName ?? ""}」正在评价中`
-            : undefined
-        }
+        title={evaluatingOther ? `「${otherEvaluatingFactorName ?? ''}」正在评价中` : undefined}
         onClick={onRunEvaluation}
       >
-        {evaluatingThis ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : null}
-        {evaluatingThis ? "评价中…" : "运行评价"}
+        {evaluatingThis ? <Loader2 className="size-4 animate-spin" /> : null}
+        {evaluatingThis ? '评价中…' : '运行评价'}
       </Button>
     </div>
   );
@@ -187,14 +156,8 @@ function FactorEvaluationDetails(props: {
   return (
     <>
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span
-          className={
-            evalRow.error
-              ? "text-destructive"
-              : "text-emerald-600 dark:text-emerald-400"
-          }
-        >
-          {evalRow.error ? "评价失败" : "评价成功"}
+        <span className={evalRow.error ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}>
+          {evalRow.error ? '评价失败' : '评价成功'}
         </span>
         {evalRow.evaluated_at ? (
           <span className="font-mono text-xs text-muted-foreground tabular-nums">
@@ -210,23 +173,13 @@ function FactorEvaluationDetails(props: {
       {evalRow.evaluation_profile_id ? (
         <div className="rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
           <span className="text-muted-foreground">评价方案</span>
-          <span className="ml-2 font-medium">
-            {evalProfile?.name ?? evalRow.evaluation_profile_id}
-          </span>
-          {!evalProfile ? (
-            <span className="ml-1 text-xs text-muted-foreground">
-              （方案可能已删除）
-            </span>
-          ) : null}
+          <span className="ml-2 font-medium">{evalProfile?.name ?? evalRow.evaluation_profile_id}</span>
+          {!evalProfile ? <span className="ml-1 text-xs text-muted-foreground">（方案可能已删除）</span> : null}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          该次评价未记录评价方案，无法对齐工作流节点说明。
-        </p>
+        <p className="text-sm text-muted-foreground">该次评价未记录评价方案，无法对齐工作流节点说明。</p>
       )}
-      {!evalRow.error &&
-        evalRow.evaluation_profile_id &&
-        !hasWorkflowMetricResults(evalRow) ? (
+      {!evalRow.error && evalRow.evaluation_profile_id && !hasWorkflowMetricResults(evalRow) ? (
         <p className="text-sm text-muted-foreground">
           当前评价没有工作流节点输出。若方案未配置图节点，或使用了「无（默认参数）」运行，则仅产生聚合指标且不在此展示。
         </p>
@@ -236,27 +189,19 @@ function FactorEvaluationDetails(props: {
   );
 }
 
-function FactorDetailHeaderActions(props: {
-  id: string;
-  onRequestDelete: () => void;
-}) {
+function FactorDetailHeaderActions(props: { id: string; onRequestDelete: () => void }) {
   const { id, onRequestDelete } = props;
 
   return (
     <div className="flex w-full min-w-0 flex-wrap justify-end gap-2">
       <Link
         href={`/factors/library/${encodeURIComponent(id)}/edit`}
-        className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+        className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
       >
         <Pencil className="size-4" />
         编辑
       </Link>
-      <Button
-        type="button"
-        variant="destructive"
-        className="gap-1.5"
-        onClick={onRequestDelete}
-      >
+      <Button type="button" variant="destructive" className="gap-1.5" onClick={onRequestDelete}>
         <Trash2 className="size-4" />
         删除
       </Button>
@@ -302,11 +247,8 @@ function FactorEvaluationCard(props: {
       <CardHeader>
         <CardTitle>方案评价结果</CardTitle>
         <CardDescription>
-          工作流节点输出（数据来自{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.65rem]">
-            factors/data/evaluations.json
-          </code>
-          ）
+          工作流节点输出（数据来自{' '}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.65rem]">factors/data/evaluations.json</code>）
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -325,14 +267,9 @@ function FactorEvaluationCard(props: {
           onRunEvaluation={onRunEvaluation}
         />
         {!evalRow?.has_evaluation ? (
-          <p className="text-sm text-muted-foreground">
-            暂无评价结果。请选择评价方案后点击「运行评价」。
-          </p>
+          <p className="text-sm text-muted-foreground">暂无评价结果。请选择评价方案后点击「运行评价」。</p>
         ) : (
-          <FactorEvaluationDetails
-            evalRow={evalRow}
-            evalProfile={evalProfile}
-          />
+          <FactorEvaluationDetails evalRow={evalRow} evalProfile={evalProfile} />
         )}
       </CardContent>
     </Card>
@@ -408,7 +345,7 @@ function FactorDetailLoadedView(props: {
 export default function FactorDetailPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
   const router = useRouter();
   const evaluationRunning = useAtomValue(factorEvaluationRunningAtom);
   const setEvaluationRunning = useSetAtom(factorEvaluationRunningAtom);
@@ -456,10 +393,8 @@ export default function FactorDetailPage() {
     return profiles.find((p) => p.id === pid) ?? null;
   }, [evalRow?.evaluation_profile_id, profiles]);
 
-  const evaluatingThis =
-    evaluationRunning != null && evaluationRunning.factorId === id;
-  const evaluatingOther =
-    evaluationRunning != null && evaluationRunning.factorId !== id;
+  const evaluatingThis = evaluationRunning != null && evaluationRunning.factorId === id;
+  const evaluatingOther = evaluationRunning != null && evaluationRunning.factorId !== id;
 
   const handleRunEvaluation = async () => {
     if (!id || !detail) return;
@@ -475,7 +410,7 @@ export default function FactorDetailPage() {
     if (!profileId) {
       setS((prev) => ({
         ...prev,
-        loadError: "暂无可用评价方案，请先创建评价方案后再运行评价。",
+        loadError: '暂无可用评价方案，请先创建评价方案后再运行评价。',
       }));
       return;
     }
@@ -483,7 +418,7 @@ export default function FactorDetailPage() {
     if (!dataSetId) {
       setS((prev) => ({
         ...prev,
-        loadError: "暂无可用数据集，请先创建数据集后再运行评价。",
+        loadError: '暂无可用数据集，请先创建数据集后再运行评价。',
       }));
       return;
     }
@@ -502,9 +437,7 @@ export default function FactorDetailPage() {
         loadError: e instanceof Error ? e.message : String(e),
       }));
     } finally {
-      setEvaluationRunning((prev) =>
-        prev?.factorId === id ? null : prev,
-      );
+      setEvaluationRunning((prev) => (prev?.factorId === id ? null : prev));
     }
   };
 
@@ -514,7 +447,7 @@ export default function FactorDetailPage() {
     try {
       await deleteFactor(deleteTarget.id);
       setS((prev) => ({ ...prev, deleteTarget: null }));
-      router.push("/factors/library");
+      router.push('/factors/library');
     } catch (e) {
       setS((prev) => ({
         ...prev,
@@ -548,7 +481,7 @@ export default function FactorDetailPage() {
       <Page>
         <Alert variant="destructive">
           <AlertTitle>无法加载因子</AlertTitle>
-          <AlertDescription>{loadError ?? "未知错误"}</AlertDescription>
+          <AlertDescription>{loadError ?? '未知错误'}</AlertDescription>
         </Alert>
       </Page>
     );
@@ -570,18 +503,12 @@ export default function FactorDetailPage() {
     <Page
       title={<span className="font-mono">{detail.name}</span>}
       description={
-        detail.description.trim() !== "" ? (
-          detail.description
-        ) : (
-          <span className="text-muted-foreground">无描述</span>
-        )
+        detail.description.trim() !== '' ? detail.description : <span className="text-muted-foreground">无描述</span>
       }
       action={
         <FactorDetailHeaderActions
           id={id}
-          onRequestDelete={() =>
-            setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))
-          }
+          onRequestDelete={() => setS((prev) => ({ ...prev, deleteTarget: summaryForDelete }))}
         />
       }
     >
@@ -597,15 +524,9 @@ export default function FactorDetailPage() {
         runDataSetId={runDataSetId}
         evaluatingThis={evaluatingThis}
         evaluatingOther={evaluatingOther}
-        otherEvaluatingFactorName={
-          evaluatingOther ? evaluationRunning?.factorName : undefined
-        }
-        onProfileSelectValue={(v) =>
-          setS((prev) => ({ ...prev, runProfileId: v }))
-        }
-        onDataSetSelectValue={(v) =>
-          setS((prev) => ({ ...prev, runDataSetId: v }))
-        }
+        otherEvaluatingFactorName={evaluatingOther ? evaluationRunning?.factorName : undefined}
+        onProfileSelectValue={(v) => setS((prev) => ({ ...prev, runProfileId: v }))}
+        onDataSetSelectValue={(v) => setS((prev) => ({ ...prev, runDataSetId: v }))}
         onRunEvaluation={() => void handleRunEvaluation()}
       />
 

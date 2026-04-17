@@ -1,17 +1,16 @@
-"use client";
+'use client';
 
+import { useMemo } from 'react';
 
-import { useMemo } from "react";
+import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
+import type { FactorEvaluationRowPublic } from '@/models/factor/dto';
 
-import { EchartsOptionChart } from "@/components/echarts/echarts-option-chart";
-import type { FactorEvaluationRowPublic } from "@/models";
-
-type EchartsPayload = { type: "echart"; option: unknown };
+type EchartsPayload = { type: 'echart'; option: unknown };
 
 function isEchartsPayload(v: unknown): v is EchartsPayload {
-  if (!v || typeof v !== "object") return false;
+  if (!v || typeof v !== 'object') return false;
   const o = v as Record<string, unknown>;
-  return o.type === "echart" && "option" in o;
+  return o.type === 'echart' && 'option' in o;
 }
 
 /**
@@ -21,7 +20,7 @@ function isEchartsPayload(v: unknown): v is EchartsPayload {
  */
 function normalizeEvalResults(raw: unknown): unknown {
   if (raw == null) return raw;
-  if (typeof raw === "string") {
+  if (typeof raw === 'string') {
     try {
       return JSON.parse(raw) as unknown;
     } catch {
@@ -41,7 +40,7 @@ function collectEchartsPayloads(value: unknown): EchartsPayload[] {
 
   const walk = (v: unknown, depth: number) => {
     if (depth > 50) return;
-    if (v && (typeof v === "object" || typeof v === "function")) {
+    if (v && (typeof v === 'object' || typeof v === 'function')) {
       if (visited.has(v)) return;
       visited.add(v);
 
@@ -64,22 +63,13 @@ function collectEchartsPayloads(value: unknown): EchartsPayload[] {
   return out;
 }
 
-export function EvaluationProfileMetricResultsPanel(props: {
-  evalRow: FactorEvaluationRowPublic;
-}) {
+export function EvaluationProfileMetricResultsPanel(props: { evalRow: FactorEvaluationRowPublic }) {
   const { evalRow } = props;
 
-  const charts = useMemo(
-    () => collectEchartsPayloads(normalizeEvalResults(evalRow.results)),
-    [evalRow.results],
-  );
+  const charts = useMemo(() => collectEchartsPayloads(normalizeEvalResults(evalRow.results)), [evalRow.results]);
 
   if (evalRow.results == null) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        当前评价没有工作流节点输出。
-      </p>
-    );
+    return <p className="text-sm text-muted-foreground">当前评价没有工作流节点输出。</p>;
   }
 
   if (charts.length === 0) {
@@ -95,7 +85,7 @@ export function EvaluationProfileMetricResultsPanel(props: {
       {charts.map((p, idx) => (
         <div key={idx} className="space-y-2">
           <div className="text-xs font-medium text-muted-foreground">
-            {charts.length === 1 ? "ECharts 图表" : `ECharts 图表 #${idx + 1}`}
+            {charts.length === 1 ? 'ECharts 图表' : `ECharts 图表 #${idx + 1}`}
           </div>
           <EchartsOptionChart option={p.option} />
         </div>

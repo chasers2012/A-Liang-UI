@@ -5,7 +5,7 @@ import type {
   ChatRenameBody,
   ChatRequestPublic,
   ChatSummaryPublic,
-} from '@/models';
+} from '@/models/agent-llm/dto';
 import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './client';
 
 /** Mirrors ``app.chat.events.ToolPayload``. */

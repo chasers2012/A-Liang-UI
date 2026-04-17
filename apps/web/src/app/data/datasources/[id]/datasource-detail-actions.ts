@@ -1,10 +1,9 @@
-import { ApiError, deleteDatasource, testDatasource } from "@/api";
-import type { DatasourceDetailState } from "@/models/datasource/detail.atom";
-import type { DataSourcePublic } from "@/models/datasource/dto";
+import { ApiError } from '@/api/client';
+import { deleteDatasource, testDatasource } from '@/api/datasources';
+import type { DatasourceDetailState } from '@/models/datasource/detail.atom';
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
-type SetDetailState = (
-  update: (prev: DatasourceDetailState) => DatasourceDetailState,
-) => void;
+type SetDetailState = (update: (prev: DatasourceDetailState) => DatasourceDetailState) => void;
 
 export type DatasourceDetailRouter = { push: (href: string) => void };
 
@@ -17,10 +16,7 @@ function testConnectionErrorMessage(e: unknown): string {
   return messageFromUnknown(e);
 }
 
-export async function runDatasourceConnectionTest(
-  id: string,
-  setState: SetDetailState,
-): Promise<void> {
+export async function runDatasourceConnectionTest(id: string, setState: SetDetailState): Promise<void> {
   if (!id) return;
   setState((s) => ({ ...s, busy: true, testHint: null }));
   try {
@@ -45,7 +41,7 @@ export async function confirmDeleteDatasource(
   try {
     await deleteDatasource(ds.id);
     setState((s) => ({ ...s, deleteOpen: false }));
-    router.push("/data/datasources");
+    router.push('/data/datasources');
   } catch (e) {
     setState((s) => ({
       ...s,
@@ -55,4 +51,3 @@ export async function confirmDeleteDatasource(
     setState((s) => ({ ...s, deleting: false }));
   }
 }
-

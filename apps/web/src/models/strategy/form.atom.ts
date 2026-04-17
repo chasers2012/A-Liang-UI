@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { createStrategy, getStrategy, getStrategyWorkflowTemplate, patchStrategy } from '@/api';
+import { createStrategy, getStrategy, getStrategyWorkflowTemplate, patchStrategy } from '@/api/strategies';
 import { defaultNewName } from '@/lib/default-new-name';
 import { EMPTY_WORKFLOW } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';

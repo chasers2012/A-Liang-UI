@@ -4,7 +4,8 @@ import type { FormEvent } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { listDatasources, listDatasourcePlugins, type DatasourcePluginPublic, type DataSourcePublic } from '@/api';
+import { listDatasources, listDatasourcePlugins } from '@/api/datasources';
+import type { DatasourcePluginPublic, DataSourcePublic } from '@/models/datasource/dto';
 import { defaultNewName } from '@/lib/default-new-name';
 
 import { commitDatasourceForm } from '../commit-datasource';

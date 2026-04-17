@@ -1,31 +1,18 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useAtom, useSetAtom } from "jotai";
-import { ArchiveRestore, Trash2 } from "lucide-react";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useAtom, useSetAtom } from 'jotai';
+import { ArchiveRestore, Trash2 } from 'lucide-react';
 
-import { Page } from "@/components/page";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { ChatArchivedSummaryPublic } from "@/models";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Page } from '@/components/page';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { ChatArchivedSummaryPublic } from '@/models/agent-llm/dto';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   archiveConfirmDeleteAtom,
   archiveDeletingIdAtom,
@@ -35,7 +22,7 @@ import {
   loadArchivedSessionsAtom,
   purgeArchivedSessionAtom,
   restoreArchivedSessionAtom,
-} from "@/models/chat/archive";
+} from '@/models/chat/archive';
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -56,24 +43,12 @@ type ArchivedSessionRowProps = ArchivedActionsProps & {
   session: ArchivedItem;
 };
 
-function ArchivedSessionRow({
-  session,
-  restoringId,
-  deletingId,
-  onRestore,
-  onDeleteIntent,
-}: ArchivedSessionRowProps) {
+function ArchivedSessionRow({ session, restoringId, deletingId, onRestore, onDeleteIntent }: ArchivedSessionRowProps) {
   return (
     <TableRow>
-      <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">
-        {session.title}
-      </TableCell>
-      <TableCell className="hidden text-muted-foreground sm:table-cell">
-        {session.message_count}
-      </TableCell>
-      <TableCell className="hidden text-muted-foreground md:table-cell">
-        {formatWhen(session.archived_at)}
-      </TableCell>
+      <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
+      <TableCell className="hidden text-muted-foreground sm:table-cell">{session.message_count}</TableCell>
+      <TableCell className="hidden text-muted-foreground md:table-cell">{formatWhen(session.archived_at)}</TableCell>
       <TableCell className="text-right">
         <div className="inline-flex items-center gap-2">
           <Button
@@ -85,7 +60,7 @@ function ArchivedSessionRow({
             onClick={() => onRestore(session.id)}
           >
             <ArchiveRestore className="size-3.5" aria-hidden />
-            {restoringId === session.id ? "恢复中…" : "恢复"}
+            {restoringId === session.id ? '恢复中…' : '恢复'}
           </Button>
           <Button
             type="button"
@@ -96,7 +71,7 @@ function ArchivedSessionRow({
             onClick={() => onDeleteIntent(session)}
           >
             <Trash2 className="size-3.5" aria-hidden />
-            {deletingId === session.id ? "删除中…" : "删除"}
+            {deletingId === session.id ? '删除中…' : '删除'}
           </Button>
         </div>
       </TableCell>
@@ -160,12 +135,7 @@ type ArchivedDeleteDialogProps = {
   onConfirm: (id: string) => void;
 };
 
-function ArchivedDeleteDialog({
-  deletingId,
-  confirmDelete,
-  onClose,
-  onConfirm,
-}: ArchivedDeleteDialogProps) {
+function ArchivedDeleteDialog({ deletingId, confirmDelete, onClose, onConfirm }: ArchivedDeleteDialogProps) {
   return (
     <ConfirmDialog
       open={confirmDelete !== null}
@@ -175,15 +145,11 @@ function ArchivedDeleteDialog({
       title="删除已归档会话"
       description={
         <div className="space-y-2">
-          <p className="text-sm text-foreground">
-            确认永久删除会话「{confirmDelete?.title ?? ""}」？
-          </p>
-          <p className="text-sm text-muted-foreground">
-            删除后将无法恢复，历史消息会一并移除。
-          </p>
+          <p className="text-sm text-foreground">确认永久删除会话「{confirmDelete?.title ?? ''}」？</p>
+          <p className="text-sm text-muted-foreground">删除后将无法恢复，历史消息会一并移除。</p>
         </div>
       }
-      confirmLabel={deletingId ? "删除中…" : "删除"}
+      confirmLabel={deletingId ? '删除中…' : '删除'}
       onConfirm={() => {
         if (!confirmDelete) return;
         onConfirm(confirmDelete.id);
@@ -211,7 +177,7 @@ export default function ArchivedChatsPage() {
   const onRestore = async (id: string) => {
     const result = await restoreArchivedSession(id);
     if (result.ok) {
-      router.push("/");
+      router.push('/');
     }
   };
 
@@ -224,13 +190,10 @@ export default function ArchivedChatsPage() {
       title="已归档会话"
       description={
         <p className="text-sm text-muted-foreground">
-          归档后的会话会出现在此列表。恢复后将重新出现在{" "}
-          <Link
-            href="/"
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
+          归档后的会话会出现在此列表。恢复后将重新出现在{' '}
+          <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
             对话
-          </Link>{" "}
+          </Link>{' '}
           页签中。
         </p>
       }
@@ -245,9 +208,7 @@ export default function ArchivedChatsPage() {
       <Card>
         <CardHeader>
           <CardTitle>归档列表</CardTitle>
-          <CardDescription>
-            按归档时间从新到旧排序。恢复不会丢失历史消息。
-          </CardDescription>
+          <CardDescription>按归档时间从新到旧排序。恢复不会丢失历史消息。</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <ArchivedSessionsTable

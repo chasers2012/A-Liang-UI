@@ -1,4 +1,4 @@
-import type { StrategyListPublic, StrategyPublic } from '@/models';
+import type { StrategyListPublic, StrategyPublic } from '@/models/strategy/dto';
 import { apiFetchJson } from './client';
 
 export function listStrategies(): Promise<StrategyListPublic[]> {

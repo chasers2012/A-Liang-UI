@@ -1,18 +1,11 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import type { DataSetPublic } from "@/api";
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { DataSetPublic } from '@/models/data-set/dto';
 
 type Props = {
   items: DataSetPublic[];
@@ -20,14 +13,14 @@ type Props = {
 };
 
 function instrumentSummary(codes: string[]): string {
-  if (!codes.length) return "全部";
-  if (codes.length <= 3) return codes.join(", ");
+  if (!codes.length) return '全部';
+  if (codes.length <= 3) return codes.join(', ');
   return `${codes.length} 个`;
 }
 
 function datasourceSummary(row: DataSetPublic): string {
   const b = row.datasource_bindings;
-  if (!b.length) return "—";
+  if (!b.length) return '—';
   if (b.length === 1) {
     return b[0].datasource_name || b[0].datasource_id;
   }
@@ -52,9 +45,7 @@ export function DataSetTable({ items, onDelete }: Props) {
             <TableCell className="max-w-48 whitespace-normal">
               <span className="font-mono text-sm">{row.name}</span>
               {row.description ? (
-                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                  {row.description}
-                </p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{row.description}</p>
               ) : null}
             </TableCell>
             <TableCell className="whitespace-normal text-sm">

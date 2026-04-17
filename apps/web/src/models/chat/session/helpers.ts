@@ -4,7 +4,7 @@ import type {
   ChatDetailPublic,
   ChatSummaryPublic,
   ChatToolCallPublic,
-} from '@/models';
+} from '@/models/agent-llm/dto';
 import type { AssistantBlock } from '@/models/chat/types';
 
 export function appendAssistantDelta(

@@ -1,8 +1,8 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import { getDatasource } from "@/api";
-import type { DataSourcePublic } from "./dto";
+import { getDatasource } from '@/api/datasources';
+import type { DataSourcePublic } from './dto';
 
 export type DatasourceDetailState = {
   ds: DataSourcePublic | null;
@@ -37,7 +37,7 @@ export const loadDatasourceDetailAtomFamily = atomFamily((id: string) =>
       set(datasourceDetailAtomFamily(id), {
         ...initialDatasourceDetail(),
         loading: false,
-        error: "无效的 id",
+        error: '无效的 id',
       });
       return;
     }

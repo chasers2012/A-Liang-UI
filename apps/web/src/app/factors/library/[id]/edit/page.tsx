@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 
-import { getFactor, patchFactor } from "@/api";
+import { getFactor, patchFactor } from '@/api/factors';
 
 import {
   bodyFromForm,
@@ -11,25 +11,18 @@ import {
   hydrateFromDetail,
   type FactorFormState,
   validateFormForSubmit,
-} from "@/models/factor";
-import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
-import {
-  applyFactorFormPatch,
-  FactorFormFields,
-} from "@/app/factors/ui/factor-form-fields";
-import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { Page } from "@/components/page";
-import {
-  FACTOR_MAIN_FORM_ID,
-  FactorFormLoadError,
-  FactorFormLoading,
-} from "@/app/factors/ui/factor-form-page";
+} from '@/models/factor';
+import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { applyFactorFormPatch, FactorFormFields } from '@/app/factors/ui/factor-form-fields';
+import { PageFormHeaderActions } from '@/components/page-form-header-actions';
+import { Page } from '@/components/page';
+import { FACTOR_MAIN_FORM_ID, FactorFormLoadError, FactorFormLoading } from '@/app/factors/ui/factor-form-page';
 
 export default function EditFactorPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
-  const id = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
   const router = useRouter();
 
   const [form, setForm] = useState<FactorFormState>(emptyForm);
@@ -40,7 +33,7 @@ export default function EditFactorPage() {
 
   const load = useCallback(async () => {
     if (!id) {
-      setLoadError("无效的因子 id");
+      setLoadError('无效的因子 id');
       setLoading(false);
       return;
     }
@@ -97,17 +90,13 @@ export default function EditFactorPage() {
       title={
         <FactorEditPageTitle
           name={form.name}
-          onNameChange={(next) =>
-            setForm((f) => applyFactorFormPatch(f, { name: next }))
-          }
+          onNameChange={(next) => setForm((f) => applyFactorFormPatch(f, { name: next }))}
         />
       }
       description={
         <FactorEditPageDescription
           description={form.description}
-          onDescriptionChange={(next) =>
-            setForm((f) => applyFactorFormPatch(f, { description: next }))
-          }
+          onDescriptionChange={(next) => setForm((f) => applyFactorFormPatch(f, { description: next }))}
         />
       }
       action={
@@ -118,11 +107,7 @@ export default function EditFactorPage() {
         />
       }
     >
-      <form
-        id={FACTOR_MAIN_FORM_ID}
-        className="flex flex-col gap-6"
-        onSubmit={(e) => void onSubmit(e)}
-      >
+      <form id={FACTOR_MAIN_FORM_ID} className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
         <FactorFormFields
           form={form}
           setForm={setForm}
@@ -133,10 +118,7 @@ export default function EditFactorPage() {
         />
       </form>
 
-      <p className="text-sm text-muted-foreground">
-        保存且源码有变更时会自动生成代码快照。{" "}
-        （评价历史已移除）
-      </p>
+      <p className="text-sm text-muted-foreground">保存且源码有变更时会自动生成代码快照。 （评价历史已移除）</p>
     </Page>
   );
 }

@@ -1,7 +1,7 @@
-import { atom } from "jotai";
+import { atom } from 'jotai';
 
-import { getFactorEvaluationsSummary } from "@/api";
-import type { FactorEvaluationsSummaryPublic } from "./dto";
+import { getFactorEvaluationsSummary } from '@/api/factors';
+import type { FactorEvaluationsSummaryPublic } from './dto';
 
 export type FactorEvaluationsOverviewState = {
   data: FactorEvaluationsSummaryPublic | null;
@@ -9,12 +9,11 @@ export type FactorEvaluationsOverviewState = {
   error: string | null;
 };
 
-export const factorEvaluationsOverviewStateAtom =
-  atom<FactorEvaluationsOverviewState>({
-    data: null,
-    loading: true,
-    error: null,
-  });
+export const factorEvaluationsOverviewStateAtom = atom<FactorEvaluationsOverviewState>({
+  data: null,
+  loading: true,
+  error: null,
+});
 
 export const loadFactorEvaluationsOverviewAtom = atom(null, async (_get, set) => {
   set(factorEvaluationsOverviewStateAtom, (s) => ({

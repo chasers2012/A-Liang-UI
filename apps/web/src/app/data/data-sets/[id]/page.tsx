@@ -1,39 +1,30 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useAtom, useSetAtom } from "jotai";
-import { Pencil, Trash2 } from "lucide-react";
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useAtom, useSetAtom } from 'jotai';
+import { Pencil, Trash2 } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Page } from "@/components/page";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { deleteDataSet } from "@/api";
-import { cn } from "@/lib/utils";
-import {
-  dataSetDetailAtomFamily,
-  loadDataSetDetailAtomFamily,
-} from "@/models/data-set/panel-detail.atom";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page } from '@/components/page';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { deleteDataSet } from '@/api/data-sets';
+import { cn } from '@/lib/utils';
+import { dataSetDetailAtomFamily, loadDataSetDetailAtomFamily } from '@/models/data-set/panel-detail.atom';
 
-import { DeleteDataSetDialog } from "../ui/delete-data-set-dialog";
+import { DeleteDataSetDialog } from '../ui/delete-data-set-dialog';
 
 function formatIso(iso: string): string {
-  return iso.replace("T", " ").replace("+00:00", " UTC");
+  return iso.replace('T', ' ').replace('+00:00', ' UTC');
 }
 
 export default function DataSetDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
 
   const [state, setState] = useAtom(dataSetDetailAtomFamily(id));
   const load = useSetAtom(loadDataSetDetailAtomFamily(id));
@@ -50,7 +41,7 @@ export default function DataSetDetailPage() {
     try {
       await deleteDataSet(row.id);
       setState((s) => ({ ...s, deleteOpen: false }));
-      router.push("/data/data-sets");
+      router.push('/data/data-sets');
     } catch (e) {
       setState((s) => ({
         ...s,
@@ -84,9 +75,9 @@ export default function DataSetDetailPage() {
       <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载数据集</AlertTitle>
-          <AlertDescription>{error ?? "未知错误"}</AlertDescription>
+          <AlertDescription>{error ?? '未知错误'}</AlertDescription>
         </Alert>
-        <Link href="/data/data-sets" className={cn(buttonVariants({ variant: "outline" }))}>
+        <Link href="/data/data-sets" className={cn(buttonVariants({ variant: 'outline' }))}>
           返回列表
         </Link>
       </Page>
@@ -96,12 +87,12 @@ export default function DataSetDetailPage() {
   return (
     <Page
       title={row.name}
-      description={row.description || "无说明"}
+      description={row.description || '无说明'}
       action={
         <>
           <Link
             href={`/data/data-sets/${encodeURIComponent(id)}/edit`}
-            className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+            className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
           >
             <Pencil className="size-4" />
             编辑
@@ -144,9 +135,7 @@ export default function DataSetDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>数据源绑定</CardTitle>
-          <CardDescription>
-            datasource_id、datasource_name、datasource_type、dependencies
-          </CardDescription>
+          <CardDescription>datasource_id、datasource_name、datasource_type、dependencies</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {row.datasource_bindings.length === 0 ? (
@@ -157,9 +146,7 @@ export default function DataSetDetailPage() {
                 key={`${b.datasource_id}-${i}`}
                 className="rounded-lg border border-border/60 bg-muted/5 p-4 text-sm"
               >
-                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  绑定 {i + 1}
-                </p>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">绑定 {i + 1}</p>
                 <dl className="grid gap-2">
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                     <dt className="text-muted-foreground">datasource_id</dt>
@@ -167,16 +154,16 @@ export default function DataSetDetailPage() {
                   </div>
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                     <dt className="text-muted-foreground">datasource_name</dt>
-                    <dd>{b.datasource_name || "—"}</dd>
+                    <dd>{b.datasource_name || '—'}</dd>
                   </div>
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                     <dt className="text-muted-foreground">datasource_type</dt>
-                    <dd className="font-mono text-xs">{b.datasource_type || "—"}</dd>
+                    <dd className="font-mono text-xs">{b.datasource_type || '—'}</dd>
                   </div>
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
                     <dt className="text-muted-foreground">dependencies</dt>
                     <dd className="font-mono text-xs">
-                      {b.dependencies.length ? b.dependencies.join(", ") : "（空：单源时使用因子全部依赖）"}
+                      {b.dependencies.length ? b.dependencies.join(', ') : '（空：单源时使用因子全部依赖）'}
                     </dd>
                   </div>
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
@@ -184,9 +171,9 @@ export default function DataSetDetailPage() {
                     <dd className="font-mono text-xs break-all">
                       {b.alias && Object.keys(b.alias).length
                         ? Object.entries(b.alias)
-                          .map(([k, v]) => `${k}=${v}`)
-                          .join(", ")
-                        : "—"}
+                            .map(([k, v]) => `${k}=${v}`)
+                            .join(', ')
+                        : '—'}
                     </dd>
                   </div>
                 </dl>
@@ -219,9 +206,7 @@ export default function DataSetDetailPage() {
             <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
               <dt className="text-muted-foreground">instrument_codes</dt>
               <dd className="font-mono text-xs break-all">
-                {row.instrument_codes.length
-                  ? row.instrument_codes.join(", ")
-                  : "（空数组：不限制标的）"}
+                {row.instrument_codes.length ? row.instrument_codes.join(', ') : '（空数组：不限制标的）'}
               </dd>
             </div>
           </dl>

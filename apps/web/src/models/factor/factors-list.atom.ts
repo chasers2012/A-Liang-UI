@@ -1,7 +1,7 @@
-import { atom } from "jotai";
+import { atom } from 'jotai';
 
-import { listFactors } from "@/api";
-import type { FactorSummaryPublic } from "./dto";
+import { listFactors } from '@/api/factors';
+import type { FactorSummaryPublic } from './dto';
 
 export type FactorsListState = {
   items: FactorSummaryPublic[] | null;

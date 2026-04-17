@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { deleteStrategy, getStrategy, listStrategies } from '@/api';
+import { deleteStrategy, getStrategy, listStrategies } from '@/api/strategies';
 import { listNodes } from '@/api/nodes';
 import type { StrategyListPublic, StrategyPublic } from './dto';
 import { NodeSummaryPublic } from '../nodes/dto';

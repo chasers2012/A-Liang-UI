@@ -1,4 +1,4 @@
-import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from '@/models';
+import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from '@/models/backtest/dto';
 import { apiFetchJson } from './client';
 
 export function runBacktest(body: unknown): Promise<BacktestRunPublic> {
@@ -8,7 +8,11 @@ export function runBacktest(body: unknown): Promise<BacktestRunPublic> {
   });
 }
 
-export function listBacktests(params?: { strategyId?: string; status?: string; limit?: number }): Promise<BacktestRunPublic[]> {
+export function listBacktests(params?: {
+  strategyId?: string;
+  status?: string;
+  limit?: number;
+}): Promise<BacktestRunPublic[]> {
   const qs = new URLSearchParams();
   if (params?.strategyId) qs.set('strategy_id', params.strategyId);
   if (params?.status) qs.set('status', params.status);

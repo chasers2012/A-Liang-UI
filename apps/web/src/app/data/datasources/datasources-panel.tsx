@@ -1,36 +1,22 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useAtom, useSetAtom } from "jotai";
-import { Plus } from "lucide-react";
+import Link from 'next/link';
+import { useAtom, useSetAtom } from 'jotai';
+import { Plus } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Page } from "@/components/page";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import {
-  ApiError,
-  deleteDatasource,
-  getQuantAgentApiBase,
-  testDatasource,
-  type DataSourcePublic,
-} from "@/api";
-import { cn } from "@/lib/utils";
-import {
-  datasourcesPanelAtom,
-  refreshDatasourcesPanelAtom,
-} from "@/models/datasource/panel.atom";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page } from '@/components/page';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { ApiError, getQuantAgentApiBase } from '@/api/client';
+import { deleteDatasource, testDatasource } from '@/api/datasources';
+import type { DataSourcePublic } from '@/models/datasource/dto';
+import { cn } from '@/lib/utils';
+import { datasourcesPanelAtom, refreshDatasourcesPanelAtom } from '@/models/datasource/panel.atom';
 
-import { DatasourceTable } from "./ui/datasource-table";
-import { DeleteDatasourceDialog } from "./ui/delete-datasource-dialog";
+import { DatasourceTable } from './ui/datasource-table';
+import { DeleteDatasourceDialog } from './ui/delete-datasource-dialog';
 
 export function DatasourcesPanel() {
   const [panel, setPanel] = useAtom(datasourcesPanelAtom);
@@ -51,12 +37,7 @@ export function DatasourcesPanel() {
         testHint: { id: ds.id, ok: r.ok, message: r.message },
       }));
     } catch (e) {
-      const msg =
-        e instanceof ApiError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : String(e);
+      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
       setPanel((p) => ({
         ...p,
         testHint: { id: ds.id, ok: false, message: msg },
@@ -90,18 +71,10 @@ export function DatasourcesPanel() {
       title="数据源"
       description={
         <>
-          配置经{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            {getQuantAgentApiBase()}
-          </code>
+          配置经 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">{getQuantAgentApiBase()}</code>
           读写，落盘于服务端 workspace（
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            QUANT_AGENT_WORKSPACE
-          </code>
-          ，默认{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            ~/.quant-agent
-          </code>
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">QUANT_AGENT_WORKSPACE</code>
+          ，默认 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">~/.quant-agent</code>
           ）。使用「详情」查看完整配置。
         </>
       }
@@ -114,7 +87,7 @@ export function DatasourcesPanel() {
       )}
 
       {testHint && (
-        <Alert variant={testHint.ok ? "default" : "destructive"}>
+        <Alert variant={testHint.ok ? 'default' : 'destructive'}>
           <AlertTitle>连接测试</AlertTitle>
           <AlertDescription>{testHint.message}</AlertDescription>
         </Alert>
@@ -123,27 +96,18 @@ export function DatasourcesPanel() {
       <Card>
         <CardHeader>
           <CardTitle>已配置的数据源</CardTitle>
-          <CardDescription>
-            共 {count} 条；可测试连接或编辑配置。
-          </CardDescription>
+          <CardDescription>共 {count} 条；可测试连接或编辑配置。</CardDescription>
           <CardAction>
-            <Link
-              href="/data/datasources/new"
-              className={cn(buttonVariants(), "gap-1.5")}
-            >
+            <Link href="/data/datasources/new" className={cn(buttonVariants(), 'gap-1.5')}>
               <Plus className="size-4" />
               新增数据源
             </Link>
           </CardAction>
         </CardHeader>
         <CardContent className="p-0">
-          {items === null && !loadError && (
-            <p className="p-6 text-sm text-muted-foreground">加载中…</p>
-          )}
+          {items === null && !loadError && <p className="p-6 text-sm text-muted-foreground">加载中…</p>}
           {items && items.length === 0 && !loadError && (
-            <p className="p-6 text-sm text-muted-foreground">
-              暂无数据源。请使用上方「新增数据源」开始配置。
-            </p>
+            <p className="p-6 text-sm text-muted-foreground">暂无数据源。请使用上方「新增数据源」开始配置。</p>
           )}
           {items && items.length > 0 && (
             <DatasourceTable

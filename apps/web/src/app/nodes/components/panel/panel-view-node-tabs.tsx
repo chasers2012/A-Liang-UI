@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { useAtomValue, useSetAtom } from "jotai";
-import { useRouter } from "next/navigation";
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useRouter } from 'next/navigation';
 
-import { deleteNode } from "@/api";
-import { CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { deleteNode } from '@/api/nodes';
+import { CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   cancelNodesDetailEditAtomFamily,
   NEW_NODE_DETAIL_KEY,
@@ -17,23 +17,20 @@ import {
   setNodesDetailEditNameAtomFamily,
   setNodesDetailSourceDraftAtomFamily,
   startNodesDetailEditAtomFamily,
-} from "@/models/nodes/detail.atom";
-import { refreshNodesListAtom } from "@/models/nodes/list-detail.atom";
-import { NodeDetailCardHeader } from "./panel-header";
-import { NodeDetailEditToolbarButton } from "./panel-edit-toolbar-button";
-import { PanelPreviewTab } from "./panel-preview-tab";
-import { PanelSourceTab } from "./panel-source-tab";
-import { NODE_PAGE_CARD_TOOLBAR, TAB_TRIGGER_CLASS } from "./shared";
+} from '@/models/nodes/detail.atom';
+import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
+import { NodeDetailCardHeader } from './panel-header';
+import { NodeDetailEditToolbarButton } from './panel-edit-toolbar-button';
+import { PanelPreviewTab } from './panel-preview-tab';
+import { PanelSourceTab } from './panel-source-tab';
+import { NODE_PAGE_CARD_TOOLBAR, TAB_TRIGGER_CLASS } from './shared';
 
-export function PanelViewNodeTabs(props: {
-  stateKey: string;
-  effectiveNodeId: string | null;
-  placeholder: string;
-}) {
+export function PanelViewNodeTabs(props: { stateKey: string; effectiveNodeId: string | null; placeholder: string }) {
   const { stateKey, placeholder, effectiveNodeId } = props;
   const router = useRouter();
-  const { detail, editName, editDescription, editing, saveError, saving, sourceDraft } =
-    useAtomValue(nodesDetailPanelStateAtomFamily(stateKey));
+  const { detail, editName, editDescription, editing, saveError, saving, sourceDraft } = useAtomValue(
+    nodesDetailPanelStateAtomFamily(stateKey),
+  );
   const startEdit = useSetAtom(startNodesDetailEditAtomFamily(stateKey));
   const cancelEdit = useSetAtom(cancelNodesDetailEditAtomFamily(stateKey));
   const setEditName = useSetAtom(setNodesDetailEditNameAtomFamily(stateKey));
@@ -54,7 +51,7 @@ export function PanelViewNodeTabs(props: {
     if (isCreate && saved) router.push(`/nodes/${encodeURIComponent(saved.id)}`);
   };
   const handleCancelEdit = () => {
-    if (isCreate) return void router.push("/nodes");
+    if (isCreate) return void router.push('/nodes');
     cancelEdit();
   };
   const handleDeleteNode = async () => {
@@ -63,7 +60,7 @@ export function PanelViewNodeTabs(props: {
     try {
       await deleteNode(detail.id);
       await refreshNodesList();
-      router.push("/nodes");
+      router.push('/nodes');
     } finally {
       setDeleting(false);
     }
@@ -80,11 +77,15 @@ export function PanelViewNodeTabs(props: {
         effectiveNodeId={effectiveNodeId}
       />
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <Tabs key={effectiveNodeId ?? "none"} defaultValue="preview" className="flex min-h-0 flex-1 flex-col gap-0">
+        <Tabs key={effectiveNodeId ?? 'none'} defaultValue="preview" className="flex min-h-0 flex-1 flex-col gap-0">
           <div className={NODE_PAGE_CARD_TOOLBAR}>
             <TabsList className="inline-flex h-9 w-fit flex-wrap items-center gap-1 rounded-lg bg-muted/80 p-1 text-muted-foreground">
-              <TabsTrigger value="preview" className={TAB_TRIGGER_CLASS}>预览</TabsTrigger>
-              <TabsTrigger value="source" className={TAB_TRIGGER_CLASS}>源码</TabsTrigger>
+              <TabsTrigger value="preview" className={TAB_TRIGGER_CLASS}>
+                预览
+              </TabsTrigger>
+              <TabsTrigger value="source" className={TAB_TRIGGER_CLASS}>
+                源码
+              </TabsTrigger>
             </TabsList>
             <NodeDetailEditToolbarButton
               canEdit={detail != null}
@@ -99,7 +100,10 @@ export function PanelViewNodeTabs(props: {
               deleteDisabled={deleting || isPluginNode}
             />
           </div>
-          <TabsContent value="preview" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden">
+          <TabsContent
+            value="preview"
+            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
+          >
             <PanelPreviewTab
               detail={detail}
               placeholder={placeholder}
@@ -109,7 +113,10 @@ export function PanelViewNodeTabs(props: {
               onEditDescriptionChange={setEditDescription}
             />
           </TabsContent>
-          <TabsContent value="source" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden">
+          <TabsContent
+            value="source"
+            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
+          >
             <PanelSourceTab
               detail={detail}
               placeholder={placeholder}
@@ -125,4 +132,3 @@ export function PanelViewNodeTabs(props: {
     </>
   );
 }
-

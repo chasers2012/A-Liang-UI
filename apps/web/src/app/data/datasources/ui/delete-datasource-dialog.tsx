@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { DataSourcePublic } from "@/api";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
 type Props = {
   target: DataSourcePublic | null;
@@ -10,12 +10,7 @@ type Props = {
   onConfirm: () => void;
 };
 
-export function DeleteDatasourceDialog({
-  target,
-  deleting,
-  onDismiss,
-  onConfirm,
-}: Props) {
+export function DeleteDatasourceDialog({ target, deleting, onDismiss, onConfirm }: Props) {
   return (
     <ConfirmDialog
       open={target !== null}

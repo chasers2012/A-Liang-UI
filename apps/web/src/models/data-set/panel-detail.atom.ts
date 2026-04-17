@@ -1,8 +1,8 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import { getDataSet, listDataSets } from "@/api";
-import type { DataSetPublic } from "./dto";
+import { getDataSet, listDataSets } from '@/api/data-sets';
+import type { DataSetPublic } from './dto';
 
 export type DataSetsPanelState = {
   items: DataSetPublic[] | null;
@@ -61,7 +61,7 @@ export const loadDataSetDetailAtomFamily = atomFamily((id: string) =>
       set(dataSetDetailAtomFamily(id), {
         ...initialDataSetDetail(),
         loading: false,
-        error: "无效的数据集 id",
+        error: '无效的数据集 id',
       });
       return;
     }

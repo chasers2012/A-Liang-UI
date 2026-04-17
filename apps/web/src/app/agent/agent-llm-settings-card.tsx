@@ -1,33 +1,22 @@
-"use client";
+'use client';
 
-import type { FormEvent } from "react";
-import { useCallback, useEffect, useState } from "react";
+import type { FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ApiError, getLlmSettings, putLlmSettings } from "@/api";
-import type { LlmProvider, LlmSettingsPublic } from "@/models";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ApiError } from '@/api/client';
+import { getLlmSettings, putLlmSettings } from '@/api/llm';
+import type { LlmProvider, LlmSettingsPublic } from '@/models/agent-llm/dto';
 
-export const AGENT_LLM_FORM_ID = "agent-llm-settings-form";
+export const AGENT_LLM_FORM_ID = 'agent-llm-settings-form';
 
 const DEFAULT_LLM: LlmSettingsPublic = {
-  provider: "ollama",
-  model: "qwen3.5:9b",
-  ollama_base_url: "http://127.0.0.1:11434",
+  provider: 'ollama',
+  model: 'qwen3.5:9b',
+  ollama_base_url: 'http://127.0.0.1:11434',
   openai_base_url: null,
   api_key: null,
   temperature: 1,
@@ -60,32 +49,22 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
       .then((data) => {
         if (!cancelled) {
           setSettings({
-            provider: data.provider === "openai" ? "openai" : "ollama",
+            provider: data.provider === 'openai' ? 'openai' : 'ollama',
             model: data.model || DEFAULT_LLM.model,
-            ollama_base_url:
-              data.ollama_base_url || DEFAULT_LLM.ollama_base_url,
+            ollama_base_url: data.ollama_base_url || DEFAULT_LLM.ollama_base_url,
             openai_base_url: data.openai_base_url ?? null,
             api_key: data.api_key ?? null,
             temperature: data.temperature ?? DEFAULT_LLM.temperature,
             ollama_timeout: data.ollama_timeout ?? DEFAULT_LLM.ollama_timeout,
-            ollama_num_predict:
-              data.ollama_num_predict ?? DEFAULT_LLM.ollama_num_predict,
+            ollama_num_predict: data.ollama_num_predict ?? DEFAULT_LLM.ollama_num_predict,
             ollama_reasoning:
-              data.ollama_reasoning === undefined
-                ? DEFAULT_LLM.ollama_reasoning
-                : data.ollama_reasoning,
+              data.ollama_reasoning === undefined ? DEFAULT_LLM.ollama_reasoning : data.ollama_reasoning,
           });
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          setLoadError(
-            err instanceof ApiError
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : String(err),
-          );
+          setLoadError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err));
         }
       })
       .finally(() => {
@@ -116,13 +95,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
         });
         setSavedOk(true);
       } catch (err) {
-        setSaveError(
-          err instanceof ApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : String(err),
-        );
+        setSaveError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err));
       } finally {
         setSaving(false);
       }
@@ -139,8 +112,8 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
       <CardHeader>
         <CardTitle>模型与密钥</CardTitle>
         <CardDescription>
-          Ollama 无需 API Key；选用 OpenAI 时需填写 Key 或设置环境变量{" "}
-          <span className="font-mono">OPENAI_API_KEY</span>。
+          Ollama 无需 API Key；选用 OpenAI 时需填写 Key 或设置环境变量 <span className="font-mono">OPENAI_API_KEY</span>
+          。
         </CardDescription>
       </CardHeader>
       <form id={AGENT_LLM_FORM_ID} onSubmit={onSubmit}>
@@ -155,9 +128,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
               保存失败：{saveError}
             </p>
           ) : null}
-          {savedOk ? (
-            <p className="text-sm text-muted-foreground">已保存。</p>
-          ) : null}
+          {savedOk ? <p className="text-sm text-muted-foreground">已保存。</p> : null}
 
           <div className="space-y-2">
             <Label>提供方</Label>
@@ -166,7 +137,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
               value={settings.provider}
               disabled={loading}
               onValueChange={(v) => {
-                if (v === "ollama" || v === "openai") setProvider(v);
+                if (v === 'ollama' || v === 'openai') setProvider(v);
               }}
             >
               <SelectTrigger className="w-full max-w-md">
@@ -185,15 +156,13 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
               id="agent-llm-model"
               value={settings.model}
               disabled={loading}
-              onChange={(e) =>
-                setSettings((s) => ({ ...s, model: e.target.value }))
-              }
+              onChange={(e) => setSettings((s) => ({ ...s, model: e.target.value }))}
               placeholder="qwen3.5:9b"
               className="max-w-md font-mono"
             />
           </div>
 
-          {settings.provider === "ollama" ? (
+          {settings.provider === 'ollama' ? (
             <div className="space-y-2">
               <Label htmlFor="agent-ollama-url">Ollama 地址</Label>
               <Input
@@ -213,12 +182,10 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="agent-openai-url">
-                  OpenAI API 基址（可选）
-                </Label>
+                <Label htmlFor="agent-openai-url">OpenAI API 基址（可选）</Label>
                 <Input
                   id="agent-openai-url"
-                  value={settings.openai_base_url ?? ""}
+                  value={settings.openai_base_url ?? ''}
                   disabled={loading}
                   onChange={(e) =>
                     setSettings((s) => ({
@@ -236,7 +203,7 @@ export function AgentLlmSettingsCard({ onBusyChange }: AgentLlmSettingsCardProps
                   id="agent-api-key"
                   type="password"
                   autoComplete="off"
-                  value={settings.api_key ?? ""}
+                  value={settings.api_key ?? ''}
                   disabled={loading}
                   onChange={(e) =>
                     setSettings((s) => ({

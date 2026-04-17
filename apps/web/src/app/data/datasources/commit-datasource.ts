@@ -1,16 +1,14 @@
-import type { DataSourcePublic } from "@/api";
-import { createDatasource, patchDatasource } from "@/api";
+import type { DataSourcePublic } from '@/models/datasource/dto';
+import { createDatasource, patchDatasource } from '@/api/datasources';
 
-import type { EditorMode, FormState } from "./form-model";
+import type { EditorMode, FormState } from './form-model';
 
-async function createDatasourceFromForm(
-  form: FormState,
-): Promise<DataSourcePublic> {
+async function createDatasourceFromForm(form: FormState): Promise<DataSourcePublic> {
   if (!form.name.trim()) {
-    throw new Error("请填写显示名称");
+    throw new Error('请填写显示名称');
   }
   if (!form.type.trim()) {
-    throw new Error("请选择数据源类型");
+    throw new Error('请选择数据源类型');
   }
   return await createDatasource({
     name: form.name.trim(),
@@ -19,10 +17,7 @@ async function createDatasourceFromForm(
   });
 }
 
-function buildEditPatch(
-  form: FormState,
-  orig: DataSourcePublic,
-): Record<string, unknown> {
+function buildEditPatch(form: FormState, orig: DataSourcePublic): Record<string, unknown> {
   const patch: Record<string, unknown> = {};
 
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
@@ -41,13 +36,13 @@ export async function commitDatasourceForm(
   form: FormState,
   items: DataSourcePublic[] | null,
 ): Promise<DataSourcePublic | null> {
-  if (editorMode === "create") {
+  if (editorMode === 'create') {
     return await createDatasourceFromForm(form);
   }
 
-  if (!editingId) throw new Error("记录已不存在");
+  if (!editingId) throw new Error('记录已不存在');
   const orig = items?.find((i) => i.id === editingId);
-  if (!orig) throw new Error("记录已不存在");
+  if (!orig) throw new Error('记录已不存在');
 
   const patch = buildEditPatch(form, orig);
   if (Object.keys(patch).length === 0) return null;

@@ -7,7 +7,12 @@ import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { defaultNewName } from '@/lib/default-new-name';
-import { createEvaluationProfile, getEvaluationProfile, getEvaluationWorkflowTemplate, patchEvaluationProfile } from '@/api';
+import {
+  createEvaluationProfile,
+  getEvaluationProfile,
+  getEvaluationWorkflowTemplate,
+  patchEvaluationProfile,
+} from '@/api/evaluation-profiles';
 
 import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
 import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
@@ -145,7 +150,13 @@ export function EvaluationProfileFormPage(props: Props) {
   return (
     <Page
       title={<FactorEditPageTitle name={name} onNameChange={setName} nameAriaLabel="评价方案名称" />}
-      description={<FactorEditPageDescription description={description} onDescriptionChange={setDescription} descriptionAriaLabel="评价方案描述" />}
+      description={
+        <FactorEditPageDescription
+          description={description}
+          onDescriptionChange={setDescription}
+          descriptionAriaLabel="评价方案描述"
+        />
+      }
       className={'max-w-full flex-1 min-h-0 h-full overflow-hidden'}
       gap="sm"
       action={

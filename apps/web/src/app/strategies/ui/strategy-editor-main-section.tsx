@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { listNodes } from '@/api';
+import { listNodes } from '@/api/nodes';
 
 import {
   WorkflowGraphCanvas,

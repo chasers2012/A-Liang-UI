@@ -1,11 +1,8 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import {
-  getEvaluationProfile,
-  listEvaluationProfiles,
-} from "@/api";
-import type { EvaluationProfilePublic } from "./dto";
+import { getEvaluationProfile, listEvaluationProfiles } from '@/api/evaluation-profiles';
+import type { EvaluationProfilePublic } from './dto';
 
 export type EvaluationProfilesListState = {
   items: EvaluationProfilePublic[] | null;

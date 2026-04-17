@@ -1,4 +1,4 @@
-import type { AgentWorkflowDetailPublic, AgentWorkflowSummaryPublic } from '@/models';
+import type { AgentWorkflowDetailPublic, AgentWorkflowSummaryPublic } from '@/models/agent-workflow/dto';
 import { apiFetchJson } from './client';
 
 export function listAgentWorkflows(): Promise<AgentWorkflowSummaryPublic[]> {

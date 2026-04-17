@@ -1,6 +1,6 @@
-import type { DataSourcePublic } from "@/api";
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
-export type EditorMode = "create" | "edit";
+export type EditorMode = 'create' | 'edit';
 
 export type ColumnMapRow = {
   factor: string;
@@ -16,8 +16,8 @@ export type FormState = {
 
 export function emptyForm(): FormState {
   return {
-    name: "",
-    type: "",
+    name: '',
+    type: '',
     config: {},
   };
 }
@@ -31,6 +31,6 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
 }
 
 function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
-  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
   return v as Record<string, unknown>;
 }

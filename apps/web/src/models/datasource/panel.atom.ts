@@ -1,7 +1,7 @@
-import { atom } from "jotai";
+import { atom } from 'jotai';
 
-import { listDatasources } from "@/api";
-import type { DataSourcePublic } from "./dto";
+import { listDatasources } from '@/api/datasources';
+import type { DataSourcePublic } from './dto';
 
 export type DatasourcesPanelState = {
   items: DataSourcePublic[] | null;

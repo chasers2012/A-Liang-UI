@@ -21,17 +21,11 @@ import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
 import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
 import { AliasMapEditor, depsFromAliasRows, mapFromAliasRows, type AliasMapRow } from './alias-map-editor';
-import {
-  ApiError,
-  createDataSet,
-  getDataSet,
-  getDataSetWorkflowTemplate,
-  getDatasourceDependencyFields,
-  listDatasources,
-  patchDataSet,
-  type DataSetPublic,
-  type DataSourcePublic,
-} from '@/api';
+import { ApiError } from '@/api/client';
+import { createDataSet, getDataSet, getDataSetWorkflowTemplate, patchDataSet } from '@/api/data-sets';
+import { getDatasourceDependencyFields, listDatasources } from '@/api/datasources';
+import type { DataSetPublic } from '@/models/data-set/dto';
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
 import { parsePersistedWorkflowGraphPayload, type WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
-import { type EvaluationProfilePublic, listNodes } from '@/api';
+import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
+import { listNodes } from '@/api/nodes';
 
 import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
 import { NodeSummaryPublic } from '@/models/nodes/dto';

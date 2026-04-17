@@ -1,21 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Form from "@rjsf/shadcn";
-import validator from "@rjsf/validator-ajv8";
-import type { RJSFSchema, UiSchema } from "@rjsf/utils";
+import { useEffect, useMemo, useState } from 'react';
+import Form from '@rjsf/shadcn';
+import validator from '@rjsf/validator-ajv8';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
-import { ApiError, getConfig, getConfigSpecs, putConfig } from "@/api";
-import { Page } from "@/components/page";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import type { ConfigModuleSpecPublic } from "@/models";
+import { ApiError } from '@/api/client';
+import { getConfig, getConfigSpecs, putConfig } from '@/api/config';
+import { Page } from '@/components/page';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { ConfigModuleSpecPublic } from '@/models/config/dto';
 
 type ModuleValuesMap = Record<string, Record<string, unknown>>;
 type ModuleBusyMap = Record<string, { loading: boolean; saving: boolean }>;
@@ -51,12 +46,7 @@ export default function AgentConfigPage() {
               setModuleErrors((prev) => ({ ...prev, [item.key]: null }));
             } catch (err) {
               if (cancelled) return;
-              const message =
-                err instanceof ApiError
-                  ? err.message
-                  : err instanceof Error
-                    ? err.message
-                    : String(err);
+              const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err);
               setModuleErrors((prev) => ({ ...prev, [item.key]: message }));
             } finally {
               if (cancelled) return;
@@ -70,23 +60,14 @@ export default function AgentConfigPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setGlobalError(
-          err instanceof ApiError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : String(err),
-        );
+        setGlobalError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err));
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const allLoading = useMemo(
-    () => Object.values(moduleBusy).some((item) => item.loading),
-    [moduleBusy],
-  );
+  const allLoading = useMemo(() => Object.values(moduleBusy).some((item) => item.loading), [moduleBusy]);
 
   const onSaveModule = async (moduleKey: string) => {
     const currentValues = moduleValues[moduleKey] ?? {};
@@ -99,14 +80,9 @@ export default function AgentConfigPage() {
     try {
       const resp = await putConfig(moduleKey, currentValues);
       setModuleValues((prev) => ({ ...prev, [moduleKey]: resp.values }));
-      setModuleSuccess((prev) => ({ ...prev, [moduleKey]: "已保存。" }));
+      setModuleSuccess((prev) => ({ ...prev, [moduleKey]: '已保存。' }));
     } catch (err) {
-      const message =
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : String(err);
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err);
       setModuleErrors((prev) => ({ ...prev, [moduleKey]: message }));
     } finally {
       setModuleBusy((prev) => ({
@@ -116,25 +92,17 @@ export default function AgentConfigPage() {
     }
   };
 
-  const schemaForModule = (module: ConfigModuleSpecPublic): RJSFSchema =>
-    module.schema as RJSFSchema;
+  const schemaForModule = (module: ConfigModuleSpecPublic): RJSFSchema => module.schema as RJSFSchema;
 
-  const uiSchemaForModule = (
-    module: ConfigModuleSpecPublic,
-    disabled: boolean,
-  ): UiSchema => ({
+  const uiSchemaForModule = (module: ConfigModuleSpecPublic, disabled: boolean): UiSchema => ({
     ...(module.uiSchema as UiSchema),
-    "ui:disabled": disabled,
+    'ui:disabled': disabled,
   });
 
   return (
     <Page
       title="配置"
-      description={
-        <>
-          动态加载后端可注册配置项。新增后端配置模块后，无需改前端页面结构即可在此展示并保存。
-        </>
-      }
+      description={<>动态加载后端可注册配置项。新增后端配置模块后，无需改前端页面结构即可在此展示并保存。</>}
     >
       <div className="space-y-4">
         {globalError ? (
@@ -156,7 +124,7 @@ export default function AgentConfigPage() {
               <CardHeader>
                 <CardTitle>{module.title}</CardTitle>
                 <CardDescription>
-                  {module.description ?? "无描述"}
+                  {module.description ?? '无描述'}
                   <span className="ml-2 font-mono text-xs">config/{module.filename}</span>
                 </CardDescription>
               </CardHeader>
@@ -167,9 +135,7 @@ export default function AgentConfigPage() {
                   </p>
                 ) : null}
                 {moduleSuccess[module.key] ? (
-                  <p className="text-sm text-muted-foreground">
-                    {moduleSuccess[module.key]}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{moduleSuccess[module.key]}</p>
                 ) : null}
                 <div className="max-w-xl">
                   <Form
@@ -193,7 +159,7 @@ export default function AgentConfigPage() {
                   onClick={() => void onSaveModule(module.key)}
                   disabled={busy.loading || busy.saving}
                 >
-                  {busy.saving ? "保存中..." : "保存"}
+                  {busy.saving ? '保存中...' : '保存'}
                 </Button>
               </CardContent>
             </Card>

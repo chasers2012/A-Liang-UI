@@ -1,15 +1,8 @@
 import { atom, type Setter } from 'jotai';
 import { startTransition } from 'react';
 
-import {
-  ApiError,
-  archiveAgentChat,
-  createAgentChat,
-  listAgentChats,
-  postAgentChatStream,
-  renameAgentChat,
-} from '@/api';
-import type { ChatMessagePublic } from '@/models';
+import { archiveAgentChat, createAgentChat, listAgentChats, postAgentChatStream, renameAgentChat } from '@/api/chat';
+import type { ChatMessagePublic } from '@/models/agent-llm/dto';
 import { chatErrorAtom, chatHydratedAtom, chatInputAtom, chatIsSendingAtom } from './atoms.base';
 
 import { CHAT_DEFAULT_TITLE } from './constants';
@@ -42,6 +35,7 @@ import {
 } from './session-detail';
 import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily } from './segment-open';
 import { chatSessionsAtom, refetchChatsListAtom, selectChatAtom } from './session-list';
+import { ApiError } from '@/api/client';
 
 export {
   activeUserMessageIdsAtom,

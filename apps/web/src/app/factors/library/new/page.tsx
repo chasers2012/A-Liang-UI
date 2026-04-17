@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { createFactor, getFactorTemplate } from "@/api";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { createFactor, getFactorTemplate } from '@/api/factors';
 
 import {
   bodyFromForm,
@@ -12,19 +12,13 @@ import {
   emptyForm,
   type FactorFormState,
   validateFormForSubmit,
-} from "@/models/factor";
-import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
-import { FactorEditPageTitle } from "@/app/factors/ui/factor-edit-page-title";
-import {
-  applyFactorFormPatch,
-  FactorFormFields,
-} from "@/app/factors/ui/factor-form-fields";
-import { PageFormHeaderActions } from "@/components/page-form-header-actions";
-import { Page } from "@/components/page";
-import {
-  FACTOR_MAIN_FORM_ID,
-  FactorFormLoading,
-} from "@/app/factors/ui/factor-form-page";
+} from '@/models/factor';
+import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { applyFactorFormPatch, FactorFormFields } from '@/app/factors/ui/factor-form-fields';
+import { PageFormHeaderActions } from '@/components/page-form-header-actions';
+import { Page } from '@/components/page';
+import { FACTOR_MAIN_FORM_ID, FactorFormLoading } from '@/app/factors/ui/factor-form-page';
 
 export default function NewFactorPage() {
   const router = useRouter();
@@ -48,9 +42,7 @@ export default function NewFactorPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setBootstrapError(
-            e instanceof Error ? e.message : "无法加载默认因子源码模板",
-          );
+          setBootstrapError(e instanceof Error ? e.message : '无法加载默认因子源码模板');
         }
       } finally {
         if (!cancelled) setBootstrapping(false);
@@ -93,25 +85,17 @@ export default function NewFactorPage() {
       title={
         <FactorEditPageTitle
           name={form.name}
-          onNameChange={(next) =>
-            setForm((f) => applyFactorFormPatch(f, { name: next }))
-          }
+          onNameChange={(next) => setForm((f) => applyFactorFormPatch(f, { name: next }))}
         />
       }
       description={
         <FactorEditPageDescription
           description={form.description}
-          onDescriptionChange={(next) =>
-            setForm((f) => applyFactorFormPatch(f, { description: next }))
-          }
+          onDescriptionChange={(next) => setForm((f) => applyFactorFormPatch(f, { description: next }))}
         />
       }
       action={
-        <PageFormHeaderActions
-          formId={FACTOR_MAIN_FORM_ID}
-          submitting={submitting}
-          cancelHref="/factors/library"
-        />
+        <PageFormHeaderActions formId={FACTOR_MAIN_FORM_ID} submitting={submitting} cancelHref="/factors/library" />
       }
     >
       {bootstrapError ? (
@@ -121,11 +105,7 @@ export default function NewFactorPage() {
         </Alert>
       ) : null}
 
-      <form
-        id={FACTOR_MAIN_FORM_ID}
-        className="flex flex-col gap-6"
-        onSubmit={(e) => void onSubmit(e)}
-      >
+      <form id={FACTOR_MAIN_FORM_ID} className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
         <FactorFormFields
           form={form}
           setForm={setForm}

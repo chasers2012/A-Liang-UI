@@ -1,14 +1,11 @@
-import {
-  ChatSummaryPublic,
-  listAgentChats,
-} from "@/api";
-import { atom } from "jotai";
-import { ApiError } from "next/dist/server/api-utils";
-import { startTransition } from "react";
-import { upsertSummary } from "./helpers";
-import { sessionDetailAtomFamily } from "./session-detail";
-import { activeSessionIdAtom } from "./active-session";
-import { chatErrorAtom } from "./atoms.base";
+import { ChatSummaryPublic, listAgentChats } from '@/api/chat';
+import { atom } from 'jotai';
+import { ApiError } from '@/api/client';
+import { startTransition } from 'react';
+import { upsertSummary } from './helpers';
+import { sessionDetailAtomFamily } from './session-detail';
+import { activeSessionIdAtom } from './active-session';
+import { chatErrorAtom } from './atoms.base';
 
 export const chatSessionsAtom = atom<ChatSummaryPublic[]>([]);
 
@@ -26,20 +23,17 @@ export const refetchChatsListAtom = atom(null, async (get, set) => {
       if (fallback) set(sessionDetailAtomFamily(fallback));
     }
   } catch (e) {
-    set(chatErrorAtom, e instanceof ApiError ? e.message : "刷新会话列表失败");
+    set(chatErrorAtom, e instanceof ApiError ? e.message : '刷新会话列表失败');
   }
 });
 
-export const selectChatAtom = atom(
-  null,
-  async (get, set, sessionId: string) => {
-    set(activeSessionIdAtom, sessionId);
-    startTransition(async () => {
-      await set(sessionDetailAtomFamily(sessionId));
-      const detail = get(sessionDetailAtomFamily(sessionId));
-      if (detail) {
-        set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
-      }
-    });
-  },
-);
+export const selectChatAtom = atom(null, async (get, set, sessionId: string) => {
+  set(activeSessionIdAtom, sessionId);
+  startTransition(async () => {
+    await set(sessionDetailAtomFamily(sessionId));
+    const detail = get(sessionDetailAtomFamily(sessionId));
+    if (detail) {
+      set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+    }
+  });
+});

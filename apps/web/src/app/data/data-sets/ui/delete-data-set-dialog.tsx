@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import type { DataSetPublic } from "@/api";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import type { DataSetPublic } from '@/models/data-set/dto';
 
 type Props = {
   target: DataSetPublic | null;
@@ -10,12 +10,7 @@ type Props = {
   onConfirm: () => void;
 };
 
-export function DeleteDataSetDialog({
-  target,
-  deleting,
-  onDismiss,
-  onConfirm,
-}: Props) {
+export function DeleteDataSetDialog({ target, deleting, onDismiss, onConfirm }: Props) {
   return (
     <ConfirmDialog
       open={target !== null}

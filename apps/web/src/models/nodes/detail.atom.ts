@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { createNode, getNode, getNodeTemplate, patchNode } from '@/api';
+import { createNode, getNode, getNodeTemplate, patchNode } from '@/api/nodes';
 import { defaultNewName } from '@/lib/default-new-name';
 import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
 import type { NodeDetailPublic } from '@/models/nodes/dto';

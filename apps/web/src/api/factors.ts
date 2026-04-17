@@ -1,12 +1,8 @@
-import type {
-  FactorDetailPublic,
-  FactorEvaluationsSummaryPublic,
-  FactorSummaryPublic,
-} from "@/models";
-import { apiFetchJson } from "./client";
+import type { FactorDetailPublic, FactorEvaluationsSummaryPublic, FactorSummaryPublic } from '@/models/factor/dto';
+import { apiFetchJson } from './client';
 
 export function listFactors(): Promise<FactorSummaryPublic[]> {
-  return apiFetchJson<FactorSummaryPublic[]>("/factors");
+  return apiFetchJson<FactorSummaryPublic[]>('/factors');
 }
 
 export function getFactor(id: string): Promise<FactorDetailPublic> {
@@ -18,30 +14,25 @@ export function getFactorTemplate(): Promise<string> {
 }
 
 export function createFactor(body: unknown): Promise<FactorDetailPublic> {
-  return apiFetchJson<FactorDetailPublic>("/factors", {
-    method: "POST",
+  return apiFetchJson<FactorDetailPublic>('/factors', {
+    method: 'POST',
     body: JSON.stringify(body),
   });
 }
 
-export function patchFactor(
-  id: string,
-  body: unknown,
-): Promise<FactorDetailPublic> {
-  return apiFetchJson<FactorDetailPublic>(
-    `/factors/${encodeURIComponent(id)}`,
-    { method: "PATCH", body: JSON.stringify(body) },
-  );
+export function patchFactor(id: string, body: unknown): Promise<FactorDetailPublic> {
+  return apiFetchJson<FactorDetailPublic>(`/factors/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 }
 
 export function deleteFactor(id: string): Promise<void> {
   return apiFetchJson<void>(`/factors/${encodeURIComponent(id)}`, {
-    method: "DELETE",
+    method: 'DELETE',
   });
 }
 
 export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
-  return apiFetchJson<FactorEvaluationsSummaryPublic>(
-    "/factors/evaluations/summary",
-  );
+  return apiFetchJson<FactorEvaluationsSummaryPublic>('/factors/evaluations/summary');
 }

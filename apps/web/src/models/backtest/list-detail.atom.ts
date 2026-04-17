@@ -7,11 +7,12 @@ import {
   getBacktestEquity,
   getBacktestTrades,
   listBacktests,
-  listDataSets,
-  listStrategies,
   runBacktest,
-} from '@/api';
-import type { DataSetPublic, StrategyListPublic } from '@/models';
+} from '@/api/backtests';
+import { listDataSets } from '@/api/data-sets';
+import { listStrategies } from '@/api/strategies';
+import type { DataSetPublic } from '@/models/data-set/dto';
+import type { StrategyListPublic } from '@/models/strategy/dto';
 
 import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from './dto';
 

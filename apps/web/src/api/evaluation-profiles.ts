@@ -1,4 +1,5 @@
-import type { EvaluationProfilePublic, FactorEvaluationRowPublic, WorkflowIOSpecPublic } from '@/models';
+import type { EvaluationProfilePublic, WorkflowIOSpecPublic } from '@/models/evaluation-profile/dto';
+import type { FactorEvaluationRowPublic } from '@/models/factor/dto';
 import { apiFetchJson } from './client';
 
 export function runFactorEvaluation(

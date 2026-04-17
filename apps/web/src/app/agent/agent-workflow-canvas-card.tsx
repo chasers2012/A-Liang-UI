@@ -1,56 +1,45 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Save } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Save } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   WorkflowGraphCanvas,
   type WorkflowGraphCanvasHandle,
   type WorkflowNodeTypeDefinition,
-} from "@/components/workflow-graph";
-import {
-  getAgentWorkflow,
-  listAgentWorkflowNodeTypes,
-  patchAgentWorkflow,
-} from "@/api";
-import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
-import { EMPTY_WORKFLOW } from "@/components/workflow-graph/reactflow/serialize";
+  toWorkflowNodeTypes,
+} from '@/components/workflow-graph';
+import { getAgentWorkflow, patchAgentWorkflow } from '@/api/agent-workflows';
+import { listNodes } from '@/api/nodes';
+import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+import { EMPTY_WORKFLOW } from '@/components/workflow-graph/reactflow/serialize';
 
 export interface AgentWorkflowCanvasCardProps {
   workflowId: string | null;
 }
 
-export function AgentWorkflowCanvasCard({
-  workflowId,
-}: AgentWorkflowCanvasCardProps) {
+export function AgentWorkflowCanvasCard({ workflowId }: AgentWorkflowCanvasCardProps) {
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
   const [nodeTypes, setNodeTypes] = useState<WorkflowNodeTypeDefinition[]>([]);
   const [graph, setGraph] = useState<WorkflowGraphPersisted>(EMPTY_WORKFLOW);
 
-
-  const [name, setName] = useState("");
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
 
   useEffect(() => {
-    listAgentWorkflowNodeTypes()
-      .then(setNodeTypes)
-      .catch(() => { });
+    listNodes('agent-workflow')
+      .then((catalog) => setNodeTypes(toWorkflowNodeTypes(catalog)))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!workflowId) {
       setGraph(EMPTY_WORKFLOW);
-      setName("");
+      setName('');
       return;
     }
     let cancelled = false;
@@ -61,7 +50,7 @@ export function AgentWorkflowCanvasCard({
         setName(detail.name);
         setGraph(detail.graph ?? EMPTY_WORKFLOW);
       })
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -87,9 +76,7 @@ export function AgentWorkflowCanvasCard({
   if (!workflowId) {
     return (
       <Card className="flex-1 flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">
-          选择左侧 Agent 以编辑工作流
-        </div>
+        <div className="text-muted-foreground text-sm">选择左侧 Agent 以编辑工作流</div>
       </Card>
     );
   }
@@ -105,16 +92,11 @@ export function AgentWorkflowCanvasCard({
   return (
     <Card className="flex-1 flex flex-col overflow-hidden" size="sm">
       <CardHeader>
-        <CardTitle>{name || "工作流"}</CardTitle>
+        <CardTitle>{name || '工作流'}</CardTitle>
         <CardAction>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={saving}
-            onClick={() => void handleSave()}
-          >
+          <Button variant="outline" size="sm" disabled={saving} onClick={() => void handleSave()}>
             <Save className="size-3.5" data-icon="inline-start" />
-            {saving ? "保存中…" : saveOk ? "已保存" : "保存"}
+            {saving ? '保存中…' : saveOk ? '已保存' : '保存'}
           </Button>
         </CardAction>
       </CardHeader>

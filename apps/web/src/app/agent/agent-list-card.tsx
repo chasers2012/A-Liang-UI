@@ -1,32 +1,16 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-} from "@/components/ui/dialog";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  createAgentWorkflow,
-  deleteAgentWorkflow,
-  listAgentWorkflows,
-} from "@/api";
-import type { AgentWorkflowSummaryPublic } from "@/models";
+import { Button } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { createAgentWorkflow, deleteAgentWorkflow, listAgentWorkflows } from '@/api/agent-workflows';
+import type { AgentWorkflowSummaryPublic } from '@/models/agent-workflow/dto';
 
 export interface AgentListCardProps {
   selectedId: string | null;
@@ -34,15 +18,11 @@ export interface AgentListCardProps {
   refreshKey?: number;
 }
 
-export function AgentListCard({
-  selectedId,
-  onSelect,
-  refreshKey,
-}: AgentListCardProps) {
+export function AgentListCard({ selectedId, onSelect, refreshKey }: AgentListCardProps) {
   const [items, setItems] = useState<AgentWorkflowSummaryPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [createName, setCreateName] = useState("");
+  const [createName, setCreateName] = useState('');
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentWorkflowSummaryPublic | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -70,7 +50,7 @@ export function AgentListCard({
     try {
       const created = await createAgentWorkflow({ name: createName.trim() });
       setCreateOpen(false);
-      setCreateName("");
+      setCreateName('');
       await fetchList();
       onSelect(created.id);
     } finally {
@@ -86,7 +66,7 @@ export function AgentListCard({
       setDeleteTarget(null);
       if (selectedId === deleteTarget.id) {
         const remaining = items.filter((i) => i.id !== deleteTarget.id);
-        onSelect(remaining.length > 0 ? remaining[0].id : "");
+        onSelect(remaining.length > 0 ? remaining[0].id : '');
       }
       await fetchList();
     } finally {
@@ -100,24 +80,16 @@ export function AgentListCard({
         <CardHeader>
           <CardTitle>Agent 列表</CardTitle>
           <CardAction>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              onClick={() => setCreateOpen(true)}
-            >
+            <Button variant="ghost" size="icon-xs" onClick={() => setCreateOpen(true)}>
               <Plus />
             </Button>
           </CardAction>
         </CardHeader>
         <CardContent className="flex-1 overflow-y-auto p-0">
           {loading && items.length === 0 ? (
-            <div className="px-3 py-4 text-muted-foreground text-xs text-center">
-              加载中…
-            </div>
+            <div className="px-3 py-4 text-muted-foreground text-xs text-center">加载中…</div>
           ) : items.length === 0 ? (
-            <div className="px-3 py-4 text-muted-foreground text-xs text-center">
-              暂无 Agent
-            </div>
+            <div className="px-3 py-4 text-muted-foreground text-xs text-center">暂无 Agent</div>
           ) : (
             <ul className="flex flex-col">
               {items.map((item) => (
@@ -125,13 +97,12 @@ export function AgentListCard({
                   <div
                     role="button"
                     tabIndex={0}
-                    className={`group w-full flex items-center justify-between gap-1 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 cursor-pointer outline-none ${item.id === selectedId
-                        ? "bg-muted font-medium"
-                        : ""
-                      }`}
+                    className={`group w-full flex items-center justify-between gap-1 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60 cursor-pointer outline-none ${
+                      item.id === selectedId ? 'bg-muted font-medium' : ''
+                    }`}
                     onClick={() => onSelect(item.id)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
+                      if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         onSelect(item.id);
                       }
@@ -170,7 +141,7 @@ export function AgentListCard({
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder="例如：因子挖掘"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleCreate();
+                  if (e.key === 'Enter') void handleCreate();
                 }}
               />
             </div>
@@ -179,11 +150,8 @@ export function AgentListCard({
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               取消
             </Button>
-            <Button
-              disabled={!createName.trim() || creating}
-              onClick={() => void handleCreate()}
-            >
-              {creating ? "创建中…" : "创建"}
+            <Button disabled={!createName.trim() || creating} onClick={() => void handleCreate()}>
+              {creating ? '创建中…' : '创建'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -192,10 +160,14 @@ export function AgentListCard({
       {/* Delete confirm */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="删除 Agent"
         description={
-          <>确定要删除 <strong>{deleteTarget?.name}</strong> 吗？此操作不可撤销。</>
+          <>
+            确定要删除 <strong>{deleteTarget?.name}</strong> 吗？此操作不可撤销。
+          </>
         }
         confirmLabel="删除"
         confirmVariant="destructive"

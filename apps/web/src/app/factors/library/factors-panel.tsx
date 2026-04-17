@@ -1,26 +1,19 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useAtomValue, useSetAtom } from "jotai";
-import { Plus } from "lucide-react";
+import Link from 'next/link';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { Plus } from 'lucide-react';
 
-import { Page } from "@/components/page";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { cn } from "@/lib/utils";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { getQuantAgentApiBase } from "@/api";
-import { factorsListAtom, refreshFactorsListAtom } from "@/models/factor";
+import { Page } from '@/components/page';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { cn } from '@/lib/utils';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getQuantAgentApiBase } from '@/api/client';
+import { factorsListAtom, refreshFactorsListAtom } from '@/models/factor';
 
-import { FactorCardList } from "@/app/factors/ui/factor-card-list";
+import { FactorCardList } from '@/app/factors/ui/factor-card-list';
 
 export function FactorsPanel() {
   const { items, error: loadError } = useAtomValue(factorsListAtom);
@@ -37,27 +30,14 @@ export function FactorsPanel() {
       title="因子库"
       description={
         <>
-          因子配置经{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            {getQuantAgentApiBase()}
-          </code>{" "}
+          因子配置经{' '}
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">{getQuantAgentApiBase()}</code>{' '}
           读写，落盘于服务端 workspace（
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            QUANT_AGENT_WORKSPACE
-          </code>
-          ，默认{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            ~/.quant-agent
-          </code>
-          ）下的{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
+          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">QUANT_AGENT_WORKSPACE</code>
+          ，默认 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">~/.quant-agent</code>
+          ）下的 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
             config/factors.json
-          </code>{" "}
-          与{" "}
-          <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">
-            factors/
-          </code>
-          。
+          </code> 与 <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs">factors/</code>。
         </>
       }
     >
@@ -75,10 +55,7 @@ export function FactorsPanel() {
             共 {count} 条。点击「详情」进入编辑与评价、历史；窄屏仅显示名称与操作。评价汇总见「因子」页。
           </CardDescription>
           <CardAction>
-            <Link
-              href="/factors/library/new"
-              className={cn(buttonVariants(), "gap-1.5")}
-            >
+            <Link href="/factors/library/new" className={cn(buttonVariants(), 'gap-1.5')}>
               <Plus className="size-4" />
               新增因子
             </Link>

@@ -1,7 +1,9 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { getFactor, getFactorEvaluationsSummary, listDataSets, listEvaluationProfiles } from '@/api';
+import { listDataSets } from '@/api/data-sets';
+import { listEvaluationProfiles } from '@/api/evaluation-profiles';
+import { getFactor, getFactorEvaluationsSummary } from '@/api/factors';
 import type { DataSetPublic } from '@/models/data-set/dto';
 import type { EvaluationProfilePublic } from '../evaluation-profile/dto';
 import type { FactorDetailPublic, FactorEvaluationRowPublic, FactorSummaryPublic } from './dto';

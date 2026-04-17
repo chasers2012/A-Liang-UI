@@ -1,21 +1,14 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Pencil, Trash2, Zap } from "lucide-react";
+import Link from 'next/link';
+import { Pencil, Trash2, Zap } from 'lucide-react';
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import type { DataSourcePublic } from "@/api";
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
-import { datasourceSummary } from "../datasource-summary";
+import { datasourceSummary } from '../datasource-summary';
 
 type Props = {
   items: DataSourcePublic[];
@@ -25,15 +18,10 @@ type Props = {
 };
 
 function formatUpdatedAt(iso: string): string {
-  return iso.replace("T", " ").replace("+00:00", " UTC");
+  return iso.replace('T', ' ').replace('+00:00', ' UTC');
 }
 
-export function DatasourceTable({
-  items,
-  busyId,
-  onTest,
-  onDelete,
-}: Props) {
+export function DatasourceTable({ items, busyId, onTest, onDelete }: Props) {
   return (
     <Table>
       <TableHeader>
@@ -56,10 +44,7 @@ export function DatasourceTable({
                   {ds.type}
                 </span>
               </TableCell>
-              <TableCell
-                className="max-w-md truncate text-muted-foreground"
-                title={summary}
-              >
+              <TableCell className="max-w-md truncate text-muted-foreground" title={summary}>
                 {summary}
               </TableCell>
               <TableCell className="text-xs text-muted-foreground tabular-nums">
@@ -88,8 +73,8 @@ export function DatasourceTable({
                       href={`/data/datasources/${encodeURIComponent(ds.id)}/edit`}
                       title="编辑"
                       className={cn(
-                        buttonVariants({ variant: "ghost", size: "icon-sm" }),
-                        "inline-flex size-7 items-center justify-center",
+                        buttonVariants({ variant: 'ghost', size: 'icon-sm' }),
+                        'inline-flex size-7 items-center justify-center',
                       )}
                     >
                       <Pencil className="size-4" aria-hidden />
