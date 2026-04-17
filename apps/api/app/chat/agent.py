@@ -56,23 +56,7 @@ def _stream_token_text(item: Any) -> str:
     return _chunk_text(chunk.content)
 
 
-def _messages_from_updates_payload(payload: Any) -> list[BaseMessage]:
-    if not isinstance(payload, dict):
-        return []
-    messages: list[BaseMessage] = []
-    for node_update in payload.values():
-        if not isinstance(node_update, dict):
-            continue
-        maybe_messages = node_update.get("messages")
-        if not isinstance(maybe_messages, list):
-            continue
-        for msg in maybe_messages:
-            if isinstance(msg, BaseMessage):
-                messages.append(msg)
-    return messages
-
-
-def _ai_message_reasoning_content(message: AIMessage) -> str:
+def _ai_message_reasoning_content(message: AIMessage | AIMessageChunk) -> str:
     raw = message.additional_kwargs.get("reasoning_content")
     if isinstance(raw, str):
         return raw
@@ -112,20 +96,14 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     emitted_tool_event_keys: set[tuple[str, str]],
 ) -> Iterable[StreamEventAny]:
     if mode == "messages":
-        text = _stream_token_text(data)
-        if text:
-            yield DeltaEvent(payload=text)
-        return
-    if mode != "updates":
-        return
-
-    for msg in _messages_from_updates_payload(data):
-        try:
-            if isinstance(msg, AIMessage):
-                reasoning = _ai_message_reasoning_content(msg)
+        # stream_mode="messages" carries incremental reasoning and text deltas.
+        if isinstance(data, tuple) and data:
+            chunk = data[0]
+            if isinstance(chunk, AIMessageChunk):
+                reasoning = _ai_message_reasoning_content(chunk)
                 if reasoning:
                     yield ReasoningEvent(payload=reasoning)
-                for tc in msg.tool_calls:
+                for tc in chunk.tool_calls:
                     name = tc.get("name") or ""
                     tc_id = str(tc.get("id") or "") or name or "tool_call"
                     pending_tool_names[tc_id] = name
@@ -141,42 +119,39 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
                             args=tc.get("args"),
                         )
                     )
-
-                continue
-
-            if isinstance(msg, ToolMessage):
-                tc_id = msg.tool_call_id
+            if isinstance(chunk, ToolMessage):
+                tc_id = chunk.tool_call_id
                 name = pending_tool_names.get(tc_id, "")
-                if msg.status == "error":
+                if chunk.status == "error":
                     event_key = ("error", tc_id or name or "tool_call")
-                    if event_key in emitted_tool_event_keys:
-                        continue
-                    emitted_tool_event_keys.add(event_key)
-                    yield ToolEvent(
-                        payload=ToolPayload(
-                            stage="error",
-                            name=name,
-                            id=tc_id or name or "tool_call",
-                            error=str(msg.content),
+                    if event_key not in emitted_tool_event_keys:
+                        emitted_tool_event_keys.add(event_key)
+                        yield ToolEvent(
+                            payload=ToolPayload(
+                                stage="error",
+                                name=name,
+                                id=tc_id or name or "tool_call",
+                                error=str(chunk.content),
+                            )
                         )
-                    )
                 else:
-                    result = msg.artifact if msg.artifact is not None else msg.content
+                    result = chunk.artifact if chunk.artifact is not None else chunk.content
                     event_key = ("result", tc_id or name or "tool_call")
-                    if event_key in emitted_tool_event_keys:
-                        continue
-                    emitted_tool_event_keys.add(event_key)
-                    yield ToolEvent(
-                        payload=ToolPayload(
-                            stage="result",
-                            name=name,
-                            id=tc_id or name or "tool_call",
-                            result=result,
+                    if event_key not in emitted_tool_event_keys:
+                        emitted_tool_event_keys.add(event_key)
+                        yield ToolEvent(
+                            payload=ToolPayload(
+                                stage="result",
+                                name=name,
+                                id=tc_id or name or "tool_call",
+                                result=result,
+                            )
                         )
-                    )
-        except Exception as e:
-            print(e)
-            continue
+        text = _stream_token_text(data)
+        if text:
+            yield DeltaEvent(payload=text)
+        return
+    return
 
 
 def stream_event_iter_for_chat(
@@ -199,7 +174,7 @@ def stream_event_iter_for_chat(
         for item in agent.stream(
             {"messages": lc_messages},
             {"recursion_limit": max_tool_rounds * 2},
-            stream_mode=["messages", "updates"],
+            stream_mode=["messages"],
             subgraphs=True,
         ):
             if not isinstance(item, tuple):
