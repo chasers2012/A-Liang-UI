@@ -6,8 +6,8 @@ from uuid import uuid4
 from app.backtest.models import BacktestRunRow
 from app.backtest.registry import BacktestRunsStore
 from app.backtest.schemas import BacktestRunPublic, RunBacktestRequest
-from app.backtest.worker import enqueue_backtest
 from app.data_set.controller import get_data_set
+from app.scheduler.controller import enqueue_oneoff_job
 from app.strategy.registry import StrategyRegistry
 
 
@@ -48,7 +48,14 @@ def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunPublic:
         params=body.model_dump(mode="json"),
     )
     created_row = BacktestRunsStore.append(row)
-    enqueue_backtest(created_row.id)
+    enqueue_oneoff_job(
+        task_type="backtest.run",
+        trigger_type="manual",
+        payload={"run_id": created_row.id},
+        max_retries=0,
+        timeout_seconds=3600,
+        dedupe_key=f"backtest-run:{created_row.id}",
+    )
     return _to_public(created_row)
 
 

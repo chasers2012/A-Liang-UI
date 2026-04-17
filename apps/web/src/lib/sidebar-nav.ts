@@ -1,5 +1,19 @@
 import type { LucideIcon } from 'lucide-react';
-import { Archive, Database, GitBranch, Layers, Library, LineChart, Settings, Table2, TableProperties, MessageCircle, Workflow, Wrench } from 'lucide-react';
+import {
+  Archive,
+  Database,
+  GitBranch,
+  Layers,
+  Library,
+  LineChart,
+  ListChecks,
+  MessageCircle,
+  Settings,
+  Table2,
+  TableProperties,
+  Workflow,
+  Wrench,
+} from 'lucide-react';
 
 export type SidebarNavLeaf = {
   title: string;
@@ -44,6 +58,7 @@ export const sidebarNav: { navMain: SidebarNavMainItem[] } = {
 
     { title: '策略', url: '/strategies', icon: GitBranch },
     { title: '回测', url: '/backtest', icon: LineChart },
+    { title: '任务', url: '/scheduler', icon: ListChecks },
     {
       title: '节点',
       url: '/nodes',

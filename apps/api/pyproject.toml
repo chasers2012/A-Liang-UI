@@ -22,6 +22,7 @@ dependencies = [
   "factor",
   "datasources",
   "numpy>=1.26.0",
+  "croniter>=6.0.0",
   "vectorbt",
   "workflow",
 ]

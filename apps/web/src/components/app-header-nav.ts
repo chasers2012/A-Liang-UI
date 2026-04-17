@@ -10,6 +10,7 @@ const DATA_DATASOURCES_LIST = '/data/datasources';
 const DATA_DATA_SETS_LIST = '/data/data-sets';
 const NODES_LIST = '/nodes';
 const TOOLS_LIST = '/tools';
+const SCHEDULER_LIST = '/scheduler';
 
 const TOP_LEVEL = new Set([
   '/',
@@ -22,6 +23,7 @@ const TOP_LEVEL = new Set([
   DATA_DATA_SETS_LIST,
   '/strategies',
   '/backtest',
+  SCHEDULER_LIST,
   '/agent',
   NODES_LIST,
   TOOLS_LIST,
@@ -39,6 +41,7 @@ const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   [DATA_DATA_SETS_LIST]: [{ label: '数据集' }],
   '/strategies': [{ label: '策略' }],
   '/backtest': [{ label: '回测' }],
+  [SCHEDULER_LIST]: [{ label: '任务' }],
   '/agent': [{ label: 'Agent' }],
   [NODES_LIST]: [{ label: '节点' }],
   [TOOLS_LIST]: [{ label: 'Tools' }],
@@ -93,7 +96,12 @@ function factorsLibraryHeaderBreadcrumbs(pathname: string): PageBreadcrumbItem[]
 }
 
 /** /list, /list/new, /list/:id, /list/:id/edit — detail label is middle + last segment text. */
-function standardResourceBreadcrumbs(pathname: string, listPath: string, listLabel: string, detailLabel: string): PageBreadcrumbItem[] | null {
+function standardResourceBreadcrumbs(
+  pathname: string,
+  listPath: string,
+  listLabel: string,
+  detailLabel: string,
+): PageBreadcrumbItem[] | null {
   const listCrumb = { href: listPath, label: listLabel };
   const prefix = escapeRegExp(listPath);
 
@@ -188,6 +196,9 @@ export function buildAppHeaderBreadcrumbs(pathname: string): PageBreadcrumbItem[
   const backtest = prefixSectionBreadcrumbs(pathname, '/backtest', '回测');
   if (backtest) return withMenuSection(pathname, backtest);
 
+  const scheduler = prefixSectionBreadcrumbs(pathname, SCHEDULER_LIST, '任务');
+  if (scheduler) return withMenuSection(pathname, scheduler);
+
   if (pathname === '/agent/config') {
     return withMenuSection(pathname, [{ href: '/agent', label: 'Agent' }, { label: '配置' }]);
   }
@@ -231,6 +242,9 @@ export function headerBackHref(pathname: string): string | null {
 
   const backtest = prefixSectionBackHref(pathname, '/backtest');
   if (backtest !== null) return backtest;
+
+  const scheduler = prefixSectionBackHref(pathname, SCHEDULER_LIST);
+  if (scheduler !== null) return scheduler;
 
   if (pathname === '/chat/archived') return '/';
 
