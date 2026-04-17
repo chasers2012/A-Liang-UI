@@ -20,6 +20,7 @@ from app.datasource import api as datasources_router
 from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
+from app.knowledge import api as knowledge_router
 from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.scheduler import api as scheduler_router
@@ -88,6 +89,7 @@ app.include_router(evaluation_runs_router.router)
 app.include_router(backtests_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
+app.include_router(knowledge_router.router)
 app.include_router(preprocessors_router.router)
 app.include_router(scheduler_router.router)
 app.include_router(strategies_router.router)

@@ -11,6 +11,7 @@ const DATA_DATA_SETS_LIST = '/data/data-sets';
 const NODES_LIST = '/nodes';
 const TOOLS_LIST = '/tools';
 const SCHEDULER_LIST = '/scheduler';
+const KNOWLEDGE_LIST = '/knowledge';
 
 const TOP_LEVEL = new Set([
   '/',
@@ -24,6 +25,7 @@ const TOP_LEVEL = new Set([
   '/strategies',
   '/backtest',
   SCHEDULER_LIST,
+  KNOWLEDGE_LIST,
   '/agent',
   NODES_LIST,
   TOOLS_LIST,
@@ -42,6 +44,7 @@ const EXACT_HEADER_CRUMBS: Record<string, PageBreadcrumbItem[]> = {
   '/strategies': [{ label: '策略' }],
   '/backtest': [{ label: '回测' }],
   [SCHEDULER_LIST]: [{ label: '任务' }],
+  [KNOWLEDGE_LIST]: [{ label: '知识库' }],
   '/agent': [{ label: 'Agent' }],
   [NODES_LIST]: [{ label: '节点' }],
   [TOOLS_LIST]: [{ label: 'Tools' }],
@@ -199,6 +202,9 @@ export function buildAppHeaderBreadcrumbs(pathname: string): PageBreadcrumbItem[
   const scheduler = prefixSectionBreadcrumbs(pathname, SCHEDULER_LIST, '任务');
   if (scheduler) return withMenuSection(pathname, scheduler);
 
+  const knowledge = prefixSectionBreadcrumbs(pathname, KNOWLEDGE_LIST, '知识库');
+  if (knowledge) return withMenuSection(pathname, knowledge);
+
   if (pathname === '/agent/config') {
     return withMenuSection(pathname, [{ href: '/agent', label: 'Agent' }, { label: '配置' }]);
   }
@@ -245,6 +251,9 @@ export function headerBackHref(pathname: string): string | null {
 
   const scheduler = prefixSectionBackHref(pathname, SCHEDULER_LIST);
   if (scheduler !== null) return scheduler;
+
+  const knowledge = prefixSectionBackHref(pathname, KNOWLEDGE_LIST);
+  if (knowledge !== null) return knowledge;
 
   if (pathname === '/chat/archived') return '/';
 

@@ -8,6 +8,7 @@ from app.backtest.registry import BacktestRunsStore
 from app.backtest.schemas import BacktestRunPublic, RunBacktestRequest
 from app.data_set.controller import get_data_set
 from app.scheduler.controller import enqueue_oneoff_job
+from app.scheduler.handlers import register_task_handler
 from app.strategy.registry import StrategyRegistry
 
 
@@ -81,3 +82,16 @@ def get_backtest_run(run_id: str) -> BacktestRunPublic:
 def delete_backtest_run(run_id: str) -> None:
     if not BacktestRunsStore.delete_by_id(run_id):
         raise BacktestRunNotFoundError(run_id)
+
+
+def _backtest_run_handler(payload: dict[str, object]) -> dict[str, object]:
+    from app.backtest.engine.runner import run_backtest_and_persist
+
+    run_id = str(payload.get("run_id", "")).strip()
+    if not run_id:
+        raise ValueError("backtest.run 任务需要 run_id")
+    run_backtest_and_persist(run_id)
+    return {"run_id": run_id, "status": "done"}
+
+
+register_task_handler("backtest.run", _backtest_run_handler)

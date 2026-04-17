@@ -34,6 +34,7 @@ from app.chat.schemas import (
     ChatCreateBody,
     ChatDetailPublic,
     ChatMessageIn,
+    ChatMessagePublic,
     ChatRecord,
     ChatRenameBody,
     ChatRequest,
@@ -47,6 +48,7 @@ from app.common.id import create_id_generator
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
+from app.knowledge import controller as knowledge_controller
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
 
@@ -285,23 +287,53 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
 _register_llm_settings_module()
 
 
-def stream(body: ChatRequest) -> Iterator[str]:
+def _build_chat_context_messages(
+    session_id: str,
+    incoming_user: ChatMessagePublic,
+) -> tuple[list[ChatMessagePublic], list[ChatMessagePublic]]:
+    history_messages = ChatRegistry.get_messages(session_id) or []
+    persisted_context_messages = [*history_messages, incoming_user]
+    context_messages = list(persisted_context_messages)
+    user_text = "".join((b.content or "") for b in incoming_user.blocks if b.kind == "text").strip()
+    if user_text:
+        try:
+            rag_ctx = knowledge_controller.retrieve_for_chat(user_text)
+            if rag_ctx.message is not None:
+                context_messages = [*history_messages, rag_ctx.message, incoming_user]
+        except Exception:
+            # Retrieval failures should not block normal chat flow.
+            context_messages = list(persisted_context_messages)
+    return persisted_context_messages, context_messages
+
+
+def _prepare_chat_stream(
+    body: ChatRequest,
+) -> tuple[str, ChatMessagePublic, list[ChatMessagePublic], list[ChatMessagePublic]]:
     session = get_active_chat(body.session_id)
     if session is None:
         raise ValueError("会话不存在或已归档")
 
-    # Request carries exactly one new user message; model context is built from
-    # persisted history + this single incoming turn.
     incoming_user = ensure_chat_message_id(body.message)
     if not incoming_user.id:
         raise ValueError("user 消息 id 生成失败")
 
-    history_messages = ChatRegistry.get_messages(body.session_id) or []
-    context_messages = [*history_messages, incoming_user]
+    persisted_context_messages, context_messages = _build_chat_context_messages(
+        body.session_id,
+        incoming_user,
+    )
+    return body.session_id, incoming_user, persisted_context_messages, context_messages
+
+
+def stream(body: ChatRequest) -> Iterator[str]:
+    # Request carries exactly one new user message; model context is built from
+    # persisted history + this single incoming turn.
+    session_id, incoming_user, persisted_context_messages, context_messages = _prepare_chat_stream(
+        body
+    )
     last_user_id = incoming_user.id
     assistant_message_id = str(uuid.uuid4())
 
-    _persist_user_messages_on_receive(body.session_id, incoming_user)
+    _persist_user_messages_on_receive(session_id, incoming_user)
     out: queue.Queue[str | None] = queue.Queue()
 
     def _producer() -> None:
@@ -326,8 +358,8 @@ def stream(body: ChatRequest) -> Iterator[str]:
         finally:
             try:
                 _persist_chat_if_needed(
-                    body.session_id,
-                    context_messages,
+                    session_id,
+                    persisted_context_messages,
                     blocks,
                     assistant_message_id,
                 )

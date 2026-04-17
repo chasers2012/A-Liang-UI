@@ -50,6 +50,7 @@ def create_db_and_tables() -> None:
     from app.evaluation.profile import models as _evaluation_profile_models  # noqa: F401
     from app.evaluation.run import models as _evaluation_run_models  # noqa: F401
     from app.factors import models as _factor_models  # noqa: F401
+    from app.knowledge import models as _knowledge_models  # noqa: F401
     from app.nodes import models as _node_models  # noqa: F401
     from app.preprocessors import models as _preprocessor_models  # noqa: F401
     from app.scheduler import models as _scheduler_models  # noqa: F401
