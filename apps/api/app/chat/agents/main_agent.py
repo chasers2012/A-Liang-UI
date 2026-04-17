@@ -5,7 +5,7 @@ from typing import Any
 from app.tool.controller import ToolController
 from langchain.agents import AgentState, create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
@@ -27,6 +27,25 @@ class PlannerPlanOutput(BaseModel):
     )
 
 
+def _format_plan_message(plan: list[str]) -> str:
+    if not plan:
+        return "计划已生成，但没有可执行步骤。"
+    lines = ["我将按以下计划执行："]
+    lines.extend(f"{idx}. {step}" for idx, step in enumerate(plan, start=1))
+    return "\n".join(lines)
+
+
+def _strip_echoed_input_messages(
+    result_messages: list[BaseMessage], input_messages: list[BaseMessage]
+) -> list[BaseMessage]:
+    if (
+        len(result_messages) >= len(input_messages)
+        and result_messages[: len(input_messages)] == input_messages
+    ):
+        return result_messages[len(input_messages) :]
+    return result_messages
+
+
 def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecuteState:
     tool_block = (
         "\n".join(f"- {name}" for name in ToolController().list_tool_names()) or "- 无可用工具"
@@ -38,8 +57,8 @@ def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecu
             "要求：\n"
             "1. 只输出计划，不要执行。\n"
             "2. 每个步骤尽量独立、原子化。\n"
-            "3. 如果需要调用工具，优先把工具调用安排到相应步骤中。\n"
-            "4. 按结构化输出生成：plan 为 list[str]，每个元素是纯文本步骤描述。\n"
+            "3. 不要扩展任务范围。"
+            "4. 如果需要调用工具，优先把工具调用安排到相应步骤中。\n"
             f"\n可用工具：\n{tool_block}"
         )
         structured_planner = model.with_structured_output(PlannerPlanOutput)
@@ -53,8 +72,9 @@ def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecu
 
     if not plan:
         plan = ["直接回答用户请求并给出最终结论。"]
+    plan_message = AIMessage(content=_format_plan_message(plan))
     return {
-        "messages": messages,
+        "messages": [*messages, plan_message],
         "plan": plan,
         "current_step": 0,
         "completed_steps": [],
@@ -85,7 +105,13 @@ def _execute_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanEx
     step_messages = [*messages, SystemMessage(content=f"执行当前计划步骤：{step}")]
     try:
         result = executor.invoke({"messages": step_messages})
-        next_messages = messages + result.get("messages", [])
+        result_messages = result.get("messages", [])
+        new_messages = (
+            _strip_echoed_input_messages(result_messages, step_messages)
+            if isinstance(result_messages, list)
+            else []
+        )
+        next_messages = messages + new_messages
     except Exception as e:
         print(e)
         next_messages = [*messages, SystemMessage(content=f"执行失败: {e}")]
