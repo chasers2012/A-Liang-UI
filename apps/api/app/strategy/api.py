@@ -13,6 +13,7 @@ from app.strategy.controller import (
 )
 from app.strategy.schemas import (
     StrategyCreate,
+    StrategyListPublic,
     StrategyPatch,
     StrategyPublic,
     StrategyValidateResponse,
@@ -26,8 +27,8 @@ def get_workflow_template() -> dict:
     return get_strategy_workflow_template()
 
 
-@router.get("", response_model=list[StrategyPublic])
-def list_strategies_route() -> list[StrategyPublic]:
+@router.get("", response_model=list[StrategyListPublic])
+def list_strategies_route() -> list[StrategyListPublic]:
     return list_strategies()
 
 

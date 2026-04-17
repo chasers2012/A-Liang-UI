@@ -47,7 +47,7 @@ def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
 
 @tool(description="获取当前工作区的策略列表。")
 def get_strategy_list() -> list[dict[str, Any]]:
-    return list_strategies_service()
+    return [i.model_dump() for i in list_strategies_service()]
 
 
 @tool(

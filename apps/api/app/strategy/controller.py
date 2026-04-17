@@ -9,6 +9,7 @@ from app.strategy.models import StrategyRow
 from app.strategy.registry import StrategyRegistry
 from app.strategy.schemas import (
     StrategyCreate,
+    StrategyListPublic,
     StrategyPatch,
     StrategyPublic,
     StrategyValidateResponse,
@@ -37,6 +38,16 @@ def to_strategy_public(row: StrategyRow) -> StrategyPublic:
     )
 
 
+def to_strategy_list_public(row: StrategyRow) -> StrategyListPublic:
+    return StrategyListPublic(
+        id=row.id,
+        name=row.name,
+        description=row.description,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
 def merge_strategy_patch(row: StrategyRow, body: StrategyPatch) -> StrategyRow:
     data = body.model_dump(exclude_unset=True)
     if "name" in data:
@@ -49,8 +60,8 @@ def merge_strategy_patch(row: StrategyRow, body: StrategyPatch) -> StrategyRow:
     return row
 
 
-def list_strategies() -> list[StrategyPublic]:
-    return [to_strategy_public(i) for i in StrategyRegistry.list_all()]
+def list_strategies() -> list[StrategyListPublic]:
+    return [to_strategy_list_public(i) for i in StrategyRegistry.list_all()]
 
 
 def get_strategy(strategy_id: str) -> StrategyPublic | None:

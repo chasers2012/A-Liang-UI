@@ -111,6 +111,14 @@ class StrategyPublic(BaseModel):
     updated_at: str
 
 
+class StrategyListPublic(BaseModel):
+    id: str
+    name: str
+    description: str
+    created_at: str
+    updated_at: str
+
+
 class WorkflowIOSpecPublic(BaseModel):
     workflow_inputs: list[dict]
     workflow_outputs: list[dict]

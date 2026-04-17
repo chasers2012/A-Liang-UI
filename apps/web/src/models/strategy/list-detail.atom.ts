@@ -3,11 +3,11 @@ import { atomFamily } from 'jotai-family';
 
 import { deleteStrategy, getStrategy, listStrategies } from '@/api';
 import { listNodes } from '@/api/nodes';
-import type { StrategyPublic } from './dto';
+import type { StrategyListPublic, StrategyPublic } from './dto';
 import { NodeSummaryPublic } from '../nodes/dto';
 
 export type StrategiesListState = {
-  items: StrategyPublic[] | null;
+  items: StrategyListPublic[] | null;
   error: string | null;
 };
 

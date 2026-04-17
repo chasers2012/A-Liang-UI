@@ -1,8 +1,8 @@
-import type { StrategyPublic } from '@/models';
+import type { StrategyListPublic, StrategyPublic } from '@/models';
 import { apiFetchJson } from './client';
 
-export function listStrategies(): Promise<StrategyPublic[]> {
-  return apiFetchJson<StrategyPublic[]>('/strategies');
+export function listStrategies(): Promise<StrategyListPublic[]> {
+  return apiFetchJson<StrategyListPublic[]>('/strategies');
 }
 
 export function getStrategy(id: string): Promise<StrategyPublic> {

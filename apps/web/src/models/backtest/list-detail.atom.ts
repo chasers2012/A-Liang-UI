@@ -11,7 +11,7 @@ import {
   listStrategies,
   runBacktest,
 } from '@/api';
-import type { DataSetPublic, StrategyPublic } from '@/models';
+import type { DataSetPublic, StrategyListPublic } from '@/models';
 
 import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from './dto';
 
@@ -61,7 +61,7 @@ export const backtestRunFormAtom = atom<BacktestRunFormState>({
 });
 
 export type BacktestRunCatalogState = {
-  strategies: StrategyPublic[];
+  strategies: StrategyListPublic[];
   dataSets: DataSetPublic[];
 };
 
