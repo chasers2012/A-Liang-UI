@@ -35,6 +35,7 @@ dependencies = [
   "unstructured[all-docs]>=0.14.0",
   "unstructured-inference>=0.7.0",
   "langchain-classic>=1.0.3",
+  "rank-bm25>=0.2.2",
 ]
 
 [tool.uv.sources]

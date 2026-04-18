@@ -7,6 +7,7 @@ from typing import Any
 from langchain_chroma import Chroma
 from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -81,6 +82,7 @@ class VectorStoreAdapter:
         )
         self._create_splitter()
         self._create_reranker()
+        self._bm25_retriever = self._build_bm25_retriever(self._load_documents())
         self.__class__._initialized = True
 
     def _create_splitter(self):
@@ -119,6 +121,7 @@ class VectorStoreAdapter:
         if ids:
             self._store.delete(ids=ids)
             self._store.add_documents(documents=documents, ids=ids)
+            self._refresh_bm25_retriever()
         return documents
 
     def delete_document(self, document_id: str, chunk_count: int) -> None:
@@ -126,6 +129,7 @@ class VectorStoreAdapter:
             return
         ids = [f"{document_id}:{idx}" for idx in range(chunk_count)]
         self._store.delete(ids=ids)
+        self._refresh_bm25_retriever()
 
     def _score_pairs(self, query: str, docs: list[Document]) -> list[float]:
         try:
@@ -139,6 +143,57 @@ class VectorStoreAdapter:
             scores.append(float(score))
         return scores
 
+    def _build_bm25_retriever(self, documents: list[Document]) -> BM25Retriever:
+        retriever = BM25Retriever.from_documents(documents)
+        retriever.k = self._settings.top_k
+        return retriever
+
+    def _refresh_bm25_retriever(self) -> None:
+        self._bm25_retriever = self._build_bm25_retriever(self._load_documents())
+
+    def _load_documents(self, document_ids: set[str] | None = None) -> list[Document]:
+        payload = self._store.get(include=["documents", "metadatas"])
+        texts = payload.get("documents") or []
+        metadatas = payload.get("metadatas") or []
+        documents: list[Document] = []
+        for text, metadata in zip(texts, metadatas, strict=False):
+            doc_metadata = dict(metadata or {})
+            if document_ids and str(doc_metadata.get("document_id", "")) not in document_ids:
+                continue
+            documents.append(Document(page_content=text, metadata=doc_metadata))
+        return documents
+
+    def _normalize_results(
+        self,
+        *,
+        query: str,
+        docs: list[Document],
+    ) -> list[RetrievalResult]:
+        if not docs:
+            return []
+
+        rerank_scores = self._score_pairs(query, docs)
+        results: list[RetrievalResult] = []
+        for idx, doc in enumerate(docs):
+            metadata = dict(doc.metadata or {})
+            rerank_score = (
+                rerank_scores[idx] if idx < len(rerank_scores) else float(len(docs) - idx)
+            )
+            results.append(
+                RetrievalResult(
+                    chunk_id=str(metadata.get("chunk_id", "")),
+                    document_id=str(metadata.get("document_id", "")),
+                    content=doc.page_content,
+                    score=float(rerank_score),
+                    metadata={
+                        **metadata,
+                        "rerank_score": float(rerank_score),
+                    },
+                )
+            )
+        results.sort(key=lambda item: item.score, reverse=True)
+        return results[: min(self._settings.rerank_top_n, len(results))]
+
     def retrieve(
         self,
         *,
@@ -147,46 +202,26 @@ class VectorStoreAdapter:
         threshold: float,
         document_ids: list[str] | None = None,
     ) -> list[RetrievalResult]:
-        pairs = self._store.similarity_search_with_relevance_scores(query=query, k=top_k)
-        allowed = set(document_ids or [])
-        candidates: list[tuple[Document, float]] = []
-        for doc, score in pairs:
+        allowed = set(document_ids or []) or None
+        documents = self._load_documents(allowed)
+        if not documents:
+            return []
+
+        bm25 = self._bm25_retriever if allowed is None else self._build_bm25_retriever(documents)
+        bm25_docs = bm25.invoke(query)[:top_k]
+        vector_pairs = self._store.similarity_search_with_relevance_scores(query=query, k=top_k)
+
+        merged_docs: list[Document] = []
+        seen_chunk_ids: set[str] = set()
+
+        for doc in bm25_docs + [doc for doc, score in vector_pairs if float(score) >= threshold]:
             metadata = dict(doc.metadata or {})
             if allowed and str(metadata.get("document_id", "")) not in allowed:
                 continue
-            if float(score) < threshold:
+            chunk_id = str(metadata.get("chunk_id", ""))
+            if not chunk_id or chunk_id in seen_chunk_ids:
                 continue
-            candidates.append((doc, float(score)))
-        if not candidates:
-            return []
-        docs = [doc for doc, _ in candidates]
-        rerank_scores = self._score_pairs(query, docs)
-        if rerank_scores:
-            results: list[RetrievalResult] = []
-            for (doc, score), rerank_score in zip(candidates, rerank_scores, strict=False):
-                metadata = dict(doc.metadata or {})
-                results.append(
-                    RetrievalResult(
-                        chunk_id=str(metadata.get("chunk_id", "")),
-                        document_id=str(metadata.get("document_id", "")),
-                        content=doc.page_content,
-                        score=float(rerank_score),
-                        metadata={
-                            **metadata,
-                            "vector_score": score,
-                            "rerank_score": float(rerank_score),
-                        },
-                    )
-                )
-            results.sort(key=lambda item: item.score, reverse=True)
-            return results[: min(self._settings.rerank_top_n, len(results))]
-        return [
-            RetrievalResult(
-                chunk_id=str(dict(doc.metadata or {}).get("chunk_id", "")),
-                document_id=str(dict(doc.metadata or {}).get("document_id", "")),
-                content=doc.page_content,
-                score=float(score),
-                metadata=dict(doc.metadata or {}),
-            )
-            for doc, score in candidates
-        ]
+            seen_chunk_ids.add(chunk_id)
+            merged_docs.append(doc)
+
+        return self._normalize_results(query=query, docs=merged_docs)
