@@ -18,7 +18,6 @@ import {
   knowledgePageAtom,
   refreshKnowledgePageAtom,
   searchKnowledgeAtom,
-  setKnowledgeCreateFieldAtom,
   setKnowledgeFileAtom,
   setKnowledgeSearchQueryAtom,
 } from '@/models/knowledge/list-detail.atom';
@@ -35,7 +34,6 @@ type KnowledgeActions = {
   createDoc: () => void;
   deleteDoc: (id: string) => void;
   search: () => void;
-  setCreateField: (payload: { key: 'name'; value: string }) => void;
   setFile: (file: File) => void;
   setSearchQuery: (value: string) => void;
 };
@@ -56,7 +54,7 @@ function CreateDocumentDialog({
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
       <DialogContent size="lg" className="gap-0">
-        <DialogHeader title="新增文档">上传文件后可填写文档名称，创建后即可入库。</DialogHeader>
+        <DialogHeader title="新增文档">选择文件后会自动使用文件名作为文档名称。</DialogHeader>
         <DialogBody variant="inset">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -73,14 +71,6 @@ function CreateDocumentDialog({
               {createForm.file_name ? (
                 <p className="text-xs text-muted-foreground">已选择: {createForm.file_name}</p>
               ) : null}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-name">名称</Label>
-              <Input
-                id="knowledge-name"
-                value={createForm.name}
-                onChange={(e) => actions.setCreateField({ key: 'name', value: e.target.value })}
-              />
             </div>
           </div>
         </DialogBody>
@@ -218,7 +208,6 @@ export default function KnowledgePage() {
   const createDoc = useSetAtom(createKnowledgeDocumentAtom);
   const deleteDoc = useSetAtom(deleteKnowledgeDocumentAtom);
   const search = useSetAtom(searchKnowledgeAtom);
-  const setCreateField = useSetAtom(setKnowledgeCreateFieldAtom);
   const setFile = useSetAtom(setKnowledgeFileAtom);
   const setSearchQuery = useSetAtom(setKnowledgeSearchQueryAtom);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -233,7 +222,6 @@ export default function KnowledgePage() {
     createDoc: () => void createDoc(),
     deleteDoc: (id) => void deleteDoc(id),
     search: () => void search(),
-    setCreateField: (payload) => setCreateField(payload),
     setFile: (file) => void setFile(file),
     setSearchQuery: (value) => setSearchQuery(value),
   };

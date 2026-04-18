@@ -46,17 +46,6 @@ export const knowledgePageAtom = atom<KnowledgePageState>({
   searchForm: { query: '' },
 });
 
-export const setKnowledgeCreateFieldAtom = atom(null, (get, set, payload: { key: 'name'; value: string }) => {
-  const state = get(knowledgePageAtom);
-  set(knowledgePageAtom, {
-    ...state,
-    createForm: {
-      ...state.createForm,
-      [payload.key]: payload.value,
-    },
-  });
-});
-
 export const setKnowledgeFileAtom = atom(null, async (get, set, file: File) => {
   set(knowledgePageAtom, (s) => ({ ...s, error: null }));
   const state = get(knowledgePageAtom);
@@ -152,7 +141,7 @@ export const searchKnowledgeAtom = atom(null, async (get, set) => {
   }
   set(knowledgePageAtom, (s) => ({ ...s, loading: true, error: null }));
   try {
-    const resp = await searchKnowledge({ query });
+    const resp = await searchKnowledge(query);
     set(knowledgePageAtom, (s) => ({
       ...s,
       hits: resp.hits,
