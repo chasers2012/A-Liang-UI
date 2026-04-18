@@ -19,6 +19,7 @@ import {
   toggleSchedulerTaskEnabledAtom,
   triggerSchedulerTaskAtom,
 } from '@/models/scheduler/list-detail.atom';
+import { useSchedulerPolling } from '@/models/scheduler/use-scheduler-polling';
 
 function toLocalTime(v: string | null): string {
   if (!v) return '-';
@@ -39,6 +40,8 @@ export default function SchedulerPage() {
   useEffect(() => {
     void refreshAll();
   }, [refreshAll]);
+
+  useSchedulerPolling(refreshAll);
 
   const sortedTasks = useMemo(
     () =>
