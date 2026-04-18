@@ -202,7 +202,7 @@ function SearchCard({
   actions,
 }: {
   query: string;
-  hits: Array<{ chunk_id: string; document_name: string; document_id: string; score: number; content: string }>;
+  hits: Array<{ document_name: string; content: string }>;
   loading: boolean;
   actions: KnowledgeActions;
 }) {
@@ -225,12 +225,11 @@ function SearchCard({
           <p className="text-sm text-muted-foreground">暂无命中结果。</p>
         ) : (
           <div className="space-y-2">
-            {hits.map((hit) => (
-              <Card key={hit.chunk_id}>
+            {hits.map((hit, index) => (
+              <Card key={`${hit.document_name || 'hit'}-${index}`}>
                 <CardContent className="space-y-1 p-4">
                   <div className="text-sm">
-                    <span className="font-medium">{hit.document_name || hit.document_id}</span>
-                    <span className="ml-2 text-muted-foreground">score: {hit.score.toFixed(3)}</span>
+                    <span className="font-medium">{hit.document_name || `命中结果 ${index + 1}`}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{hit.content}</p>
                 </CardContent>

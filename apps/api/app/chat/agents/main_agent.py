@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from app.tool.controller import ToolController
-from app.tool.tools import list_available_tools
 from langchain.agents import AgentState, create_agent
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, SystemMessage
@@ -46,18 +45,19 @@ def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecu
             "1. 只输出计划，不要执行。\n"
             "2. 每个步骤独立、原子化，但对于一次工具调用的结果处理要在一个步骤内完成\n"
             "3. 不要扩展任务范围。\n"
-            "4. 你可以获取工具列表并安排executor调用，而不是你自己调用。\n"
-            "5. 不要把信息展示和告知作为单独的步骤"
+            # "4. 你可以获取工具列表并安排executor调用，而不是你自己调用。\n"
+            "5. 不要把信息展示和告知作为单独的步骤\n"
+            "6. 当被问及系统中不包含的信息或具体的知识时，应当首先将查阅知识库列入计划"
         )
         planner = create_agent(
             model=model,
-            tools=[list_available_tools],
+            tools=[],
             system_prompt=system_prompt,
             response_format=PlannerPlanOutput,
         )
         structured_result = planner.invoke(
             {"messages": messages},
-            config={"recursion_limit": 20},
+            config={"recursion_limit": 10},
         )
         structured_response = structured_result.get("structured_response")
         plan = (

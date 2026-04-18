@@ -1,37 +1,28 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.chat.schemas import AssistantBlockPublic, ChatMessageIn
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
 from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow, KnowledgeIndexMetaRow
-from app.knowledge.rag import RetrievalResult, VectorStoreAdapter, build_chat_context
+from app.knowledge.rag import RetrievalResult, VectorStoreAdapter
 from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
-    KnowledgeReindexResponse,
     KnowledgeSearchHit,
     KnowledgeSearchRequest,
-    KnowledgeSearchResponse,
     KnowledgeSettings,
 )
 from app.knowledge.store import KnowledgeStore
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
+from app.scheduler.schemas import SchedulerJobPublic
 
 _KNOWLEDGE_CONFIG_MODULE = "knowledge_rag"
 _KNOWLEDGE_INDEX_TASK_TYPE = "knowledge.index"
-
-
-@dataclass(frozen=True)
-class ChatKnowledgeContext:
-    message: ChatMessageIn | None
-    hits: list[KnowledgeSearchHit]
 
 
 def _utcnow() -> datetime:
@@ -116,19 +107,16 @@ def create_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPu
     return _to_public(created)
 
 
-def enqueue_index_document(
-    document_id: str, *, content: str | None = None
-) -> KnowledgeReindexResponse:
+def enqueue_index_document(document_id: str, *, content: str | None = None) -> SchedulerJobPublic:
     payload = {"document_id": document_id}
     if content is not None:
         payload["content"] = content
-    job = enqueue_oneoff_job(
+    return enqueue_oneoff_job(
         task_type=_KNOWLEDGE_INDEX_TASK_TYPE,
         trigger_type="manual",
         payload=payload,
         dedupe_key=f"knowledge:{document_id}:index",
     )
-    return KnowledgeReindexResponse(document_id=document_id, indexed_chunks=0, status=job.status)
 
 
 def delete_document(document_id: str) -> bool:
@@ -148,7 +136,7 @@ def _mark_document_status(document_id: str, *, status: str, error: str | None = 
     KnowledgeStore.update_document(document_id, _apply)
 
 
-def reindex_document(document_id: str, *, content: str | None = None) -> KnowledgeReindexResponse:
+def reindex_document(document_id: str, *, content: str | None = None) -> None:
     row = KnowledgeStore.get_document(document_id)
     if row is None:
         raise ValueError("文档不存在")
@@ -191,13 +179,12 @@ def reindex_document(document_id: str, *, content: str | None = None) -> Knowled
             )
         )
         _mark_document_status(document_id, status="indexed", error=None)
-        return KnowledgeReindexResponse(document_id=document_id, indexed_chunks=count, status="ok")
     except Exception as exc:
         _mark_document_status(document_id, status="failed", error=str(exc))
         raise
 
 
-def search_knowledge(body: KnowledgeSearchRequest) -> KnowledgeSearchResponse:
+def search_knowledge(body: KnowledgeSearchRequest) -> list[KnowledgeSearchHit]:
     settings = get_settings()
     top_k = body.top_k or settings.top_k
     threshold = settings.threshold if body.threshold is None else body.threshold
@@ -208,47 +195,7 @@ def search_knowledge(body: KnowledgeSearchRequest) -> KnowledgeSearchResponse:
         threshold=threshold,
         document_ids=body.document_ids,
     )
-    hits: list[KnowledgeSearchHit] = []
-    for item in retrievals:
-        doc = rows.get(item.document_id)
-        hits.append(
-            KnowledgeSearchHit(
-                chunk_id=item.chunk_id,
-                document_id=item.document_id,
-                document_name=(doc.name if doc else item.metadata.get("document_name", "")),
-                content=item.content,
-                score=item.score,
-                metadata=item.metadata,
-            )
-        )
-    return KnowledgeSearchResponse(hits=hits)
-
-
-def retrieve_for_chat(query: str) -> ChatKnowledgeContext:
-    settings = get_settings()
-    if not settings.enabled:
-        return ChatKnowledgeContext(message=None, hits=[])
-    if not query.strip():
-        return ChatKnowledgeContext(message=None, hits=[])
-
-    retrievals = _adapter().retrieve(
-        query=query,
-        top_k=settings.top_k,
-        threshold=settings.threshold,
-    )
-    if not retrievals:
-        return ChatKnowledgeContext(message=None, hits=[])
-
-    docs_by_id = {row.id: row for row in KnowledgeStore.list_documents()}
-    hits = [_retrieval_to_hit(item, docs_by_id) for item in retrievals]
-    context_text = build_chat_context(query, [_hit_to_retrieval(hit) for hit in hits])
-    if not context_text:
-        return ChatKnowledgeContext(message=None, hits=hits)
-    system_message = ChatMessageIn(
-        role="system",
-        blocks=[AssistantBlockPublic(kind="text", content=context_text)],
-    )
-    return ChatKnowledgeContext(message=system_message, hits=hits)
+    return [_retrieval_to_hit(item, rows) for item in retrievals]
 
 
 def _retrieval_to_hit(
@@ -257,22 +204,8 @@ def _retrieval_to_hit(
 ) -> KnowledgeSearchHit:
     doc = docs_by_id.get(item.document_id)
     return KnowledgeSearchHit(
-        chunk_id=item.chunk_id,
-        document_id=item.document_id,
         document_name=(doc.name if doc else item.metadata.get("document_name", "")),
         content=item.content,
-        score=item.score,
-        metadata=item.metadata,
-    )
-
-
-def _hit_to_retrieval(hit: KnowledgeSearchHit) -> RetrievalResult:
-    return RetrievalResult(
-        chunk_id=hit.chunk_id,
-        document_id=hit.document_id,
-        content=hit.content,
-        score=hit.score,
-        metadata=hit.metadata,
     )
 
 
@@ -284,11 +217,11 @@ def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
         raise ValueError("knowledge.index 任务需要 document_id")
     content = payload.get("content")
     content_text = None if content is None else str(content)
-    result = reindex_document(document_id, content=content_text)
-    return result.model_dump(mode="json")
+    reindex_document(document_id, content=content_text)
+    return {"result": "success"}
 
 
-register_task_handler("knowledge.index", _knowledge_index_handler)
+register_task_handler(_KNOWLEDGE_INDEX_TASK_TYPE, _knowledge_index_handler)
 
 
 _register_settings_module()

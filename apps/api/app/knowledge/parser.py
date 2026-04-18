@@ -4,14 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from fastapi import UploadFile
-
-try:
-    from unstructured.partition.auto import partition  # type: ignore[import-not-found]
-except Exception as exc:  # pragma: no cover - import guard
-    partition = None  # type: ignore[assignment]
-    _UNSTRUCTURED_IMPORT_ERROR = exc
-else:
-    _UNSTRUCTURED_IMPORT_ERROR = None
+from unstructured.partition.auto import partition  # type: ignore[import-not-found]
 
 
 class KnowledgeParseError(ValueError):
@@ -19,8 +12,6 @@ class KnowledgeParseError(ValueError):
 
 
 async def extract_text(upload_file: UploadFile) -> tuple[str, str]:
-    if partition is None:
-        raise KnowledgeParseError(f"Unstructured 未安装或不可用: {_UNSTRUCTURED_IMPORT_ERROR}")
 
     filename = upload_file.filename or "uploaded-file"
     suffix = Path(filename).suffix.lower() or ".bin"

@@ -9,6 +9,7 @@ from fastapi import (  # type: ignore[import-not-found]
     HTTPException,
     UploadFile,
 )
+from pydantic import BaseModel, Field
 
 from app.http_errors import http_bad_request
 from app.knowledge import controller
@@ -16,13 +17,22 @@ from app.knowledge.parser import extract_text
 from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
-    KnowledgeReindexResponse,
+    KnowledgeSearchHit,
     KnowledgeSearchRequest,
-    KnowledgeSearchResponse,
     KnowledgeSettings,
 )
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+
+
+class KnowledgeSearchResponse(BaseModel):
+    hits: list[KnowledgeSearchHit] = Field(default_factory=list)
+
+
+class KnowledgeReindexResponse(BaseModel):
+    document_id: str
+    indexed_chunks: int = 0
+    status: str = "queued"
 
 
 @router.post("/documents", response_model=KnowledgeDocumentPublic)
@@ -75,14 +85,18 @@ def delete_knowledge_document(document_id: str) -> None:
 @router.post("/documents/{document_id}/reindex", response_model=KnowledgeReindexResponse)
 def reindex_knowledge_document(document_id: str) -> KnowledgeReindexResponse:
     try:
-        return controller.enqueue_index_document(document_id)
+        job = controller.enqueue_index_document(document_id)
+        return KnowledgeReindexResponse(
+            document_id=document_id, indexed_chunks=0, status=job.status
+        )
     except ValueError as exc:
         http_bad_request(exc)
 
 
 @router.post("/search", response_model=KnowledgeSearchResponse)
 def search_knowledge(body: KnowledgeSearchRequest) -> KnowledgeSearchResponse:
-    return controller.search_knowledge(body)
+    hits = controller.search_knowledge(body)
+    return KnowledgeSearchResponse(hits=hits)
 
 
 @router.get("/settings", response_model=KnowledgeSettings)

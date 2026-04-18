@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import import_module
-from pathlib import Path
 from typing import Any
 
+from langchain_chroma import Chroma
+from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from workspace import workspace_path
 
 from app.knowledge.schemas import KnowledgeSettings
@@ -55,41 +58,43 @@ class RetrievalResult:
 
 
 class VectorStoreAdapter:
+    _instance: VectorStoreAdapter | None = None
+    _initialized = False
+
+    def __new__(cls, settings: KnowledgeSettings) -> VectorStoreAdapter:
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self, settings: KnowledgeSettings) -> None:
+        if self.__class__._initialized:
+            return
         self._settings = settings
         self._embedding = LocalEmbeddings(settings)
-        persist_dir = self._vector_store_dir()
+        self._reranker: Any = None
+        persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
-        self._store = self._build_store(persist_dir)
-
-    def _build_store(self, persist_dir: Path):
-        try:
-            from langchain_chroma import Chroma
-        except ImportError as exc:  # pragma: no cover - runtime dependency guard
-            raise ValueError(
-                "缺少 langchain-chroma 依赖，请在 apps/api 环境安装后再使用 Knowledge 检索。"
-            ) from exc
-        return Chroma(
+        self._store = Chroma(
             collection_name=self._settings.collection_name,
             embedding_function=self._embedding,
             persist_directory=persist_dir.as_posix(),
         )
+        self._create_splitter()
+        self._create_reranker()
+        self.__class__._initialized = True
 
-    def _vector_store_dir(self) -> Path:
-        return workspace_path("data/knowledge/chroma")
-
-    def split_text(self, text: str) -> list[str]:
-        try:
-            from langchain_text_splitters import RecursiveCharacterTextSplitter
-        except ImportError as exc:  # pragma: no cover - runtime dependency guard
-            raise ValueError(
-                "缺少 langchain-text-splitters 依赖，请在 apps/api 环境安装后再使用 Knowledge 检索。"
-            ) from exc
-        splitter = RecursiveCharacterTextSplitter(
+    def _create_splitter(self):
+        self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=self._settings.chunk_size,
             chunk_overlap=self._settings.chunk_overlap,
         )
-        return [piece.strip() for piece in splitter.split_text(text) if piece.strip()]
+
+    def _create_reranker(self):
+        model = HuggingFaceCrossEncoder(model_name=self._settings.rerank_model)
+        self._reranker = CrossEncoderReranker(model=model, top_n=self._settings.rerank_top_n)
+
+    def split_text(self, text: str) -> list[str]:
+        return [piece.strip() for piece in self._splitter.split_text(text) if piece.strip()]
 
     def upsert_chunks(
         self,
@@ -122,6 +127,18 @@ class VectorStoreAdapter:
         ids = [f"{document_id}:{idx}" for idx in range(chunk_count)]
         self._store.delete(ids=ids)
 
+    def _score_pairs(self, query: str, docs: list[Document]) -> list[float]:
+        try:
+            compressed = self._reranker.compress_documents(docs, query)
+        except Exception:
+            return []
+        scores: list[float] = []
+        for idx, doc in enumerate(compressed):
+            metadata = dict(doc.metadata or {})
+            score = metadata.get("relevance_score", metadata.get("score", len(compressed) - idx))
+            scores.append(float(score))
+        return scores
+
     def retrieve(
         self,
         *,
@@ -131,36 +148,45 @@ class VectorStoreAdapter:
         document_ids: list[str] | None = None,
     ) -> list[RetrievalResult]:
         pairs = self._store.similarity_search_with_relevance_scores(query=query, k=top_k)
-        results: list[RetrievalResult] = []
         allowed = set(document_ids or [])
+        candidates: list[tuple[Document, float]] = []
         for doc, score in pairs:
             metadata = dict(doc.metadata or {})
             if allowed and str(metadata.get("document_id", "")) not in allowed:
                 continue
             if float(score) < threshold:
                 continue
-            results.append(
-                RetrievalResult(
-                    chunk_id=str(metadata.get("chunk_id", "")),
-                    document_id=str(metadata.get("document_id", "")),
-                    content=doc.page_content,
-                    score=float(score),
-                    metadata=metadata,
+            candidates.append((doc, float(score)))
+        if not candidates:
+            return []
+        docs = [doc for doc, _ in candidates]
+        rerank_scores = self._score_pairs(query, docs)
+        if rerank_scores:
+            results: list[RetrievalResult] = []
+            for (doc, score), rerank_score in zip(candidates, rerank_scores, strict=False):
+                metadata = dict(doc.metadata or {})
+                results.append(
+                    RetrievalResult(
+                        chunk_id=str(metadata.get("chunk_id", "")),
+                        document_id=str(metadata.get("document_id", "")),
+                        content=doc.page_content,
+                        score=float(rerank_score),
+                        metadata={
+                            **metadata,
+                            "vector_score": score,
+                            "rerank_score": float(rerank_score),
+                        },
+                    )
                 )
+            results.sort(key=lambda item: item.score, reverse=True)
+            return results[: min(self._settings.rerank_top_n, len(results))]
+        return [
+            RetrievalResult(
+                chunk_id=str(dict(doc.metadata or {}).get("chunk_id", "")),
+                document_id=str(dict(doc.metadata or {}).get("document_id", "")),
+                content=doc.page_content,
+                score=float(score),
+                metadata=dict(doc.metadata or {}),
             )
-        return results
-
-
-def build_chat_context(query: str, retrievals: list[RetrievalResult]) -> str:
-    if not retrievals:
-        return ""
-    lines = [
-        "以下是与用户问题相关的知识库片段，请优先基于这些资料作答；若资料不足，请明确说明。",
-        f"用户问题：{query}",
-        "",
-    ]
-    for idx, hit in enumerate(retrievals, start=1):
-        lines.append(f"[{idx}] doc={hit.document_id} score={hit.score:.3f}")
-        lines.append(hit.content)
-        lines.append("")
-    return "\n".join(lines).strip()
+            for doc, score in candidates
+        ]

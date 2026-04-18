@@ -57,28 +57,16 @@ class KnowledgeSearchRequest(BaseModel):
 
 
 class KnowledgeSearchHit(BaseModel):
-    chunk_id: str
-    document_id: str
     document_name: str
     content: str
-    score: float
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class KnowledgeSearchResponse(BaseModel):
-    hits: list[KnowledgeSearchHit] = Field(default_factory=list)
-
-
-class KnowledgeReindexResponse(BaseModel):
-    document_id: str
-    indexed_chunks: int = 0
-    status: str = "queued"
 
 
 class KnowledgeSettings(BaseModel):
     enabled: bool = True
     top_k: int = Field(default=4, ge=1, le=20)
     threshold: float = Field(default=0.2, ge=0.0, le=1.0)
+    rerank_top_n: int = Field(default=4, ge=1, le=20)
+    rerank_model: str = Field(default="BAAI/bge-reranker-base")
     chunk_size: int = Field(default=800, ge=100, le=4000)
     chunk_overlap: int = Field(default=120, ge=0, le=1000)
     vector_store: str = Field(default="chroma")
@@ -95,6 +83,14 @@ class KnowledgeSettings(BaseModel):
             raise ValueError("chunk_overlap 必须小于 chunk_size")
         return value
 
+    @field_validator("rerank_top_n")
+    @classmethod
+    def rerank_top_n_not_exceed_top_k(cls, value: int, info) -> int:
+        top_k = int(info.data.get("top_k", 4))
+        if value > top_k:
+            raise ValueError("rerank_top_n 不能大于 top_k")
+        return value
+
     @field_validator("embedding_provider")
     @classmethod
     def validate_embedding_provider(cls, value: str) -> str:
@@ -109,6 +105,14 @@ class KnowledgeSettings(BaseModel):
         text = value.strip()
         if not text:
             raise ValueError("embedding_model 不能为空")
+        return text
+
+    @field_validator("rerank_model")
+    @classmethod
+    def validate_rerank_model(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("rerank_model 不能为空")
         return text
 
     @classmethod
@@ -128,6 +132,16 @@ class KnowledgeSettings(BaseModel):
                     "type": "number",
                     "title": "最小相似度阈值",
                     "default": defaults["threshold"],
+                },
+                "rerank_top_n": {
+                    "type": "integer",
+                    "title": "Rerank 保留数量",
+                    "default": defaults["rerank_top_n"],
+                },
+                "rerank_model": {
+                    "type": "string",
+                    "title": "Rerank 模型",
+                    "default": defaults["rerank_model"],
                 },
                 "chunk_size": {
                     "type": "integer",

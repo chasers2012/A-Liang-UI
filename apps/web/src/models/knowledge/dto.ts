@@ -25,12 +25,8 @@ export interface KnowledgeSearchRequest {
 }
 
 export interface KnowledgeSearchHit {
-  chunk_id: string;
-  document_id: string;
   document_name: string;
   content: string;
-  score: number;
-  metadata: Record<string, unknown>;
 }
 
 export interface KnowledgeSearchResponse {

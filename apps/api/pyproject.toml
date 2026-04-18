@@ -25,6 +25,8 @@ dependencies = [
   "croniter>=6.0.0",
   "vectorbt",
   "workflow",
+  "langchain>=0.3.0",
+  "langchain-community>=0.3.0",
   "langchain-chroma>=0.2.0",
   "langchain-text-splitters>=0.3.0",
   "langchain-huggingface>=0.1.0",
@@ -32,6 +34,7 @@ dependencies = [
   "chromadb>=0.5.0",
   "unstructured[all-docs]>=0.14.0",
   "unstructured-inference>=0.7.0",
+  "langchain-classic>=1.0.3",
 ]
 
 [tool.uv.sources]
