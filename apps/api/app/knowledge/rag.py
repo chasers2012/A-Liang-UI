@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from importlib import import_module
 from typing import Any
 
 from langchain_chroma import Chroma
@@ -10,6 +9,7 @@ from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from workspace import workspace_path
 
@@ -25,16 +25,6 @@ class LocalEmbeddings(Embeddings):
         model = settings.embedding_model
         kwargs = dict(settings.embedding_kwargs or {})
         if provider == "huggingface":
-            try:
-                module = import_module("langchain_huggingface")
-                HuggingFaceEmbeddings = module.HuggingFaceEmbeddings
-            except (
-                ImportError,
-                AttributeError,
-            ) as exc:  # pragma: no cover - runtime dependency guard
-                raise ValueError(
-                    "缺少 langchain-huggingface 依赖，请在 apps/api 环境安装后再使用 Knowledge 检索。"
-                ) from exc
             self._embedding_fn = HuggingFaceEmbeddings(
                 model_name=model,
                 encode_kwargs=kwargs,
@@ -82,7 +72,6 @@ class VectorStoreAdapter:
         )
         self._create_splitter()
         self._create_reranker()
-        self._bm25_retriever = self._build_bm25_retriever(self._load_documents())
         self.__class__._initialized = True
 
     def _create_splitter(self):
@@ -148,9 +137,6 @@ class VectorStoreAdapter:
         retriever.k = self._settings.top_k
         return retriever
 
-    def _refresh_bm25_retriever(self) -> None:
-        self._bm25_retriever = self._build_bm25_retriever(self._load_documents())
-
     def _load_documents(self, document_ids: set[str] | None = None) -> list[Document]:
         payload = self._store.get(include=["documents", "metadatas"])
         texts = payload.get("documents") or []
@@ -207,7 +193,8 @@ class VectorStoreAdapter:
         if not documents:
             return []
 
-        bm25 = self._bm25_retriever if allowed is None else self._build_bm25_retriever(documents)
+        bm25 = self._build_bm25_retriever(documents)
+
         bm25_docs = bm25.invoke(query)[:top_k]
         vector_pairs = self._store.similarity_search_with_relevance_scores(query=query, k=top_k)
 
