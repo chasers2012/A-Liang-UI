@@ -10,10 +10,14 @@ import {
 } from '@/api/knowledge';
 import type { KnowledgeDocumentPublic, KnowledgeSearchHit } from '@/models/knowledge/dto';
 
-type CreateFormState = {
+type CreateFormItemState = {
   name: string;
   file_name: string;
-  file: File | null;
+  file: File;
+};
+
+type CreateFormState = {
+  files: CreateFormItemState[];
 };
 
 type SearchFormState = {
@@ -31,9 +35,7 @@ export type KnowledgePageState = {
 };
 
 const defaultCreateForm: CreateFormState = {
-  name: '',
-  file_name: '',
-  file: null,
+  files: [],
 };
 
 export const knowledgePageAtom = atom<KnowledgePageState>({
@@ -46,16 +48,32 @@ export const knowledgePageAtom = atom<KnowledgePageState>({
   searchForm: { query: '' },
 });
 
-export const setKnowledgeFileAtom = atom(null, async (get, set, file: File) => {
+export const addKnowledgeFilesAtom = atom(null, (get, set, files: File[]) => {
+  if (!files.length) return;
   set(knowledgePageAtom, (s) => ({ ...s, error: null }));
+  const state = get(knowledgePageAtom);
+  const nextFiles = [...state.createForm.files];
+  for (const file of files) {
+    nextFiles.push({
+      name: file.name.replace(/\.[^.]+$/, '') || file.name,
+      file_name: file.name,
+      file,
+    });
+  }
+  set(knowledgePageAtom, {
+    ...state,
+    createForm: {
+      files: nextFiles,
+    },
+  });
+});
+
+export const removeKnowledgeFileAtom = atom(null, (get, set, index: number) => {
   const state = get(knowledgePageAtom);
   set(knowledgePageAtom, {
     ...state,
     createForm: {
-      ...state.createForm,
-      name: file.name.replace(/\.[^.]+$/, '') || file.name,
-      file_name: file.name,
-      file,
+      files: state.createForm.files.filter((_, i) => i !== index),
     },
   });
 });
@@ -88,20 +106,22 @@ export const refreshKnowledgePageAtom = atom(null, async (_get, set) => {
 });
 
 export const createKnowledgeDocumentAtom = atom(null, async (get, set) => {
-  const { createForm } = get(knowledgePageAtom);
-  if (!createForm.file) {
+  const { files } = get(knowledgePageAtom).createForm;
+  if (!files.length) {
     set(knowledgePageAtom, (s) => ({ ...s, error: '请先选择文件' }));
     return;
   }
   set(knowledgePageAtom, (s) => ({ ...s, error: null }));
   try {
-    const uploadForm = new FormData();
-    uploadForm.append('file', createForm.file);
-    const uploaded = await uploadFile(uploadForm);
-    await createKnowledgeDocument({
-      name: createForm.name.trim(),
-      uploaded_path: uploaded.path,
-    });
+    for (const item of files) {
+      const uploadForm = new FormData();
+      uploadForm.append('file', item.file);
+      const uploaded = await uploadFile(uploadForm);
+      await createKnowledgeDocument({
+        name: item.name.trim(),
+        uploaded_path: uploaded.path,
+      });
+    }
     set(knowledgePageAtom, (s) => ({ ...s, createForm: defaultCreateForm }));
     await set(refreshKnowledgePageAtom);
   } catch (e) {

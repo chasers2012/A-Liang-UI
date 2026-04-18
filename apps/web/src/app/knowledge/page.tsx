@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Page } from '@/components/page';
@@ -13,12 +13,13 @@ import { Label } from '@/components/ui/label';
 import { Item, ItemContent, ItemGroup, ItemHeader, ItemTitle } from '@/components/ui/item';
 
 import {
+  addKnowledgeFilesAtom,
   createKnowledgeDocumentAtom,
   deleteKnowledgeDocumentAtom,
   knowledgePageAtom,
   refreshKnowledgePageAtom,
+  removeKnowledgeFileAtom,
   searchKnowledgeAtom,
-  setKnowledgeFileAtom,
   setKnowledgeSearchQueryAtom,
 } from '@/models/knowledge/list-detail.atom';
 import { useKnowledgeDocumentsPolling } from '@/models/knowledge/use-knowledge-documents-polling';
@@ -34,7 +35,8 @@ type KnowledgeActions = {
   createDoc: () => void;
   deleteDoc: (id: string) => void;
   search: () => void;
-  setFile: (file: File) => void;
+  addFiles: (files: File[]) => void;
+  removeFile: (index: number) => void;
   setSearchQuery: (value: string) => void;
 };
 
@@ -47,30 +49,81 @@ function CreateDocumentDialog({
 }: {
   open: boolean;
   loading: boolean;
-  createForm: { name: string; file_name: string; file: File | null };
+  createForm: { files: Array<{ name: string; file_name: string; file: File }> };
   onClose: () => void;
   actions: KnowledgeActions;
 }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
       <DialogContent size="lg" className="gap-0">
-        <DialogHeader title="新增文档">选择文件后会自动使用文件名作为文档名称。</DialogHeader>
+        <DialogHeader title="新增文档">拖放多个文件到下方区域即可批量上传，文档名称会自动使用文件名。</DialogHeader>
         <DialogBody variant="inset">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-file">上传文件</Label>
-              <Input
-                id="knowledge-file"
+            <div
+              className={`rounded-xl border-2 border-dashed p-6 transition-colors ${
+                dragActive ? 'border-primary bg-primary/5' : 'border-border bg-muted/20'
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                actions.addFiles(Array.from(e.dataTransfer.files));
+              }}
+              onClick={() => inputRef.current?.click()}
+            >
+              <input
+                ref={inputRef}
+                className="hidden"
                 type="file"
+                multiple
                 accept=".txt,.md,.markdown,.csv,.json,.pdf,.docx,.html,.htm"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) actions.setFile(file);
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length) actions.addFiles(files);
+                  e.currentTarget.value = '';
                 }}
               />
-              {createForm.file_name ? (
-                <p className="text-xs text-muted-foreground">已选择: {createForm.file_name}</p>
-              ) : null}
+              <div className="text-center">
+                <div className="text-sm font-medium">拖拽文件到这里，或点击选择文件</div>
+                <p className="mt-1 text-xs text-muted-foreground">支持批量上传：TXT、MD、CSV、JSON、PDF、DOCX、HTML</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="text-sm font-medium">上传文件列表</div>
+              {!createForm.files.length ? (
+                <p className="text-sm text-muted-foreground">还没有选择文件。</p>
+              ) : (
+                <div className="space-y-2">
+                  {createForm.files.map((item, index) => (
+                    <div
+                      key={`${item.file_name}-${index}`}
+                      className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium">{item.file_name}</div>
+                        <div className="truncate text-xs text-muted-foreground">{item.name}</div>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => actions.removeFile(index)} disabled={loading}>
+                        删除
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </DialogBody>
@@ -78,7 +131,7 @@ function CreateDocumentDialog({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             取消
           </Button>
-          <Button onClick={() => actions.createDoc()} disabled={loading}>
+          <Button onClick={() => actions.createDoc()} disabled={loading || !createForm.files.length}>
             上传并创建文档
           </Button>
         </DialogFooter>
@@ -208,7 +261,8 @@ export default function KnowledgePage() {
   const createDoc = useSetAtom(createKnowledgeDocumentAtom);
   const deleteDoc = useSetAtom(deleteKnowledgeDocumentAtom);
   const search = useSetAtom(searchKnowledgeAtom);
-  const setFile = useSetAtom(setKnowledgeFileAtom);
+  const addFiles = useSetAtom(addKnowledgeFilesAtom);
+  const removeFile = useSetAtom(removeKnowledgeFileAtom);
   const setSearchQuery = useSetAtom(setKnowledgeSearchQueryAtom);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
@@ -222,7 +276,8 @@ export default function KnowledgePage() {
     createDoc: () => void createDoc(),
     deleteDoc: (id) => void deleteDoc(id),
     search: () => void search(),
-    setFile: (file) => void setFile(file),
+    addFiles: (files) => void addFiles(files),
+    removeFile: (index) => void removeFile(index),
     setSearchQuery: (value) => setSearchQuery(value),
   };
 
