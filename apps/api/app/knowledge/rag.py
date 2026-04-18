@@ -62,6 +62,7 @@ class VectorStoreAdapter:
             return
         self._settings = settings
         self._embedding = LocalEmbeddings(settings)
+        self._splitter: RecursiveCharacterTextSplitter | None = None
         self._reranker: Any = None
         persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
@@ -70,59 +71,64 @@ class VectorStoreAdapter:
             embedding_function=self._embedding,
             persist_directory=persist_dir.as_posix(),
         )
-        self._create_splitter()
-        self._create_reranker()
         self.__class__._initialized = True
 
-    def _create_splitter(self):
-        self._splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self._settings.chunk_size,
-            chunk_overlap=self._settings.chunk_overlap,
-        )
+    @property
+    def splitter(self) -> RecursiveCharacterTextSplitter:
+        if self._splitter is None:
+            self._splitter = RecursiveCharacterTextSplitter(
+                chunk_size=self._settings.chunk_size,
+                chunk_overlap=self._settings.chunk_overlap,
+            )
+        return self._splitter
 
-    def _create_reranker(self):
-        model = HuggingFaceCrossEncoder(model_name=self._settings.rerank_model)
-        self._reranker = CrossEncoderReranker(model=model, top_n=self._settings.rerank_top_n)
+    @property
+    def reranker(self) -> CrossEncoderReranker:
+        if self._reranker is None:
+            model = HuggingFaceCrossEncoder(model_name=self._settings.rerank_model)
+            self._reranker = CrossEncoderReranker(model=model, top_n=self._settings.rerank_top_n)
+        return self._reranker
 
     def split_text(self, text: str) -> list[str]:
-        return [piece.strip() for piece in self._splitter.split_text(text) if piece.strip()]
+        return [piece.strip() for piece in self.splitter.split_text(text) if piece.strip()]
 
     def upsert_chunks(
         self,
         *,
         document_id: str,
         chunks: list[str],
+        chunk_ids: list[str],
         base_metadata: dict[str, Any],
     ) -> list[Document]:
-        ids = [f"{document_id}:{idx}" for idx, _ in enumerate(chunks)]
-        documents = [
-            Document(
-                page_content=content,
-                metadata={
-                    **base_metadata,
-                    "document_id": document_id,
-                    "chunk_index": idx,
-                    "chunk_id": ids[idx],
-                },
+        documents = []
+        ids: list[str] = []
+        for idx, content in enumerate(chunks):
+            chunk_id = chunk_ids[idx] if idx < len(chunk_ids) else f"{document_id}:{idx}"
+            ids.append(chunk_id)
+            documents.append(
+                Document(
+                    page_content=content,
+                    metadata={
+                        **base_metadata,
+                        "document_id": document_id,
+                        "chunk_index": idx,
+                        "chunk_id": chunk_id,
+                    },
+                )
             )
-            for idx, content in enumerate(chunks)
-        ]
         if ids:
             self._store.delete(ids=ids)
             self._store.add_documents(documents=documents, ids=ids)
-            self._refresh_bm25_retriever()
         return documents
 
-    def delete_document(self, document_id: str, chunk_count: int) -> None:
-        if chunk_count <= 0:
+    def delete_document(self, chunk_ids: list[str]) -> None:
+        if not chunk_ids:
             return
-        ids = [f"{document_id}:{idx}" for idx in range(chunk_count)]
-        self._store.delete(ids=ids)
-        self._refresh_bm25_retriever()
+        self._store.delete(ids=chunk_ids)
 
     def _score_pairs(self, query: str, docs: list[Document]) -> list[float]:
         try:
-            compressed = self._reranker.compress_documents(docs, query)
+            compressed = self.reranker.compress_documents(docs, query)
         except Exception:
             return []
         scores: list[float] = []

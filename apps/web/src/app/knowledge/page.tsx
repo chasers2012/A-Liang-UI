@@ -6,10 +6,11 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Item, ItemActions, ItemContent, ItemGroup, ItemHeader, ItemTitle } from '@/components/ui/item';
+import { Item, ItemContent, ItemGroup, ItemHeader, ItemTitle } from '@/components/ui/item';
 
 import {
   createKnowledgeDocumentAtom,
@@ -51,19 +52,12 @@ function CreateDocumentDialog({
   onClose: () => void;
   actions: KnowledgeActions;
 }) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-background shadow-lg">
-        <Card className="border-0 shadow-none">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>新增文档</CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              关闭
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
+    <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
+      <DialogContent size="lg" className="gap-0">
+        <DialogHeader title="新增文档">上传文件后可填写文档名称与来源路径，创建后可选择是否自动建立索引。</DialogHeader>
+        <DialogBody variant="inset">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="knowledge-file">上传文件</Label>
               <Input
@@ -105,18 +99,18 @@ function CreateDocumentDialog({
               />
               <Label htmlFor="knowledge-auto-index">创建后自动建立索引</Label>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={onClose} disabled={loading}>
-                取消
-              </Button>
-              <Button onClick={() => actions.createDoc()} disabled={loading}>
-                上传并创建文档
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+          </div>
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            取消
+          </Button>
+          <Button onClick={() => actions.createDoc()} disabled={loading}>
+            上传并创建文档
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -157,7 +151,6 @@ function DocumentsCard({
               </Button>
             </div>
           </ItemHeader>
-          <ItemActions />
         </ItemContent>
       </Item>
     );

@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from sqlmodel import col, delete, select
 
-from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow, KnowledgeIndexMetaRow
+from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow
 from app.persistence.sqlite_db import get_session
 
 
@@ -56,25 +56,18 @@ class KnowledgeStore:
             session.exec(
                 delete(KnowledgeChunkRow).where(KnowledgeChunkRow.document_id == document_id)
             )
-            session.exec(
-                delete(KnowledgeIndexMetaRow).where(
-                    KnowledgeIndexMetaRow.document_id == document_id
-                )
-            )
             session.delete(row)
             session.commit()
             return True
 
     @classmethod
-    def replace_document_chunks(
+    def add_document_chunks(
         cls,
-        document_id: str,
         chunks: list[KnowledgeChunkRow],
     ) -> int:
+        if not chunks:
+            return 0
         with get_session() as session:
-            session.exec(
-                delete(KnowledgeChunkRow).where(KnowledgeChunkRow.document_id == document_id)
-            )
             for chunk in chunks:
                 session.add(chunk)
             session.commit()
@@ -89,25 +82,3 @@ class KnowledgeStore:
                 .order_by(col(KnowledgeChunkRow.chunk_index))
             )
             return list(session.exec(stmt))
-
-    @classmethod
-    def upsert_index_meta(cls, row: KnowledgeIndexMetaRow) -> KnowledgeIndexMetaRow:
-        with get_session() as session:
-            existing = session.exec(
-                select(KnowledgeIndexMetaRow).where(
-                    KnowledgeIndexMetaRow.document_id == row.document_id
-                )
-            ).first()
-            if existing is None:
-                session.add(row)
-                session.commit()
-                session.refresh(row)
-                return row
-            existing.chunk_count = row.chunk_count
-            existing.embed_model = row.embed_model
-            existing.vector_store = row.vector_store
-            existing.updated_at = row.updated_at
-            session.add(existing)
-            session.commit()
-            session.refresh(existing)
-            return existing

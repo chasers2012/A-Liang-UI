@@ -34,18 +34,3 @@ class KnowledgeChunkRow(SQLModel, table=True):
     content: str
     meta: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonText))
     created_at: datetime = Field(default_factory=utcnow, index=True)
-
-
-class KnowledgeIndexMetaRow(SQLModel, table=True):
-    __tablename__ = "knowledge_index_meta"
-
-    id: str = Field(primary_key=True)
-    document_id: str = Field(
-        foreign_key="knowledge_documents.id",
-        unique=True,
-        index=True,
-    )
-    chunk_count: int = Field(default=0, ge=0)
-    embed_model: str = Field(default="hash-v1")
-    vector_store: str = Field(default="chroma", index=True)
-    updated_at: datetime = Field(default_factory=utcnow, index=True)

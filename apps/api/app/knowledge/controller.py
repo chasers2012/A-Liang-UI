@@ -7,7 +7,7 @@ from uuid import uuid4
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
-from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow, KnowledgeIndexMetaRow
+from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow
 from app.knowledge.rag import RetrievalResult, VectorStoreAdapter
 from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
@@ -120,8 +120,8 @@ def enqueue_index_document(document_id: str, *, content: str | None = None) -> S
 
 
 def delete_document(document_id: str) -> bool:
-    chunk_count = len(KnowledgeStore.list_chunks_by_document(document_id))
-    _adapter().delete_document(document_id, chunk_count=chunk_count)
+    chunk_ids = [row.id for row in KnowledgeStore.list_chunks_by_document(document_id)]
+    _adapter().delete_document(chunk_ids=chunk_ids)
     return KnowledgeStore.delete_document(document_id)
 
 
@@ -136,7 +136,7 @@ def _mark_document_status(document_id: str, *, status: str, error: str | None = 
     KnowledgeStore.update_document(document_id, _apply)
 
 
-def reindex_document(document_id: str, *, content: str | None = None) -> None:
+def index_document(document_id: str, *, content: str | None = None) -> None:
     row = KnowledgeStore.get_document(document_id)
     if row is None:
         raise ValueError("文档不存在")
@@ -150,34 +150,26 @@ def reindex_document(document_id: str, *, content: str | None = None) -> None:
         settings = get_settings()
         adapter = VectorStoreAdapter(settings)
         chunks = adapter.split_text(raw_content)
+        chunk_ids = [str(uuid4()) for _ in chunks]
         docs = adapter.upsert_chunks(
             document_id=document_id,
             chunks=chunks,
+            chunk_ids=chunk_ids,
             base_metadata={"document_name": row.name},
         )
         now = _utcnow()
         db_chunks = [
             KnowledgeChunkRow(
-                id=str(uuid4()),
+                id=chunk_id,
                 document_id=document_id,
                 chunk_index=int(doc.metadata.get("chunk_index", idx)),
                 content=doc.page_content,
                 meta=dict(doc.metadata),
                 created_at=now,
             )
-            for idx, doc in enumerate(docs)
+            for idx, (chunk_id, doc) in enumerate(zip(chunk_ids, docs, strict=False))
         ]
-        count = KnowledgeStore.replace_document_chunks(document_id, db_chunks)
-        KnowledgeStore.upsert_index_meta(
-            KnowledgeIndexMetaRow(
-                id=f"idx:{document_id}",
-                document_id=document_id,
-                chunk_count=count,
-                embed_model=f"{settings.embedding_provider}:{settings.embedding_model}",
-                vector_store=settings.vector_store,
-                updated_at=now,
-            )
-        )
+        KnowledgeStore.add_document_chunks(db_chunks)
         _mark_document_status(document_id, status="indexed", error=None)
     except Exception as exc:
         _mark_document_status(document_id, status="failed", error=str(exc))
@@ -210,14 +202,14 @@ def _retrieval_to_hit(
 
 
 def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
-    from app.knowledge.controller import reindex_document
+    from app.knowledge.controller import index_document
 
     document_id = str(payload.get("document_id", "")).strip()
     if not document_id:
         raise ValueError("knowledge.index 任务需要 document_id")
     content = payload.get("content")
     content_text = None if content is None else str(content)
-    reindex_document(document_id, content=content_text)
+    index_document(document_id, content=content_text)
     return {"result": "success"}
 
 
