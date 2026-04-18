@@ -22,6 +22,7 @@ import {
   setKnowledgeFileAtom,
   setKnowledgeSearchQueryAtom,
 } from '@/models/knowledge/list-detail.atom';
+import { useKnowledgeDocumentsPolling } from '@/models/knowledge/use-knowledge-documents-polling';
 import { Trash } from 'lucide-react';
 
 function toLocalTime(v: string): string {
@@ -34,7 +35,7 @@ type KnowledgeActions = {
   createDoc: () => void;
   deleteDoc: (id: string) => void;
   search: () => void;
-  setCreateField: (payload: { key: 'name' | 'source_path' | 'auto_index'; value: string | boolean }) => void;
+  setCreateField: (payload: { key: 'name'; value: string }) => void;
   setFile: (file: File) => void;
   setSearchQuery: (value: string) => void;
 };
@@ -48,14 +49,14 @@ function CreateDocumentDialog({
 }: {
   open: boolean;
   loading: boolean;
-  createForm: { name: string; source_path: string; auto_index: boolean; file_name: string; file: File | null };
+  createForm: { name: string; file_name: string; file: File | null };
   onClose: () => void;
   actions: KnowledgeActions;
 }) {
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? onClose() : undefined)}>
       <DialogContent size="lg" className="gap-0">
-        <DialogHeader title="新增文档">上传文件后可填写文档名称与来源路径，创建后可选择是否自动建立索引。</DialogHeader>
+        <DialogHeader title="新增文档">上传文件后可填写文档名称，创建后即可入库。</DialogHeader>
         <DialogBody variant="inset">
           <div className="space-y-4">
             <div className="space-y-2">
@@ -81,24 +82,6 @@ function CreateDocumentDialog({
                 onChange={(e) => actions.setCreateField({ key: 'name', value: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="knowledge-source-path">来源路径（可选）</Label>
-              <Input
-                id="knowledge-source-path"
-                value={createForm.source_path}
-                onChange={(e) => actions.setCreateField({ key: 'source_path', value: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                id="knowledge-auto-index"
-                type="checkbox"
-                className="h-4 w-4"
-                checked={createForm.auto_index}
-                onChange={(e) => actions.setCreateField({ key: 'auto_index', value: e.target.checked })}
-              />
-              <Label htmlFor="knowledge-auto-index">创建后自动建立索引</Label>
-            </div>
           </div>
         </DialogBody>
         <DialogFooter>
@@ -120,7 +103,7 @@ function DocumentsCard({
   onAdd,
   actions,
 }: {
-  documents: Array<{ id: string; name: string; source_path: string | null; status: string; updated_at: string }>;
+  documents: Array<{ id: string; name: string; status: string; updated_at: string }>;
   busyDocumentId: string | null;
   onAdd: () => void;
   actions: KnowledgeActions;
@@ -128,13 +111,7 @@ function DocumentsCard({
   const pendingDocuments = documents.filter((doc) => doc.status !== 'indexed');
   const indexedDocuments = documents.filter((doc) => doc.status === 'indexed');
 
-  const renderDocumentItem = (doc: {
-    id: string;
-    name: string;
-    source_path: string | null;
-    status: string;
-    updated_at: string;
-  }) => {
+  const renderDocumentItem = (doc: { id: string; name: string; status: string; updated_at: string }) => {
     const isBusy = busyDocumentId === doc.id;
 
     return (
@@ -249,6 +226,8 @@ export default function KnowledgePage() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useKnowledgeDocumentsPolling(refresh);
 
   const actions: KnowledgeActions = {
     createDoc: () => void createDoc(),

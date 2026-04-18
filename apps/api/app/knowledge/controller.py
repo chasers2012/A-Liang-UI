@@ -70,7 +70,6 @@ def _to_public(row: KnowledgeDocumentRow) -> KnowledgeDocumentPublic:
     return KnowledgeDocumentPublic(
         id=row.id,
         name=row.name,
-        source_path=row.source_path,
         status=row.status,
         error=row.error,
         metadata=dict(row.meta or {}),
@@ -92,13 +91,12 @@ def get_document(document_id: str) -> KnowledgeDocumentPublic | None:
 
 def create_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPublic:
     now = _utcnow()
-    source_path = (body.source_path or "").strip() or None
     metadata = dict(body.metadata or {})
 
     row = KnowledgeDocumentRow(
         id=str(uuid4()),
         name=body.name,
-        source_path=source_path or body.uploaded_path,
+        source_path=body.uploaded_path,
         status="pending",
         error=None,
         meta=metadata,
@@ -106,11 +104,7 @@ def create_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPu
         updated_at=now,
     )
     created = KnowledgeStore.add_document(row)
-    if body.auto_index:
-        enqueue_index_document(created.id, uploaded_path=body.uploaded_path, content=body.content)
-        refreshed = KnowledgeStore.get_document(created.id)
-        if refreshed is not None:
-            return _to_public(refreshed)
+    enqueue_index_document(created.id, uploaded_path=body.uploaded_path, content=body.content)
     return _to_public(created)
 
 

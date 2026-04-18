@@ -3,19 +3,15 @@ import { atom } from 'jotai';
 import {
   createKnowledgeDocument,
   deleteKnowledgeDocument,
-  getKnowledgeSettings,
   listKnowledgeDocuments,
-  putKnowledgeSettings,
   reindexKnowledgeDocument,
   searchKnowledge,
   uploadFile,
 } from '@/api/knowledge';
-import type { KnowledgeDocumentPublic, KnowledgeSearchHit, KnowledgeSettings } from '@/models/knowledge/dto';
+import type { KnowledgeDocumentPublic, KnowledgeSearchHit } from '@/models/knowledge/dto';
 
 type CreateFormState = {
   name: string;
-  source_path: string;
-  auto_index: boolean;
   file_name: string;
   file: File | null;
 };
@@ -27,7 +23,6 @@ type SearchFormState = {
 export type KnowledgePageState = {
   documents: KnowledgeDocumentPublic[];
   hits: KnowledgeSearchHit[];
-  settings: KnowledgeSettings | null;
   loading: boolean;
   error: string | null;
   busyDocumentId: string | null;
@@ -37,8 +32,6 @@ export type KnowledgePageState = {
 
 const defaultCreateForm: CreateFormState = {
   name: '',
-  source_path: '',
-  auto_index: true,
   file_name: '',
   file: null,
 };
@@ -46,7 +39,6 @@ const defaultCreateForm: CreateFormState = {
 export const knowledgePageAtom = atom<KnowledgePageState>({
   documents: [],
   hits: [],
-  settings: null,
   loading: false,
   error: null,
   busyDocumentId: null,
@@ -54,19 +46,16 @@ export const knowledgePageAtom = atom<KnowledgePageState>({
   searchForm: { query: '' },
 });
 
-export const setKnowledgeCreateFieldAtom = atom(
-  null,
-  (get, set, payload: { key: keyof CreateFormState; value: string | boolean }) => {
-    const state = get(knowledgePageAtom);
-    set(knowledgePageAtom, {
-      ...state,
-      createForm: {
-        ...state.createForm,
-        [payload.key]: payload.value,
-      },
-    });
-  },
-);
+export const setKnowledgeCreateFieldAtom = atom(null, (get, set, payload: { key: 'name'; value: string }) => {
+  const state = get(knowledgePageAtom);
+  set(knowledgePageAtom, {
+    ...state,
+    createForm: {
+      ...state.createForm,
+      [payload.key]: payload.value,
+    },
+  });
+});
 
 export const setKnowledgeFileAtom = atom(null, async (get, set, file: File) => {
   set(knowledgePageAtom, (s) => ({ ...s, error: null }));
@@ -76,7 +65,6 @@ export const setKnowledgeFileAtom = atom(null, async (get, set, file: File) => {
     createForm: {
       ...state.createForm,
       name: file.name.replace(/\.[^.]+$/, '') || file.name,
-      source_path: state.createForm.source_path || file.name,
       file_name: file.name,
       file,
     },
@@ -91,29 +79,13 @@ export const setKnowledgeSearchQueryAtom = atom(null, (get, set, value: string) 
   });
 });
 
-export const setKnowledgeSettingFieldAtom = atom(
-  null,
-  (get, set, payload: { key: keyof KnowledgeSettings; value: string | number | boolean }) => {
-    const state = get(knowledgePageAtom);
-    if (!state.settings) return;
-    set(knowledgePageAtom, {
-      ...state,
-      settings: {
-        ...state.settings,
-        [payload.key]: payload.value,
-      },
-    });
-  },
-);
-
 export const refreshKnowledgePageAtom = atom(null, async (_get, set) => {
   set(knowledgePageAtom, (s) => ({ ...s, loading: true, error: null }));
   try {
-    const [documents, settings] = await Promise.all([listKnowledgeDocuments(), getKnowledgeSettings()]);
+    const documents = await listKnowledgeDocuments();
     set(knowledgePageAtom, (s) => ({
       ...s,
       documents,
-      settings,
       loading: false,
       error: null,
     }));
@@ -140,8 +112,6 @@ export const createKnowledgeDocumentAtom = atom(null, async (get, set) => {
     await createKnowledgeDocument({
       name: createForm.name.trim(),
       uploaded_path: uploaded.path,
-      source_path: createForm.source_path.trim() || uploaded.filename,
-      auto_index: createForm.auto_index,
     });
     set(knowledgePageAtom, (s) => ({ ...s, createForm: defaultCreateForm }));
     await set(refreshKnowledgePageAtom);
@@ -189,22 +159,6 @@ export const searchKnowledgeAtom = atom(null, async (get, set) => {
       loading: false,
       error: null,
     }));
-  } catch (e) {
-    set(knowledgePageAtom, (s) => ({
-      ...s,
-      loading: false,
-      error: e instanceof Error ? e.message : String(e),
-    }));
-  }
-});
-
-export const saveKnowledgeSettingsAtom = atom(null, async (get, set) => {
-  const settings = get(knowledgePageAtom).settings;
-  if (!settings) return;
-  set(knowledgePageAtom, (s) => ({ ...s, loading: true, error: null }));
-  try {
-    const saved = await putKnowledgeSettings(settings);
-    set(knowledgePageAtom, (s) => ({ ...s, settings: saved, loading: false }));
   } catch (e) {
     set(knowledgePageAtom, (s) => ({
       ...s,
