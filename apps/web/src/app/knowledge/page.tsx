@@ -61,28 +61,30 @@ function CreateDocumentDialog({
       <DialogContent size="lg" className="gap-0">
         <DialogHeader title="新增文档">拖放多个文件到下方区域即可批量上传，文档名称会自动使用文件名。</DialogHeader>
         <DialogBody variant="inset">
-          <div className="space-y-4">
+          <div
+            className="space-y-4"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              setDragActive(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setDragActive(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragActive(false);
+              actions.addFiles(Array.from(e.dataTransfer.files));
+            }}
+          >
             <div
               className={`rounded-xl border-2 border-dashed p-6 transition-colors ${
                 dragActive ? 'border-primary bg-primary/5' : 'border-border bg-muted/20'
               }`}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                setDragActive(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragActive(false);
-                actions.addFiles(Array.from(e.dataTransfer.files));
-              }}
               onClick={() => inputRef.current?.click()}
             >
               <input
@@ -121,7 +123,7 @@ function CreateDocumentDialog({
                     </div>
                   ))
                 ) : (
-                  <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">暂无文件</div>
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">暂无文件</div>
                 )}
               </div>
             </div>
