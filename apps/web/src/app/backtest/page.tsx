@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BacktestRunForm } from './ui/backtest-run-form';
 import { refreshBacktestsListAtom, backtestsListAtom } from '@/models/backtest/list-detail.atom';
+import { useBacktestsPolling } from '@/models/backtest/use-backtests-polling';
 
 export default function BacktestPage() {
   const { items, error } = useAtomValue(backtestsListAtom);
@@ -19,6 +20,8 @@ export default function BacktestPage() {
   useEffect(() => {
     void refreshList();
   }, [refreshList]);
+
+  useBacktestsPolling(refreshList);
 
   return (
     <Page title="回测" description="历史回测与结果分析。">
@@ -55,7 +58,10 @@ export default function BacktestPage() {
                     <TableCell className="font-mono text-xs">{r.id}</TableCell>
                     <TableCell>{r.status}</TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/backtest/${encodeURIComponent(r.id)}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+                      <Link
+                        href={`/backtest/${encodeURIComponent(r.id)}`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
                         详情
                       </Link>
                     </TableCell>

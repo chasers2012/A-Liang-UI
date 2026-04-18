@@ -10,6 +10,7 @@ import {
   deleteBacktestAtomFamily,
   loadBacktestDetailAtomFamily,
 } from '@/models/backtest/list-detail.atom';
+import { useBacktestDetailPolling } from '@/models/backtest/use-backtest-detail-polling';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -262,6 +263,8 @@ export default function BacktestRunDetailPage() {
     if (invalidRunId) return;
     void load();
   }, [invalidRunId, load]);
+
+  useBacktestDetailPolling(stateKey, load);
 
   const onDelete = async () => {
     if (invalidRunId) return;
