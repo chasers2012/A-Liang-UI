@@ -8,7 +8,8 @@ from pydantic import BaseModel, Field, field_validator
 
 class KnowledgeDocumentCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    content: str = Field(min_length=1)
+    content: str | None = None
+    uploaded_path: str | None = None
     source_path: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     auto_index: bool = True

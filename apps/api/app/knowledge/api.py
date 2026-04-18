@@ -1,19 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from fastapi import (  # type: ignore[import-not-found]
-    APIRouter,
-    File,
-    Form,
-    HTTPException,
-    UploadFile,
-)
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.http_errors import http_bad_request
 from app.knowledge import controller
-from app.knowledge.parser import extract_text
 from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
@@ -38,26 +29,6 @@ class KnowledgeReindexResponse(BaseModel):
 @router.post("/documents", response_model=KnowledgeDocumentPublic)
 def create_knowledge_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPublic:
     try:
-        return controller.create_document(body)
-    except ValueError as exc:
-        http_bad_request(exc)
-
-
-@router.post("/documents/upload", response_model=KnowledgeDocumentPublic)
-async def upload_knowledge_document(
-    file: UploadFile = File(...),
-    name: str | None = Form(default=None),
-    source_path: str | None = Form(default=None),
-    auto_index: bool = Form(default=True),
-) -> KnowledgeDocumentPublic:
-    try:
-        content, filename = await extract_text(file)
-        body = KnowledgeDocumentCreateRequest(
-            name=(name or Path(filename).stem or filename or "未命名文档"),
-            content=content,
-            source_path=source_path or filename,
-            auto_index=auto_index,
-        )
         return controller.create_document(body)
     except ValueError as exc:
         http_bad_request(exc)

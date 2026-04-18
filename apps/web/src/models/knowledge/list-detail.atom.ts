@@ -1,13 +1,14 @@
 import { atom } from 'jotai';
 
 import {
+  createKnowledgeDocument,
   deleteKnowledgeDocument,
   getKnowledgeSettings,
   listKnowledgeDocuments,
   putKnowledgeSettings,
   reindexKnowledgeDocument,
   searchKnowledge,
-  uploadKnowledgeDocument,
+  uploadFile,
 } from '@/api/knowledge';
 import type { KnowledgeDocumentPublic, KnowledgeSearchHit, KnowledgeSettings } from '@/models/knowledge/dto';
 
@@ -133,12 +134,15 @@ export const createKnowledgeDocumentAtom = atom(null, async (get, set) => {
   }
   set(knowledgePageAtom, (s) => ({ ...s, error: null }));
   try {
-    const formData = new FormData();
-    formData.append('file', createForm.file);
-    formData.append('name', createForm.name.trim());
-    formData.append('source_path', createForm.source_path.trim());
-    formData.append('auto_index', String(createForm.auto_index));
-    await uploadKnowledgeDocument(formData);
+    const uploadForm = new FormData();
+    uploadForm.append('file', createForm.file);
+    const uploaded = await uploadFile(uploadForm);
+    await createKnowledgeDocument({
+      name: createForm.name.trim(),
+      uploaded_path: uploaded.path,
+      source_path: createForm.source_path.trim() || uploaded.filename,
+      auto_index: createForm.auto_index,
+    });
     set(knowledgePageAtom, (s) => ({ ...s, createForm: defaultCreateForm }));
     await set(refreshKnowledgePageAtom);
   } catch (e) {

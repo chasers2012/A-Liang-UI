@@ -11,7 +11,8 @@ export interface KnowledgeDocumentPublic {
 
 export interface KnowledgeDocumentCreateRequest {
   name: string;
-  content: string;
+  content?: string | null;
+  uploaded_path?: string | null;
   source_path?: string | null;
   metadata?: Record<string, unknown>;
   auto_index?: boolean;

@@ -11,8 +11,18 @@ class KnowledgeParseError(ValueError):
     pass
 
 
-async def extract_text(upload_file: UploadFile) -> tuple[str, str]:
+def _extract_text_from_elements(elements: list[object]) -> str:
+    text = "\n".join(
+        element.text.strip()
+        for element in elements
+        if getattr(element, "text", None) and str(element.text).strip()
+    ).strip()
+    if not text:
+        raise KnowledgeParseError("未能从文件中提取到正文内容")
+    return text
 
+
+async def extract_text(upload_file: UploadFile) -> tuple[str, str]:
     filename = upload_file.filename or "uploaded-file"
     suffix = Path(filename).suffix.lower() or ".bin"
 
@@ -26,12 +36,14 @@ async def extract_text(upload_file: UploadFile) -> tuple[str, str]:
         except Exception as exc:
             raise KnowledgeParseError(f"文件解析失败: {exc}") from exc
 
-    text = "\n".join(
-        element.text.strip()
-        for element in elements
-        if getattr(element, "text", None) and str(element.text).strip()
-    ).strip()
-    if not text:
-        raise KnowledgeParseError("未能从文件中提取到正文内容")
+    return _extract_text_from_elements(list(elements)), filename
 
-    return text, filename
+
+def extract_text_from_path(path: Path) -> tuple[str, str]:
+    if not path.exists():
+        raise KnowledgeParseError(f"文件不存在: {path}")
+    try:
+        elements = partition(filename=str(path))
+    except Exception as exc:
+        raise KnowledgeParseError(f"文件解析失败: {exc}") from exc
+    return _extract_text_from_elements(list(elements)), path.name

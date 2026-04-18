@@ -19,8 +19,14 @@ export function createKnowledgeDocument(body: KnowledgeDocumentCreateRequest): P
   });
 }
 
-export function uploadKnowledgeDocument(formData: FormData): Promise<KnowledgeDocumentPublic> {
-  return apiFetchJson<KnowledgeDocumentPublic>('/knowledge/documents/upload', {
+export type UploadFileResponse = {
+  path: string;
+  filename: string;
+  size: number;
+};
+
+export function uploadFile(formData: FormData): Promise<UploadFileResponse> {
+  return apiFetchJson<UploadFileResponse>('/uploads/file', {
     method: 'POST',
     body: formData,
   });

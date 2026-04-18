@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from contextlib import suppress
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
+
+from workspace import workspace_path
 
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
 from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow
+from app.knowledge.parser import extract_text_from_path
 from app.knowledge.rag import RetrievalResult, VectorStoreAdapter
 from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
@@ -88,29 +92,39 @@ def get_document(document_id: str) -> KnowledgeDocumentPublic | None:
 
 def create_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPublic:
     now = _utcnow()
+    source_path = (body.source_path or "").strip() or None
+    metadata = dict(body.metadata or {})
+
     row = KnowledgeDocumentRow(
         id=str(uuid4()),
         name=body.name,
-        source_path=body.source_path,
+        source_path=source_path or body.uploaded_path,
         status="pending",
         error=None,
-        meta=dict(body.metadata or {}),
+        meta=metadata,
         created_at=now,
         updated_at=now,
     )
     created = KnowledgeStore.add_document(row)
     if body.auto_index:
-        enqueue_index_document(created.id, content=body.content)
+        enqueue_index_document(created.id, uploaded_path=body.uploaded_path, content=body.content)
         refreshed = KnowledgeStore.get_document(created.id)
         if refreshed is not None:
             return _to_public(refreshed)
     return _to_public(created)
 
 
-def enqueue_index_document(document_id: str, *, content: str | None = None) -> SchedulerJobPublic:
+def enqueue_index_document(
+    document_id: str,
+    *,
+    content: str | None = None,
+    uploaded_path: str | None = None,
+) -> SchedulerJobPublic:
     payload = {"document_id": document_id}
     if content is not None:
         payload["content"] = content
+    if uploaded_path is not None:
+        payload["uploaded_path"] = uploaded_path
     return enqueue_oneoff_job(
         task_type=_KNOWLEDGE_INDEX_TASK_TYPE,
         trigger_type="manual",
@@ -136,13 +150,19 @@ def _mark_document_status(document_id: str, *, status: str, error: str | None = 
     KnowledgeStore.update_document(document_id, _apply)
 
 
-def index_document(document_id: str, *, content: str | None = None) -> None:
+def index_document(
+    document_id: str,
+    *,
+    content: str | None = None,
+    uploaded_path: str | None = None,
+) -> None:
     row = KnowledgeStore.get_document(document_id)
     if row is None:
         raise ValueError("文档不存在")
     raw_content = (content or "").strip()
-    if not raw_content:
-        raw_content = str((row.meta or {}).get("content", "")).strip()
+    if not raw_content and uploaded_path:
+        file_path = workspace_path(uploaded_path)
+        raw_content, _ = extract_text_from_path(Path(file_path))
     if not raw_content:
         raise ValueError("文档内容为空，无法建立索引")
 
@@ -209,7 +229,9 @@ def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
         raise ValueError("knowledge.index 任务需要 document_id")
     content = payload.get("content")
     content_text = None if content is None else str(content)
-    index_document(document_id, content=content_text)
+    uploaded_path = payload.get("uploaded_path")
+    uploaded_path_text = None if uploaded_path is None else str(uploaded_path)
+    index_document(document_id, content=content_text, uploaded_path=uploaded_path_text)
     return {"result": "success"}
 
 
