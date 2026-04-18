@@ -104,11 +104,9 @@ function CreateDocumentDialog({
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium">上传文件列表</div>
-              {!createForm.files.length ? (
-                <p className="text-sm text-muted-foreground">还没有选择文件。</p>
-              ) : (
-                <div className="h-64 space-y-2 overflow-y-auto pr-1">
-                  {createForm.files.map((item, index) => (
+              <div className="h-64 space-y-2 overflow-y-auto pr-1">
+                {createForm.files.length > 0 ? (
+                  createForm.files.map((item, index) => (
                     <div
                       key={`${item.file_name}-${index}`}
                       className="flex items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2"
@@ -121,9 +119,11 @@ function CreateDocumentDialog({
                         删除
                       </Button>
                     </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                ) : (
+                  <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">暂无文件</div>
+                )}
+              </div>
             </div>
           </div>
         </DialogBody>
