@@ -4,9 +4,10 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from app.knowledge import controller
-from app.tool.controller import ToolController
-from apps.api.app.knowledge.schemas import KnowledgeSearchHit
+from app.tool.registry import ChatToolRegistry
+
+from .controller import search_knowledge
+from .schemas import KnowledgeSearchHit
 
 
 def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
@@ -29,9 +30,9 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
     description="在知识库中检索与用户问题最相关的文档片段，并返回命中的文档名称和内容。",
 )
 def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
-    hits = controller.search_knowledge(query)
-    return build_chat_context(hits)
+    hits = search_knowledge(query)
+    return build_chat_context(query, hits)
 
 
 def register_knowledge_tools() -> None:
-    ToolController().register_tool(knowledge_search_tool)
+    ChatToolRegistry.instance().register_tool(knowledge_search_tool, category="knowledge")

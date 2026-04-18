@@ -17,9 +17,6 @@ export interface KnowledgeDocumentCreateRequest {
 
 export interface KnowledgeSearchRequest {
   query: string;
-  top_k?: number | null;
-  threshold?: number | null;
-  document_ids?: string[] | null;
 }
 
 export interface KnowledgeSearchHit {

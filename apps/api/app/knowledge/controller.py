@@ -17,7 +17,6 @@ from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
     KnowledgeSearchHit,
-    KnowledgeSearchRequest,
     KnowledgeSettings,
 )
 from app.knowledge.store import KnowledgeStore
@@ -190,16 +189,14 @@ def index_document(
         raise
 
 
-def search_knowledge(body: KnowledgeSearchRequest) -> list[KnowledgeSearchHit]:
+def search_knowledge(query: str) -> list[KnowledgeSearchHit]:
     settings = get_settings()
-    top_k = body.top_k or settings.top_k
-    threshold = settings.threshold if body.threshold is None else body.threshold
     rows = {row.id: row for row in KnowledgeStore.list_documents()}
     retrievals = _adapter().retrieve(
-        query=body.query,
-        top_k=top_k,
-        threshold=threshold,
-        document_ids=body.document_ids,
+        query=query,
+        top_k=settings.top_k,
+        threshold=settings.threshold,
+        document_ids=None,
     )
     return [_retrieval_to_hit(item, rows) for item in retrievals]
 

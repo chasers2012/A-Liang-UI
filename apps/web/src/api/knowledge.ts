@@ -3,7 +3,6 @@ import type {
   KnowledgeDocumentCreateRequest,
   KnowledgeDocumentPublic,
   KnowledgeReindexResponse,
-  KnowledgeSearchRequest,
   KnowledgeSearchResponse,
   KnowledgeSettings,
 } from '@/models/knowledge/dto';
@@ -48,11 +47,8 @@ export function reindexKnowledgeDocument(documentId: string): Promise<KnowledgeR
   });
 }
 
-export function searchKnowledge(body: KnowledgeSearchRequest): Promise<KnowledgeSearchResponse> {
-  return apiFetchJson<KnowledgeSearchResponse>('/knowledge/search', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+export function searchKnowledge(query: string): Promise<KnowledgeSearchResponse> {
+  return apiFetchJson<KnowledgeSearchResponse>(`/knowledge/search?query=${encodeURIComponent(query)}`);
 }
 
 export function getKnowledgeSettings(): Promise<KnowledgeSettings> {

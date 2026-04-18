@@ -9,7 +9,6 @@ from app.knowledge.schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
     KnowledgeSearchHit,
-    KnowledgeSearchRequest,
     KnowledgeSettings,
 )
 
@@ -64,9 +63,9 @@ def reindex_knowledge_document(document_id: str) -> KnowledgeReindexResponse:
         http_bad_request(exc)
 
 
-@router.post("/search", response_model=KnowledgeSearchResponse)
-def search_knowledge(body: KnowledgeSearchRequest) -> KnowledgeSearchResponse:
-    hits = controller.search_knowledge(body)
+@router.get("/search", response_model=KnowledgeSearchResponse)
+def search_knowledge(query: str) -> KnowledgeSearchResponse:
+    hits = controller.search_knowledge(query)
     return KnowledgeSearchResponse(hits=hits)
 
 
