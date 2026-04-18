@@ -107,7 +107,7 @@ function CreateDocumentDialog({
               {!createForm.files.length ? (
                 <p className="text-sm text-muted-foreground">还没有选择文件。</p>
               ) : (
-                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                <div className="h-64 space-y-2 overflow-y-auto pr-1">
                   {createForm.files.map((item, index) => (
                     <div
                       key={`${item.file_name}-${index}`}
