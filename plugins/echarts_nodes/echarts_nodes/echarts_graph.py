@@ -28,7 +28,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 关系图",
     description="节点表 + 边列表 JSON（source/target）生成力导向/环形关系图（echartsy graph）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

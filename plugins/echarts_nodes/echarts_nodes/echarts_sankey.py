@@ -28,7 +28,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 桑基图",
     description="从 DataFrame 多列阶段与流量列生成桑基图（echartsy sankey）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

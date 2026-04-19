@@ -30,7 +30,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 箱线图",
     description="从 DataFrame 生成分组箱线图（分类列 + 数值列，echartsy boxplot）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

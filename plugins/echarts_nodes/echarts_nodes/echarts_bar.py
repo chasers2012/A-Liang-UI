@@ -32,7 +32,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 柱状图",
     description="从 DataFrame 生成柱状图 ECharts option（echartsy）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

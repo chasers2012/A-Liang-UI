@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 直方图",
     description="从 DataFrame 单列生成直方图（echartsy hist）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

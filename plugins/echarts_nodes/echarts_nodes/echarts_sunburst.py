@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 旭日图",
     description="从 DataFrame 层级列生成旭日图（echartsy sunburst）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

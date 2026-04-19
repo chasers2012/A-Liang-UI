@@ -31,7 +31,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 折线图",
     description="从 DataFrame 生成折线图 ECharts option（echartsy）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

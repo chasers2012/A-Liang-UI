@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 雷达图",
     description="宽表：每行一个系列，指定多列为雷达轴指标（echartsy radar）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

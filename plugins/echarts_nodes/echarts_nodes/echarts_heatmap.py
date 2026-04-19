@@ -26,7 +26,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 热力图",
     description="从 DataFrame 生成矩阵热力图（x/y 类目列 + 数值列，echartsy heatmap）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

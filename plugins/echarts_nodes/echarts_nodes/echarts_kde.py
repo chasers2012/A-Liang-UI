@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts KDE 曲线",
     description="从 DataFrame 数值列生成核密度估计曲线（echartsy kde，可选 hue 分组）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

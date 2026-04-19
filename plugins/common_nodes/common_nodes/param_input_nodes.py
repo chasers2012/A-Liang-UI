@@ -15,7 +15,7 @@ from workflow.node_types import DateNodeParam, DateTimeNodeParam
 @workflow_node(
     label="Number",
     description="填写数字并输出",
-    category="common",
+    category="input",
     input_sockets=[
         NumberNodeParam(
             "value",
@@ -36,7 +36,7 @@ class NumberParamsNode:
 @workflow_node(
     label="Boolean",
     description="填写布尔值并输出",
-    category="common",
+    category="input",
     input_sockets=[
         BooleanNodeParam(
             "value", required=False, default=False, label="值", description="输入布尔参数"
@@ -55,7 +55,7 @@ class BooleanParamsNode:
 @workflow_node(
     label="String",
     description="填写字符串并输出",
-    category="common",
+    category="input",
     input_sockets=[
         StringNodeParam(
             "value", required=False, default="", label="值", description="输入字符串参数"
@@ -72,7 +72,7 @@ class StringParamsNode:
 @workflow_node(
     label="Date",
     description="填写日期并输出",
-    category="common",
+    category="input",
     input_sockets=[
         DateNodeParam(
             "value", required=False, default="2026-01-01", label="值", description="输入日期参数"
@@ -89,7 +89,7 @@ class DateParamsNode:
 @workflow_node(
     label="DateTime",
     description="填写时间并输出",
-    category="common",
+    category="input",
     input_sockets=[
         DateTimeNodeParam(
             "value",

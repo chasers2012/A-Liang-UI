@@ -30,7 +30,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 漏斗图",
     description="从 DataFrame 生成漏斗图（阶段名称列 + 数值列，echartsy funnel）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

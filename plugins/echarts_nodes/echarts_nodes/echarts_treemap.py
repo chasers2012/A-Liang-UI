@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 矩形树图",
     description="从 DataFrame 层级列生成 treemap（path 为逗号分隔列名，自顶向下，echartsy treemap）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

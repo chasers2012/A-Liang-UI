@@ -30,7 +30,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 瀑布图",
     description="从 DataFrame 类目列与数值增量列生成瀑布图（echartsy waterfall）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

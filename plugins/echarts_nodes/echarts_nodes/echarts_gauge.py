@@ -26,7 +26,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 仪表盘",
     description="从 DataFrame 单列取最后一行数值作为指针读数（echartsy gauge）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

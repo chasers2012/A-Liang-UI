@@ -26,7 +26,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts 日历热力图",
     description="从 DataFrame 日期列与数值列生成全年日历格热力图（echartsy calendar_heatmap）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",

@@ -27,7 +27,7 @@ from .echarts_common import (
 @workflow_node(
     label="ECharts K 线图",
     description="从 DataFrame OHLC 列生成蜡烛图（echartsy candlestick）",
-    category="factor_evaluation",
+    category="ECharts",
     input_sockets=[
         Socket(
             "data",
