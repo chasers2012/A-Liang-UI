@@ -22,7 +22,18 @@ STRATEGY_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
         "name": "position",
         "required": True,
         "label": "持仓",
-        "description": "MultiIndex(date, asset) 的持仓矩阵。",
+        "description": (
+            "MultiIndex(date, asset) 的持仓矩阵。\n"
+            "\n"
+            "示例：\n"
+            "\n"
+            "| date       | asset | position |\n"
+            "|------------|-------|----------|\n"
+            "| 2026-04-01 | AAPL  | 0.50     |\n"
+            "| 2026-04-01 | MSFT  | 0.50     |\n"
+            "| 2026-04-02 | AAPL  | 0.70     |\n"
+            "| 2026-04-02 | MSFT  | 0.30     |\n"
+        ),
         "value_type": "position_df",
         "render_type": "socket",
     },

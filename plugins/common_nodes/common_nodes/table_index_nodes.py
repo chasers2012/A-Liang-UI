@@ -16,7 +16,22 @@ def _parse_index_names(raw: str) -> list[str]:
 
 @workflow_node(
     label="宽表 → MultiIndex",
-    description="将以日期为行、资产为列的宽表转换为 MultiIndex(date, asset) 长表。",
+    description=(
+        "将宽表转换为 MultiIndex(行索引，列索引) 长表。\n\n"
+        "例如：\n\n"
+        "配置索引名称为`date,asset`，数值列名为`value`时，\n\n"
+        "| date       | A   | B   |\n"
+        "|------------|-----|-----|\n"
+        "| 2026-04-01 | 1.2 | 2.3 |\n"
+        "| 2026-04-02 | 1.4 | 2.1 |\n\n"
+        "转换后会得到：\n\n"
+        "| date       | asset | value |\n"
+        "|------------|-------|-------|\n"
+        "| 2026-04-01 | A     | 1.2   |\n"
+        "| 2026-04-01 | B     | 2.3   |\n"
+        "| 2026-04-02 | A     | 1.4   |\n"
+        "| 2026-04-02 | B     | 2.1   |\n"
+    ),
     category="common",
     input_sockets=[
         Socket(
@@ -24,7 +39,7 @@ def _parse_index_names(raw: str) -> list[str]:
             required=True,
             value_type="dataframe",
             label="宽表",
-            description="行索引通常为日期，列索引通常为资产代码。",
+            description="需要转换的宽表",
         ),
         StringNodeParam(
             "index_names",
@@ -71,7 +86,25 @@ class WideToMultiIndexNode:
 
 @workflow_node(
     label="MultiIndex → 宽表",
-    description="将 MultiIndex(date, asset) 长表转换为按日期展开、资产为列的宽表。",
+    description=(
+        "将 MultiIndex 长表转换为宽表。\n\n"
+        "例如：\n\n"
+        "数值列名为`value`时，\n\n"
+        "\n"
+        "| date       | asset | value |\n"
+        "|------------|-------|-------|\n"
+        "| 2026-04-01 | A     | 1.2   |\n"
+        "| 2026-04-01 | B     | 2.3   |\n"
+        "| 2026-04-02 | A     | 1.4   |\n"
+        "| 2026-04-02 | B     | 2.1   |\n"
+        "\n"
+        "转换后会得到：\n\n"
+        "\n"
+        "| date       | A   | B   |\n"
+        "|------------|-----|-----|\n"
+        "| 2026-04-01 | 1.2 | 2.3 |\n"
+        "| 2026-04-02 | 1.4 | 2.1 |\n"
+    ),
     category="common",
     input_sockets=[
         Socket(

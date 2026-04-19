@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
-import { memo, useId } from "react";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { memo, useId } from 'react';
+import { ArrowUp, Loader2 } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom } from "@/models/chat/session";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom } from '@/models/chat/session';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 export const AiChatComposer = memo(function AiChatComposer() {
   const formId = useId();
@@ -42,11 +41,11 @@ export const AiChatComposer = memo(function AiChatComposer() {
           disabled={isSending}
           onChange={(ev) => setInput(ev.target.value)}
           onKeyDown={(ev) => {
-            if (ev.key !== "Enter" || ev.shiftKey) return;
+            if (ev.key !== 'Enter' || ev.shiftKey) return;
             ev.preventDefault();
             void send();
           }}
-          className="min-h-18 min-w-0 flex-1 resize-y"
+          className="min-h-18 min-w-0 flex-1 resize-y max-h-64"
         />
       </div>
     </div>

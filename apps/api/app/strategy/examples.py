@@ -49,9 +49,9 @@ def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
             },
             {
                 "id": "lag",
-                "type": "strategy_nodes.nodes.LagNode",
+                "type": "common_nodes.lag_node.LagNode",
                 "pos": [1500, 0],
-                "params": {"bars": 1},
+                "params": {"column": "weights", "bars": 1},
             },
             {
                 "id": "out",

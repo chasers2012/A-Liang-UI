@@ -22,8 +22,19 @@ from workflow.node_types import OptionsNodeParam
         ),
     ],
     output_sockets=[Socket("factor", required=True, value_type="factor", label="因子矩阵")],
-    label="因子引用",
-    description="加载并计算因子，输出 date,asset MultiIndex 因子数据。",
+    label="因子计算",
+    description=(
+        "加载并计算因子，输出 date,asset MultiIndex 因子数据。\n"
+        "\n"
+        "示例输出：\n"
+        "\n"
+        "| date       | asset | factor_value |\n"
+        "|------------|-------|--------------|\n"
+        "| 2026-04-01 | AAPL  | 1.23         |\n"
+        "| 2026-04-01 | MSFT  | 0.87         |\n"
+        "| 2026-04-02 | AAPL  | 1.18         |\n"
+        "| 2026-04-02 | MSFT  | 0.91         |\n"
+    ),
     category="common",
 )
 class FactorRefNode:
