@@ -73,6 +73,12 @@ class Factor(ABC):
         if not isinstance(result.index, pd.MultiIndex):
             raise ValueError(f"Factor {self.name}: calc result must have MultiIndex (date, asset)")
 
+        index_names = list(result.index.names)
+        if index_names != ["date", "asset"]:
+            raise ValueError(
+                f"Factor {self.name}: MultiIndex must be exactly (date, asset), got {index_names}"
+            )
+
         if isinstance(result, pd.Series):
             out = pd.DataFrame({self.name: result})
         elif len(result.columns) == 1:

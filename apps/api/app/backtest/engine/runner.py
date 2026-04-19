@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -118,5 +119,11 @@ def run_backtest_and_persist(run_id: str) -> None:
     except Exception as e:
         rec.status = "failed"  # type: ignore[assignment]
         rec.end_at = datetime.now(timezone.utc)
-        rec.error = str(e)
+        rec.error = "\n".join(
+            [
+                f"{type(e).__name__}: {e}",
+                "",
+                traceback.format_exc(),
+            ]
+        )
         BacktestRunsStore.save(rec)
