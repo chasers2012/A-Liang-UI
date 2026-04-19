@@ -21,7 +21,7 @@ from workflow.node_types import OptionsNodeParam
             ],
         ),
     ],
-    output_sockets=[Socket("factor", required=True, value_type="factor", label="因子矩阵")],
+    output_sockets=[Socket("factor", required=True, value_type="dataframe", label="因子矩阵")],
     label="因子计算",
     description=(
         "加载并计算因子，输出 date,asset MultiIndex 因子数据。\n"

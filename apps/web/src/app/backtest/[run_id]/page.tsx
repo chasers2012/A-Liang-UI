@@ -10,7 +10,6 @@ import {
   deleteBacktestAtomFamily,
   loadBacktestDetailAtomFamily,
 } from '@/models/backtest/list-detail.atom';
-import { useBacktestDetailPolling } from '@/models/backtest/use-backtest-detail-polling';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -77,26 +76,23 @@ function asTradeRows(trades: unknown): Array<Record<string, unknown>> {
 function BacktestRunDetailContent({
   invalidRunId,
   run,
-  equity,
-  trades,
   error,
   deleting,
   onDelete,
 }: {
   invalidRunId: boolean;
   run: { id: string; status: string; strategy_id?: string | null; error?: string | null; results: unknown } | null;
-  equity: { equity_curve?: Array<Record<string, unknown>> } | null;
-  trades: { trades?: unknown[] } | null;
   error: string | null;
   deleting: boolean;
   onDelete: () => Promise<void>;
 }) {
-  const equitySeries = useMemo(() => asEquitySeries(equity?.equity_curve ?? []), [equity]);
-  const statsEntries = useMemo(() => {
-    const payload = isRecord(run?.results) ? run.results['stats'] : null;
-    return asStatsEntries(payload);
-  }, [run]);
-  const tradeRows = useMemo(() => asTradeRows(trades?.trades ?? []), [trades]);
+  const payload = isRecord(run?.results) ? run.results : null;
+  const equitySeries = useMemo(
+    () => asEquitySeries((payload?.equity_curve as Array<Record<string, unknown>> | undefined) ?? []),
+    [payload],
+  );
+  const statsEntries = useMemo(() => asStatsEntries(payload?.stats), [payload]);
+  const tradeRows = useMemo(() => asTradeRows((payload?.trades as unknown[] | undefined) ?? []), [payload]);
   const tradeColumns = useMemo(() => {
     const cols = new Set<string>();
     for (const row of tradeRows) {
@@ -255,7 +251,7 @@ export default function BacktestRunDetailPage() {
 
   const [deleting, setDeleting] = useState(false);
   const stateKey = runId ?? '';
-  const { run, equity, trades, error } = useAtomValue(backtestDetailAtomFamily(stateKey));
+  const { run, error } = useAtomValue(backtestDetailAtomFamily(stateKey));
   const load = useSetAtom(loadBacktestDetailAtomFamily(stateKey));
   const doDelete = useSetAtom(deleteBacktestAtomFamily(stateKey));
 
@@ -263,8 +259,6 @@ export default function BacktestRunDetailPage() {
     if (invalidRunId) return;
     void load();
   }, [invalidRunId, load]);
-
-  useBacktestDetailPolling(stateKey, load);
 
   const onDelete = async () => {
     if (invalidRunId) return;
@@ -281,8 +275,6 @@ export default function BacktestRunDetailPage() {
     <BacktestRunDetailContent
       invalidRunId={invalidRunId}
       run={run}
-      equity={equity}
-      trades={trades}
       error={error}
       deleting={deleting}
       onDelete={onDelete}

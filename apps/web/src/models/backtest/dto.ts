@@ -2,7 +2,7 @@
 
 export type BacktestRunStatus = 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
 
-export interface BacktestRunPublic {
+export interface BacktestRunSummary {
   id: string;
   strategy_id: string;
   data_set_id: string;
@@ -11,6 +11,9 @@ export interface BacktestRunPublic {
   start_at: string | null;
   end_at: string | null;
   error: string | null;
+}
+
+export interface BacktestRunDetail extends BacktestRunSummary {
   results: unknown;
 }
 

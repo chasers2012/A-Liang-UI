@@ -7,8 +7,8 @@ from app.strategy.constants import STRATEGY_WORKFLOW_INPUTS, STRATEGY_WORKFLOW_O
 
 def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
     """
-    A minimal, runnable built-in strategy workflow:
-    data_set(ID) -> LoadDataSet -> Factor -> TopK -> EqualWeight -> Rebalance -> Lag -> Position
+    A minimal, runnable built-in strategy workflow using existing nodes:
+    data_set -> LoadDataSet -> FactorRefNode -> RankTopKEqualWeightNode -> RebalanceNode -> position
 
     Contract:
     - workflow input `data_set`: DataSet ID (str)
@@ -31,39 +31,21 @@ def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
             },
             {
                 "id": "rank",
-                "type": "strategy_nodes.nodes.RankTopKNode",
+                "type": "strategy_nodes.nodes.RankTopKEqualWeightNode",
                 "pos": [600, 0],
                 "params": {"k": 10, "ascending": False},
             },
             {
-                "id": "ew",
-                "type": "strategy_nodes.nodes.EqualWeightNode",
-                "pos": [900, 0],
-                "params": {},
-            },
-            {
                 "id": "reb",
                 "type": "strategy_nodes.nodes.RebalanceNode",
-                "pos": [1200, 0],
-                "params": {"freq": "W"},
-            },
-            {
-                "id": "lag",
-                "type": "common_nodes.lag_node.LagNode",
-                "pos": [1500, 0],
-                "params": {"column": "weights", "bars": 1},
-            },
-            {
-                "id": "out",
-                "type": "strategy_nodes.nodes.ToPositionNode",
-                "pos": [1800, 0],
-                "params": {},
+                "pos": [900, 0],
+                "params": {"freq": 1},
             },
         ],
         "links": [
             {
                 "from": {"kind": "workflow_input", "socket": "data_set"},
-                "to": {"kind": "node", "node_id": "load", "socket": "data_set"},
+                "to": {"kind": "node", "node_id": "load", "socket": "data_set_id"},
             },
             {
                 "from": {"kind": "node", "node_id": "load", "socket": "data_set"},
@@ -74,23 +56,11 @@ def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
                 "to": {"kind": "node", "node_id": "rank", "socket": "factor"},
             },
             {
-                "from": {"kind": "node", "node_id": "rank", "socket": "selected"},
-                "to": {"kind": "node", "node_id": "ew", "socket": "selected"},
-            },
-            {
-                "from": {"kind": "node", "node_id": "ew", "socket": "weights"},
+                "from": {"kind": "node", "node_id": "rank", "socket": "weights"},
                 "to": {"kind": "node", "node_id": "reb", "socket": "weights"},
             },
             {
                 "from": {"kind": "node", "node_id": "reb", "socket": "weights"},
-                "to": {"kind": "node", "node_id": "lag", "socket": "weights"},
-            },
-            {
-                "from": {"kind": "node", "node_id": "lag", "socket": "weights"},
-                "to": {"kind": "node", "node_id": "out", "socket": "weights"},
-            },
-            {
-                "from": {"kind": "node", "node_id": "out", "socket": "position"},
                 "to": {"kind": "workflow_output", "socket": "position"},
             },
         ],

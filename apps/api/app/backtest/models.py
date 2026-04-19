@@ -22,4 +22,4 @@ class BacktestRunRow(SQLModel, table=True):
 
     params: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonText))
     error: str | None = None
-    results: Any = Field(default=None, sa_column=Column(JsonText))
+    results_path: str | None = Field(default=None, index=True)

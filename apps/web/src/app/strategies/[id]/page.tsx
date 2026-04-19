@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Pencil } from 'lucide-react';
@@ -9,7 +9,6 @@ import { Pencil } from 'lucide-react';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
 import { cn } from '@/lib/utils';
 import {

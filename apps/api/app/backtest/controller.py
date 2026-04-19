@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
+from contextlib import suppress
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
+
+from workspace import get_workspace_root
 
 from app.backtest.models import BacktestRunRow
 from app.backtest.registry import BacktestRunsStore
-from app.backtest.schemas import BacktestRunPublic, RunBacktestRequest
+from app.backtest.schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
 from app.data_set.controller import get_data_set
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
@@ -18,8 +23,8 @@ class BacktestRunNotFoundError(ValueError):
         self.run_id = run_id
 
 
-def _to_public(row: BacktestRunRow) -> BacktestRunPublic:
-    return BacktestRunPublic(
+def _to_summary(row: BacktestRunRow) -> BacktestRunSummary:
+    return BacktestRunSummary(
         id=row.id,
         strategy_id=row.strategy_id,
         data_set_id=row.data_set_id,
@@ -28,11 +33,24 @@ def _to_public(row: BacktestRunRow) -> BacktestRunPublic:
         start_at=row.start_at,
         end_at=row.end_at,
         error=row.error,
-        results=row.results,
     )
 
 
-def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunPublic:
+def _to_detail(row: BacktestRunRow) -> BacktestRunDetail:
+    return BacktestRunDetail(
+        id=row.id,
+        strategy_id=row.strategy_id,
+        data_set_id=row.data_set_id,
+        status=row.status,  # type: ignore[arg-type]
+        queued_at=row.queued_at,
+        start_at=row.start_at,
+        end_at=row.end_at,
+        error=row.error,
+        results=row.results_path,
+    )
+
+
+def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunSummary:
     strategy = StrategyRegistry.get_by_id(body.strategy_id)
     if strategy is None:
         raise ValueError("策略不存在")
@@ -57,7 +75,7 @@ def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunPublic:
         timeout_seconds=3600,
         dedupe_key=f"backtest-run:{created_row.id}",
     )
-    return _to_public(created_row)
+    return _to_summary(created_row)
 
 
 def list_backtest_runs(
@@ -65,18 +83,30 @@ def list_backtest_runs(
     strategy_id: str | None = None,
     status: str | None = None,
     limit: int | None = None,
-) -> list[BacktestRunPublic]:
+) -> list[BacktestRunSummary]:
     return [
-        _to_public(r)
+        _to_summary(r)
         for r in BacktestRunsStore.list_items(strategy_id=strategy_id, status=status, limit=limit)
     ]
 
 
-def get_backtest_run(run_id: str) -> BacktestRunPublic:
+def get_backtest_run(run_id: str) -> BacktestRunDetail:
     row = BacktestRunsStore.get_item(run_id)
     if row is None:
         raise BacktestRunNotFoundError(run_id)
-    return _to_public(row)
+
+    run = _to_detail(row)
+    results_path = run.results
+    if not results_path:
+        return run
+
+    path = Path(results_path)
+    if not path.is_absolute():
+        path = Path(get_workspace_root()) / path
+    if path.exists():
+        with suppress(json.JSONDecodeError):
+            return run.model_copy(update={"results": json.loads(path.read_text(encoding="utf-8"))})
+    return run
 
 
 def delete_backtest_run(run_id: str) -> None:

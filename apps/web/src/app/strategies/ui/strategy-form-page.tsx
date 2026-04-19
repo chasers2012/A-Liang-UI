@@ -51,6 +51,22 @@ export function StrategyFormPage(props: Props) {
     if (savedId) router.push(`/strategies/${encodeURIComponent(savedId)}`);
   };
 
+  const pageTitle = isEdit ? (
+    <FactorEditPageTitle name={state.name} onNameChange={(name) => void setName(name)} nameAriaLabel="策略名称" />
+  ) : (
+    '新增策略'
+  );
+
+  const pageDescription = isEdit ? (
+    <FactorEditPageDescription
+      description={state.description}
+      onDescriptionChange={(description) => void setDescription(description)}
+      descriptionAriaLabel="策略描述"
+    />
+  ) : (
+    '创建一个新的策略工作流。'
+  );
+
   if (state.loadError) {
     return (
       <Page>
@@ -79,14 +95,27 @@ export function StrategyFormPage(props: Props) {
   }
 
   return (
-    <form id={formId} className="flex min-h-0 flex-1 flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+    <Page
+      title={pageTitle}
+      description={pageDescription}
+      className="max-w-full h-full overflow-hidden"
+      size="full"
+      gap="sm"
+      action={<PageFormHeaderActions formId={formId} submitting={state.submitting} cancelHref={cancelHref} />}
+    >
       {state.formError && (
         <Alert variant="destructive" className="shrink-0">
           <AlertTitle>无法保存</AlertTitle>
           <AlertDescription>{state.formError}</AlertDescription>
         </Alert>
       )}
-      <StrategyWorkflowEditorBlock workflow={state.workflow} canvasKey={canvasKey} canvasRef={canvasRef} />
-    </form>
+      <form
+        id={formId}
+        className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden"
+        onSubmit={(e) => void onSubmit(e)}
+      >
+        <StrategyWorkflowEditorBlock workflow={state.workflow} canvasKey={canvasKey} canvasRef={canvasRef} />
+      </form>
+    </Page>
   );
 }

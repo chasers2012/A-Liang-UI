@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 BacktestRunStatus = Literal["queued", "running", "success", "failed", "cancelled"]
 
 
-class BacktestRunPublic(BaseModel):
+class BacktestRunSummary(BaseModel):
     id: str
     strategy_id: str
     data_set_id: str
@@ -17,6 +17,9 @@ class BacktestRunPublic(BaseModel):
     start_at: datetime | None = None
     end_at: datetime | None = None
     error: str | None = None
+
+
+class BacktestRunDetail(BacktestRunSummary):
     # Summary payload for list/detail; charts fetched via dedicated endpoints.
     results: Any = None
 

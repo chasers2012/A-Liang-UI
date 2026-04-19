@@ -39,24 +39,6 @@ def ensure_example_strategy() -> None:
     now = utc_now_iso()
     wf = example_topk_equal_weight_workflow_dict()
 
-    # Best-effort: pick a default factor if available so the example can run out of box.
-    try:
-        from app.factors.registry import FactorItemsRegistry
-
-        factors = FactorItemsRegistry.list_items()
-        if factors:
-            factor_id = factors[0].id
-            for n in wf.get("nodes", []):
-                if isinstance(n, dict) and n.get("id") == "factor":
-                    params = n.get("params")
-                    if isinstance(params, dict):
-                        params.setdefault("factor_id", factor_id)
-                    else:
-                        n["params"] = {"factor_id": factor_id}
-                    break
-    except Exception:
-        pass
-
     # Avoid importing strategy schemas here to keep startup lightweight and reduce optional deps.
     row = StrategyRow(
         id=EXAMPLE_STRATEGY_ID,

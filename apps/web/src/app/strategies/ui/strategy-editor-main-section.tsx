@@ -35,13 +35,13 @@ export function StrategyWorkflowEditorBlock(props: {
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
-    <div className={cn('flex min-h-0 flex-1 flex-col gap-3', className)}>
+    <div className={cn('flex min-h-0 flex-1 flex-col gap-3 overflow-hidden', className)}>
       {loading ? (
         <p className="text-sm text-muted-foreground">加载节点类型…</p>
       ) : (
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <WorkflowNodeTypeList
-            className="w-[300px]"
+            className="h-full max-h-full w-[300px] shrink-0 overflow-y-auto"
             items={nodeTypes}
             onSelectType={(type) => canvasRef.current?.addNode(type)}
           />
@@ -50,7 +50,7 @@ export function StrategyWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
-            className="h-full flex-1"
+            className="h-full flex-1 min-w-0"
           />
         </div>
       )}

@@ -8,11 +8,11 @@ WORKFLOW_STRATEGY_DOMAIN: str = "strategy"
 
 STRATEGY_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
-        "name": "data_set",
+        "name": "data_set_id",
         "required": True,
         "label": "数据集ID",
         "description": "策略计算与回测使用的数据集 ID",
-        "value_type": "data_set",
+        "value_type": "string",
         "render_type": "socket",
     },
 ]
@@ -34,7 +34,7 @@ STRATEGY_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
             "| 2026-04-02 | AAPL  | 0.70     |\n"
             "| 2026-04-02 | MSFT  | 0.30     |\n"
         ),
-        "value_type": "position_df",
+        "value_type": "dataframe",
         "render_type": "socket",
     },
 ]

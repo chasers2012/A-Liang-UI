@@ -1,23 +1,16 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import {
-  deleteBacktest,
-  getBacktest,
-  getBacktestEquity,
-  getBacktestTrades,
-  listBacktests,
-  runBacktest,
-} from '@/api/backtests';
+import { deleteBacktest, getBacktest, listBacktests, runBacktest } from '@/api/backtests';
 import { listDataSets } from '@/api/data-sets';
 import { listStrategies } from '@/api/strategies';
 import type { DataSetPublic } from '@/models/data-set/dto';
 import type { StrategyListPublic } from '@/models/strategy/dto';
 
-import type { BacktestEquityResponse, BacktestRunPublic, BacktestTradesResponse } from './dto';
+import type { BacktestRunDetail, BacktestRunSummary } from './dto';
 
 export type BacktestsListState = {
-  items: BacktestRunPublic[] | null;
+  items: BacktestRunSummary[] | null;
   error: string | null;
 };
 
@@ -157,9 +150,7 @@ export const submitBacktestRunAtom = atom(null, async (get, set) => {
 });
 
 export type BacktestDetailState = {
-  run: BacktestRunPublic | null;
-  equity: BacktestEquityResponse | null;
-  trades: BacktestTradesResponse | null;
+  run: BacktestRunDetail | null;
   error: string | null;
 };
 
@@ -167,8 +158,6 @@ export const backtestDetailAtomFamily = atomFamily((runId: string) => {
   void runId;
   return atom<BacktestDetailState>({
     run: null,
-    equity: null,
-    trades: null,
     error: null,
   });
 });
@@ -176,26 +165,13 @@ export const backtestDetailAtomFamily = atomFamily((runId: string) => {
 export const loadBacktestDetailAtomFamily = atomFamily((runId: string) =>
   atom(null, async (_get, set) => {
     if (!runId) return;
-    set(backtestDetailAtomFamily(runId), { run: null, equity: null, trades: null, error: null });
+    set(backtestDetailAtomFamily(runId), { run: null, error: null });
     try {
       const run = await getBacktest(runId);
-      let equity: BacktestEquityResponse | null = null;
-      let trades: BacktestTradesResponse | null = null;
-      let auxError: string | null = null;
-
-      try {
-        [equity, trades] = await Promise.all([getBacktestEquity(runId), getBacktestTrades(runId)]);
-      } catch (e) {
-        // Keep primary run visible even if auxiliary endpoints fail.
-        auxError = e instanceof Error ? e.message : String(e);
-      }
-
-      set(backtestDetailAtomFamily(runId), { run, equity, trades, error: auxError });
+      set(backtestDetailAtomFamily(runId), { run, error: null });
     } catch (e) {
       set(backtestDetailAtomFamily(runId), {
         run: null,
-        equity: null,
-        trades: null,
         error: e instanceof Error ? e.message : String(e),
       });
     }

@@ -1,112 +1,83 @@
 from __future__ import annotations
 
-from typing import Any
+import datetime
+from typing import TYPE_CHECKING, Any
+
+import pandas as pd
+
+if TYPE_CHECKING:
+    from vectorbt.portfolio.base import Portfolio
 
 
-def _to_jsonable_sequence(value: Any) -> Any:
-    return [_to_jsonable(v) for v in value]
+def parse_dates(df: pd.DataFrame) -> pd.DataFrame:
+    datetime_cols = df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]"]).columns
+
+    df[datetime_cols] = df[datetime_cols].astype(str)
+    return df
 
 
-def _to_jsonable_numpy(value: Any) -> Any:
-    import numpy as np
+def safe_series_to_dict(s: pd.Series) -> dict:
+    s = s.copy()
 
-    if isinstance(value, np.ndarray):
-        return _to_jsonable(value.tolist())
-    if isinstance(value, np.generic):
-        return _to_jsonable(value.item())
-    return None
+    # 处理 index（如果 index 是 DatetimeIndex）
+    if isinstance(s.index, pd.DatetimeIndex):
+        s.index = s.index.astype(str)
+
+    # 处理 value
+    for k, v in s.items():
+        if isinstance(v, (pd.Timestamp, datetime.datetime, datetime.date, pd.Timedelta)):
+            s[k] = str(v)
+
+    return s.to_dict()
 
 
-def _to_jsonable_pandas(value: Any) -> Any:
-    import pandas as pd
-
+def parse_equity_curve(pf: Portfolio) -> list[dict[str, Any]]:
+    value = pf.value()
+    if value is None:
+        return []
     if isinstance(value, pd.DataFrame):
-        frame = value.copy()
-        frame.columns = [str(c) for c in frame.columns]
-        frame = frame.reset_index()
-        return _to_jsonable(frame.to_dict(orient="records"))
-    if isinstance(value, pd.Series):
-        series = value.copy()
-        frame = series.rename("value").reset_index()
-        return _to_jsonable(frame.to_dict(orient="records"))
-    if isinstance(value, pd.Index):
-        return _to_jsonable(list(value))
-    return None
+        # vectorbt may return per-asset portfolio values; aggregate to a single
+        # total equity series so the frontend chart can render one curve.
+        value = value.sum(axis=1)
+    if not isinstance(value, pd.Series):
+        return []
+
+    frame = value.rename("value").reset_index()
+    frame.columns = ["date", "value"] if len(frame.columns) >= 2 else frame.columns
+
+    return parse_dates(frame).to_dict(orient="records")
 
 
-def _to_jsonable(value: Any) -> Any:
-    if value is None or isinstance(value, (str, int, float, bool)):
-        return value
-    if hasattr(value, "isoformat"):
-        try:
-            return value.isoformat()
-        except Exception:
-            pass
-    if isinstance(value, dict):
-        return {str(k): _to_jsonable(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple, set)):
-        return _to_jsonable_sequence(value)
-    try:
-        converted = _to_jsonable_numpy(value)
-        if converted is not None:
-            return converted
-    except Exception:
-        pass
-    try:
-        converted = _to_jsonable_pandas(value)
-        if converted is not None:
-            return converted
-    except Exception:
-        pass
-    return str(value)
+def parse_stats(pf: Portfolio) -> dict[str, Any]:
+    s = pf.stats()
+    if s is None:
+        return {}
+    if isinstance(s, pd.Series):
+        return safe_series_to_dict(s)
+    if isinstance(s, pd.DataFrame):
+        return parse_dates(s).to_dict(orient="records")
+    return dict(s)
 
 
-def portfolio_to_results_dict(pf: Any, *, max_trades: int = 2000) -> dict[str, Any]:
-    # Equity curve (portfolio value)
-    try:
-        value = pf.value()
-    except Exception:
-        value = None
+def parse_trades(pf: Portfolio) -> list[dict[str, Any]]:
+    recs = pf.trades.records_readable
+    if not isinstance(recs, pd.DataFrame):
+        return []
 
-    equity_curve: list[dict[str, Any]] = []
-    if value is not None:
-        try:
-            import pandas as pd
+    drop_cols = [col for col in ["index", "Exit Trade Id", "Position Id"] if col in recs.columns]
+    if drop_cols:
+        recs = recs.drop(columns=drop_cols)
+    sort_cols = [
+        col for col in ["Entry Timestamp", "Exit Timestamp", "Trade Id"] if col in recs.columns
+    ]
+    if sort_cols:
+        recs = recs.sort_values(by=sort_cols, kind="stable")
+    return parse_dates(recs).reset_index(drop=True).to_dict(orient="records")
 
-            if isinstance(value, pd.DataFrame):
-                # vectorbt may return per-asset portfolio values; aggregate to a single
-                # total equity series so the frontend chart can render one curve.
-                value = value.sum(axis=1)
-            if isinstance(value, pd.Series):
-                frame = value.rename("value").reset_index()
-                frame.columns = ["date", "value"] if len(frame.columns) >= 2 else frame.columns
-                equity_curve = _to_jsonable(frame.to_dict(orient="records"))
-            else:
-                equity_curve = _to_jsonable(value) if value is not None else []
-        except Exception:
-            equity_curve = _to_jsonable(value) if value is not None else []
 
-    # Stats (keep small)
-    stats: dict[str, Any] = {}
-    try:
-        s = pf.stats()
-        stats = _to_jsonable(s) if s is not None else {}
-    except Exception:
-        stats = {}
-
-    # Trades (best-effort, trimmed)
-    trades: list[dict[str, Any]] = []
-    try:
-        recs = pf.trades.records_readable
-        if recs is not None:
-            trades_raw = _to_jsonable(recs)
-            if isinstance(trades_raw, list):
-                trades = trades_raw[: max(0, int(max_trades))]
-    except Exception:
-        trades = []
-
+def portfolio_to_results_dict(pf: Portfolio) -> dict[str, Any]:
     return {
-        "stats": stats,
-        "equity_curve": equity_curve,
-        "trades": trades,
+        "stats": parse_stats(pf),
+        "equity_curve": parse_equity_curve(pf),
+        "trades": parse_trades(pf),
     }

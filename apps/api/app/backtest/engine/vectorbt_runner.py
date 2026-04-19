@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pandas as pd
+
+if TYPE_CHECKING:
+    from vectorbt.portfolio.base import Portfolio
 
 
 def run_portfolio_from_target_weights(
@@ -13,7 +16,7 @@ def run_portfolio_from_target_weights(
     fees: float,
     slippage: float,
     freq: str = "1D",
-) -> Any:
+) -> Portfolio:
     import vectorbt as vbt
 
     # Align inputs

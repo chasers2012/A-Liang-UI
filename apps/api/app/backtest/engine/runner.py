@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pandas as pd
+from workspace import get_workspace_root
 
+from app.backtest.engine.serialize import portfolio_to_results_dict
 from app.backtest.registry import BacktestRunsStore
+
+WORKSPACE_ROOT = Path(get_workspace_root())
+BACKTEST_ARTIFACT_DIR = WORKSPACE_ROOT / "backtest_results"
 
 
 def _position_to_target_weights(position: pd.DataFrame) -> pd.DataFrame:
@@ -33,6 +40,19 @@ def _position_to_target_weights(position: pd.DataFrame) -> pd.DataFrame:
     return weights.fillna(0.0)
 
 
+def _results_path(run_id: str) -> Path:
+    return BACKTEST_ARTIFACT_DIR / f"{run_id}.json"
+
+
+def _write_results_json(run_id: str, results: dict[str, object]) -> str:
+    BACKTEST_ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    path = _results_path(run_id)
+    path.write_text(
+        json.dumps(results, ensure_ascii=False, indent=2, default=str), encoding="utf-8"
+    )
+    return str(path.relative_to(WORKSPACE_ROOT))
+
+
 def run_backtest_and_persist(run_id: str) -> None:
     rec = BacktestRunsStore.get_item(run_id)
     if rec is None:
@@ -44,7 +64,6 @@ def run_backtest_and_persist(run_id: str) -> None:
     from workflow import WorkflowExecutor
 
     from app.backtest.engine.market_data import load_market_data
-    from app.backtest.engine.serialize import portfolio_to_results_dict
     from app.backtest.engine.vectorbt_runner import (
         run_portfolio_from_target_weights,
     )
@@ -68,7 +87,7 @@ def run_backtest_and_persist(run_id: str) -> None:
         executor = WorkflowExecutor()
         node_results = executor.execute(
             strategy.workflow,
-            workflow_inputs={"data_set": rec.data_set_id},
+            workflow_inputs={"data_set_id": rec.data_set_id},
         )
         wf_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
@@ -91,7 +110,7 @@ def run_backtest_and_persist(run_id: str) -> None:
             fees=float(params["fees"]),
             slippage=float(params["slippage"]),
         )
-        rec.results = portfolio_to_results_dict(pf)
+        rec.results_path = _write_results_json(run_id, portfolio_to_results_dict(pf))
         rec.status = "success"  # type: ignore[assignment]
         rec.end_at = datetime.now(timezone.utc)
         rec.error = None

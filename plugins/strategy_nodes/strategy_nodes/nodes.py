@@ -9,12 +9,12 @@ from workflow.node_types import BooleanNodeParam, NumberNodeParam
 
 @workflow_node(
     input_sockets=[
-        Socket("factor", required=True, value_type="factor", label="因子"),
-        Socket("mask", required=False, value_type="signal_df", label="掩码"),
+        Socket("factor", required=True, value_type="dataframe", label="因子"),
+        Socket("mask", required=False, value_type="dataframe", label="掩码"),
         NumberNodeParam("k", required=True, default=10, label="K"),
         BooleanNodeParam("ascending", required=False, default=False, label="升序(小值优先)"),
     ],
-    output_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
+    output_sockets=[Socket("weights", required=True, value_type="dataframe", label="权重")],
     label="TopK 等权",
     description=(
         "按截面排序选前 K，并对选中资产等权分配。\n"
@@ -61,10 +61,10 @@ class RankTopKEqualWeightNode:
 
 @workflow_node(
     input_sockets=[
-        Socket("weights", required=True, value_type="weights_df", label="权重"),
+        Socket("weights", required=True, value_type="dataframe", label="权重"),
         NumberNodeParam("freq", required=True, default=1, label="调仓频率"),
     ],
-    output_sockets=[Socket("weights", required=True, value_type="weights_df", label="权重")],
+    output_sockets=[Socket("weights", required=True, value_type="dataframe", label="权重")],
     label="调仓频率",
     description=(
         "按固定间隔更新权重（非调仓日沿用上一期）。\n"
