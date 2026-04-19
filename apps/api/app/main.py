@@ -1,3 +1,4 @@
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -21,6 +22,7 @@ from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
 from app.knowledge import api as knowledge_router
+from app.log_config import configure_logging
 from app.nodes import api as nodes_router
 from app.preprocessors import api as preprocessors_router
 from app.scheduler import api as scheduler_router
@@ -58,10 +60,13 @@ def _bootstrap_env() -> None:
 
 
 _bootstrap_env()
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    logger.info("Starting quant-agent API application")
     for job in STARTUP_JOBS:
         try:
             if iscoroutinefunction(job):
@@ -71,11 +76,11 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
                 if isawaitable(result):
                     await result  # type: ignore[misc]
         except Exception:
-            # Startup jobs are best-effort; failures should not crash the app.
-            # If needed, integrate with the project's logging solution here.
+            logger.exception("Startup job failed")
             continue
 
     yield
+    logger.info("Stopping quant-agent API application")
 
 
 app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
@@ -126,5 +131,5 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", "8000"))
     log_level = os.getenv("LOG_LEVEL", "info")
 
-    print(f"Starting quant-agent API on http://{host}:{port}")
+    logger.info("Starting quant-agent API on http://%s:%s", host, port)
     uvicorn.run(app, host=host, port=port, log_level=log_level)
