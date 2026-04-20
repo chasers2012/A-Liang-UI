@@ -11,7 +11,9 @@ BacktestRunStatus = Literal["queued", "running", "success", "failed", "cancelled
 class BacktestRunSummary(BaseModel):
     id: str
     strategy_id: str
+    strategy_name: str | None = None
     data_set_id: str
+    data_set_name: str | None = None
     status: BacktestRunStatus
     queued_at: datetime
     start_at: datetime | None = None

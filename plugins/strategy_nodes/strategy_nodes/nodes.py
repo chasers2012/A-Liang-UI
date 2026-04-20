@@ -67,7 +67,7 @@ class RankTopKEqualWeightNode:
     output_sockets=[Socket("weights", required=True, value_type="dataframe", label="权重")],
     label="调仓频率",
     description=(
-        "按固定间隔更新权重（非调仓日沿用上一期）。\n"
+        "按固定间隔更新权重（非调仓日填充为 NaN）。\n"
         "\n"
         "输入示例：\n"
         "\n"
@@ -83,9 +83,9 @@ class RankTopKEqualWeightNode:
         "| date       | AAPL | MSFT | NVDA |\n"
         "|------------|------|------|------|\n"
         "| 2026-04-01 | 0.5  | 0.0  | 0.5  |\n"
-        "| 2026-04-02 | 0.5  | 0.0  | 0.5  |\n"
+        "| 2026-04-02 | NaN  | NaN  | NaN  |\n"
         "| 2026-04-03 | 0.4  | 0.2  | 0.4  |\n"
-        "| 2026-04-04 | 0.4  | 0.2  | 0.4  |\n"
+        "| 2026-04-04 | NaN  | NaN  | NaN  |\n"
     ),
     category="strategy",
 )
@@ -100,7 +100,7 @@ class RebalanceNode:
         mask = pd.Series(False, index=w.index)
         mask.iloc[::freq] = True
         w.loc[~mask.values, :] = pd.NA
-        return w.ffill().fillna(0.0)
+        return w
 
 
 __all__: ClassVar[list[str]] = [

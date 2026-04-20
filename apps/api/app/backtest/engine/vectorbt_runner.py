@@ -21,8 +21,8 @@ def run_portfolio_from_target_weights(
 
     # Align inputs
     px = price.sort_index()
-    w = target_weights.reindex(px.index).fillna(0.0)
-    w = w.reindex(columns=px.columns).fillna(0.0)
+    w = target_weights.reindex(px.index)
+    w = w.reindex(columns=px.columns)
 
     # Use target percent sizing: each timestamp's weights are desired portfolio weights.
     return vbt.Portfolio.from_orders(

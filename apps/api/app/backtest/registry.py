@@ -23,6 +23,20 @@ class BacktestRunsStore:
             session.commit()
 
     @classmethod
+    def update_item(cls, run_id: str, **updates: object) -> BacktestRunRow | None:
+        with get_session() as session:
+            row = session.get(BacktestRunRow, run_id)
+            if row is None:
+                return None
+            for key, value in updates.items():
+                setattr(row, key, value)
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+            session.expunge(row)
+            return row
+
+    @classmethod
     def get_item(cls, run_id: str) -> BacktestRunRow | None:
         with get_session() as session:
             return session.get(BacktestRunRow, run_id)

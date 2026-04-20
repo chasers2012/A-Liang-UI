@@ -5,7 +5,9 @@ export type BacktestRunStatus = 'queued' | 'running' | 'success' | 'failed' | 'c
 export interface BacktestRunSummary {
   id: string;
   strategy_id: string;
+  strategy_name: string | null;
   data_set_id: string;
+  data_set_name: string | null;
   status: BacktestRunStatus;
   queued_at: string;
   start_at: string | null;

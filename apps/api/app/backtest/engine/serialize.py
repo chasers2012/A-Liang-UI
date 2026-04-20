@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -73,6 +74,31 @@ def parse_trades(pf: Portfolio) -> list[dict[str, Any]]:
     if sort_cols:
         recs = recs.sort_values(by=sort_cols, kind="stable")
     return parse_dates(recs).reset_index(drop=True).to_dict(orient="records")
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, (pd.Timestamp, datetime.datetime, datetime.date, pd.Timedelta)):
+        return str(value)
+    if isinstance(value, pd.Series):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, pd.DataFrame):
+        return parse_dates(value.copy()).to_dict(orient="records")
+    if isinstance(value, Mapping):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    if hasattr(value, "to_dict"):
+        try:
+            return _json_safe(value.to_dict())
+        except Exception:
+            pass
+    return str(value)
+
+
+def serialize_node_results(node_results: Any) -> Any:
+    return _json_safe(node_results)
 
 
 def portfolio_to_results_dict(pf: Portfolio) -> dict[str, Any]:

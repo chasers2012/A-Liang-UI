@@ -11,7 +11,7 @@ from workspace import get_workspace_root
 from app.backtest.models import BacktestRunRow
 from app.backtest.registry import BacktestRunsStore
 from app.backtest.schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
-from app.data_set.controller import get_data_set
+from app.data_set.controller import get_data_set, get_data_set_detail
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
 from app.strategy.registry import StrategyRegistry
@@ -24,10 +24,14 @@ class BacktestRunNotFoundError(ValueError):
 
 
 def _to_summary(row: BacktestRunRow) -> BacktestRunSummary:
+    strategy = StrategyRegistry.get_by_id(row.strategy_id)
+    data_set = get_data_set_detail(row.data_set_id)
     return BacktestRunSummary(
         id=row.id,
         strategy_id=row.strategy_id,
+        strategy_name=strategy.name if strategy is not None else None,
         data_set_id=row.data_set_id,
+        data_set_name=data_set.name if data_set is not None else None,
         status=row.status,  # type: ignore[arg-type]
         queued_at=row.queued_at,
         start_at=row.start_at,
@@ -37,10 +41,14 @@ def _to_summary(row: BacktestRunRow) -> BacktestRunSummary:
 
 
 def _to_detail(row: BacktestRunRow) -> BacktestRunDetail:
+    strategy = StrategyRegistry.get_by_id(row.strategy_id)
+    data_set = get_data_set_detail(row.data_set_id)
     return BacktestRunDetail(
         id=row.id,
         strategy_id=row.strategy_id,
+        strategy_name=strategy.name if strategy is not None else None,
         data_set_id=row.data_set_id,
+        data_set_name=data_set.name if data_set is not None else None,
         status=row.status,  # type: ignore[arg-type]
         queued_at=row.queued_at,
         start_at=row.start_at,
@@ -103,9 +111,12 @@ def get_backtest_run(run_id: str) -> BacktestRunDetail:
     path = Path(results_path)
     if not path.is_absolute():
         path = Path(get_workspace_root()) / path
-    if path.exists():
+    portfolio_path = path / "portfolio.json"
+    if portfolio_path.exists():
         with suppress(json.JSONDecodeError):
-            return run.model_copy(update={"results": json.loads(path.read_text(encoding="utf-8"))})
+            return run.model_copy(
+                update={"results": json.loads(portfolio_path.read_text(encoding="utf-8"))}
+            )
     return run
 
 

@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Page } from '@/components/page';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BacktestRunForm } from './ui/backtest-run-form';
@@ -25,13 +24,6 @@ export default function BacktestPage() {
 
   return (
     <Page title="回测" description="历史回测与结果分析。">
-      {error && (
-        <Alert variant="destructive">
-          <AlertTitle>操作失败</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       <BacktestRunForm />
 
       <Card>
@@ -47,7 +39,8 @@ export default function BacktestPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>策略</TableHead>
+                  <TableHead>数据集</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
@@ -55,7 +48,8 @@ export default function BacktestPage() {
               <TableBody>
                 {items.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono text-xs">{r.id}</TableCell>
+                    <TableCell className="text-sm font-medium">{r.strategy_name || '-'}</TableCell>
+                    <TableCell className="text-sm">{r.data_set_name || '-'}</TableCell>
                     <TableCell>{r.status}</TableCell>
                     <TableCell className="text-right">
                       <Link
