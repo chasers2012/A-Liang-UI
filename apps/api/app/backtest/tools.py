@@ -14,6 +14,9 @@ from app.backtest.controller import (
     enqueue_backtest_run as enqueue_backtest_run_controller,
 )
 from app.backtest.controller import (
+    get_backtest_node_output as get_backtest_node_output_controller,
+)
+from app.backtest.controller import (
     get_backtest_run as get_backtest_run_controller,
 )
 from app.backtest.controller import (
@@ -81,6 +84,14 @@ def get_backtest_trades(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "trades": list(payload or [])}
 
 
+@tool(description="按 run_id + node_id 获取该节点在回测中的已保存输出文件内容。")
+def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, Any]:
+    try:
+        return get_backtest_node_output_controller(run_id, node_id)
+    except BacktestRunNotFoundError as e:
+        raise ValueError("回测运行记录不存在") from e
+
+
 BACKTEST_CHAT_TOOLS = [
     run_backtest,
     get_backtest_runs,
@@ -88,4 +99,5 @@ BACKTEST_CHAT_TOOLS = [
     delete_backtest_run,
     get_backtest_equity,
     get_backtest_trades,
+    get_backtest_node_output,
 ]

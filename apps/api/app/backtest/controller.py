@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -118,6 +119,139 @@ def get_backtest_run(run_id: str) -> BacktestRunDetail:
                 update={"results": json.loads(portfolio_path.read_text(encoding="utf-8"))}
             )
     return run
+
+
+def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, object]:
+    return get_backtest_node_output_page(run_id, node_id, file_name=None, page=1, page_size=100)
+
+
+def get_backtest_node_output_page(  # noqa: C901
+    run_id: str,
+    node_id: str,
+    *,
+    file_name: str | None,
+    page: int,
+    page_size: int,
+) -> dict[str, object]:
+    row = BacktestRunsStore.get_item(run_id)
+    if row is None:
+        raise BacktestRunNotFoundError(run_id)
+    if page < 1:
+        raise ValueError("page 必须 >= 1")
+    if page_size < 1:
+        raise ValueError("page_size 必须 >= 1")
+    if page_size > 1000:
+        raise ValueError("page_size 不能超过 1000")
+    if not row.results_path:
+        return {"run_id": run_id, "node_id": node_id, "files": []}
+
+    path = Path(row.results_path)
+    if not path.is_absolute():
+        path = Path(get_workspace_root()) / path
+    node_dir = path / node_id
+    if not node_dir.exists() or not node_dir.is_dir():
+        return {"run_id": run_id, "node_id": node_id, "files": []}
+
+    if file_name:
+        target_file = node_dir / file_name
+        if not target_file.exists() or not target_file.is_file():
+            return {
+                "run_id": run_id,
+                "node_id": node_id,
+                "file": file_name,
+                "kind": "missing",
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_rows": 0,
+                    "total_pages": 0,
+                },
+                "headers": [],
+                "rows": [],
+            }
+        if target_file.suffix.lower() == ".csv":
+            with target_file.open("r", encoding="utf-8", newline="") as f:
+                reader = csv.reader(f)
+                try:
+                    headers = next(reader)
+                except StopIteration:
+                    headers = []
+                    total_rows = 0
+                    rows: list[list[str]] = []
+                else:
+                    total_rows = 0
+                    start = (page - 1) * page_size
+                    end = start + page_size
+                    rows = []
+                    for idx, r in enumerate(reader):
+                        if idx >= start and idx < end:
+                            rows.append([str(v) for v in r])
+                        total_rows += 1
+            total_pages = (total_rows + page_size - 1) // page_size if total_rows > 0 else 0
+            return {
+                "run_id": run_id,
+                "node_id": node_id,
+                "file": file_name,
+                "kind": "csv",
+                "headers": [str(h) for h in headers],
+                "rows": rows,
+                "pagination": {
+                    "page": page,
+                    "page_size": page_size,
+                    "total_rows": total_rows,
+                    "total_pages": total_pages,
+                },
+            }
+        suffix = target_file.suffix.lower()
+        if suffix == ".json":
+            with suppress(json.JSONDecodeError):
+                return {
+                    "run_id": run_id,
+                    "node_id": node_id,
+                    "file": file_name,
+                    "kind": "json",
+                    "content": json.loads(target_file.read_text(encoding="utf-8")),
+                }
+        return {
+            "run_id": run_id,
+            "node_id": node_id,
+            "file": file_name,
+            "kind": "text",
+            "content": target_file.read_text(encoding="utf-8"),
+        }
+
+    files: list[dict[str, object]] = []
+    for file_path in sorted(node_dir.iterdir(), key=lambda p: p.name):
+        if not file_path.is_file():
+            continue
+        suffix = file_path.suffix.lower()
+        if suffix == ".csv":
+            files.append(
+                {
+                    "name": file_path.name,
+                    "kind": "csv",
+                    "content": None,
+                }
+            )
+            continue
+        if suffix == ".json":
+            with suppress(json.JSONDecodeError):
+                files.append(
+                    {
+                        "name": file_path.name,
+                        "kind": "json",
+                        "content": json.loads(file_path.read_text(encoding="utf-8")),
+                    }
+                )
+                continue
+        files.append(
+            {
+                "name": file_path.name,
+                "kind": "text",
+                "content": file_path.read_text(encoding="utf-8"),
+            }
+        )
+    return {"run_id": run_id, "node_id": node_id, "files": files}
 
 
 def delete_backtest_run(run_id: str) -> None:

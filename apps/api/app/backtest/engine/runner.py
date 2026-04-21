@@ -52,7 +52,7 @@ def _write_json(path: Path, data: object) -> None:
 
 def _write_value(path: Path, value: object) -> None:
     if isinstance(value, pd.DataFrame):
-        value.to_csv(path, index=False, encoding="utf-8-sig")
+        value.to_csv(path, index=True, encoding="utf-8-sig")
         return
     if isinstance(value, pd.Series):
         value.to_csv(path, index=True, encoding="utf-8-sig", header=True)

@@ -6,6 +6,8 @@ from app.backtest.controller import (
     BacktestRunNotFoundError,
     delete_backtest_run,
     enqueue_backtest_run,
+    get_backtest_node_output,
+    get_backtest_node_output_page,
     get_backtest_run,
     list_backtest_runs,
 )
@@ -38,6 +40,36 @@ def get_backtest_run_api(run_id: str) -> BacktestRunDetail:
         return get_backtest_run(run_id)
     except BacktestRunNotFoundError:
         raise HTTPException(status_code=404, detail="回测运行记录不存在") from None
+
+
+@router.get("/{run_id}/nodes/{node_id}/output")
+def get_backtest_node_output_api(run_id: str, node_id: str) -> dict[str, object]:
+    try:
+        return get_backtest_node_output(run_id, node_id)
+    except BacktestRunNotFoundError:
+        raise HTTPException(status_code=404, detail="回测运行记录不存在") from None
+
+
+@router.get("/{run_id}/nodes/{node_id}/output/page")
+def get_backtest_node_output_page_api(
+    run_id: str,
+    node_id: str,
+    file: str,
+    page: int = 1,
+    page_size: int = 100,
+) -> dict[str, object]:
+    try:
+        return get_backtest_node_output_page(
+            run_id,
+            node_id,
+            file_name=file,
+            page=page,
+            page_size=page_size,
+        )
+    except BacktestRunNotFoundError:
+        raise HTTPException(status_code=404, detail="回测运行记录不存在") from None
+    except ValueError as e:
+        http_bad_request(e)
 
 
 @router.delete("/{run_id}", status_code=204)

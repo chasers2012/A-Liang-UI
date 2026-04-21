@@ -3,6 +3,8 @@ import type {
   BacktestRunDetail,
   BacktestRunSummary,
   BacktestTradesResponse,
+  BacktestNodeOutputResponse,
+  BacktestNodeCsvPageResponse,
 } from '@/models/backtest/dto';
 import { apiFetchJson } from './client';
 
@@ -42,4 +44,26 @@ export function getBacktestEquity(runId: string): Promise<BacktestEquityResponse
 
 export function getBacktestTrades(runId: string): Promise<BacktestTradesResponse> {
   return apiFetchJson<BacktestTradesResponse>(`/backtests/${encodeURIComponent(runId)}/trades`);
+}
+
+export function getBacktestNodeOutput(runId: string, nodeId: string): Promise<BacktestNodeOutputResponse> {
+  return apiFetchJson<BacktestNodeOutputResponse>(
+    `/backtests/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(nodeId)}/output`,
+  );
+}
+
+export function getBacktestNodeCsvPage(params: {
+  runId: string;
+  nodeId: string;
+  file: string;
+  page: number;
+  pageSize: number;
+}): Promise<BacktestNodeCsvPageResponse> {
+  const qs = new URLSearchParams();
+  qs.set('file', params.file);
+  qs.set('page', String(params.page));
+  qs.set('page_size', String(params.pageSize));
+  return apiFetchJson<BacktestNodeCsvPageResponse>(
+    `/backtests/${encodeURIComponent(params.runId)}/nodes/${encodeURIComponent(params.nodeId)}/output/page?${qs.toString()}`,
+  );
 }

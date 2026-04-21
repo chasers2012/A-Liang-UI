@@ -1,96 +1,75 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { Page } from '@/components/page';
+import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
+import { BacktestWorkflowPanel } from './components/backtest-workflow-panel';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { resolveBacktestStateView } from './components/backtest-state-view';
 import {
   backtestDetailAtomFamily,
   deleteBacktestAtomFamily,
   loadBacktestDetailAtomFamily,
 } from '@/models/backtest/list-detail.atom';
-import { Page } from '@/components/page';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button, buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
+import {
+  loadStrategyDetailAtomFamily,
+  refreshStrategyNodeTypesAtom,
+  strategyDetailAtomFamily,
+  strategyNodeTypesAtom,
+} from '@/models/strategy/list-detail.atom';
+import { toWorkflowNodeTypes } from '@/components/workflow-graph';
+import { asEquitySeries, asStatsEntries, asTradeRows, fmtValue, isRecord } from './utils';
+import type { BacktestRunDetailViewData } from './types';
 
-import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
-
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return Boolean(x) && typeof x === 'object' && !Array.isArray(x);
+function BacktestTabCard({ value, title, children }: { value: string; title: string; children: ReactNode }) {
+  return (
+    <TabsContent value={value} className="mt-0 data-hidden:hidden">
+      <Card>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
+    </TabsContent>
+  );
 }
 
-function asEquitySeries(equity_curve: Array<Record<string, unknown>>): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  for (const row of equity_curve) {
-    const tRaw = row['date'] ?? row['index'] ?? row['datetime'] ?? row['timestamp'] ?? row['t'];
-    const vRaw = row['value'] ?? row['equity'] ?? row['v'];
-    const t = typeof tRaw === 'string' ? Date.parse(tRaw) : Number(tRaw);
-    const v = Number(vRaw);
-    if (!Number.isFinite(t) || !Number.isFinite(v)) continue;
-    out.push([t, v]);
-  }
-  return out;
-}
+/* eslint-disable complexity */
+export default function BacktestRunDetailPage() {
+  const params = useParams<{ run_id?: string | string[] }>();
+  const rawRunId = params?.run_id;
+  const runId = Array.isArray(rawRunId) ? rawRunId[0] : rawRunId;
+  const router = useRouter();
+  const invalidRunId = !runId || runId === 'undefined';
 
-function fmtValue(v: unknown): string {
-  if (v == null) return '-';
-  if (typeof v === 'number') {
-    if (!Number.isFinite(v)) return String(v);
-    const abs = Math.abs(v);
-    if (abs >= 1000) return v.toLocaleString(undefined, { maximumFractionDigits: 4 });
-    return v.toLocaleString(undefined, { maximumFractionDigits: 6 });
-  }
-  if (typeof v === 'string') return v;
-  if (typeof v === 'boolean') return v ? 'true' : 'false';
-  return String(v);
-}
+  const [deleting, setDeleting] = useState(false);
+  const stateKey = runId ?? '';
+  const { run, error } = useAtomValue(backtestDetailAtomFamily(stateKey));
+  const load = useSetAtom(loadBacktestDetailAtomFamily(stateKey));
+  const doDelete = useSetAtom(deleteBacktestAtomFamily(stateKey));
+  const runData = (run as BacktestRunDetailViewData | null) ?? null;
+  const runResults = runData?.results;
+  const payload = isRecord(runResults) ? runResults : null;
+  const strategyId = runData?.strategy_id ?? '';
+  const { row: strategyDetail, error: strategyError } = useAtomValue(strategyDetailAtomFamily(strategyId));
+  const loadStrategyDetail = useSetAtom(loadStrategyDetailAtomFamily(strategyId));
+  const { items: strategyNodeCatalog, error: strategyNodeCatalogError } = useAtomValue(strategyNodeTypesAtom);
+  const refreshStrategyNodeTypes = useSetAtom(refreshStrategyNodeTypesAtom);
 
-function asStatsEntries(stats: unknown): Array<{ key: string; value: unknown }> {
-  if (!stats) return [];
-  if (Array.isArray(stats)) {
-    const out: Array<{ key: string; value: unknown }> = [];
-    for (const row of stats) {
-      if (!isRecord(row)) continue;
-      const keyRaw = row['index'] ?? row['metric'] ?? row['name'] ?? row['key'];
-      const valRaw = row['value'];
-      if (keyRaw == null) continue;
-      out.push({ key: String(keyRaw), value: valRaw });
-    }
-    return out;
-  }
-  if (isRecord(stats)) {
-    return Object.entries(stats).map(([key, value]) => ({ key, value }));
-  }
-  return [];
-}
-
-function asTradeRows(trades: unknown): Array<Record<string, unknown>> {
-  if (!Array.isArray(trades)) return [];
-  return trades.filter((x): x is Record<string, unknown> => isRecord(x));
-}
-
-function BacktestRunDetailContent({
-  invalidRunId,
-  run,
-  error,
-  deleting,
-  onDelete,
-}: {
-  invalidRunId: boolean;
-  run: { id: string; status: string; strategy_id?: string | null; error?: string | null; results: unknown } | null;
-  error: string | null;
-  deleting: boolean;
-  onDelete: () => Promise<void>;
-}) {
-  const payload = isRecord(run?.results) ? run.results : null;
   const equitySeries = useMemo(
     () => asEquitySeries((payload?.equity_curve as Array<Record<string, unknown>> | undefined) ?? []),
     [payload],
   );
+  const strategyNodeTypes = useMemo(() => toWorkflowNodeTypes(strategyNodeCatalog ?? []), [strategyNodeCatalog]);
   const statsEntries = useMemo(() => asStatsEntries(payload?.stats), [payload]);
   const tradeRows = useMemo(() => asTradeRows((payload?.trades as unknown[] | undefined) ?? []), [payload]);
   const tradeColumns = useMemo(() => {
@@ -117,45 +96,45 @@ function BacktestRunDetailContent({
     [equitySeries],
   );
 
-  if (invalidRunId) {
-    return (
-      <Page title="回测详情">
-        <Alert variant="destructive">
-          <AlertTitle>加载失败</AlertTitle>
-          <AlertDescription>无效回测 ID</AlertDescription>
-        </Alert>
-      </Page>
-    );
-  }
+  useEffect(() => {
+    if (invalidRunId) return;
+    void load();
+  }, [invalidRunId, load]);
 
-  if (!run && !error) {
-    return (
-      <Page title="回测详情">
-        <p className="text-sm text-muted-foreground">加载中…</p>
-      </Page>
-    );
-  }
+  useEffect(() => {
+    if (!strategyId) return;
+    void loadStrategyDetail();
+  }, [loadStrategyDetail, strategyId]);
 
-  if (error || !run) {
-    return (
-      <Page title="回测详情">
-        <Alert variant="destructive">
-          <AlertTitle>加载失败</AlertTitle>
-          <AlertDescription>{error ?? '未知错误'}</AlertDescription>
-        </Alert>
-      </Page>
-    );
-  }
+  useEffect(() => {
+    if (!strategyId) return;
+    void refreshStrategyNodeTypes();
+  }, [refreshStrategyNodeTypes, strategyId]);
+
+  const onDelete = async () => {
+    if (invalidRunId) return;
+    setDeleting(true);
+    try {
+      await doDelete();
+      router.push('/backtest');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const stateView = resolveBacktestStateView({ invalidRunId, run: runData, error });
+  if (stateView) return stateView;
+  const safeRun = runData as NonNullable<typeof runData>;
 
   return (
     <Page
-      title={`回测 ${run.id}`}
-      description={`状态：${run.status}`}
+      title={`回测 ${safeRun.id}`}
+      description={`状态：${safeRun.status}`}
       action={
         <div className="flex items-center gap-2">
-          {run.strategy_id ? (
+          {safeRun.strategy_id ? (
             <Link
-              href={`/strategies/${encodeURIComponent(run.strategy_id)}`}
+              href={`/strategies/${encodeURIComponent(safeRun.strategy_id)}`}
               className={cn(buttonVariants({ variant: 'outline' }))}
             >
               查看策略
@@ -171,27 +150,38 @@ function BacktestRunDetailContent({
         </div>
       }
     >
-      {run.error ? (
+      {safeRun.error ? (
         <Alert variant="destructive">
           <AlertTitle>运行失败</AlertTitle>
-          <AlertDescription>{run.error}</AlertDescription>
+          <AlertDescription>{safeRun.error}</AlertDescription>
         </Alert>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>收益曲线</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <EchartsOptionChart option={option} className="h-[360px] min-h-[360px]" />
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="strategy">
+        <TabsList>
+          <TabsTrigger value="strategy">策略</TabsTrigger>
+          <TabsTrigger value="equity">收益曲线</TabsTrigger>
+          <TabsTrigger value="stats">统计</TabsTrigger>
+          <TabsTrigger value="trades">交易记录</TabsTrigger>
+        </TabsList>
+        <BacktestTabCard value="strategy" title="策略">
+          <BacktestWorkflowPanel
+            key={safeRun.id}
+            runId={safeRun.id}
+            strategyId={strategyId}
+            strategyDetail={strategyDetail}
+            strategyError={strategyError}
+            strategyNodeCatalog={strategyNodeCatalog}
+            strategyNodeCatalogError={strategyNodeCatalogError}
+            strategyNodeTypes={strategyNodeTypes}
+          />
+        </BacktestTabCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>统计</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <BacktestTabCard value="equity" title="收益曲线">
+          <EchartsOptionChart option={option} className="h-[360px] min-h-[360px]" />
+        </BacktestTabCard>
+
+        <BacktestTabCard value="stats" title="统计">
           {statsEntries.length ? (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {statsEntries.map((item) => (
@@ -204,14 +194,9 @@ function BacktestRunDetailContent({
           ) : (
             <p className="text-sm text-muted-foreground">暂无统计数据</p>
           )}
-        </CardContent>
-      </Card>
+        </BacktestTabCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>交易记录</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <BacktestTabCard value="trades" title="交易记录">
           {tradeRows.length && tradeColumns.length ? (
             <Table compact>
               <TableHeader>
@@ -236,48 +221,8 @@ function BacktestRunDetailContent({
           ) : (
             <p className="text-sm text-muted-foreground">暂无交易记录</p>
           )}
-        </CardContent>
-      </Card>
+        </BacktestTabCard>
+      </Tabs>
     </Page>
-  );
-}
-
-export default function BacktestRunDetailPage() {
-  const params = useParams<{ run_id?: string | string[] }>();
-  const rawRunId = params?.run_id;
-  const runId = Array.isArray(rawRunId) ? rawRunId[0] : rawRunId;
-  const router = useRouter();
-  const invalidRunId = !runId || runId === 'undefined';
-
-  const [deleting, setDeleting] = useState(false);
-  const stateKey = runId ?? '';
-  const { run, error } = useAtomValue(backtestDetailAtomFamily(stateKey));
-  const load = useSetAtom(loadBacktestDetailAtomFamily(stateKey));
-  const doDelete = useSetAtom(deleteBacktestAtomFamily(stateKey));
-
-  useEffect(() => {
-    if (invalidRunId) return;
-    void load();
-  }, [invalidRunId, load]);
-
-  const onDelete = async () => {
-    if (invalidRunId) return;
-    setDeleting(true);
-    try {
-      await doDelete();
-      router.push('/backtest');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <BacktestRunDetailContent
-      invalidRunId={invalidRunId}
-      run={run}
-      error={error}
-      deleting={deleting}
-      onDelete={onDelete}
-    />
   );
 }

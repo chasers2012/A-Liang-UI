@@ -28,3 +28,30 @@ export interface BacktestTradesResponse {
   run_id: string;
   trades: Array<Record<string, unknown>>;
 }
+
+export interface BacktestNodeOutputFile {
+  name: string;
+  kind: 'json' | 'text' | 'csv';
+  content: unknown;
+}
+
+export interface BacktestNodeOutputResponse {
+  run_id: string;
+  node_id: string;
+  files: BacktestNodeOutputFile[];
+}
+
+export interface BacktestNodeCsvPageResponse {
+  run_id: string;
+  node_id: string;
+  file: string;
+  kind: 'csv' | 'missing';
+  headers: string[];
+  rows: string[][];
+  pagination: {
+    page: number;
+    page_size: number;
+    total_rows: number;
+    total_pages: number;
+  };
+}

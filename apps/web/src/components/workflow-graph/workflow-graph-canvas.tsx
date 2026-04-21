@@ -136,6 +136,7 @@ export type WorkflowGraphCanvasProps = {
   initialGraph: WorkflowGraphPersisted;
   className?: string;
   readOnly?: boolean;
+  onNodeSelect?: (node: { id: string; label?: string | null; outputs?: WorkflowNodeTypeDefinition['outputs'] }) => void;
 };
 
 function pickConnectionNodes(rf: ReactFlowInstance | null, sourceId: string, targetId: string) {
@@ -170,7 +171,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
   );
 }
 export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps>(
-  function WorkflowGraphCanvas({ className, nodeTypes, initialGraph, readOnly = false }, ref) {
+  function WorkflowGraphCanvas({ className, nodeTypes, initialGraph, readOnly = false, onNodeSelect }, ref) {
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(
       () => Object.fromEntries(nodeTypes.map((d) => [d.id, d])),
       [nodeTypes],
@@ -233,6 +234,14 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
         });
       },
       [readOnly],
+    );
+
+    const onNodeClick = useCallback(
+      (_: unknown, node: Node) => {
+        const data = node.data as { label?: string; outputs?: WorkflowNodeTypeDefinition['outputs'] } | undefined;
+        onNodeSelect?.({ id: node.id, label: data?.label ?? null, outputs: data?.outputs ?? [] });
+      },
+      [onNodeSelect],
     );
 
     const isValidConnection: IsValidConnection = useCallback((c) => {
@@ -367,6 +376,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
                 onlyRenderVisibleElements
                 onInit={onInit}
                 onNodeDragStop={onNodeDragStop}
+                onNodeClick={onNodeClick}
                 onConnect={readOnly ? undefined : onConnect}
                 isValidConnection={readOnly ? undefined : isValidConnection}
                 fitView
@@ -374,7 +384,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
                 deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
                 nodesDraggable={!readOnly}
                 nodesConnectable={!readOnly}
-                elementsSelectable={!readOnly}
+                elementsSelectable
                 zoomOnScroll
                 zoomOnPinch
                 panOnScroll={false}
