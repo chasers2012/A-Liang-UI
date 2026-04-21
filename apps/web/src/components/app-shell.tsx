@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
   SidebarContent,
@@ -19,20 +19,13 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
   useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  type SidebarNavLeaf,
-  type SidebarNavMainItem,
-  sidebarNav,
-} from "@/lib/sidebar-nav";
-import { cn } from "@/lib/utils";
-
-export type { SidebarNavLeaf, SidebarNavMainItem };
-export { sidebarNav };
+} from '@/components/ui/sidebar';
+import { SIDEBAR_NAV, type SidebarNavLeaf, type SidebarNavMainItem } from '@/lib/app-navigation';
+import { cn } from '@/lib/utils';
 
 function isNavActive(url: string, pathname: string) {
-  if (url === "#") return false;
-  if (url === "/") return pathname === "/";
+  if (url === '#') return false;
+  if (url === '/') return pathname === '/';
   return pathname === url || pathname.startsWith(`${url}/`);
 }
 
@@ -42,11 +35,10 @@ function navSectionActive(item: SidebarNavMainItem, pathname: string) {
 }
 
 function leafActive(leaf: SidebarNavLeaf, pathname: string) {
-  if (leaf.isActive != null) return leaf.isActive;
   return isNavActive(leaf.url, pathname);
 }
 
-function SidebarNavFromConfig({ navMain }: { navMain: SidebarNavMainItem[] }) {
+function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainItem[] }) {
   const pathname = usePathname();
 
   return (
@@ -114,33 +106,31 @@ function SidebarNavFromConfig({ navMain }: { navMain: SidebarNavMainItem[] }) {
 
 function AppSidebar() {
   const { state, isMobile } = useSidebar();
-  const collapsed = !isMobile && state === "collapsed";
+  const collapsed = !isMobile && state === 'collapsed';
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader
         className={cn(
-          "flex h-14 shrink-0 flex-row items-center border-b border-sidebar-border px-2",
-          collapsed && "hidden",
+          'flex h-14 shrink-0 flex-row items-center border-b border-sidebar-border px-2',
+          collapsed && 'hidden',
         )}
       >
-        <span className="min-w-0 flex-1 truncate px-2 text-sm font-semibold">
-          quant-agent
-        </span>
+        <span className="min-w-0 flex-1 truncate px-2 text-sm font-semibold">quant-agent</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <nav aria-label="主导航">
-              <SidebarNavFromConfig navMain={sidebarNav.navMain} />
+              <SidebarNavFromConfig navMain={SIDEBAR_NAV} />
             </nav>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter
         className={cn(
-          "mt-auto shrink-0 flex-row items-center border-t border-sidebar-border",
-          collapsed ? "justify-center" : "justify-end",
+          'mt-auto shrink-0 flex-row items-center border-t border-sidebar-border',
+          collapsed ? 'justify-center' : 'justify-end',
         )}
       >
         <ThemeToggle />
@@ -155,16 +145,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       className="flex min-h-0 min-w-0 flex-1 h-screen w-screen overflow-hidden"
       style={
         {
-          "--sidebar-width": "14rem",
-          "--sidebar-width-icon": "3.5rem",
+          '--sidebar-width': '14rem',
+          '--sidebar-width-icon': '3.5rem',
         } as React.CSSProperties
       }
     >
       <AppSidebar />
       <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-auto">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
-          {children}
-        </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

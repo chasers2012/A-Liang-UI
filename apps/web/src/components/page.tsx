@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
-import { buildAppHeaderBreadcrumbs, headerBackHref } from '@/components/app-header-nav';
+import { isTopLevelPath, useAppHeaderBreadcrumbs } from '@/components/app-header-nav';
 import { PageAppHeaderContext } from '@/components/page-app-header-context';
 import { PageBreadcrumb } from '@/components/page-breadcrumb';
 import { Button } from '@/components/ui/button';
@@ -88,24 +88,22 @@ function PagePrimaryColumn({
 }
 
 const PageAppHeader = memo(function PageAppHeader({
-  pathname,
   showBackLink,
   action,
   pageHeaderLabel,
 }: {
-  pathname: string;
   showBackLink: boolean;
   action?: ReactNode;
   pageHeaderLabel?: string;
 }) {
   const router = useRouter();
+  const crumbs = useAppHeaderBreadcrumbs();
   const headerCrumbs = useMemo(() => {
-    const crumbs = buildAppHeaderBreadcrumbs(pathname);
     if (!pageHeaderLabel) return crumbs;
     if (crumbs.length === 0) return crumbs;
     const last = crumbs[crumbs.length - 1];
     return [...crumbs.slice(0, -1), { ...last, label: pageHeaderLabel, href: undefined }];
-  }, [pathname, pageHeaderLabel]);
+  }, [crumbs, pageHeaderLabel]);
 
   return (
     <header
@@ -142,7 +140,7 @@ export function Page({
   action,
 }: PageProps) {
   const pathname = usePathname();
-  const canHeaderBack = headerBackHref(pathname) != null;
+  const canHeaderBack = !isTopLevelPath(pathname);
   const pageHeaderLabel = typeof title === 'string' ? title : undefined;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] = useState(false);
@@ -159,12 +157,7 @@ export function Page({
     <PageAppHeaderContext.Provider value={headerContextValue}>
       <div className="flex h-full flex-1 min-w-0 w-full flex-col">
         {showAppHeader ? (
-          <PageAppHeader
-            pathname={pathname}
-            showBackLink={showBackLink}
-            action={action}
-            pageHeaderLabel={pageHeaderLabel}
-          />
+          <PageAppHeader showBackLink={showBackLink} action={action} pageHeaderLabel={pageHeaderLabel} />
         ) : null}
 
         <div className="min-w-0 w-full flex-1 overflow-y-auto">
