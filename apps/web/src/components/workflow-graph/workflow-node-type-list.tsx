@@ -1,10 +1,11 @@
 'use client';
 
-import { Search } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { ChevronRight, Search } from 'lucide-react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Item, ItemContent, ItemDescription, ItemTitle } from '@/components/ui/item';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SectionHeader } from '@/components/section-header';
 import { cn } from '@/lib/utils';
 
@@ -55,9 +56,9 @@ function NodeItem(props: {
         />
       }
     >
-      <ItemContent className="overflow-hidden">
-        <ItemTitle>{item.label}</ItemTitle>
-        {description ? <ItemDescription>{description}</ItemDescription> : null}
+      <ItemContent className="min-h-18 overflow-hidden">
+        <ItemTitle className="truncate">{item.label}</ItemTitle>
+        <ItemDescription className="min-h-10 line-clamp-2">{description || '\u00A0'}</ItemDescription>
       </ItemContent>
     </Item>
   );
@@ -125,7 +126,16 @@ export function WorkflowNodeTypeList(props: {
     dragMime = WORKFLOW_GRAPH_NODE_DRAG_MIME,
   } = props;
   const [innerQuery, setInnerQuery] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => new Set());
   const effectiveQuery = searchQuery ?? innerQuery;
+  const toggleCategory = useCallback((category: string) => {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  }, []);
 
   const filteredItems = useMemo(() => {
     if (!items) return null;
@@ -173,7 +183,7 @@ export function WorkflowNodeTypeList(props: {
           {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
         </div>
         <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-2 pr-1', listClassName)}>
-          <div className="flex flex-col gap-1 pb-2">
+          <div className="flex flex-col pb-2">
             {!filteredItems ? (
               error ? (
                 <p className="p-6 text-sm text-destructive">{error}</p>
@@ -183,27 +193,41 @@ export function WorkflowNodeTypeList(props: {
             ) : filteredItems.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">{emptyText}</p>
             ) : (
-              groupedItems?.map(([category, list]) => (
-                <section key={category} className="space-y-1">
-                  <div className="px-3 pt-3 pb-2 bg-card sticky top-0 left-0 right-0">
-                    <SectionHeader>{category}</SectionHeader>
-                  </div>
-                  {list.map((item) => {
-                    const description = toPlainTextFirstLinePreview(item.description);
-                    return (
-                      <NodeItem
-                        key={item.id}
-                        item={item}
-                        selectedId={selectedId}
-                        description={description}
-                        onSelectId={onSelectId}
-                        draggable={draggable}
-                        dragMime={dragMime}
-                      />
-                    );
-                  })}
-                </section>
-              ))
+              groupedItems?.map(([category, list]) => {
+                const isCollapsed = collapsedCategories.has(category);
+                return (
+                  <Collapsible
+                    key={category}
+                    className="space-y-2"
+                    open={!isCollapsed}
+                    onOpenChange={() => toggleCategory(category)}
+                  >
+                    <CollapsibleTrigger className="sticky left-0 right-0 top-0 z-10 w-full bg-card pl-2 py-3 text-left">
+                      <SectionHeader className="mt-0 flex items-center gap-1 py-0">
+                        <ChevronRight className={cn('size-4 transition-transform', !isCollapsed && 'rotate-90')} />
+                        <span>{category}</span>
+                        <span className="text-xs normal-case text-muted-foreground/80">({list.length})</span>
+                      </SectionHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2">
+                      {list.map((item) => {
+                        const description = toPlainTextFirstLinePreview(item.description);
+                        return (
+                          <NodeItem
+                            key={item.id}
+                            item={item}
+                            selectedId={selectedId}
+                            description={description}
+                            onSelectId={onSelectId}
+                            draggable={draggable}
+                            dragMime={dragMime}
+                          />
+                        );
+                      })}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })
             )}
           </div>
         </div>

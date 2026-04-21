@@ -44,49 +44,6 @@ export type PageProps = {
   size?: 'default' | 'full';
 };
 
-type PagePrimaryColumnProps = {
-  gap: PageGap;
-  size: NonNullable<PageProps['size']>;
-  className?: string;
-  title?: ReactNode;
-  description?: ReactNode;
-  headerClassName?: string;
-  children?: ReactNode;
-};
-
-function PagePrimaryColumn({
-  gap,
-  size,
-  className,
-  title,
-  description,
-  headerClassName,
-  children,
-}: PagePrimaryColumnProps) {
-  const showPageHeading = !!title || !!description;
-
-  return (
-    <div
-      className={cn(
-        'mx-auto flex min-h-full min-w-0 w-full flex-col p-6 md:p-8',
-        size === 'full' ? 'max-w-none' : 'max-w-7xl',
-        gapClass[gap],
-        className,
-      )}
-    >
-      {showPageHeading ? (
-        <header className={cn('shrink-0 space-y-2', headerClassName)}>
-          {title != null ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
-          {description != null ? (
-            <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</div>
-          ) : null}
-        </header>
-      ) : null}
-      {children}
-    </div>
-  );
-}
-
 const PageAppHeader = memo(function PageAppHeader({
   showBackLink,
   action,
@@ -142,6 +99,7 @@ export function Page({
   const pathname = usePathname();
   const canHeaderBack = !isTopLevelPath(pathname);
   const pageHeaderLabel = typeof title === 'string' ? title : undefined;
+  const showPageHeading = !!title || !!description;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] = useState(false);
   const suppressBackLink = useCallback((suppress: boolean) => {
@@ -161,16 +119,24 @@ export function Page({
         ) : null}
 
         <div className="min-w-0 w-full flex-1 overflow-y-auto">
-          <PagePrimaryColumn
-            gap={gap}
-            size={size}
-            className={className}
-            title={title}
-            description={description}
-            headerClassName={headerClassName}
+          <div
+            className={cn(
+              'mx-auto flex min-h-full min-w-0 w-full flex-col p-4',
+              size === 'full' ? 'max-w-none' : 'max-w-7xl',
+              gapClass[gap],
+              className,
+            )}
           >
+            {showPageHeading ? (
+              <header className={cn('shrink-0 space-y-2 mt-4', headerClassName)}>
+                {title != null ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
+                {description != null ? (
+                  <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</div>
+                ) : null}
+              </header>
+            ) : null}
             {children}
-          </PagePrimaryColumn>
+          </div>
         </div>
       </div>
     </PageAppHeaderContext.Provider>
