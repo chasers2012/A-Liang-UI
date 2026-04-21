@@ -3,12 +3,43 @@ from __future__ import annotations
 import csv
 import json
 from contextlib import suppress
+from functools import lru_cache
 from pathlib import Path
 
 import pandas as pd
 from workspace import get_workspace_root
 
 from app.backtest.engine.serialize import portfolio_to_results_dict, serialize_node_results
+
+
+@lru_cache(maxsize=256)
+def _count_csv_data_rows_cached(path_str: str, mtime_ns: int, size: int) -> int:
+    # mtime/size 作为缓存 key 的一部分；文件更新会自动失效
+    _ = (mtime_ns, size)
+    path = Path(path_str)
+    if not path.exists() or not path.is_file():
+        return 0
+
+    # 快速按换行统计总行数。约定：CSV 一行对应一条记录（写入时由 pandas.to_csv 保证）。
+    # total_lines 包含表头行，因此 data_rows = max(total_lines - 1, 0)
+    total_lines = 0
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            total_lines += chunk.count(b"\n")
+
+    # 若文件非空且没有以换行结尾，补 1 行（最后一行）
+    if size > 0:
+        try:
+            with path.open("rb") as f2:
+                f2.seek(-1, 2)
+                last = f2.read(1)
+            if last != b"\n":
+                total_lines += 1
+        except OSError:
+            # 非常小/特殊文件，忽略补偿
+            pass
+
+    return max(total_lines - 1, 0)
 
 
 class BacktestResultManager:
@@ -118,24 +149,49 @@ class BacktestResultManager:
         page: int,
         page_size: int,
     ) -> tuple[list[str], list[list[str]], int, int]:
-        with target_file.open("r", encoding="utf-8", newline="") as f:
+        # 注意：这个接口会被前端频繁分页调用。
+        # 原实现会为计算 total_rows/total_pages 每次把整个 CSV 用 csv.reader 解析一遍，
+        # 在大文件场景非常慢。这里改为：
+        # - 先用二进制快速按换行统计行数（并带缓存）
+        # - 再只用 csv.reader 解析当前页所需的行（start..end）
+
+        # 先快速统计行数（不做 CSV 解析）
+        stat = target_file.stat()
+        total_rows = _count_csv_data_rows_cached(
+            str(target_file),
+            int(stat.st_mtime_ns),
+            int(stat.st_size),
+        )
+        total_pages = (total_rows + page_size - 1) // page_size if total_rows > 0 else 0
+
+        start = (page - 1) * page_size
+        end = start + page_size
+        if total_rows == 0 or start >= total_rows:
+            # 仍需返回 headers（如果存在）以便前端渲染表头
+            with target_file.open("r", encoding="utf-8-sig", newline="") as f:
+                reader = csv.reader(f)
+                with suppress(StopIteration):
+                    headers = next(reader)
+                    return [str(h).lstrip("\ufeff") for h in headers], [], total_rows, total_pages
+            return [], [], total_rows, total_pages
+
+        with target_file.open("r", encoding="utf-8-sig", newline="") as f:
             reader = csv.reader(f)
             try:
                 headers = next(reader)
             except StopIteration:
                 return [], [], 0, 0
 
-            start = (page - 1) * page_size
-            end = start + page_size
-            total_rows = 0
             rows: list[list[str]] = []
+            # 只解析当前页需要的行，避免读取到文件末尾
             for idx, row in enumerate(reader):
-                if start <= idx < end:
-                    rows.append([str(v) for v in row])
-                total_rows += 1
+                if idx < start:
+                    continue
+                if idx >= end:
+                    break
+                rows.append([str(v) for v in row])
 
-        total_pages = (total_rows + page_size - 1) // page_size if total_rows > 0 else 0
-        return [str(h) for h in headers], rows, total_rows, total_pages
+        return [str(h).lstrip("\ufeff") for h in headers], rows, total_rows, total_pages
 
     def _read_node_file(
         self,
