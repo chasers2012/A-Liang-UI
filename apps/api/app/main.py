@@ -8,6 +8,7 @@ from pathlib import Path
 # Imports must follow bootstrap so workspace node packages exist before routers load catalogs.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 import app.persistence
 import app.plugin
@@ -100,6 +101,9 @@ app.include_router(scheduler_router.router)
 app.include_router(strategies_router.router)
 app.include_router(tools_router.router)
 app.include_router(uploads_router.router)
+
+_gzip_min_size = int(os.getenv("GZIP_MIN_SIZE", "1024"))
+app.add_middleware(GZipMiddleware, minimum_size=_gzip_min_size)
 
 _origins = os.getenv("CORS_ORIGINS", "*")
 _origins_list = [o.strip() for o in _origins.split(",") if o.strip()]
