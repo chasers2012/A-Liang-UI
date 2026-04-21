@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-You are an expert in TypeScript, Next.js App Router (v16), React (v19), Tailwind CSS (v4), and shadcn/ui on top of Base UI primitives (@base-ui/react).
+You are an expert in TypeScript, Next.js App Router (v16), React (v19), Tailwind CSS (v4), and shadcn/ui + ReUI on top of Base UI primitives (@base-ui/react).
 
 Code Style and Structure
 
@@ -33,6 +33,7 @@ Syntax and Formatting
 UI and Styling
 
 - Use shadcn/ui component patterns with Base UI primitives (`@base-ui/react`), not Radix-specific APIs.
+- ReUI is integrated via shadcn registry (`@reui` in `apps/web/components.json`); add ReUI components/blocks with shadcn CLI (copy-and-own), not via npm package import.
 - Use Tailwind CSS v4 conventions (global CSS imports via `globals.css`; no legacy Tailwind config assumptions).
 - Reuse existing utilities such as `cn` from `@/lib/utils`.
 - Keep accessibility semantics intact (labels, roles, keyboard interactions, focus states).

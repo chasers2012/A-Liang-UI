@@ -21,5 +21,7 @@
   },
   "menuColor": "default",
   "menuAccent": "bold",
-  "registries": {}
+  "registries": {
+    "@reui": "https://reui.io/r/{style}/{name}.json"
+  }
 }
