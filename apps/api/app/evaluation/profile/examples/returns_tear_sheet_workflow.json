@@ -16,7 +16,7 @@
     },
     {
       "id": "mean_ret",
-      "type": "alphalens_nodes.mean_return_by_quantile_metric.MeanReturnByQuantileMetric",
+      "type": "alphalens_nodes.performance.mean_return_by_quantile_metric.MeanReturnByQuantileMetric",
       "pos": [520, -60],
       "params": {
         "by_date": false,
@@ -27,7 +27,7 @@
     },
     {
       "id": "mean_ret_by_date",
-      "type": "alphalens_nodes.mean_return_by_quantile_metric.MeanReturnByQuantileMetric",
+      "type": "alphalens_nodes.performance.mean_return_by_quantile_metric.MeanReturnByQuantileMetric",
       "pos": [520, 140],
       "params": {
         "by_date": true,
@@ -38,25 +38,25 @@
     },
     {
       "id": "rate_ret",
-      "type": "alphalens_nodes.rate_of_return_metric.RateOfReturnMetric",
+      "type": "alphalens_nodes.performance.rate_of_return_metric.RateOfReturnMetric",
       "pos": [780, -60],
       "params": {}
     },
     {
       "id": "rate_ret_by_date",
-      "type": "alphalens_nodes.rate_of_return_metric.RateOfReturnMetric",
+      "type": "alphalens_nodes.performance.rate_of_return_metric.RateOfReturnMetric",
       "pos": [780, 140],
       "params": {}
     },
     {
       "id": "std_conv",
-      "type": "alphalens_nodes.std_conversion_metric.StdConversionMetric",
+      "type": "alphalens_nodes.performance.std_conversion_metric.StdConversionMetric",
       "pos": [780, 300],
       "params": {}
     },
     {
       "id": "spread",
-      "type": "alphalens_nodes.compute_mean_returns_spread_metric.ComputeMeanReturnsSpreadMetric",
+      "type": "alphalens_nodes.performance.compute_mean_returns_spread_metric.ComputeMeanReturnsSpreadMetric",
       "pos": [1040, 170],
       "params": {
         "upper_quant": 5,
@@ -65,7 +65,7 @@
     },
     {
       "id": "top_bottom_1d",
-      "type": "alphalens_nodes.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
+      "type": "alphalens_nodes.performance.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
       "pos": [1040, 300],
       "params": {
         "period": "1D",
@@ -76,7 +76,7 @@
     },
     {
       "id": "top_bottom_5d",
-      "type": "alphalens_nodes.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
+      "type": "alphalens_nodes.performance.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
       "pos": [1040, 430],
       "params": {
         "period": "5D",
@@ -87,7 +87,7 @@
     },
     {
       "id": "top_bottom_10d",
-      "type": "alphalens_nodes.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
+      "type": "alphalens_nodes.performance.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
       "pos": [1040, 560],
       "params": {
         "period": "10D",
@@ -98,7 +98,7 @@
     },
     {
       "id": "top_bottom_20d",
-      "type": "alphalens_nodes.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
+      "type": "alphalens_nodes.performance.top_bottom_spread_timeseries_metric.TopBottomSpreadTimeSeriesMetric",
       "pos": [1040, 690],
       "params": {
         "period": "20D",
@@ -109,7 +109,7 @@
     },
     {
       "id": "factor_cumret_1d",
-      "type": "alphalens_nodes.factor_cumulative_returns_metric.FactorCumulativeReturnsMetric",
+      "type": "alphalens_nodes.performance.factor_cumulative_returns_metric.FactorCumulativeReturnsMetric",
       "pos": [1040, -240],
       "params": {
         "period": "1D",
@@ -120,7 +120,7 @@
     },
     {
       "id": "cumret_by_quantile_1d",
-      "type": "alphalens_nodes.quantile_cumulative_returns_metric.QuantileCumulativeReturnsMetric",
+      "type": "alphalens_nodes.performance.quantile_cumulative_returns_metric.QuantileCumulativeReturnsMetric",
       "pos": [1040, -60],
       "params": {
         "period": "1D"

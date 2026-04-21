@@ -34,6 +34,9 @@ class EvaluationRunsStore:
         with get_session() as session:
             session.add(row)
             session.commit()
+            # After commit, attributes expire by default; refresh while the session
+            # is still open so callers can use the same instance outside this block.
+            session.refresh(row)
 
     @classmethod
     def delete_by_id(cls, run_id: str) -> bool:

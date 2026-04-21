@@ -38,7 +38,7 @@ from workflow.node_types import BooleanNodeParam, NumberNodeParam
         "| date       | AAPL | MSFT | NVDA |\n"
         "|------------|------|------|------|\n"
         "| 2026-04-01 | 0.5  | 0.0  | 0.5  |\n"
-        "| 2026-04-02 | 1.0  | 0.0  | 0.0  |\n"
+        "| 2026-04-02 | 0.5  | 0.5  | 0.0  |\n"
     ),
     category="strategy",
 )
@@ -50,10 +50,11 @@ class RankTopKEqualWeightNode:
         ascending = bool(kwargs.get("ascending") or False)
         if k <= 0:
             raise ValueError("k 必须 > 0")
+        if mask is not None:
+            mask = mask.fillna(False).astype(bool)
+            f = f.where(mask)
         ranks = f.rank(axis=1, method="first", ascending=ascending)
         selected = (ranks <= k).fillna(False)
-        if mask is not None:
-            selected = selected & mask.fillna(False).astype(bool)
         sel_num = selected.astype(float)
         denom = sel_num.sum(axis=1).replace(0.0, pd.NA)
         return sel_num.div(denom, axis=0).fillna(0.0)

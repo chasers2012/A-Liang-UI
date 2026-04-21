@@ -117,8 +117,6 @@ export default function EditFactorPage() {
           hideDescriptionField
         />
       </form>
-
-      <p className="text-sm text-muted-foreground">保存且源码有变更时会自动生成代码快照。 （评价历史已移除）</p>
     </Page>
   );
 }
