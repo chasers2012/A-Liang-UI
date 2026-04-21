@@ -1,29 +1,20 @@
-"use client";
+'use client';
 
-import { usePathname, useRouter } from "next/navigation";
-import {
-  memo,
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-import { ArrowLeft } from "lucide-react";
+import { usePathname, useRouter } from 'next/navigation';
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { ArrowLeft } from 'lucide-react';
 
-import {
-  buildAppHeaderBreadcrumbs,
-  headerBackHref,
-} from "@/components/app-header-nav";
-import { PageAppHeaderContext } from "@/components/page-app-header-context";
-import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { buildAppHeaderBreadcrumbs, headerBackHref } from '@/components/app-header-nav';
+import { PageAppHeaderContext } from '@/components/page-app-header-context';
+import { PageBreadcrumb } from '@/components/page-breadcrumb';
+import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 const gapClass = {
-  none: "",
-  sm: "gap-4",
-  lg: "gap-8",
+  none: '',
+  sm: 'gap-4',
+  lg: 'gap-8',
 } as const;
 
 export type PageGap = keyof typeof gapClass;
@@ -50,13 +41,12 @@ export type PageProps = {
   /** 顶栏右侧操作区（如保存/取消），与面包屑、返回同一行。 */
   action?: ReactNode;
   /** 主内容区宽度：`default` 为 `max-w-7xl` 居中；`full` 铺满可用宽度。 */
-  size?: "default" | "full";
+  size?: 'default' | 'full';
 };
-
 
 type PagePrimaryColumnProps = {
   gap: PageGap;
-  size: NonNullable<PageProps["size"]>;
+  size: NonNullable<PageProps['size']>;
   className?: string;
   title?: ReactNode;
   description?: ReactNode;
@@ -78,23 +68,17 @@ function PagePrimaryColumn({
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-full min-w-0 w-full flex-col p-6 md:p-8",
-        size === "full" ? "max-w-none" : "max-w-7xl",
+        'mx-auto flex min-h-full min-w-0 w-full flex-col p-6 md:p-8',
+        size === 'full' ? 'max-w-none' : 'max-w-7xl',
         gapClass[gap],
         className,
       )}
     >
       {showPageHeading ? (
-        <header className={cn("shrink-0 space-y-2", headerClassName)}>
-          {title != null ? (
-            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              {title}
-            </h1>
-          ) : null}
+        <header className={cn('shrink-0 space-y-2', headerClassName)}>
+          {title != null ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
           {description != null ? (
-            <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              {description}
-            </div>
+            <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</div>
           ) : null}
         </header>
       ) : null}
@@ -107,16 +91,21 @@ const PageAppHeader = memo(function PageAppHeader({
   pathname,
   showBackLink,
   action,
+  pageHeaderLabel,
 }: {
   pathname: string;
   showBackLink: boolean;
   action?: ReactNode;
+  pageHeaderLabel?: string;
 }) {
   const router = useRouter();
-  const headerCrumbs = useMemo(
-    () => buildAppHeaderBreadcrumbs(pathname),
-    [pathname],
-  );
+  const headerCrumbs = useMemo(() => {
+    const crumbs = buildAppHeaderBreadcrumbs(pathname);
+    if (!pageHeaderLabel) return crumbs;
+    if (crumbs.length === 0) return crumbs;
+    const last = crumbs[crumbs.length - 1];
+    return [...crumbs.slice(0, -1), { ...last, label: pageHeaderLabel, href: undefined }];
+  }, [pathname, pageHeaderLabel]);
 
   return (
     <header
@@ -128,27 +117,17 @@ const PageAppHeader = memo(function PageAppHeader({
         <PageBreadcrumb items={headerCrumbs} variant="header" />
       </div>
       {showBackLink ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0 gap-1.5"
-          onClick={() => router.back()}
-        >
+        <Button type="button" variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => router.back()}>
           <ArrowLeft className="size-4" aria-hidden />
           返回
         </Button>
       ) : null}
       {action != null ? (
-        <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
-          {action}
-        </div>
+        <div className="ml-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">{action}</div>
       ) : null}
     </header>
   );
 });
-
-
 
 export function Page({
   children,
@@ -156,30 +135,25 @@ export function Page({
   title,
   description,
   headerClassName,
-  gap = "lg",
-  size = "default",
+  gap = 'lg',
+  size = 'default',
   showAppHeader = true,
   showAppHeaderBack,
   action,
 }: PageProps) {
   const pathname = usePathname();
   const canHeaderBack = headerBackHref(pathname) != null;
+  const pageHeaderLabel = typeof title === 'string' ? title : undefined;
 
-  const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] =
-    useState(false);
+  const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] = useState(false);
   const suppressBackLink = useCallback((suppress: boolean) => {
     setBackLinkSuppressedByAction(suppress);
   }, []);
 
-  const headerContextValue = useMemo(
-    () => ({ suppressBackLink }),
-    [suppressBackLink],
-  );
+  const headerContextValue = useMemo(() => ({ suppressBackLink }), [suppressBackLink]);
 
   const showBackLink =
-    canHeaderBack &&
-    (showAppHeaderBack === true ||
-      (showAppHeaderBack !== false && !backLinkSuppressedByAction));
+    canHeaderBack && (showAppHeaderBack === true || (showAppHeaderBack !== false && !backLinkSuppressedByAction));
 
   return (
     <PageAppHeaderContext.Provider value={headerContextValue}>
@@ -189,6 +163,7 @@ export function Page({
             pathname={pathname}
             showBackLink={showBackLink}
             action={action}
+            pageHeaderLabel={pageHeaderLabel}
           />
         ) : null}
 
@@ -206,5 +181,5 @@ export function Page({
         </div>
       </div>
     </PageAppHeaderContext.Provider>
-  )
+  );
 }
