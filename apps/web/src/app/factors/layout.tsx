@@ -183,11 +183,10 @@ async function deleteSelectedFactor(params: {
 // eslint-disable-next-line complexity
 export default function FactorsLayout({ children }: { children: ReactNode }) {
   void children;
-  const CREATE_SENTINEL = '__create__';
   const [detailTabValue, setDetailTabValue] = useState('overview');
   const { items, error: loadError } = useAtomValue(factorsListAtom);
   const refresh = useSetAtom(refreshFactorsListAtom);
-  const [selectedIdState, setSelectedIdState] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [sourceSaving, setSourceSaving] = useState(false);
   const [sourceSaveVersion, setSourceSaveVersion] = useState(0);
@@ -209,8 +208,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
   }, [items, searchQuery]);
 
   const effectiveDefaultSelectedId = filteredItems?.[0]?.id ?? null;
-  const isCreating = selectedIdState === CREATE_SENTINEL;
-  const selectedId = isCreating ? null : (selectedIdState ?? effectiveDefaultSelectedId);
+  const isCreating = editing && selectedId === null;
 
   const selectedFactor = useMemo(() => {
     if (!selectedId) return null;
@@ -219,7 +217,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
 
   const onSelectFactor = (id: string) => {
     setEditing(false);
-    setSelectedIdState(id);
+    setSelectedId(id);
   };
 
   return (
@@ -257,7 +255,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
             aria-label="新增因子"
             className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
             onClick={() => {
-              setSelectedIdState(CREATE_SENTINEL);
+              setSelectedId(null);
               setEditing(true);
               setDetailTabValue('source');
             }}
@@ -286,7 +284,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                         disabled={sourceSaving}
                         onClick={() => {
                           setEditing(false);
-                          setSelectedIdState(effectiveDefaultSelectedId);
+                          setSelectedId(effectiveDefaultSelectedId);
                           setDetailTabValue('overview');
                         }}
                       >
@@ -333,7 +331,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                             selectedId,
                             selectedName: selectedFactor?.name ?? selectedId,
                             refresh,
-                            onDeleted: () => setSelectedIdState(null),
+                            onDeleted: () => setSelectedId(null),
                           });
                         }}
                       >
@@ -342,6 +340,8 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                       <Button
                         disabled={!selectedId}
                         onClick={() => {
+                          setDetailTabValue('source');
+                          setSelectedId(selectedId ?? effectiveDefaultSelectedId);
                           setEditing(true);
                         }}
                       >
@@ -379,7 +379,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
               className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
             >
               <FactorSourceEditor
-                factorId={isCreating ? null : selectedId}
+                factorId={selectedId}
                 readonly={!editing}
                 saveVersion={sourceSaveVersion}
                 onSavingChange={setSourceSaving}
@@ -389,7 +389,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                 }}
                 onCreated={(id) => {
                   setEditing(false);
-                  setSelectedIdState(id);
+                  setSelectedId(id);
                   setDetailTabValue('source');
                 }}
               />

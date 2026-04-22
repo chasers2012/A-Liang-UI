@@ -1,9 +1,10 @@
 import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
 import type { FactorEvaluationRowPublic } from '@/models/factor/dto';
-import { factorDetailStateAtomFamily } from '@/models/factor';
+import { factorDetailEvalRowAtom } from '@/models/factor';
 import { useAtomValue } from 'jotai';
 
 import { EvaluationProfileMetricResultsPanel } from './evaluation-profile-metric-results';
+import { evaluationProfilesListItemsAtom } from '@/models/evaluation-profile/list-detail.atom';
 
 function formatIso(iso: string): string {
   return iso.replace('T', ' ').replace('+00:00', ' UTC');
@@ -19,8 +20,9 @@ function hasWorkflowMetricResults(row: FactorEvaluationRowPublic): boolean {
 
 export function FactorEvaluationResult(props: { factorId: string }) {
   const { factorId } = props;
-  const s = useAtomValue(factorDetailStateAtomFamily(factorId));
-  const { evalRow, profiles } = s;
+  void factorId;
+  const evalRow = useAtomValue(factorDetailEvalRowAtom);
+  const profiles = useAtomValue(evaluationProfilesListItemsAtom);
 
   if (!evalRow?.has_evaluation) {
     return <p className="text-sm text-muted-foreground">暂无评价结果。请选择评价方案后点击「运行评价」。</p>;

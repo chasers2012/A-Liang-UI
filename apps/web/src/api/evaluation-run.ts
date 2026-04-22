@@ -4,7 +4,7 @@ import { apiFetchJson } from './client';
 export function runFactorEvaluation(
   factorId: string,
   options: {
-    dataSetId?: string | null;
+    dataSetId?: string;
     evaluationProfileId: string;
   },
 ): Promise<FactorEvaluationRowPublic> {

@@ -3,37 +3,29 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { dataSetsItemsAtom } from '@/models/data-set/panel-detail.atom';
 import { evaluationProfilesListItemsAtom } from '@/models/evaluation-profile/list-detail.atom';
-import { evaluationRunRunningAtom, runEvaluationActionAtom } from '@/models/evaluation-run';
-import { factorDetailStateAtomFamily } from '@/models/factor';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { Loader2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { runEvaluationActionAtom } from '@/models/evaluation-run';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useMemo, useState } from 'react';
 
 const EMPTY_DATA_SETS: { id: string; name: string }[] = [];
 
 export function FactorEvaluationTrigger(props: { factorId: string }) {
   const { factorId } = props;
-  const [state, setState] = useAtom(factorDetailStateAtomFamily(factorId));
+
   const dataSets = useAtomValue(dataSetsItemsAtom) ?? EMPTY_DATA_SETS;
   const evaluationProfiles = useAtomValue(evaluationProfilesListItemsAtom);
-  const evaluationRunning = useAtomValue(evaluationRunRunningAtom);
   const runEvaluation = useSetAtom(runEvaluationActionAtom);
-  const { detail, runProfileId, runDataSetId } = state;
-  const evaluatingThis = evaluationRunning != null && evaluationRunning.factorId === factorId;
-  const evaluatingOther = evaluationRunning != null && evaluationRunning.factorId !== factorId;
-  const otherEvaluatingFactorName = evaluatingOther ? evaluationRunning?.factorName : undefined;
-  const profileSelectItems = useMemo(() => {
-    const o: Record<string, string> = {};
-    for (const p of evaluationProfiles) o[p.id] = p.name;
-    return o;
-  }, [evaluationProfiles]);
-  const dataSetSelectItems = useMemo(() => {
-    const o: Record<string, string> = {};
-    for (const ds of dataSets) o[ds.id] = ds.name;
-    return o;
-  }, [dataSets]);
 
-  const selectDisabled = evaluatingThis || evaluatingOther;
+  const [runProfileId, setRunProfileId] = useState<string>('');
+  const [runDataSetId, setRunDataSetId] = useState<string>('');
+
+  const profileSelectItems = useMemo(() => {
+    return Object.fromEntries(evaluationProfiles.map((p) => [p.id, p.name]));
+  }, [evaluationProfiles]);
+
+  const dataSetSelectItems = useMemo(() => {
+    return Object.fromEntries(dataSets.map((d) => [d.id, d.name]));
+  }, [dataSets]);
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -50,9 +42,9 @@ export function FactorEvaluationTrigger(props: { factorId: string }) {
           value={runProfileId ?? ''}
           onValueChange={(v) => {
             if (!v) return;
-            setState((prev) => ({ ...prev, runProfileId: v }));
+            setRunProfileId(v);
           }}
-          disabled={selectDisabled || evaluationProfiles.length === 0}
+          disabled={evaluationProfiles.length === 0}
         >
           <SelectTrigger id="factor-eval-profile-card" size="sm" className="w-full min-w-0">
             <SelectValue />
@@ -79,9 +71,9 @@ export function FactorEvaluationTrigger(props: { factorId: string }) {
           value={runDataSetId ?? ''}
           onValueChange={(v) => {
             if (!v) return;
-            setState((prev) => ({ ...prev, runDataSetId: v }));
+            setRunDataSetId(v);
           }}
-          disabled={selectDisabled || dataSets.length === 0}
+          disabled={dataSets.length === 0}
         >
           <SelectTrigger id="factor-eval-dataset-card" size="sm" className="w-full min-w-0">
             <SelectValue />
@@ -99,25 +91,16 @@ export function FactorEvaluationTrigger(props: { factorId: string }) {
         type="button"
         variant="secondary"
         className="w-full gap-1.5 sm:w-auto"
-        disabled={selectDisabled}
-        title={evaluatingOther ? `「${otherEvaluatingFactorName ?? ''}」正在评价中` : undefined}
+        disabled={!runProfileId || !runDataSetId}
         onClick={() => {
           void runEvaluation({
             factorId,
-            factorName: detail?.name ?? '当前因子',
             evaluationProfileId: runProfileId,
             dataSetId: runDataSetId,
-            setLoadError: (message) => {
-              setState((prev) => ({ ...prev, loadError: message }));
-            },
-            onSucceeded: (row) => {
-              setState((prev) => ({ ...prev, evalRow: row }));
-            },
           });
         }}
       >
-        {evaluatingThis ? <Loader2 className="size-4 animate-spin" /> : null}
-        {evaluatingThis ? '评价中…' : '运行评价'}
+        运行评价
       </Button>
     </div>
   );
