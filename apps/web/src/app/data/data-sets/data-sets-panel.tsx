@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/page';
-import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { getQuantAgentApiBase } from '@/api/client';
 import { deleteDataSet } from '@/api/data-sets';
 import { cn } from '@/lib/utils';
@@ -29,10 +28,6 @@ export function DataSetsPanel() {
   const [deleteTarget, setDeleteTarget] = useAtom(dataSetsDeleteTargetAtom);
   const [deleting, setDeleting] = useAtom(dataSetsDeletingAtom);
   const refresh = useSetAtom(refreshDataSetsAtom);
-
-  useEffectMicrotask(() => {
-    void refresh();
-  }, [refresh]);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;

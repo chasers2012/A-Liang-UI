@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue } from 'jotai';
 import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -9,23 +9,16 @@ import { buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { getQuantAgentApiBase } from '@/api/client';
 import { cn } from '@/lib/utils';
 import {
   evaluationProfilesListErrorAtom,
   evaluationProfilesListItemsAtom,
-  refreshEvaluationProfilesListAtom,
 } from '@/models/evaluation-profile/list-detail.atom';
 
 export default function EvaluationProfilesPage() {
   const items = useAtomValue(evaluationProfilesListItemsAtom);
   const error = useAtomValue(evaluationProfilesListErrorAtom);
-  const refresh = useSetAtom(refreshEvaluationProfilesListAtom);
-
-  useEffectMicrotask(() => {
-    void refresh();
-  }, [refresh]);
 
   return (
     <Page

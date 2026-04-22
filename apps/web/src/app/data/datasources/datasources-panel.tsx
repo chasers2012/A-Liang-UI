@@ -1,66 +1,64 @@
 'use client';
 
 import Link from 'next/link';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/page';
-import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { ApiError, getQuantAgentApiBase } from '@/api/client';
 import { deleteDatasource, testDatasource } from '@/api/datasources';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import { cn } from '@/lib/utils';
-import { datasourcesPanelAtom, refreshDatasourcesPanelAtom } from '@/models/datasource/panel.atom';
+import {
+  datasourcesBusyIdAtom,
+  datasourcesDeleteTargetAtom,
+  datasourcesDeletingAtom,
+  datasourcesItemsAtom,
+  datasourcesLoadErrorAtom,
+  datasourcesTestHintAtom,
+  refreshDatasourcesPanelAtom,
+} from '@/models/datasource/panel.atom';
 
 import { DatasourceTable } from './ui/datasource-table';
 import { DeleteDatasourceDialog } from './ui/delete-datasource-dialog';
 
 export function DatasourcesPanel() {
-  const [panel, setPanel] = useAtom(datasourcesPanelAtom);
+  const [busyId, setBusyId] = useAtom(datasourcesBusyIdAtom);
+  const [testHint, setTestHint] = useAtom(datasourcesTestHintAtom);
+  const [deleteTarget, setDeleteTarget] = useAtom(datasourcesDeleteTargetAtom);
+  const [deleting, setDeleting] = useAtom(datasourcesDeletingAtom);
+  const [loadError, setLoadError] = useAtom(datasourcesLoadErrorAtom);
+  const items = useAtomValue(datasourcesItemsAtom);
   const refresh = useSetAtom(refreshDatasourcesPanelAtom);
 
-  useEffectMicrotask(() => {
-    void refresh();
-  }, [refresh]);
-
-  const { items, loadError, busyId, testHint, deleteTarget, deleting } = panel;
-
   const runTest = async (ds: DataSourcePublic) => {
-    setPanel((p) => ({ ...p, busyId: ds.id, testHint: null }));
+    setBusyId(ds.id);
+    setTestHint(null);
     try {
       const r = await testDatasource(ds.id);
-      setPanel((p) => ({
-        ...p,
-        testHint: { id: ds.id, ok: r.ok, message: r.message },
-      }));
+      setTestHint({ id: ds.id, ok: r.ok, message: r.message });
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
-      setPanel((p) => ({
-        ...p,
-        testHint: { id: ds.id, ok: false, message: msg },
-      }));
+      setTestHint({ id: ds.id, ok: false, message: msg });
     } finally {
-      setPanel((p) => ({ ...p, busyId: null }));
+      setBusyId(null);
     }
   };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setPanel((p) => ({ ...p, deleting: true }));
+    setDeleting(true);
     try {
       await deleteDatasource(deleteTarget.id);
-      setPanel((p) => ({ ...p, deleteTarget: null }));
+      setDeleteTarget(null);
       await refresh();
     } catch (e) {
-      setPanel((p) => ({
-        ...p,
-        loadError: e instanceof Error ? e.message : String(e),
-      }));
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
-      setPanel((p) => ({ ...p, deleting: false }));
+      setDeleting(false);
     }
   };
 
@@ -110,12 +108,7 @@ export function DatasourcesPanel() {
             <p className="p-6 text-sm text-muted-foreground">暂无数据源。请使用上方「新增数据源」开始配置。</p>
           )}
           {items && items.length > 0 && (
-            <DatasourceTable
-              items={items}
-              busyId={busyId}
-              onTest={runTest}
-              onDelete={(ds) => setPanel((p) => ({ ...p, deleteTarget: ds }))}
-            />
+            <DatasourceTable items={items} busyId={busyId} onTest={runTest} onDelete={(ds) => setDeleteTarget(ds)} />
           )}
         </CardContent>
       </Card>
@@ -123,7 +116,7 @@ export function DatasourcesPanel() {
       <DeleteDatasourceDialog
         target={deleteTarget}
         deleting={deleting}
-        onDismiss={() => setPanel((p) => ({ ...p, deleteTarget: null }))}
+        onDismiss={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />
     </Page>

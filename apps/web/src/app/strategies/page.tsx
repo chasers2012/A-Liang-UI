@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
 import { Plus } from 'lucide-react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue } from 'jotai';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,15 +10,10 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Page } from '@/components/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { refreshStrategiesListAtom, strategiesListAtom } from '@/models/strategy/list-detail.atom';
+import { strategiesListAtom } from '@/models/strategy/list-detail.atom';
 
 export default function StrategiesPage() {
   const { items, error } = useAtomValue(strategiesListAtom);
-  const refresh = useSetAtom(refreshStrategiesListAtom);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   return (
     <Page title="策略" description="策略定义与维护。">
@@ -59,10 +53,15 @@ export default function StrategiesPage() {
                   <TableRow key={s.id}>
                     <TableCell>
                       <span className="font-medium">{s.name}</span>
-                      {s.description ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{s.description}</p> : null}
+                      {s.description ? (
+                        <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{s.description}</p>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link href={`/strategies/${encodeURIComponent(s.id)}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline">
+                      <Link
+                        href={`/strategies/${encodeURIComponent(s.id)}`}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
                         详情
                       </Link>
                     </TableCell>
