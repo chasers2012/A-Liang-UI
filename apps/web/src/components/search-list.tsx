@@ -50,7 +50,7 @@ function SearchListItem<TItem extends SearchListItemBase>(props: {
     >
       <ItemContent className="min-h-18 overflow-hidden">
         <ItemTitle className="truncate">{title}</ItemTitle>
-        <ItemDescription className="min-h-10 line-clamp-2">{description || '\u00A0'}</ItemDescription>
+        <ItemDescription className="min-h-10 line-clamp-2">{description || '-'}</ItemDescription>
       </ItemContent>
     </Item>
   );
@@ -185,7 +185,7 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
           />
           {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
         </div>
-        <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-2 pr-1', listClassName)}>
+        <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-2', listClassName)}>
           <div className="flex flex-col pb-2">
             {!filteredItems ? (
               <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
