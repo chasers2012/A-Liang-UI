@@ -37,35 +37,25 @@ type Props = {
   readOnly?: boolean;
   /** Prefix for input ids to avoid duplicates across routes. */
   idPrefix?: string;
+  /** 渲染哪些字段。 */
+  variant?: 'all' | 'meta' | 'source';
   /** 编辑页在标题处改 name 时为 true */
   hideNameField?: boolean;
   /** 编辑页在副标题区改 description 时为 true */
   hideDescriptionField?: boolean;
 };
 
-export function FactorFormFields({
-  form,
-  setForm,
-  formError,
-  readOnly = false,
-  idPrefix = 'factor',
-  hideNameField = false,
-  hideDescriptionField = false,
-}: Props) {
-  const set = (patch: Partial<FactorFormState>) => {
-    setForm((f) => applyFactorFormPatch(f, patch));
-  };
-
-  const pid = (s: string) => `${idPrefix}-${s}`;
-
+function FactorMetaFields(props: {
+  form: FactorFormState;
+  set: (patch: Partial<FactorFormState>) => void;
+  readOnly: boolean;
+  pid: (s: string) => string;
+  hideNameField: boolean;
+  hideDescriptionField: boolean;
+}) {
+  const { form, set, readOnly, pid, hideNameField, hideDescriptionField } = props;
   return (
-    <div className="space-y-4">
-      {formError && (
-        <Alert variant="destructive">
-          <AlertTitle>无法保存</AlertTitle>
-          <AlertDescription>{formError}</AlertDescription>
-        </Alert>
-      )}
+    <>
       <div className="grid gap-4 sm:grid-cols-2">
         {!hideNameField ? (
           <div className="space-y-2 sm:col-span-2">
@@ -130,14 +120,66 @@ export function FactorFormFields({
           多选常用列；列表含当前 workspace 中因子已用过的列。新列名需符合标识符规则，输入后按 Enter 添加。
         </p>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={pid('source')}>Python 源码</Label>
-        {readOnly ? (
-          <CodeJar id={pid('source')} value={form.source} readOnly />
-        ) : (
-          <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
-        )}
-      </div>
+    </>
+  );
+}
+
+function FactorSourceField(props: {
+  form: FactorFormState;
+  set: (patch: Partial<FactorFormState>) => void;
+  readOnly: boolean;
+  pid: (s: string) => string;
+}) {
+  const { form, set, readOnly, pid } = props;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={pid('source')}>Python 源码</Label>
+      {readOnly ? (
+        <CodeJar id={pid('source')} value={form.source} readOnly />
+      ) : (
+        <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
+      )}
+    </div>
+  );
+}
+
+export function FactorFormFields({
+  form,
+  setForm,
+  formError,
+  readOnly = false,
+  idPrefix = 'factor',
+  variant = 'all',
+  hideNameField = false,
+  hideDescriptionField = false,
+}: Props) {
+  const set = (patch: Partial<FactorFormState>) => {
+    setForm((f) => applyFactorFormPatch(f, patch));
+  };
+
+  const pid = (s: string) => `${idPrefix}-${s}`;
+  const showMeta = variant === 'all' || variant === 'meta';
+  const showSource = variant === 'all' || variant === 'source';
+
+  return (
+    <div className="space-y-4">
+      {formError && (
+        <Alert variant="destructive">
+          <AlertTitle>无法保存</AlertTitle>
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+      {showMeta ? (
+        <FactorMetaFields
+          form={form}
+          set={set}
+          readOnly={readOnly}
+          pid={pid}
+          hideNameField={hideNameField}
+          hideDescriptionField={hideDescriptionField}
+        />
+      ) : null}
+      {showSource ? <FactorSourceField form={form} set={set} readOnly={readOnly} pid={pid} /> : null}
     </div>
   );
 }
