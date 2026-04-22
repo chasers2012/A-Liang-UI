@@ -48,7 +48,7 @@ export function PanelViewNodeTabs(props: { stateKey: string; effectiveNodeId: st
 
   const handleSaveSource = async () => {
     const saved = await saveDetail();
-    if (isCreate && saved) router.push(`/nodes/${encodeURIComponent(saved.id)}`);
+    if (isCreate && saved) router.push(`/nodes?id=${encodeURIComponent(saved.id)}`);
   };
   const handleCancelEdit = () => {
     if (isCreate) return void router.push('/nodes');

@@ -1,27 +1,26 @@
-"use client";
+'use client';
 
-import { useAtomValue, useSetAtom } from "jotai";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useAtomValue, useSetAtom } from 'jotai';
+import { useEffect } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   getNodesDetailStateKey,
   loadNodesDetailPanelAtomFamily,
   NEW_NODE_DETAIL_KEY,
   nodesDetailPanelStateAtomFamily,
-} from "@/models/nodes/detail.atom";
-import { EMPTY_HINT } from "./shared";
-import { PanelViewNodeTabs } from "./panel-view-node-tabs";
+} from '@/models/nodes/detail.atom';
+import { EMPTY_HINT } from './shared';
+import { PanelViewNodeTabs } from './panel-view-node-tabs';
 
 export type NodesNodeDetailPanelProps = {
   nodeId?: string | null;
+  createMode?: boolean;
 };
 
-export function NodesNodeDetailPanel({ nodeId = null }: NodesNodeDetailPanelProps) {
-  const pathname = usePathname();
-  const effectiveNodeId = pathname === "/nodes/new" ? NEW_NODE_DETAIL_KEY : nodeId;
+export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: NodesNodeDetailPanelProps) {
+  const effectiveNodeId = createMode ? NEW_NODE_DETAIL_KEY : nodeId;
   const stateKey = getNodesDetailStateKey(effectiveNodeId);
   const { detail, loadError } = useAtomValue(nodesDetailPanelStateAtomFamily(stateKey));
   const loadDetail = useSetAtom(loadNodesDetailPanelAtomFamily(stateKey));
@@ -46,8 +45,8 @@ export function NodesNodeDetailPanel({ nodeId = null }: NodesNodeDetailPanelProp
     );
   }
 
-  const placeholder = !effectiveNodeId ? EMPTY_HINT : "加载中…";
-  const tabsInstanceKey = `${effectiveNodeId ?? "none"}:${detail?.id ?? "pending"}`;
+  const placeholder = !effectiveNodeId ? EMPTY_HINT : '加载中…';
+  const tabsInstanceKey = `${effectiveNodeId ?? 'none'}:${detail?.id ?? 'pending'}`;
   return (
     <PanelViewNodeTabs
       key={tabsInstanceKey}
@@ -57,4 +56,3 @@ export function NodesNodeDetailPanel({ nodeId = null }: NodesNodeDetailPanelProp
     />
   );
 }
-
