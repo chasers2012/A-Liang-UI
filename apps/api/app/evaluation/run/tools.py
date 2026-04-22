@@ -26,7 +26,7 @@ from app.evaluation.run.controller import (
     description=(
         "执行一次因子评价运行（run）。"
         "入参 profile_id（评价方案 id）与 factor_id（因子 id），"
-        "行为与 POST /evaluation-profiles/{profile_id}/factors/{factor_id}/evaluations/run 一致。"
+        "行为与 POST /evalation/run 一致。"
         "返回本次评价结果摘要与 results 负载。"
     )
 )

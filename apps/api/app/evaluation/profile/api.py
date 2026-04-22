@@ -19,7 +19,7 @@ from app.evaluation.profile.schemas import (
     workflow_public_dict,
 )
 
-router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-profiles"])
+router = APIRouter(prefix="/evaluation/profile", tags=["evaluation/profile"])
 
 
 def _to_public(row: EvaluationProfileRow) -> EvaluationProfilePublic:

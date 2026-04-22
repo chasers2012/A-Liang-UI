@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { EvaluationProfileFormPage } from "../ui/evaluation-profile-form-page";
+import { EvaluationProfileFormPage } from '../ui/evaluation-profile-form-page';
 
 export default function NewEvaluationProfilePage() {
   return <EvaluationProfileFormPage />;

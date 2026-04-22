@@ -218,7 +218,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     ds_row_id = r_ts.json()["id"]
 
     r_prof = client.post(
-        "/evaluation-profiles",
+        "/evaluation/profile",
         json={"name": "prof_ts", "workflow": _profile_workflow_with_data_set(ds_row_id)},
     )
     assert r_prof.status_code == 200
@@ -237,7 +237,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
     fid = r_f.json()["id"]
 
     r_run = client.post(
-        "/evaluation-profiles/evaluations/run",
+        "/evalation/run",
         json={"profile_id": prof_id, "factor_id": fid},
     )
     assert r_run.status_code == 200
@@ -281,7 +281,7 @@ def test_evaluation_run_data_set_id_overrides_profile_params(
     ds_row_id = r_ts.json()["id"]
 
     r_prof = client.post(
-        "/evaluation-profiles",
+        "/evaluation/profile",
         json={
             "name": "prof_bad_embedded_ds",
             "workflow": _profile_workflow_with_data_set("nonexistent-dataset-id"),
@@ -303,7 +303,7 @@ def test_evaluation_run_data_set_id_overrides_profile_params(
     fid = r_f.json()["id"]
 
     r_run = client.post(
-        "/evaluation-profiles/evaluations/run",
+        "/evalation/run",
         json={
             "profile_id": prof_id,
             "factor_id": fid,
@@ -354,14 +354,14 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
     fid = r_f.json()["id"]
 
     r_prof = client.post(
-        "/evaluation-profiles",
+        "/evaluation/profile",
         json={"name": "prof_no_ds", "workflow": _profile_workflow_missing_data_set()},
     )
     assert r_prof.status_code == 200
     prof_id = r_prof.json()["id"]
 
     r_run = client.post(
-        "/evaluation-profiles/evaluations/run",
+        "/evalation/run",
         json={"profile_id": prof_id, "factor_id": fid},
     )
     assert r_run.status_code == 200

@@ -1,4 +1,4 @@
-import type { FactorDetailPublic, FactorEvaluationsSummaryPublic, FactorSummaryPublic } from '@/models/factor/dto';
+import type { FactorDetailPublic, FactorSummaryPublic } from '@/models/factor/dto';
 import { apiFetchJson } from './client';
 
 export function listFactors(): Promise<FactorSummaryPublic[]> {
@@ -31,8 +31,4 @@ export function deleteFactor(id: string): Promise<void> {
   return apiFetchJson<void>(`/factors/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
-}
-
-export function getFactorEvaluationsSummary(): Promise<FactorEvaluationsSummaryPublic> {
-  return apiFetchJson<FactorEvaluationsSummaryPublic>('/factors/evaluations/summary');
 }

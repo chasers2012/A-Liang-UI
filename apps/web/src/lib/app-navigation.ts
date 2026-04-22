@@ -44,11 +44,11 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
       { title: '数据集', url: '/data/data-sets', icon: Table2 },
     ],
   },
+  { title: '评价方案', url: '/profiles', icon: Table2 },
   {
     title: '因子库',
     url: '/factors',
     icon: Library,
-    items: [{ title: '评价方案', url: '/factors/profiles', icon: Table2 }],
   },
   { title: '策略', url: '/strategies', icon: GitBranch },
   { title: '回测', url: '/backtest', icon: LineChart },

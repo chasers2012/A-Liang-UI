@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useAtomValue } from 'jotai';
 import { Loader2 } from 'lucide-react';
 
-import { factorEvaluationRunningAtom } from '@/models/factor';
+import { evaluationRunRunningAtom } from '@/models/evaluation-run';
 import { cn } from '@/lib/utils';
 
 export function FactorEvaluationGlobalStatus() {
-  const running = useAtomValue(factorEvaluationRunningAtom);
+  const running = useAtomValue(evaluationRunRunningAtom);
   if (!running) return null;
 
   return (

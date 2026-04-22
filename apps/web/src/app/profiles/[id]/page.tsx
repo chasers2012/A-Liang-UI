@@ -1,27 +1,27 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useAtomValue, useSetAtom } from "jotai";
-import { Pencil } from "lucide-react";
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { Pencil } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
 
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { cn } from "@/lib/utils";
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { cn } from '@/lib/utils';
 import {
   evaluationProfileDetailAtomFamily,
   loadEvaluationProfileDetailAtomFamily,
-} from "@/models/evaluation-profile/list-detail.atom";
+} from '@/models/evaluation-profile/list-detail.atom';
 
-import { Page } from "@/components/page";
-import { ProfileDetailWorkflowCard } from "../ui/profile-detail-workflow-card";
+import { Page } from '@/components/page';
+import { ProfileDetailWorkflowCard } from '../ui/profile-detail-workflow-card';
 
 export default function EvaluationProfileDetailPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
   const { row, error } = useAtomValue(evaluationProfileDetailAtomFamily(id));
   const load = useSetAtom(loadEvaluationProfileDetailAtomFamily(id));
 
@@ -42,8 +42,8 @@ export default function EvaluationProfileDetailPage() {
   if (error || !row) {
     return (
       <Page>
-        <Alert variant={error ? "destructive" : "default"}>
-          <AlertTitle>{error ? "加载失败" : "加载中…"}</AlertTitle>
+        <Alert variant={error ? 'destructive' : 'default'}>
+          <AlertTitle>{error ? '加载失败' : '加载中…'}</AlertTitle>
           {error ? <AlertDescription>{error}</AlertDescription> : null}
         </Alert>
       </Page>
@@ -53,13 +53,13 @@ export default function EvaluationProfileDetailPage() {
   return (
     <Page
       title={row.name}
-      description={row.description || "无描述"}
+      description={row.description || '无描述'}
       className="max-w-full"
       gap="sm"
       action={
         <Link
-          href={`/factors/profiles/${encodeURIComponent(id)}/edit`}
-          className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+          href={`/profiles/${encodeURIComponent(id)}/edit`}
+          className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
         >
           <Pencil className="size-4" />
           编辑

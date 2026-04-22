@@ -44,14 +44,14 @@ def test_evaluation_run_no_datasource(client):
     fid = r.json()["id"]
 
     r_p = client.post(
-        "/evaluation-profiles",
+        "/evaluation/profile",
         json={"name": "p_run", "workflow": _profile_workflow_missing_data_set()},
     )
     assert r_p.status_code == 200
     pid = r_p.json()["id"]
 
     r2 = client.post(
-        "/evaluation-profiles/evaluations/run",
+        "/evalation/run",
         json={"profile_id": pid, "factor_id": fid},
     )
     assert r2.status_code == 200

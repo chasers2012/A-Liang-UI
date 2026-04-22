@@ -33,6 +33,8 @@ type Props = {
   form: FactorFormState;
   setForm: Dispatch<SetStateAction<FactorFormState>>;
   formError: string | null;
+  /** 只读模式：仅展示内容，不允许编辑。 */
+  readOnly?: boolean;
   /** Prefix for input ids to avoid duplicates across routes. */
   idPrefix?: string;
   /** 编辑页在标题处改 name 时为 true */
@@ -45,6 +47,7 @@ export function FactorFormFields({
   form,
   setForm,
   formError,
+  readOnly = false,
   idPrefix = 'factor',
   hideNameField = false,
   hideDescriptionField = false,
@@ -71,6 +74,7 @@ export function FactorFormFields({
               id={pid('name')}
               className="font-mono text-sm"
               value={form.name}
+              readOnly={readOnly}
               onChange={(e) => set({ name: e.target.value })}
               placeholder="my_factor"
               autoComplete="off"
@@ -83,7 +87,11 @@ export function FactorFormFields({
         ) : null}
         <div className="min-w-0 space-y-2">
           <Label htmlFor={pid('group')}>分组 group</Label>
-          <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => set({ group })} />
+          {readOnly ? (
+            <Input id={pid('group')} value={form.group} readOnly className="font-mono text-sm" />
+          ) : (
+            <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => set({ group })} />
+          )}
           <p className="text-xs text-muted-foreground">可选已有分组或输入新名称。</p>
         </div>
         <div className="min-w-0 space-y-2">
@@ -94,6 +102,7 @@ export function FactorFormFields({
             min={1}
             className="font-mono"
             value={form.window}
+            readOnly={readOnly}
             onChange={(e) => set({ window: e.target.value })}
           />
         </div>
@@ -105,24 +114,33 @@ export function FactorFormFields({
             id={pid('desc')}
             rows={2}
             value={form.description}
+            readOnly={readOnly}
             onChange={(e) => set({ description: e.target.value })}
           />
         </div>
       ) : null}
       <div className="space-y-2">
         <Label htmlFor={pid('deps')}>依赖列 dependencies</Label>
-        <FactorDependenciesCombobox
-          id={pid('deps')}
-          valueCsv={form.dependencies_csv}
-          onValueCsvChange={(csv) => set({ dependencies_csv: csv })}
-        />
+        {readOnly ? (
+          <Input id={pid('deps')} value={form.dependencies_csv} readOnly className="font-mono text-sm" />
+        ) : (
+          <FactorDependenciesCombobox
+            id={pid('deps')}
+            valueCsv={form.dependencies_csv}
+            onValueCsvChange={(csv) => set({ dependencies_csv: csv })}
+          />
+        )}
         <p className="text-xs text-muted-foreground">
           多选常用列；列表含当前 workspace 中因子已用过的列。新列名需符合标识符规则，输入后按 Enter 添加。
         </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor={pid('source')}>Python 源码</Label>
-        <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
+        {readOnly ? (
+          <CodeJar id={pid('source')} value={form.source} readOnly />
+        ) : (
+          <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
+        )}
       </div>
     </div>
   );

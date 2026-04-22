@@ -16,14 +16,6 @@ export interface FactorDetailPublic extends FactorSummaryPublic {
   source: string;
 }
 
-export interface FactorEvaluationsAggregatePublic {
-  total_factors: number;
-  evaluated_count: number;
-  unevaluated_count: number;
-  primary_period: string;
-  mean_ic_primary_avg: number | null;
-}
-
 export interface FactorEvaluationRowPublic {
   /** Evaluation run primary key (not factor_id/profile_id). */
   id?: string | null;
@@ -43,9 +35,4 @@ export interface FactorEvaluationRowPublic {
   mean_return_spread?: Record<string, number>;
   /** Present when the run used a named evaluation profile (with or without workflow nodes). */
   evaluation_profile_id?: string | null;
-}
-
-export interface FactorEvaluationsSummaryPublic {
-  aggregate: FactorEvaluationsAggregatePublic;
-  rows: FactorEvaluationRowPublic[];
 }

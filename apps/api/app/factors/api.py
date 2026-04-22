@@ -5,13 +5,6 @@ import contextlib
 from fastapi import APIRouter, HTTPException
 
 from app.evaluation.run.controller import delete_evaluation_runs_for_factor
-from app.evaluation.run.models import EvaluationRunRow
-from app.evaluation.run.redistry import EvaluationRunsStore
-from app.evaluation.run.schemas import (
-    EvaluationRunRowPublic,
-    EvaluationRunsAggregatePublic,
-    EvaluationRunsSummaryPublic,
-)
 from app.factors.constants import NEW_FACTOR_TEMPLATE
 from app.factors.controller import (
     create_factor as create_factor_record,
@@ -33,70 +26,10 @@ from app.http_errors import http_bad_request
 
 router = APIRouter(prefix="/factors", tags=["factors"])
 
-PRIMARY_IC_PERIOD = "5"
-
 
 @router.get("", response_model=list[FactorSummaryPublic])
 def get_factor_list() -> list[FactorSummaryPublic]:
     return list_factors()
-
-
-@router.get("/evaluations/summary", response_model=EvaluationRunsSummaryPublic)
-def evaluation_runs_summary() -> EvaluationRunsSummaryPublic:
-    items = FactorItemsRegistry.list_items()
-    rows: list[EvaluationRunRowPublic] = []
-    ic_for_avg: list[float] = []
-    evaluated_ok = 0
-    latest_eval_runs_by_factor_id: dict[str, EvaluationRunRow] = {}
-    for run in EvaluationRunsStore.list_items():
-        current = latest_eval_runs_by_factor_id.get(run.factor_id)
-        if current is None or run.end_at > current.end_at:
-            latest_eval_runs_by_factor_id[run.factor_id] = run
-
-    for rec in items:
-        ev_rec = latest_eval_runs_by_factor_id.get(rec.id)
-        if ev_rec is None:
-            rows.append(
-                EvaluationRunRowPublic(
-                    factor_id=rec.id,
-                    name=rec.name,
-                    has_evaluation=False,
-                )
-            )
-            continue
-
-        err_raw = (ev_rec.error or "").strip()
-        err: str | None = err_raw or None
-        success = err is None
-        if success:
-            evaluated_ok += 1
-
-        rows.append(
-            EvaluationRunRowPublic(
-                id=ev_rec.id,
-                factor_id=rec.id,
-                name=rec.name,
-                has_evaluation=True,
-                evaluated_at=ev_rec.end_at.isoformat(),
-                error=err,
-                evaluation_profile_id=ev_rec.evaluation_profile_id,
-                results=ev_rec.results,
-            )
-        )
-
-    total = len(items)
-    mean_ic_primary: float | None = None
-    if ic_for_avg:
-        mean_ic_primary = sum(ic_for_avg) / len(ic_for_avg)
-
-    aggregate = EvaluationRunsAggregatePublic(
-        total_factors=total,
-        evaluated_count=evaluated_ok,
-        unevaluated_count=total - evaluated_ok,
-        primary_period=PRIMARY_IC_PERIOD,
-        mean_ic_primary_avg=mean_ic_primary,
-    )
-    return EvaluationRunsSummaryPublic(aggregate=aggregate, rows=rows)
 
 
 @router.get("/template", response_model=str)

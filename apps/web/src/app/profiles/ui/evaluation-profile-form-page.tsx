@@ -34,7 +34,7 @@ export function EvaluationProfileFormPage(props: Props) {
   const isEdit = Boolean(id);
 
   const formId = isEdit ? 'evaluation-profile-edit-form' : 'evaluation-profile-new-form';
-  const cancelHref = isEdit ? `/factors/profiles/${encodeURIComponent(id ?? '')}` : '/factors/profiles';
+  const cancelHref = isEdit ? `/profiles/${encodeURIComponent(id ?? '')}` : '/profiles';
 
   const [templateLoading, setTemplateLoading] = useState(!isEdit);
   // Avoid hydration mismatch: timestamped defaults must be generated client-side.
@@ -104,14 +104,14 @@ export function EvaluationProfileFormPage(props: Props) {
           description: description.trim(),
           workflow: wf,
         });
-        router.push(`/factors/profiles/${encodeURIComponent(id)}`);
+        router.push(`/profiles/${encodeURIComponent(id)}`);
       } else {
         const created = await createEvaluationProfile({
           name: name.trim(),
           description: description.trim(),
           workflow: wf,
         });
-        router.push(`/factors/profiles/${encodeURIComponent(created.id)}`);
+        router.push(`/profiles/${encodeURIComponent(created.id)}`);
       }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : String(err));

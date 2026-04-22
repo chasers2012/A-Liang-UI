@@ -1,7 +1,5 @@
-export type * from "./dto";
-export * from "./evaluation-running.atom";
-export * from "./evaluations-overview.atom";
-export * from "./factor-detail.atom";
-export * from "./factors-list.atom";
-export * from "./form-model";
-export * from "./factor-metadata-sync";
+export type * from './dto';
+export * from './factor-detail.atom';
+export * from './factors-list.atom';
+export * from './form-model';
+export * from './factor-metadata-sync';

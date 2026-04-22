@@ -17,13 +17,11 @@ from app.evaluation.run.schemas import (
 )
 from app.http_errors import http_bad_request
 
-router = APIRouter(prefix="/evaluation-profiles", tags=["evaluation-runs"])
-run_router = APIRouter(prefix="/evaluation-runs", tags=["evaluation-runs"])
-router.include_router(run_router)
+router = APIRouter(prefix="/evaluation/run", tags=["evaluation/run"])
 
 
 @router.post(
-    "/evaluations/run",
+    "/evalation/run",
     response_model=EvaluationRunRowPublic,
 )
 def post_evaluation_run_for_profile(
@@ -43,7 +41,7 @@ def post_evaluation_run_for_profile(
         http_bad_request(e)
 
 
-@run_router.get("", response_model=list[EvaluationRunDetailPublic])
+@router.get("", response_model=list[EvaluationRunDetailPublic])
 def get_evaluation_runs(
     factor_id: str | None = None,
     limit: int | None = None,
@@ -54,7 +52,7 @@ def get_evaluation_runs(
         http_bad_request(e)
 
 
-@run_router.get("/{run_id}", response_model=EvaluationRunDetailPublic)
+@router.get("/{run_id}", response_model=EvaluationRunDetailPublic)
 def get_evaluation_run(run_id: str) -> EvaluationRunDetailPublic:
     try:
         return get_evaluation_run_detail(run_id)
@@ -62,7 +60,7 @@ def get_evaluation_run(run_id: str) -> EvaluationRunDetailPublic:
         raise HTTPException(status_code=404, detail="评价运行记录不存在") from None
 
 
-@run_router.delete("/{run_id}", status_code=204)
+@router.delete("/{run_id}", status_code=204)
 def delete_evaluation_run_by_id_api(run_id: str) -> None:
     try:
         delete_evaluation_run(run_id)

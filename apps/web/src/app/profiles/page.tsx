@@ -47,7 +47,7 @@ export default function EvaluationProfilesPage() {
           <CardTitle>方案列表</CardTitle>
           <CardDescription>评价按工作流图执行；准备参数在「计算因子」节点上配置</CardDescription>
           <CardAction>
-            <Link href="/factors/profiles/new" className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}>
+            <Link href="/profiles/new" className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}>
               <Plus className="size-4" />
               新增方案
             </Link>
@@ -77,7 +77,7 @@ export default function EvaluationProfilesPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Link
-                        href={`/factors/profiles/${encodeURIComponent(p.id)}`}
+                        href={`/profiles/${encodeURIComponent(p.id)}`}
                         className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
                         详情

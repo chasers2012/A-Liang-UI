@@ -1,1 +1,0 @@
-export const EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT = "加载工作流模板…";

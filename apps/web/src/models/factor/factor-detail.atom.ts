@@ -3,7 +3,7 @@ import { atomFamily } from 'jotai-family';
 
 import { listDataSets } from '@/api/data-sets';
 import { listEvaluationProfiles } from '@/api/evaluation-profiles';
-import { getFactor, getFactorEvaluationsSummary } from '@/api/factors';
+import { getFactor } from '@/api/factors';
 import type { DataSetPublic } from '@/models/data-set/dto';
 import type { EvaluationProfilePublic } from '../evaluation-profile/dto';
 import type { FactorDetailPublic, FactorEvaluationRowPublic, FactorSummaryPublic } from './dto';
@@ -57,12 +57,7 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
       loading: true,
     }));
     try {
-      const [d, summary, pr, dataSets] = await Promise.all([
-        getFactor(factorId),
-        getFactorEvaluationsSummary(),
-        listEvaluationProfiles(),
-        listDataSets(),
-      ]);
+      const [d, pr, dataSets] = await Promise.all([getFactor(factorId), listEvaluationProfiles(), listDataSets()]);
       set(factorDetailStateAtomFamily(factorId), (prev) => {
         const runProfileId = (() => {
           const p = prev.runProfileId;
@@ -79,7 +74,6 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
           loading: false,
           loadError: null,
           detail: d,
-          evalRow: summary.rows.find((r) => r.factor_id === factorId) ?? null,
           profiles: pr,
           dataSets,
           runProfileId,
@@ -93,16 +87,5 @@ export const loadFactorDetailAtomFamily = atomFamily((factorId: string) =>
         loadError: e instanceof Error ? e.message : String(e),
       });
     }
-  }),
-);
-
-export const refreshFactorEvalRowAtomFamily = atomFamily((factorId: string) =>
-  atom(null, async (_get, set) => {
-    if (!factorId) return;
-    const summary = await getFactorEvaluationsSummary();
-    set(factorDetailStateAtomFamily(factorId), (s) => ({
-      ...s,
-      evalRow: summary.rows.find((r) => r.factor_id === factorId) ?? null,
-    }));
   }),
 );
