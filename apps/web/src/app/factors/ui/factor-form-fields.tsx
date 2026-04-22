@@ -6,8 +6,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/reui/badge';
 
-import { applyFormMetadataToSource, parseUserFactorMetadataFromSource, type FactorFormState } from '@/models/factor';
+import {
+  applyFormMetadataToSource,
+  parseDependencies,
+  parseUserFactorMetadataFromSource,
+  type FactorFormState,
+} from '@/models/factor';
 import { CodeJar } from '@/components/ui/code-jar';
 import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
 import { FactorGroupCombobox } from './factor-group-combobox';
@@ -54,27 +60,32 @@ function FactorMetaFields(props: {
   hideDescriptionField: boolean;
 }) {
   const { form, set, readOnly, pid, hideNameField, hideDescriptionField } = props;
+  const dependencies = parseDependencies(form.dependencies_csv);
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
         {!hideNameField ? (
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor={pid('name')}>标识 name</Label>
-            <Input
-              id={pid('name')}
-              className="font-mono text-sm"
-              value={form.name}
-              readOnly={readOnly}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder="my_factor"
-              autoComplete="off"
-            />
+            {readOnly ? (
+              <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.name || '-'}</div>
+            ) : (
+              <Input
+                id={pid('name')}
+                className="font-mono text-sm"
+                value={form.name}
+                readOnly={readOnly}
+                onChange={(e) => set({ name: e.target.value })}
+                placeholder="my_factor"
+                autoComplete="off"
+              />
+            )}
           </div>
         ) : null}
         <div className="min-w-0 space-y-2">
           <Label htmlFor={pid('group')}>分组 group</Label>
           {readOnly ? (
-            <Input id={pid('group')} value={form.group} readOnly className="font-mono text-sm" />
+            <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.group || '-'}</div>
           ) : (
             <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => set({ group })} />
           )}
@@ -82,33 +93,53 @@ function FactorMetaFields(props: {
         </div>
         <div className="min-w-0 space-y-2">
           <Label htmlFor={pid('mw')}>window</Label>
-          <Input
-            id={pid('mw')}
-            type="number"
-            min={1}
-            className="font-mono"
-            value={form.window}
-            readOnly={readOnly}
-            onChange={(e) => set({ window: e.target.value })}
-          />
+          {readOnly ? (
+            <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.window || '-'}</div>
+          ) : (
+            <Input
+              id={pid('mw')}
+              type="number"
+              min={1}
+              className="font-mono"
+              value={form.window}
+              readOnly={readOnly}
+              onChange={(e) => set({ window: e.target.value })}
+            />
+          )}
         </div>
       </div>
       {!hideDescriptionField ? (
         <div className="space-y-2">
           <Label htmlFor={pid('desc')}>描述</Label>
-          <Textarea
-            id={pid('desc')}
-            rows={2}
-            value={form.description}
-            readOnly={readOnly}
-            onChange={(e) => set({ description: e.target.value })}
-          />
+          {readOnly ? (
+            <div className="min-h-16 rounded-md bg-muted/30 px-3 py-2 text-sm whitespace-pre-wrap">
+              {form.description || '-'}
+            </div>
+          ) : (
+            <Textarea
+              id={pid('desc')}
+              rows={2}
+              value={form.description}
+              readOnly={readOnly}
+              onChange={(e) => set({ description: e.target.value })}
+            />
+          )}
         </div>
       ) : null}
       <div className="space-y-2">
         <Label htmlFor={pid('deps')}>依赖列 dependencies</Label>
         {readOnly ? (
-          <Input id={pid('deps')} value={form.dependencies_csv} readOnly className="font-mono text-sm" />
+          dependencies.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {dependencies.map((dep) => (
+                <Badge key={dep} variant="secondary" size="default" className="font-mono">
+                  {dep}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">-</div>
+          )
         ) : (
           <FactorDependenciesCombobox
             id={pid('deps')}
