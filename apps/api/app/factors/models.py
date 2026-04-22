@@ -12,7 +12,7 @@ class FactorRow(SQLModel, table=True):
     name: str
     group: str
     description: str
-    max_window: int = 1
+    window: int = 1
     dependencies: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
     source_path: str
     created_at: str

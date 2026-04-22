@@ -19,10 +19,10 @@ def merged_dependencies(factors: Sequence[Factor]) -> list[str]:
 
 
 def max_lookback(factors: Sequence[Factor]) -> int:
-    """Largest ``max_window`` among factors (default 1 if empty)."""
+    """Largest ``window`` among factors (default 1 if empty)."""
     if not factors:
         return 1
-    return max(f.max_window for f in factors)
+    return max(f.window for f in factors)
 
 
 def compute_factor_values(

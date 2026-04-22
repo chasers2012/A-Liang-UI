@@ -8,7 +8,7 @@ class NewFactor(Factor):
     name = ""
     group = "custom"
     description = ""
-    max_window = 2 # max_window需要是calc中所使用的data最大窗口长度 + 1，例如使用20天的数据，需要将max_window设置为21
+    window = 2 # window 需要是 calc 中所使用的 data 最大窗口长度
 
     def calc(self, close: pd.DataFrame) -> pd.DataFrame:
         return close.pct_change(periods=1)

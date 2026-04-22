@@ -18,7 +18,7 @@ class Factor(ABC):
     Subclasses define:
     - ``name``: factor id
     - ``group``: registry grouping (optional override; default ``"factor"``)
-    - ``max_window``: maximum lookback length
+    - ``window``: maximum lookback length
     - ``calc(**kwargs)``: compute values from dependency wide DataFrame (index=date, columns=asset)
     """
 
@@ -26,7 +26,7 @@ class Factor(ABC):
     label: str = "因子"
     group: str = "factor"
     description: str = "因子描述"
-    max_window: int = 1
+    window: int = 1
 
     def __init__(
         self,
@@ -256,5 +256,5 @@ class Factor(ABC):
             start_date=start_date,
             end_date=end_date,
             instrument_codes=instrument_codes,
-            window=self.max_window,
+            window=self.window + 1,
         )

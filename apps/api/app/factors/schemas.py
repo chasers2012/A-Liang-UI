@@ -27,7 +27,7 @@ class FactorCreate(BaseModel):
     name: str = Field(description="因子名称")
     group: str = Field(description="因子组", default="factor")
     description: str = Field(description="因子描述", default="")
-    max_window: int = Field(description="因子最大窗口", default=1)
+    window: int = Field(description="因子最大窗口", default=1)
     dependencies: list[str] = Field(
         description="因子依赖的列这些列会在data中传给因子calc方法",
         default_factory=lambda: ["close"],
@@ -47,8 +47,8 @@ class FactorCreate(BaseModel):
         deps = [d.strip() for d in self.dependencies if str(d).strip()]
         if not deps:
             raise ValueError("dependencies 不能为空")
-        if self.max_window < 1:
-            raise ValueError("max_window 须 >= 1")
+        if self.window < 1:
+            raise ValueError("window 须 >= 1")
         return self.model_copy(update={"dependencies": deps})
 
     def to_row(self, factor_id: str, now: str) -> FactorRow:
@@ -57,7 +57,7 @@ class FactorCreate(BaseModel):
             name=self.name.strip(),
             group=self.group.strip(),
             description=self.description.strip(),
-            max_window=self.max_window,
+            window=self.window,
             dependencies=list(self.dependencies),
             source_path=source_relative_path(factor_id),
             created_at=now,
@@ -71,7 +71,7 @@ class FactorPatch(BaseModel):
     name: str | None = None
     group: str | None = None
     description: str | None = None
-    max_window: int | None = None
+    window: int | None = None
     dependencies: list[str] | None = None
     source: str | None = None
 
@@ -81,7 +81,7 @@ class FactorSummaryPublic(BaseModel):
     name: str
     group: str
     description: str
-    max_window: int
+    window: int
     dependencies: list[str]
     source_path: str
     created_at: str
@@ -98,7 +98,7 @@ def row_to_summary(row: FactorRow) -> FactorSummaryPublic:
         name=row.name,
         group=row.group,
         description=row.description,
-        max_window=row.max_window,
+        window=row.window,
         dependencies=list(row.dependencies),
         source_path=row.source_path,
         created_at=row.created_at,

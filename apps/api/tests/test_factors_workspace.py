@@ -20,7 +20,7 @@ class NewFactor(Factor):
     name = "{name}"
     group = "custom"
     description = ""
-    max_window = 2
+    window = 2
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         # Minimal implementation; this test only checks loading.
@@ -71,7 +71,7 @@ def test_create_roundtrip_files(workspace_tmp, client):
             "name": "alpha_one",
             "group": "g",
             "description": "d",
-            "max_window": 3,
+            "window": 3,
             "dependencies": ["close", "volume"],
             "source": MIN_SOURCE,
         },
@@ -103,7 +103,7 @@ def test_create_bad_name(client):
         "/factors",
         json={
             "name": "not-valid!",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
         },
@@ -116,7 +116,7 @@ def test_create_syntax_error(client):
         "/factors",
         json={
             "name": "okname",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": "def x(",
         },
@@ -129,7 +129,7 @@ def test_patch_and_delete(workspace_tmp, client):
         "/factors",
         json={
             "name": "to_patch",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
         },
@@ -164,7 +164,7 @@ def test_get_factor_loads_from_source(workspace_tmp, client):
             "name": "alpha_test",
             "group": "custom",
             "description": "",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": src,
         },

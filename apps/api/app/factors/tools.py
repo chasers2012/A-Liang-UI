@@ -42,7 +42,7 @@ def create_factor(body: FactorCreate) -> dict[str, Any]:
         "name": "因子名称",
         "group": "因子组",
         "description": "因子描述",
-        "max_window": 20,
+        "window": 20,
         "dependencies": ["close"],
         "source": "因子源码"
     }

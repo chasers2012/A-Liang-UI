@@ -33,10 +33,10 @@ def merge_factor_patch(rec: FactorRow, patch: FactorPatch) -> None:
         rec.group = (data["group"] or "").strip()
     if "description" in data:
         rec.description = (data["description"] or "").strip()
-    if "max_window" in data:
-        mw = data["max_window"]
-        if mw is not None:
-            rec.max_window = mw
+    if "window" in data:
+        w = data["window"]
+        if w is not None:
+            rec.window = w
     if "dependencies" in data and data["dependencies"] is not None:
         deps = [d.strip() for d in data["dependencies"] if str(d).strip()]
         if not deps:
@@ -54,8 +54,8 @@ def patch_factor_validate_and_merge(
             raise ValueError("name 不能为空")
         validate_identifier_name(str(body.name))
 
-    if "max_window" in unset and body.max_window is not None and body.max_window < 1:
-        raise ValueError("max_window 须 >= 1")
+    if "window" in unset and body.window is not None and body.window < 1:
+        raise ValueError("window 须 >= 1")
 
     merge_factor_patch(rec, body)
 

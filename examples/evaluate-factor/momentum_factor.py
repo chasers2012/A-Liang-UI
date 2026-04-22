@@ -9,7 +9,7 @@ class MomentumFactor(Factor):
 
     name = "mom_10d"
     label = "10日动量"
-    max_window = 11
+    window = 11
     lookback = 10
 
     def calc(self, close: pd.DataFrame) -> pd.Series:

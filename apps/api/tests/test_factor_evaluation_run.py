@@ -35,7 +35,7 @@ def test_evaluation_run_no_datasource(client):
         "/factors",
         json={
             "name": "f_run",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
         },

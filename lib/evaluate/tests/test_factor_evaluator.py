@@ -33,7 +33,7 @@ class _StaticPanelSource(FactorDataSource):
 
 class _RankFactor(Factor):
     name = "momentum_rank"
-    max_window = 1
+    window = 1
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         return close.rank(axis=1, pct=True).stack()

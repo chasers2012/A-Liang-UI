@@ -9,7 +9,7 @@ class PriceFactor(Factor):
 
     name = "price"
     label = "价格(收盘)"
-    max_window = 1
+    window = 1
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         return close.stack()

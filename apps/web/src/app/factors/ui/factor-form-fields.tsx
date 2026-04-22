@@ -1,35 +1,22 @@
-"use client";
+'use client';
 
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
-import {
-  applyFormMetadataToSource,
-  parseUserFactorMetadataFromSource,
-  type FactorFormState,
-} from "@/models/factor";
-import { CodeJar } from "@/components/ui/code-jar";
-import { FactorDependenciesCombobox } from "./factor-dependencies-combobox";
-import { FactorGroupCombobox } from "./factor-group-combobox";
+import { applyFormMetadataToSource, parseUserFactorMetadataFromSource, type FactorFormState } from '@/models/factor';
+import { CodeJar } from '@/components/ui/code-jar';
+import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
+import { FactorGroupCombobox } from './factor-group-combobox';
 
-const SYNC_FROM_FORM_FIELDS: (keyof FactorFormState)[] = [
-  "name",
-  "group",
-  "description",
-  "max_window",
-  "dependencies_csv",
-];
+const SYNC_FROM_FORM_FIELDS: (keyof FactorFormState)[] = ['name', 'group', 'description', 'window', 'dependencies_csv'];
 
 /** 与表单内 `set` 一致：改元数据时写回源码，改 `source` 时从源码解析元数据。 */
-export function applyFactorFormPatch(
-  f: FactorFormState,
-  patch: Partial<FactorFormState>,
-): FactorFormState {
-  if (Object.prototype.hasOwnProperty.call(patch, "source")) {
+export function applyFactorFormPatch(f: FactorFormState, patch: Partial<FactorFormState>): FactorFormState {
+  if (Object.prototype.hasOwnProperty.call(patch, 'source')) {
     const src = patch.source as string;
     const parsed = parseUserFactorMetadataFromSource(src);
     return { ...f, ...patch, ...parsed };
@@ -58,7 +45,7 @@ export function FactorFormFields({
   form,
   setForm,
   formError,
-  idPrefix = "factor",
+  idPrefix = 'factor',
   hideNameField = false,
   hideDescriptionField = false,
 }: Props) {
@@ -79,9 +66,9 @@ export function FactorFormFields({
       <div className="grid gap-4 sm:grid-cols-2">
         {!hideNameField ? (
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor={pid("name")}>标识 name</Label>
+            <Label htmlFor={pid('name')}>标识 name</Label>
             <Input
-              id={pid("name")}
+              id={pid('name')}
               className="font-mono text-sm"
               value={form.name}
               onChange={(e) => set({ name: e.target.value })}
@@ -89,40 +76,33 @@ export function FactorFormFields({
               autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
-              须为合法 Python 标识符；请与源码中{" "}
-              <span className="font-mono">NewFactor.name</span>{" "}
+              须为合法 Python 标识符；请与源码中 <span className="font-mono">NewFactor.name</span>{' '}
               保持一致（可与代码编辑器双向同步）。
             </p>
           </div>
         ) : null}
         <div className="min-w-0 space-y-2">
-          <Label htmlFor={pid("group")}>分组 group</Label>
-          <FactorGroupCombobox
-            id={pid("group")}
-            value={form.group}
-            onValueChange={(group) => set({ group })}
-          />
-          <p className="text-xs text-muted-foreground">
-            可选已有分组或输入新名称。
-          </p>
+          <Label htmlFor={pid('group')}>分组 group</Label>
+          <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => set({ group })} />
+          <p className="text-xs text-muted-foreground">可选已有分组或输入新名称。</p>
         </div>
         <div className="min-w-0 space-y-2">
-          <Label htmlFor={pid("mw")}>max_window</Label>
+          <Label htmlFor={pid('mw')}>window</Label>
           <Input
-            id={pid("mw")}
+            id={pid('mw')}
             type="number"
             min={1}
             className="font-mono"
-            value={form.max_window}
-            onChange={(e) => set({ max_window: e.target.value })}
+            value={form.window}
+            onChange={(e) => set({ window: e.target.value })}
           />
         </div>
       </div>
       {!hideDescriptionField ? (
         <div className="space-y-2">
-          <Label htmlFor={pid("desc")}>描述</Label>
+          <Label htmlFor={pid('desc')}>描述</Label>
           <Textarea
-            id={pid("desc")}
+            id={pid('desc')}
             rows={2}
             value={form.description}
             onChange={(e) => set({ description: e.target.value })}
@@ -130,9 +110,9 @@ export function FactorFormFields({
         </div>
       ) : null}
       <div className="space-y-2">
-        <Label htmlFor={pid("deps")}>依赖列 dependencies</Label>
+        <Label htmlFor={pid('deps')}>依赖列 dependencies</Label>
         <FactorDependenciesCombobox
-          id={pid("deps")}
+          id={pid('deps')}
           valueCsv={form.dependencies_csv}
           onValueCsvChange={(csv) => set({ dependencies_csv: csv })}
         />
@@ -141,12 +121,8 @@ export function FactorFormFields({
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor={pid("source")}>Python 源码</Label>
-        <CodeJar
-          id={pid("source")}
-          value={form.source}
-          onChange={(source) => set({ source })}
-        />
+        <Label htmlFor={pid('source')}>Python 源码</Label>
+        <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
       </div>
     </div>
   );

@@ -65,7 +65,7 @@ def test_agent_chat_stream_sse_tool_calls(client, monkeypatch):
                                 "name": "MyFactor",
                                 "group": "custom",
                                 "description": "d",
-                                "max_window": 2,
+                                "window": 2,
                                 "dependencies": ["close"],
                                 # Intentionally omit source to test tool fallback.
                             },

@@ -198,7 +198,7 @@ class AlphalensFactorEvaluator:
             start_date=start_date,
             end_date=end_date,
             instrument_codes=instrument_codes,
-            window=factor.max_window,
+            window=factor.window,
         )
         if self._price_panel.empty:
             raise ValueError("Price panel is empty for the given range and resolver")

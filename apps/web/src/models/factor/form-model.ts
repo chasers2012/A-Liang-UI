@@ -4,7 +4,7 @@ export type FactorFormState = {
   name: string;
   group: string;
   description: string;
-  max_window: string;
+  window: string;
   dependencies_csv: string;
   source: string;
 };
@@ -27,7 +27,7 @@ export function emptyForm(): FactorFormState {
     name: '新因子',
     group: '未分组',
     description: '',
-    max_window: '1',
+    window: '1',
     dependencies_csv: 'close',
     source: '',
   };
@@ -38,7 +38,7 @@ export function hydrateFromDetail(d: FactorDetailPublic): FactorFormState {
     name: d.name,
     group: d.group,
     description: d.description,
-    max_window: String(d.max_window),
+    window: String(d.window),
     dependencies_csv: d.dependencies.join(', '),
     source: d.source,
   };
@@ -53,8 +53,8 @@ export function parseDependencies(csv: string): string[] {
 
 export function validateFormForSubmit(form: FactorFormState): string | null {
   if (!form.name.trim()) return '因子标识（name）不能为空';
-  const mw = Number.parseInt(form.max_window, 10);
-  if (!Number.isFinite(mw) || mw < 1) return 'max_window 须为 >= 1 的整数';
+  const w = Number.parseInt(form.window, 10);
+  if (!Number.isFinite(w) || w < 1) return 'window 须为 >= 1 的整数';
   const deps = parseDependencies(form.dependencies_csv);
   if (deps.length === 0) return '至少填写一个依赖字段（如 close）';
   if (!form.source.trim()) return '源码不能为空';
@@ -63,12 +63,12 @@ export function validateFormForSubmit(form: FactorFormState): string | null {
 
 export function bodyFromForm(form: FactorFormState): Record<string, unknown> {
   const deps = parseDependencies(form.dependencies_csv);
-  const max_window = Number.parseInt(form.max_window, 10);
+  const window = Number.parseInt(form.window, 10);
   return {
     name: form.name.trim(),
     group: form.group.trim(),
     description: form.description.trim(),
-    max_window,
+    window,
     dependencies: deps,
     source: form.source,
   };

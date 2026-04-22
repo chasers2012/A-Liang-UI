@@ -492,7 +492,7 @@ export default function FactorDetailPage() {
     name: detail.name,
     group: detail.group,
     description: detail.description,
-    max_window: detail.max_window,
+    window: detail.window,
     dependencies: detail.dependencies,
     source_path: detail.source_path,
     created_at: detail.created_at,

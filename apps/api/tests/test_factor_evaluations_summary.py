@@ -21,7 +21,7 @@ def test_evaluations_summary_partial_and_aggregate(workspace_tmp, client):
         "/factors",
         json={
             "name": "f_a",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
         },
@@ -33,7 +33,7 @@ def test_evaluations_summary_partial_and_aggregate(workspace_tmp, client):
         "/factors",
         json={
             "name": "f_b",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": MIN_SOURCE,
         },

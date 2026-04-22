@@ -35,9 +35,9 @@ function patchUserFactorBody(block: string, form: FactorFormState): string {
   b = replaceStringAttr(b, 'name', name);
   b = replaceStringAttr(b, 'group', form.group.trim());
   b = replaceStringAttr(b, 'description', form.description);
-  const mw = Number.parseInt(form.max_window, 10);
-  if (Number.isFinite(mw) && mw >= 1) {
-    b = replaceNumberAttr(b, 'max_window', mw);
+  const w = Number.parseInt(form.window, 10);
+  if (Number.isFinite(w) && w >= 1) {
+    b = replaceNumberAttr(b, 'window', w);
   }
   return b;
 }
@@ -159,9 +159,9 @@ function parseStringAttr(block: string, attr: string): string | null {
   return null;
 }
 
-function parseMaxWindow(block: string): string | null {
-  const mm = block.match(/^\s*max_window\s*=\s*(\d+)/m);
-  return mm ? mm[1] : null;
+function parseWindow(block: string): string | null {
+  const m = block.match(/^\s*window\s*=\s*(\d+)/m);
+  return m ? m[1] : null;
 }
 
 function parseDependenciesCsvFromCalc(source: string): string | null {
@@ -188,8 +188,8 @@ export function parseUserFactorMetadataFromSource(source: string): Partial<Facto
   if (group !== null) out.group = group;
   const description = parseStringAttr(block, 'description');
   if (description !== null) out.description = description;
-  const mw = parseMaxWindow(block);
-  if (mw !== null) out.max_window = mw;
+  const w = parseWindow(block);
+  if (w !== null) out.window = w;
   const deps = parseDependenciesCsvFromCalc(source);
   if (deps !== null) out.dependencies_csv = deps;
   return out;

@@ -12,7 +12,7 @@ from factor import Factor
 
 class _DoubleClose(Factor):
     name = "double_close"
-    max_window = 1
+    window = 1
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         return (close * 2.0).stack()
@@ -20,7 +20,7 @@ class _DoubleClose(Factor):
 
 class _NeedsVol(Factor):
     name = "vol_tag"
-    max_window = 5
+    window = 5
 
     def calc(self, close: pd.DataFrame, volume: pd.DataFrame) -> pd.Series:
         _ = close

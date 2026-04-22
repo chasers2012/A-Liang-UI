@@ -5,7 +5,7 @@ export interface FactorSummaryPublic {
   name: string;
   group: string;
   description: string;
-  max_window: number;
+  window: number;
   dependencies: string[];
   source_path: string;
   created_at: string;

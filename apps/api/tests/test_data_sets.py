@@ -24,7 +24,7 @@ class EvalWorkflowFactor(Factor):
     name = "{name}"
     group = "g"
     description = ""
-    max_window = 2
+    window = 2
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         return close.stack()
@@ -228,7 +228,7 @@ def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
         "/factors",
         json={
             "name": "f_ts",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": _factor_source_for_name("f_ts"),
         },
@@ -294,7 +294,7 @@ def test_evaluation_run_data_set_id_overrides_profile_params(
         "/factors",
         json={
             "name": "f_override_ds",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": _factor_source_for_name("f_override_ds"),
         },
@@ -345,7 +345,7 @@ def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monk
         "/factors",
         json={
             "name": "f_no_ds_in_body",
-            "max_window": 2,
+            "window": 2,
             "dependencies": ["close"],
             "source": _factor_source_for_name("f_no_ds_in_body"),
         },
