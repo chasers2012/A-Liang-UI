@@ -1,33 +1,36 @@
-"use client";
+'use client';
 
-import { Combobox } from "@base-ui/react/combobox";
-import { Check, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 
-import { ParamItem, SocketItem } from "../node-preview-meta";
-import { PreviewDescriptionSection } from "../preview-description-section";
-import { WorkflowStepNodePreview } from "../preview/workflow-step-node-preview";
-import { cn } from "@/lib/utils";
-import type { NodeDetailPublic, WorkflowDomainNodeVisibilityPublic } from "@/models/nodes/dto";
-import { isWireInputSpec } from "@/components/workflow-graph/workflow-node-input-spec";
-import { SectionHeader } from "@/components/section-header";
-import { PREVIEW_SCROLL_CLASS, mergePreviewParamModels } from "./shared";
-import { listNodeVisibilityConfigs, putNodeVisibilityConfig } from "@/api/nodes";
+import { ParamItem, SocketItem } from '../node-preview-meta';
+import { PreviewDescriptionSection } from '../preview-description-section';
+import { WorkflowStepNodePreview } from '../preview/workflow-step-node-preview';
+import { cn } from '@/lib/utils';
+import type { NodeDetailPublic, WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
+import { isWireInputSpec } from '@/components/workflow-graph/workflow-node-input-spec';
+import { SectionHeader } from '@/components/section-header';
+import { PREVIEW_SCROLL_CLASS, mergePreviewParamModels } from './shared';
+import { listNodeVisibilityConfigs, putNodeVisibilityConfig } from '@/api/nodes';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '@/components/ui/combobox';
 
-const domainComboboxInputClassName =
-  "min-w-[6rem] flex-1 border-0 bg-transparent py-0.5 pl-1 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50";
-const domainComboboxInputGroupClassName =
-  "flex min-h-8 w-full flex-wrap items-center gap-0.5 rounded-lg border border-input bg-transparent px-1.5 py-1 outline-none transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30";
-const domainChipClassName =
-  "flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-xs text-foreground outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground";
-const domainComboboxItemClassName =
-  "flex cursor-default items-start gap-2 px-2.5 py-1.5 text-sm outline-none select-none data-[highlighted]:relative data-[highlighted]:z-0 data-[highlighted]:text-accent-foreground data-[highlighted]:before:absolute data-[highlighted]:before:inset-x-1 data-[highlighted]:before:inset-y-0.5 data-[highlighted]:before:z-[-1] data-[highlighted]:before:rounded-md data-[highlighted]:before:bg-accent";
+const domainComboboxInputClassName = 'text-sm placeholder:text-muted-foreground';
+const domainChipClassName = 'text-xs';
+const domainComboboxItemClassName = 'items-start text-sm';
 
 function NodeDomainsSection(props: { nodeId: string }) {
   const { nodeId } = props;
-  const [domainConfigs, setDomainConfigs] = useState<WorkflowDomainNodeVisibilityPublic[]>(
-    [],
-  );
+  const [domainConfigs, setDomainConfigs] = useState<WorkflowDomainNodeVisibilityPublic[]>([]);
   const [domainsLoading, setDomainsLoading] = useState(false);
   const [domainsSaving, setDomainsSaving] = useState<string | null>(null);
   const [domainsError, setDomainsError] = useState<string | null>(null);
@@ -56,10 +59,7 @@ function NodeDomainsSection(props: { nodeId: string }) {
   }, [nodeId]);
 
   const domainRows = useMemo(
-    () =>
-      [...domainConfigs].sort((a, b) =>
-        a.domain.localeCompare(b.domain, "zh-Hans-CN"),
-      ),
+    () => [...domainConfigs].sort((a, b) => a.domain.localeCompare(b.domain, 'zh-Hans-CN')),
     [domainConfigs],
   );
   const selectedDomainSet = useMemo(() => {
@@ -71,9 +71,10 @@ function NodeDomainsSection(props: { nodeId: string }) {
     return set;
   }, [domainRows, nodeId]);
   const selectedDomains = useMemo(
-    () => [...selectedDomainSet].sort((a, b) => a.localeCompare(b, "zh-Hans-CN")),
+    () => [...selectedDomainSet].sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')),
     [selectedDomainSet],
   );
+  const domainAnchor = useComboboxAnchor();
 
   const toggleDomain = async (domain: string) => {
     if (domainsSaving) return;
@@ -89,9 +90,7 @@ function NodeDomainsSection(props: { nodeId: string }) {
       const nextHiddenIds = [...set];
 
       const saved = await putNodeVisibilityConfig(domain, nextHiddenIds);
-      setDomainConfigs((prev) =>
-        prev.map((item) => (item.domain === domain ? saved : item)),
-      );
+      setDomainConfigs((prev) => prev.map((item) => (item.domain === domain ? saved : item)));
     } catch (e) {
       setDomainsError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -119,7 +118,7 @@ function NodeDomainsSection(props: { nodeId: string }) {
   }
   return (
     <>
-      <Combobox.Root
+      <Combobox
         items={domainRows.map((row) => row.domain)}
         multiple
         value={selectedDomains}
@@ -127,75 +126,43 @@ function NodeDomainsSection(props: { nodeId: string }) {
         openOnInputClick
         disabled={Boolean(domainsSaving)}
       >
-        <Combobox.InputGroup className={domainComboboxInputGroupClassName}>
-          <Combobox.Chips className="flex w-full min-w-0 flex-wrap items-center gap-0.5">
-            <Combobox.Value>
-              {(value: string[]) => (
-                <>
-                  {value.map((domain) => (
-                    <Combobox.Chip
-                      key={domain}
-                      className={domainChipClassName}
-                      aria-label={`移除 ${domain}`}
-                    >
-                      {domain}
-                      <Combobox.ChipRemove
-                        type="button"
-                        className="rounded p-0.5 text-muted-foreground hover:bg-background/80 hover:text-foreground"
-                        aria-label="移除"
-                      >
-                        <X className="size-3" aria-hidden />
-                      </Combobox.ChipRemove>
-                    </Combobox.Chip>
-                  ))}
-                  <Combobox.Input
-                    placeholder={value.length > 0 ? "添加更多…" : "选择可用领域"}
-                    autoComplete="off"
-                    className={domainComboboxInputClassName}
-                  />
-                </>
-              )}
-            </Combobox.Value>
-          </Combobox.Chips>
-        </Combobox.InputGroup>
+        <ComboboxChips ref={domainAnchor} className="w-full min-w-0">
+          <ComboboxValue>
+            {(value: string[]) => (
+              <>
+                {value.map((domain) => (
+                  <ComboboxChip key={domain} className={domainChipClassName} aria-label={`移除 ${domain}`}>
+                    {domain}
+                  </ComboboxChip>
+                ))}
+                <ComboboxChipsInput
+                  placeholder={value.length > 0 ? '添加更多…' : '选择可用领域'}
+                  autoComplete="off"
+                  className={domainComboboxInputClassName}
+                />
+              </>
+            )}
+          </ComboboxValue>
+        </ComboboxChips>
 
-        <Combobox.Portal>
-          <Combobox.Positioner className="z-50 outline-none" sideOffset={4} align="start">
-            <Combobox.Popup
-              className={cn(
-                "max-h-[min(16rem,var(--available-height))] min-w-(--anchor-width) w-max max-w-[min(28rem,var(--available-width))]",
-                "origin-(--transform-origin) overflow-y-auto overscroll-contain rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md",
-              )}
-            >
-              <Combobox.Empty className="px-2.5 py-2 text-sm text-muted-foreground">
-                无匹配领域
-              </Combobox.Empty>
-              <Combobox.List className="outline-none">
-                {(item: string) => (
-                  <Combobox.Item
-                    key={item}
-                    value={item}
-                    className={domainComboboxItemClassName}
-                  >
-                    <Combobox.ItemIndicator className="mt-0.5 flex shrink-0 justify-center">
-                      <Check className="size-3.5" aria-hidden />
-                    </Combobox.ItemIndicator>
-                    <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">
-                      {item}
-                    </span>
-                  </Combobox.Item>
-                )}
-              </Combobox.List>
-            </Combobox.Popup>
-          </Combobox.Positioner>
-        </Combobox.Portal>
-      </Combobox.Root>
-      {domainsSaving ? (
-        <p className="text-xs text-muted-foreground">保存中…</p>
-      ) : null}
-      {domainsError ? (
-        <p className="text-xs text-destructive">{domainsError}</p>
-      ) : null}
+        <ComboboxContent
+          anchor={domainAnchor}
+          sideOffset={4}
+          align="start"
+          className="w-max max-w-[min(28rem,var(--available-width))]"
+        >
+          <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配领域</ComboboxEmpty>
+          <ComboboxList className="outline-none">
+            {(item: string) => (
+              <ComboboxItem key={item} value={item} className={domainComboboxItemClassName}>
+                <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">{item}</span>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+      {domainsSaving ? <p className="text-xs text-muted-foreground">保存中…</p> : null}
+      {domainsError ? <p className="text-xs text-destructive">{domainsError}</p> : null}
     </>
   );
 }
@@ -208,18 +175,11 @@ export function PanelPreviewTab(props: {
   editDescription?: string;
   onEditDescriptionChange?: (description: string) => void;
 }) {
-  const {
-    detail,
-    placeholder,
-    editable = false,
-    editName = "",
-    editDescription = "",
-    onEditDescriptionChange,
-  } = props;
+  const { detail, placeholder, editable = false, editName = '', editDescription = '', onEditDescriptionChange } = props;
 
   if (!detail) {
     return (
-      <div className={cn(PREVIEW_SCROLL_CLASS, "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+      <div className={cn(PREVIEW_SCROLL_CLASS, 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
         <p className="py-8 text-sm text-muted-foreground">{placeholder}</p>
       </div>
     );
@@ -230,7 +190,7 @@ export function PanelPreviewTab(props: {
   const mergedParamModels = mergePreviewParamModels(detail);
 
   return (
-    <div className={cn(PREVIEW_SCROLL_CLASS, "flex min-h-0 flex-1 flex-col overflow-hidden")}>
+    <div className={cn(PREVIEW_SCROLL_CLASS, 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
       <div className="flex min-h-0 flex-1 flex-col gap-6 pb-2 pt-2 lg:flex-row lg:items-stretch lg:gap-8">
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
           <SectionHeader>可用领域</SectionHeader>
@@ -287,4 +247,3 @@ export function PanelPreviewTab(props: {
     </div>
   );
 }
-

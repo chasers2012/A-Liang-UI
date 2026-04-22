@@ -1,8 +1,7 @@
 'use client';
 
-import { Combobox } from '@base-ui/react/combobox';
 import { useAtomValue, useSetAtom } from 'jotai';
-import { Check, Funnel, Plus, X } from 'lucide-react';
+import { Funnel, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -12,6 +11,18 @@ import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '@/components/ui/combobox';
 import {
   Popover,
   PopoverContent,
@@ -43,31 +54,11 @@ import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
 const DOMAIN_ALL_PLACEHOLDER = '不限（全部领域）';
 
-const domainComboboxInputClassName = cn(
-  'min-w-[6rem] flex-1 border-0 bg-transparent py-0.5 pl-1 text-sm outline-none',
-  'text-foreground placeholder:text-muted-foreground',
-  'focus-visible:outline-none',
-  'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
-);
+const domainComboboxInputClassName = cn('text-sm placeholder:text-muted-foreground');
 
-const domainComboboxInputGroupClassName = cn(
-  'flex min-h-8 w-full flex-wrap items-center gap-0.5 rounded-lg border border-input bg-transparent px-1.5 py-1',
-  'outline-none transition-colors',
-  'focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50',
-  'dark:bg-input/30',
-);
+const domainChipClassName = cn('text-xs');
 
-const domainChipClassName = cn(
-  'flex items-center gap-0.5 rounded-md bg-muted px-1.5 py-0.5 text-xs text-foreground',
-  'outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground',
-);
-
-const domainComboboxItemClassName = cn(
-  'flex cursor-default items-start gap-2 px-2.5 py-1.5 text-sm outline-none select-none',
-  'data-[highlighted]:relative data-[highlighted]:z-0 data-[highlighted]:text-accent-foreground',
-  'data-[highlighted]:before:absolute data-[highlighted]:before:inset-x-1 data-[highlighted]:before:inset-y-0.5 data-[highlighted]:before:z-[-1]',
-  'data-[highlighted]:before:rounded-md data-[highlighted]:before:bg-accent',
-);
+const domainComboboxItemClassName = cn('items-start text-sm');
 
 function getNodesEffectiveSelectedId(params: {
   pathname: string;
@@ -107,6 +98,8 @@ function NodesListFilterPopover(props: {
     clearCategoryFilters,
     resetListFilters,
   } = props;
+
+  const domainAnchor = useComboboxAnchor();
 
   return (
     <Popover>
@@ -169,64 +162,48 @@ function NodesListFilterPopover(props: {
                 清除领域条件
               </Button>
             </div>
-            <Combobox.Root
+            <Combobox
               items={domainOptions}
               multiple
               value={selectedDomains}
               onValueChange={(v) => setSelectedDomains(v ?? [])}
               openOnInputClick
             >
-              <Combobox.InputGroup className={domainComboboxInputGroupClassName}>
-                <Combobox.Chips className="flex w-full min-w-0 flex-wrap items-center gap-0.5">
-                  <Combobox.Value>
-                    {(value: string[]) => (
-                      <>
-                        {value.map((domain) => (
-                          <Combobox.Chip key={domain} className={domainChipClassName} aria-label={`移除 ${domain}`}>
-                            {domain}
-                            <Combobox.ChipRemove
-                              type="button"
-                              className="rounded p-0.5 text-muted-foreground hover:bg-background/80 hover:text-foreground"
-                              aria-label="移除"
-                            >
-                              <X className="size-3" aria-hidden />
-                            </Combobox.ChipRemove>
-                          </Combobox.Chip>
-                        ))}
-                        <Combobox.Input
-                          placeholder={value.length > 0 ? '添加更多…' : DOMAIN_ALL_PLACEHOLDER}
-                          autoComplete="off"
-                          className={domainComboboxInputClassName}
-                        />
-                      </>
-                    )}
-                  </Combobox.Value>
-                </Combobox.Chips>
-              </Combobox.InputGroup>
+              <ComboboxChips ref={domainAnchor} className="w-full min-w-0">
+                <ComboboxValue>
+                  {(value: string[]) => (
+                    <>
+                      {value.map((domain) => (
+                        <ComboboxChip key={domain} className={domainChipClassName} aria-label={`移除 ${domain}`}>
+                          {domain}
+                        </ComboboxChip>
+                      ))}
+                      <ComboboxChipsInput
+                        placeholder={value.length > 0 ? '添加更多…' : DOMAIN_ALL_PLACEHOLDER}
+                        autoComplete="off"
+                        className={domainComboboxInputClassName}
+                      />
+                    </>
+                  )}
+                </ComboboxValue>
+              </ComboboxChips>
 
-              <Combobox.Portal>
-                <Combobox.Positioner className="z-50 outline-none" sideOffset={4} align="start">
-                  <Combobox.Popup
-                    className={cn(
-                      'max-h-[min(16rem,var(--available-height))] min-w-(--anchor-width) w-max max-w-[min(28rem,var(--available-width))]',
-                      'origin-(--transform-origin) overflow-y-auto overscroll-contain rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md',
-                    )}
-                  >
-                    <Combobox.Empty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配领域</Combobox.Empty>
-                    <Combobox.List className="outline-none">
-                      {(item: string) => (
-                        <Combobox.Item key={item} value={item} className={domainComboboxItemClassName}>
-                          <Combobox.ItemIndicator className="mt-0.5 flex shrink-0 justify-center">
-                            <Check className="size-3.5" aria-hidden />
-                          </Combobox.ItemIndicator>
-                          <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">{item}</span>
-                        </Combobox.Item>
-                      )}
-                    </Combobox.List>
-                  </Combobox.Popup>
-                </Combobox.Positioner>
-              </Combobox.Portal>
-            </Combobox.Root>
+              <ComboboxContent
+                anchor={domainAnchor}
+                sideOffset={4}
+                align="start"
+                className="w-max max-w-[min(28rem,var(--available-width))]"
+              >
+                <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配领域</ComboboxEmpty>
+                <ComboboxList className="outline-none">
+                  {(item: string) => (
+                    <ComboboxItem key={item} value={item} className={domainComboboxItemClassName}>
+                      <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">{item}</span>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
             {domainOptions.length === 0 ? (
               <div className="mt-2 text-xs text-muted-foreground">
                 暂无领域配置（可在后端先创建 `/nodes/node-visibility/{'{domain}'}` 配置）
