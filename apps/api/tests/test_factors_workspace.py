@@ -20,7 +20,7 @@ class NewFactor(Factor):
     name = "{name}"
     group = "custom"
     description = ""
-    window = 2
+    window = 1
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         # Minimal implementation; this test only checks loading.

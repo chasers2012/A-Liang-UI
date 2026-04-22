@@ -24,7 +24,7 @@ class EvalWorkflowFactor(Factor):
     name = "{name}"
     group = "g"
     description = ""
-    window = 2
+    window = 1
 
     def calc(self, close: pd.DataFrame) -> pd.Series:
         return close.stack()
