@@ -135,6 +135,7 @@ def _to_detail_public(run: EvaluationRunRow) -> EvaluationRunDetailPublic:
     return EvaluationRunDetailPublic(
         id=run.id,
         factor_id=run.factor_id,
+        dataset_id=run.dataset_id,
         factor_name=factor_name,
         start_at=run.start_at,
         end_at=run.end_at,

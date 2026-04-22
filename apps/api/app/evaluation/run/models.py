@@ -15,6 +15,7 @@ class EvaluationRunRow(SQLModel, table=True):
     start_at: datetime
     end_at: datetime
     factor_id: str = Field(index=True)
+    dataset_id: str | None = Field(default=None, index=True)
     error: str | None = None
     evaluation_profile_id: str | None = Field(default=None, index=True)
     results: Any = Field(default=None, sa_column=Column(JsonText))

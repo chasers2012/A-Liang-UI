@@ -97,6 +97,7 @@ def run_evaluation_profile_workflow(
 
     workflow_inputs: dict[str, Any] = {"factor": factor}
     override = (data_set_id or "").strip()
+    dataset_id = override or None
     if override:
         ds = get_data_set(override)
         if ds is not None:
@@ -119,6 +120,7 @@ def run_evaluation_profile_workflow(
             start_at=started_at,
             end_at=datetime.now(timezone.utc),
             factor_id=factor_id,
+            dataset_id=dataset_id,
             error=str(e),
             evaluation_profile_id=profile.id,
         )
@@ -129,6 +131,7 @@ def run_evaluation_profile_workflow(
             start_at=started_at,
             end_at=datetime.now(timezone.utc),
             factor_id=factor_id,
+            dataset_id=dataset_id,
             error=f"{e}\n{tb}",
             evaluation_profile_id=profile.id,
         )
@@ -138,6 +141,7 @@ def run_evaluation_profile_workflow(
         start_at=started_at,
         end_at=datetime.now(timezone.utc),
         factor_id=factor_id,
+        dataset_id=dataset_id,
         evaluation_profile_id=profile.id,
         results=final_result,
     )

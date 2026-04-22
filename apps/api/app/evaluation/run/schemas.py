@@ -47,6 +47,7 @@ class EvaluationRunsSummaryPublic(BaseModel):
 class EvaluationRunDetailPublic(BaseModel):
     id: str
     factor_id: str
+    dataset_id: str | None = None
     factor_name: str | None = None
     start_at: datetime
     end_at: datetime
