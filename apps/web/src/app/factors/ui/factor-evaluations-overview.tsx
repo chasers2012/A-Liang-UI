@@ -1,35 +1,28 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useAtomValue, useSetAtom } from "jotai";
-import { BarChart3, RefreshCw } from "lucide-react";
+import Link from 'next/link';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { BarChart3, RefreshCw } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import {
   bumpFactorsEvalOverviewRevisionAtom,
   factorEvaluationsOverviewStateAtom,
   factorsEvalOverviewRevisionAtom,
   factorsListAtom,
   loadFactorEvaluationsOverviewAtom,
-} from "@/models/factor";
+} from '@/models/factor';
 
 function formatIsoShort(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  return iso.replace("T", " ").replace("+00:00", " UTC");
+  if (!iso) return '—';
+  return iso.replace('T', ' ').replace('+00:00', ' UTC');
 }
 
 function formatIc(n: number | null | undefined): string {
-  if (n === null || n === undefined) return "—";
+  if (n === null || n === undefined) return '—';
   return n.toFixed(4);
 }
 
@@ -73,15 +66,10 @@ export function FactorEvaluationsOverview() {
   if (factorCount === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-10 text-center">
-        <BarChart3
-          className="size-10 text-muted-foreground/40"
-          strokeWidth={1.25}
-        />
+        <BarChart3 className="size-10 text-muted-foreground/40" strokeWidth={1.25} />
         <p className="text-sm text-muted-foreground">
-          暂无因子。创建因子后，可将评价结果写入 workspace 的{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-            factors/data/evaluations.json
-          </code>{" "}
+          暂无因子。创建因子后，可将评价结果写入 workspace 的{' '}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">factors/data/evaluations.json</code>{' '}
           以在此查看整体评分。
         </p>
       </div>
@@ -89,28 +77,19 @@ export function FactorEvaluationsOverview() {
   }
 
   const anyEvaluated = rows.some((r) => r.has_evaluation);
-  const noSuccessfulEval =
-    aggregate.evaluated_count === 0 && aggregate.total_factors > 0;
+  const noSuccessfulEval = aggregate.evaluated_count === 0 && aggregate.total_factors > 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={() => bumpRevision()}
-        >
+        <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => bumpRevision()}>
           <RefreshCw className="size-3.5" />
           刷新评价
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border/80 bg-muted/10 px-3 py-2.5">
-          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-            已评价 / 总数
-          </p>
+          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">已评价 / 总数</p>
           <p className="mt-0.5 font-mono text-lg tabular-nums tracking-tight">
             {aggregate.evaluated_count}
             <span className="text-muted-foreground"> / </span>
@@ -126,21 +105,15 @@ export function FactorEvaluationsOverview() {
           </p>
         </div>
         <div className="col-span-2 rounded-lg border border-border/80 bg-muted/10 px-3 py-2.5 sm:col-span-1">
-          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-            待成功评价
-          </p>
-          <p className="mt-0.5 font-mono text-lg tabular-nums tracking-tight">
-            {aggregate.unevaluated_count}
-          </p>
+          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">待成功评价</p>
+          <p className="mt-0.5 font-mono text-lg tabular-nums tracking-tight">{aggregate.unevaluated_count}</p>
         </div>
       </div>
 
       {!anyEvaluated && (
         <p className="text-xs leading-relaxed text-muted-foreground">
-          当前没有任何评价记录。请通过 API/Agent 运行评价或写入{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">
-            factors/data/evaluations.json
-          </code>
+          当前没有任何评价记录。请通过 API/Agent 运行评价或写入{' '}
+          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.7rem]">factors/data/evaluations.json</code>
           ，刷新本页即可看到汇总。
         </p>
       )}
@@ -158,9 +131,7 @@ export function FactorEvaluationsOverview() {
               <TableRow>
                 <TableHead>因子</TableHead>
                 <TableHead className="text-right">Mean IC ({pp}D)</TableHead>
-                <TableHead className="hidden text-right md:table-cell">
-                  Spread ({pp}D)
-                </TableHead>
+                <TableHead className="hidden text-right md:table-cell">Spread ({pp}D)</TableHead>
                 <TableHead className="hidden sm:table-cell">评价时间</TableHead>
                 <TableHead className="text-right">状态</TableHead>
               </TableRow>
@@ -169,17 +140,17 @@ export function FactorEvaluationsOverview() {
               {rows.map((r) => {
                 let status: string;
                 if (!r.has_evaluation) {
-                  status = "未评价";
+                  status = '未评价';
                 } else if (r.error) {
-                  status = "失败";
+                  status = '失败';
                 } else {
-                  status = "成功";
+                  status = '成功';
                 }
                 return (
                   <TableRow key={r.id ?? r.factor_id}>
                     <TableCell className="max-w-40 truncate font-mono text-xs font-medium">
                       <Link
-                        href={`/factors/library/${encodeURIComponent(r.factor_id)}`}
+                        href={`/factors/${encodeURIComponent(r.factor_id)}`}
                         className="text-foreground underline-offset-4 hover:underline"
                       >
                         {r.name}
@@ -192,11 +163,11 @@ export function FactorEvaluationsOverview() {
                     <TableCell className="whitespace-normal text-right text-xs">
                       <span
                         className={
-                          status === "成功"
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : status === "失败"
-                              ? "text-destructive"
-                              : "text-muted-foreground"
+                          status === '成功'
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : status === '失败'
+                              ? 'text-destructive'
+                              : 'text-muted-foreground'
                         }
                       >
                         {status}

@@ -46,7 +46,7 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
   },
   {
     title: '因子库',
-    url: '/factors/library',
+    url: '/factors',
     icon: Library,
     items: [{ title: '评价方案', url: '/factors/profiles', icon: Table2 }],
   },

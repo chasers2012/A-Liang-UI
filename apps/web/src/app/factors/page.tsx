@@ -1,10 +1,10 @@
-import { FactorSectionContent } from './factor-section-content';
 import type { Metadata } from 'next';
+import FactorsBrowsePage from './ui/factors-browse-page';
 
 export const metadata: Metadata = {
-  title: '因子',
+  title: '因子库',
 };
 
-export default function FactorOverviewPage() {
-  return <FactorSectionContent />;
+export default function FactorsPage() {
+  return <FactorsBrowsePage />;
 }

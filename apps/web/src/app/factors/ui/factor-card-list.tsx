@@ -28,7 +28,7 @@ export function FactorCardList({ items }: Props) {
       <TableBody>
         {items.map((f) => {
           const depsText = f.dependencies.join(', ');
-          const href = `/factors/library/${encodeURIComponent(f.id)}`;
+          const href = `/factors/${encodeURIComponent(f.id)}`;
           return (
             <TableRow key={f.id}>
               <TableCell className="font-mono text-sm">{f.name}</TableCell>

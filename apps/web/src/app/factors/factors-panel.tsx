@@ -55,7 +55,7 @@ export function FactorsPanel() {
             共 {count} 条。点击「详情」进入编辑与评价、历史；窄屏仅显示名称与操作。评价汇总见「因子」页。
           </CardDescription>
           <CardAction>
-            <Link href="/factors/library/new" className={cn(buttonVariants(), 'gap-1.5')}>
+            <Link href="/factors/new" className={cn(buttonVariants(), 'gap-1.5')}>
               <Plus className="size-4" />
               新增因子
             </Link>

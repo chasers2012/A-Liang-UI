@@ -114,7 +114,7 @@ async function deleteFactorAction(params: {
     await deleteFactor(deleteTarget.id);
     setS((prev) => ({ ...prev, deleteTarget: null }));
     await refreshList();
-    routerPush('/factors/library');
+    routerPush('/factors');
   } catch (e) {
     setS((prev) => ({ ...prev, loadError: e instanceof Error ? e.message : String(e) }));
   } finally {
@@ -362,13 +362,13 @@ function FactorDetailView(props: {
         </div>
         <div className="flex w-full min-w-0 flex-wrap justify-end gap-2">
           <Link
-            href={`/factors/library/${encodeURIComponent(factorId)}`}
+            href={`/factors/${encodeURIComponent(factorId)}`}
             className={cn(buttonVariants({ variant: 'outline' }), 'gap-1.5')}
           >
             打开详情页
           </Link>
           <Link
-            href={`/factors/library/${encodeURIComponent(factorId)}/edit`}
+            href={`/factors/${encodeURIComponent(factorId)}/edit`}
             className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
           >
             <Pencil className="size-4" />

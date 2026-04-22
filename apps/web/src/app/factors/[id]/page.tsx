@@ -195,7 +195,7 @@ function FactorDetailHeaderActions(props: { id: string; onRequestDelete: () => v
   return (
     <div className="flex w-full min-w-0 flex-wrap justify-end gap-2">
       <Link
-        href={`/factors/library/${encodeURIComponent(id)}/edit`}
+        href={`/factors/${encodeURIComponent(id)}/edit`}
         className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
       >
         <Pencil className="size-4" />
@@ -447,7 +447,7 @@ export default function FactorDetailPage() {
     try {
       await deleteFactor(deleteTarget.id);
       setS((prev) => ({ ...prev, deleteTarget: null }));
-      router.push('/factors/library');
+      router.push('/factors');
     } catch (e) {
       setS((prev) => ({
         ...prev,
