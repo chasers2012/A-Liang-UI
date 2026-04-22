@@ -319,7 +319,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                   </FramePanel>
                   <FramePanel>
                     <h2 className="text-sm">因子评价</h2>
-                    <FactorEvaluationTrigger factorId={selectedId} onRunEvaluation={function (): void {}} />
+                    <FactorEvaluationTrigger factorId={selectedId} />
                   </FramePanel>
                   <FramePanel>
                     <h2 className="text-sm">评价结果</h2>

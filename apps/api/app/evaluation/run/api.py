@@ -21,7 +21,7 @@ router = APIRouter(prefix="/evaluation/run", tags=["evaluation/run"])
 
 
 @router.post(
-    "/evalation/run",
+    "",
     response_model=SchedulerJobPublic,
 )
 def post_evaluation_run_for_profile(

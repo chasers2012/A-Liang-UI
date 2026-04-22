@@ -1,25 +1,32 @@
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { evaluationRunRunningAtom } from '@/models/evaluation-run';
+import { dataSetsItemsAtom } from '@/models/data-set/panel-detail.atom';
+import { evaluationProfilesListItemsAtom } from '@/models/evaluation-profile/list-detail.atom';
+import { evaluationRunRunningAtom, runEvaluationActionAtom } from '@/models/evaluation-run';
 import { factorDetailStateAtomFamily } from '@/models/factor';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 
-export function FactorEvaluationTrigger(props: { factorId: string; onRunEvaluation: () => void }) {
-  const { factorId, onRunEvaluation } = props;
+const EMPTY_DATA_SETS: { id: string; name: string }[] = [];
+
+export function FactorEvaluationTrigger(props: { factorId: string }) {
+  const { factorId } = props;
   const [state, setState] = useAtom(factorDetailStateAtomFamily(factorId));
+  const dataSets = useAtomValue(dataSetsItemsAtom) ?? EMPTY_DATA_SETS;
+  const evaluationProfiles = useAtomValue(evaluationProfilesListItemsAtom);
   const evaluationRunning = useAtomValue(evaluationRunRunningAtom);
-  const { profiles, dataSets, runProfileId, runDataSetId } = state;
+  const runEvaluation = useSetAtom(runEvaluationActionAtom);
+  const { detail, runProfileId, runDataSetId } = state;
   const evaluatingThis = evaluationRunning != null && evaluationRunning.factorId === factorId;
   const evaluatingOther = evaluationRunning != null && evaluationRunning.factorId !== factorId;
   const otherEvaluatingFactorName = evaluatingOther ? evaluationRunning?.factorName : undefined;
   const profileSelectItems = useMemo(() => {
     const o: Record<string, string> = {};
-    for (const p of profiles) o[p.id] = p.name;
+    for (const p of evaluationProfiles) o[p.id] = p.name;
     return o;
-  }, [profiles]);
+  }, [evaluationProfiles]);
   const dataSetSelectItems = useMemo(() => {
     const o: Record<string, string> = {};
     for (const ds of dataSets) o[ds.id] = ds.name;
@@ -45,13 +52,13 @@ export function FactorEvaluationTrigger(props: { factorId: string; onRunEvaluati
             if (!v) return;
             setState((prev) => ({ ...prev, runProfileId: v }));
           }}
-          disabled={selectDisabled || profiles.length === 0}
+          disabled={selectDisabled || evaluationProfiles.length === 0}
         >
           <SelectTrigger id="factor-eval-profile-card" size="sm" className="w-full min-w-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {profiles.map((p) => (
+            {evaluationProfiles.map((p) => (
               <SelectItem key={p.id} value={p.id}>
                 {p.name}
               </SelectItem>
@@ -94,7 +101,20 @@ export function FactorEvaluationTrigger(props: { factorId: string; onRunEvaluati
         className="w-full gap-1.5 sm:w-auto"
         disabled={selectDisabled}
         title={evaluatingOther ? `「${otherEvaluatingFactorName ?? ''}」正在评价中` : undefined}
-        onClick={onRunEvaluation}
+        onClick={() => {
+          void runEvaluation({
+            factorId,
+            factorName: detail?.name ?? '当前因子',
+            evaluationProfileId: runProfileId,
+            dataSetId: runDataSetId,
+            setLoadError: (message) => {
+              setState((prev) => ({ ...prev, loadError: message }));
+            },
+            onSucceeded: (row) => {
+              setState((prev) => ({ ...prev, evalRow: row }));
+            },
+          });
+        }}
       >
         {evaluatingThis ? <Loader2 className="size-4 animate-spin" /> : null}
         {evaluatingThis ? '评价中…' : '运行评价'}

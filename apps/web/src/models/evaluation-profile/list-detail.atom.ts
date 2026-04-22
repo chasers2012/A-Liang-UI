@@ -4,26 +4,18 @@ import { atomFamily } from 'jotai-family';
 import { getEvaluationProfile, listEvaluationProfiles } from '@/api/evaluation-profiles';
 import type { EvaluationProfilePublic } from './dto';
 
-export type EvaluationProfilesListState = {
-  items: EvaluationProfilePublic[] | null;
-  error: string | null;
-};
-
-export const evaluationProfilesListAtom = atom<EvaluationProfilesListState>({
-  items: null,
-  error: null,
-});
+export const evaluationProfilesListItemsAtom = atom<EvaluationProfilePublic[]>([]);
+export const evaluationProfilesListErrorAtom = atom<string | null>(null);
 
 export const refreshEvaluationProfilesListAtom = atom(null, async (_get, set) => {
-  set(evaluationProfilesListAtom, (s) => ({ ...s, error: null }));
+  set(evaluationProfilesListErrorAtom, null);
   try {
     const items = await listEvaluationProfiles();
-    set(evaluationProfilesListAtom, { items, error: null });
+    set(evaluationProfilesListItemsAtom, items);
+    set(evaluationProfilesListErrorAtom, null);
   } catch (e) {
-    set(evaluationProfilesListAtom, {
-      items: null,
-      error: e instanceof Error ? e.message : String(e),
-    });
+    set(evaluationProfilesListItemsAtom, []);
+    set(evaluationProfilesListErrorAtom, e instanceof Error ? e.message : String(e));
   }
 });
 

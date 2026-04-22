@@ -12,35 +12,39 @@ import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { getQuantAgentApiBase } from '@/api/client';
 import { deleteDataSet } from '@/api/data-sets';
 import { cn } from '@/lib/utils';
-import { dataSetsPanelAtom, refreshDataSetsPanelAtom } from '@/models/data-set/panel-detail.atom';
+import {
+  dataSetsDeleteTargetAtom,
+  dataSetsDeletingAtom,
+  dataSetsItemsAtom,
+  dataSetsLoadErrorAtom,
+  refreshDataSetsAtom,
+} from '@/models/data-set/panel-detail.atom';
 
 import { DeleteDataSetDialog } from './ui/delete-data-set-dialog';
 import { DataSetTable } from './ui/data-set-table';
 
 export function DataSetsPanel() {
-  const [panel, setPanel] = useAtom(dataSetsPanelAtom);
-  const refresh = useSetAtom(refreshDataSetsPanelAtom);
+  const [items] = useAtom(dataSetsItemsAtom);
+  const [loadError, setLoadError] = useAtom(dataSetsLoadErrorAtom);
+  const [deleteTarget, setDeleteTarget] = useAtom(dataSetsDeleteTargetAtom);
+  const [deleting, setDeleting] = useAtom(dataSetsDeletingAtom);
+  const refresh = useSetAtom(refreshDataSetsAtom);
 
   useEffectMicrotask(() => {
     void refresh();
   }, [refresh]);
 
-  const { items, loadError, deleteTarget, deleting } = panel;
-
   const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setPanel((p) => ({ ...p, deleting: true }));
+    setDeleting(true);
     try {
       await deleteDataSet(deleteTarget.id);
-      setPanel((p) => ({ ...p, deleteTarget: null }));
+      setDeleteTarget(null);
       await refresh();
     } catch (e) {
-      setPanel((p) => ({
-        ...p,
-        loadError: e instanceof Error ? e.message : String(e),
-      }));
+      setLoadError(e instanceof Error ? e.message : String(e));
     } finally {
-      setPanel((p) => ({ ...p, deleting: false }));
+      setDeleting(false);
     }
   };
 
@@ -80,16 +84,14 @@ export function DataSetsPanel() {
           {items && items.length === 0 && !loadError && (
             <p className="p-6 text-sm text-muted-foreground">暂无数据集。请使用上方「新增数据集」开始配置。</p>
           )}
-          {items && items.length > 0 && (
-            <DataSetTable items={items} onDelete={(t) => setPanel((p) => ({ ...p, deleteTarget: t }))} />
-          )}
+          {items && items.length > 0 && <DataSetTable items={items} onDelete={(t) => setDeleteTarget(t)} />}
         </CardContent>
       </Card>
 
       <DeleteDataSetDialog
         target={deleteTarget}
         deleting={deleting}
-        onDismiss={() => setPanel((p) => ({ ...p, deleteTarget: null }))}
+        onDismiss={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
       />
     </Page>

@@ -4,31 +4,20 @@ import { atomFamily } from 'jotai-family';
 import { getDataSet, listDataSets } from '@/api/data-sets';
 import type { DataSetPublic } from './dto';
 
-export type DataSetsPanelState = {
-  items: DataSetPublic[] | null;
-  loadError: string | null;
-  deleteTarget: DataSetPublic | null;
-  deleting: boolean;
-};
+export const dataSetsItemsAtom = atom<DataSetPublic[] | null>(null);
+export const dataSetsLoadErrorAtom = atom<string | null>(null);
+export const dataSetsDeleteTargetAtom = atom<DataSetPublic | null>(null);
+export const dataSetsDeletingAtom = atom<boolean>(false);
 
-export const dataSetsPanelAtom = atom<DataSetsPanelState>({
-  items: null,
-  loadError: null,
-  deleteTarget: null,
-  deleting: false,
-});
-
-export const refreshDataSetsPanelAtom = atom(null, async (_get, set) => {
-  set(dataSetsPanelAtom, (s) => ({ ...s, loadError: null }));
+export const refreshDataSetsAtom = atom(null, async (_get, set) => {
+  set(dataSetsLoadErrorAtom, null);
   try {
     const items = await listDataSets();
-    set(dataSetsPanelAtom, (s) => ({ ...s, items, loadError: null }));
+    set(dataSetsItemsAtom, items);
+    set(dataSetsLoadErrorAtom, null);
   } catch (e) {
-    set(dataSetsPanelAtom, (s) => ({
-      ...s,
-      items: null,
-      loadError: e instanceof Error ? e.message : String(e),
-    }));
+    set(dataSetsItemsAtom, null);
+    set(dataSetsLoadErrorAtom, e instanceof Error ? e.message : String(e));
   }
 });
 

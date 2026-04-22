@@ -13,12 +13,14 @@ import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { getQuantAgentApiBase } from '@/api/client';
 import { cn } from '@/lib/utils';
 import {
-  evaluationProfilesListAtom,
+  evaluationProfilesListErrorAtom,
+  evaluationProfilesListItemsAtom,
   refreshEvaluationProfilesListAtom,
 } from '@/models/evaluation-profile/list-detail.atom';
 
 export default function EvaluationProfilesPage() {
-  const { items, error } = useAtomValue(evaluationProfilesListAtom);
+  const items = useAtomValue(evaluationProfilesListItemsAtom);
+  const error = useAtomValue(evaluationProfilesListErrorAtom);
   const refresh = useSetAtom(refreshEvaluationProfilesListAtom);
 
   useEffectMicrotask(() => {

@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 
-import { runFactorEvaluation } from '@/api/evaluation-profiles';
 import type { FactorEvaluationRowPublic } from '@/models/factor/dto';
+import { runFactorEvaluation } from '@/api/evaluation-run';
 
 export type EvaluationRunRunning = {
   factorId: string;
