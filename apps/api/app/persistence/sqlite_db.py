@@ -52,7 +52,6 @@ def create_db_and_tables() -> None:
     from app.factors import models as _factor_models  # noqa: F401
     from app.knowledge import models as _knowledge_models  # noqa: F401
     from app.nodes import models as _node_models  # noqa: F401
-    from app.preprocessors import models as _preprocessor_models  # noqa: F401
     from app.scheduler import models as _scheduler_models  # noqa: F401
     from app.strategy import models as _strategy_models  # noqa: F401
     from app.tool import models as _tool_models  # noqa: F401

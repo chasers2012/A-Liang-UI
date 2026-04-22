@@ -25,7 +25,6 @@ from app.factors import api as factors_router
 from app.knowledge import api as knowledge_router
 from app.log_config import configure_logging
 from app.nodes import api as nodes_router
-from app.preprocessors import api as preprocessors_router
 from app.scheduler import api as scheduler_router
 from app.startup_jobs import STARTUP_JOBS
 from app.strategy import api as strategies_router
@@ -96,7 +95,6 @@ app.include_router(backtests_router.router)
 app.include_router(data_sets_router.router)
 app.include_router(factors_router.router)
 app.include_router(knowledge_router.router)
-app.include_router(preprocessors_router.router)
 app.include_router(scheduler_router.router)
 app.include_router(strategies_router.router)
 app.include_router(tools_router.router)

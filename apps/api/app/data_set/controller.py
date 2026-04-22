@@ -21,7 +21,6 @@ from app.data_set.schemas import (
 from app.datasource.controller import get_datasource
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import utc_now_iso
-from app.preprocessors.controller import list_preprocessor_records
 
 
 def get_data_set(id: str) -> DataSet | None:
@@ -129,23 +128,8 @@ def _strip_deps(deps: list[str]) -> list[str]:
 
 
 def _extract_preprocessors_from_workflow(workflow: dict) -> list[str]:
-    nodes = workflow.get("nodes", [])
-    if not isinstance(nodes, list):
-        return []
-    known_ids = {r.id for r in list_preprocessor_records()}
-    out: list[str] = []
-    seen: set[str] = set()
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        node_type = str(node.get("type", "")).strip()
-        if not node_type or node_type in seen:
-            continue
-        if node_type not in known_ids:
-            continue
-        seen.add(node_type)
-        out.append(node_type)
-    return out
+    _ = workflow
+    return []
 
 
 def _validate_binding_dependencies(
