@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Page } from '@/components/page';
 import { StrategyWorkflowEditorBlock } from './strategy-editor-main-section';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
-import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import {
   initStrategyFormAtomFamily,
@@ -63,10 +63,10 @@ export function StrategyFormPage(props: Props) {
   );
 
   const pageDescription = isEdit ? (
-    <FactorEditPageDescription
-      description={state.description}
-      onDescriptionChange={(description) => void setDescription(description)}
-      descriptionAriaLabel="策略描述"
+    <EditablePageDescription
+      value={state.description}
+      onChange={(v) => void setDescription(v)}
+      textareaAriaLabel="策略描述"
     />
   ) : (
     '创建一个新的策略工作流。'

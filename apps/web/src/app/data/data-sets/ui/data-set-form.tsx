@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Page } from '@/components/page';
 import { PageFormHeaderActions } from '@/components/page-form-header-actions';
-import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
@@ -659,10 +659,10 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         />
       }
       description={
-        <FactorEditPageDescription
-          description={form.description}
-          onDescriptionChange={(d) => set({ description: d })}
-          descriptionAriaLabel="数据集说明"
+        <EditablePageDescription
+          value={form.description}
+          onChange={(d) => set({ description: d })}
+          textareaAriaLabel="数据集说明"
         />
       }
       headerClassName="mb-8"

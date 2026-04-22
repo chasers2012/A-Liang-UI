@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { FactorEditPageDescription } from "@/app/factors/ui/factor-edit-page-description";
-import { MarkdownContent } from "@/components/markdown/markdown-content";
+import { EditablePageDescription } from '@/components/editable-page-description';
+import { MarkdownContent } from '@/components/markdown/markdown-content';
 
 export function PreviewDescriptionSection(props: {
   readonly: boolean;
@@ -11,10 +11,10 @@ export function PreviewDescriptionSection(props: {
   const { readonly, description, onDescriptionChange } = props;
   if (!readonly) {
     return (
-      <FactorEditPageDescription
-        description={description ?? ""}
-        onDescriptionChange={onDescriptionChange ?? (() => {})}
-        descriptionAriaLabel="节点描述"
+      <EditablePageDescription
+        value={description ?? ''}
+        onChange={onDescriptionChange ?? (() => {})}
+        textareaAriaLabel="节点描述"
       />
     );
   }
@@ -27,4 +27,3 @@ export function PreviewDescriptionSection(props: {
     />
   );
 }
-

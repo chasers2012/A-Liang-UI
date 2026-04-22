@@ -14,7 +14,7 @@ import {
   patchEvaluationProfile,
 } from '@/api/evaluation-profiles';
 
-import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
+import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { Page } from '@/components/page';
 import { ProfileWorkflowEditorBlock } from './profile-editor-main-section';
@@ -158,11 +158,7 @@ export function EvaluationProfileFormPage(props: Props) {
         />
       }
       description={
-        <FactorEditPageDescription
-          description={description}
-          onDescriptionChange={setDescription}
-          descriptionAriaLabel="评价方案描述"
-        />
+        <EditablePageDescription value={description} onChange={setDescription} textareaAriaLabel="评价方案描述" />
       }
       className={'max-w-full flex-1 min-h-0 h-full overflow-hidden'}
       gap="sm"
