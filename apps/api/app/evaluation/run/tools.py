@@ -12,32 +12,32 @@ from app.evaluation.run.controller import (
     delete_evaluation_run as delete_evaluation_run_controller,
 )
 from app.evaluation.run.controller import (
+    enqueue_evaluation_run as enqueue_evaluation_run_controller,
+)
+from app.evaluation.run.controller import (
     get_evaluation_run_detail as get_evaluation_run_detail_controller,
 )
 from app.evaluation.run.controller import (
     list_evaluation_runs as list_evaluation_runs_controller,
 )
-from app.evaluation.run.controller import (
-    run_evaluation_run as run_evaluation_run_controller,
-)
 
 
 @tool(
     description=(
-        "执行一次因子评价运行（run）。"
+        "异步触发一次因子评价运行（run）。"
         "入参 profile_id（评价方案 id）与 factor_id（因子 id），"
         "行为与 POST /evalation/run 一致。"
-        "返回本次评价结果摘要与 results 负载。"
+        "返回调度任务信息（job）。"
     )
 )
 def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
     try:
-        row = run_evaluation_run_controller(profile_id, factor_id)
+        job = enqueue_evaluation_run_controller(profile_id, factor_id)
     except ProfileNotFoundError:
         raise ValueError(f"评价方案 {profile_id} 不存在") from None
     except FactorNotFoundError:
         raise ValueError(f"因子 {factor_id} 不存在") from None
-    return row.model_dump()
+    return job.model_dump(mode="json")
 
 
 @tool(

@@ -6,29 +6,29 @@ from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFou
 from app.evaluation.run.controller import (
     EvaluationRunNotFoundError,
     delete_evaluation_run,
+    enqueue_evaluation_run,
     get_evaluation_run_detail,
     list_evaluation_runs,
-    run_evaluation_run,
 )
 from app.evaluation.run.schemas import (
     EvaluationRunDetailPublic,
-    EvaluationRunRowPublic,
     RunEvaluationRunRequest,
 )
 from app.http_errors import http_bad_request
+from app.scheduler.schemas import SchedulerJobPublic
 
 router = APIRouter(prefix="/evaluation/run", tags=["evaluation/run"])
 
 
 @router.post(
     "/evalation/run",
-    response_model=EvaluationRunRowPublic,
+    response_model=SchedulerJobPublic,
 )
 def post_evaluation_run_for_profile(
     body: RunEvaluationRunRequest,
-) -> EvaluationRunRowPublic:
+) -> SchedulerJobPublic:
     try:
-        return run_evaluation_run(
+        return enqueue_evaluation_run(
             body.profile_id,
             body.factor_id,
             data_set_id=body.data_set_id,
