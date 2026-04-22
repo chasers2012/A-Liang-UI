@@ -9,10 +9,10 @@ from factor.factor import Factor
 
 
 def merged_dependencies(factors: Sequence[Factor]) -> list[str]:
-    """Union of ``Factor.dependencies`` in first-seen order."""
+    """Union of factor dependency fields in first-seen order."""
     out: list[str] = []
     for f in factors:
-        for col in f.dependencies:
+        for col in f.dependency_fields():
             if col not in out:
                 out.append(col)
     return out

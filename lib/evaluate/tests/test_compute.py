@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import ClassVar
-
 import pandas as pd
 import pytest
 from evaluate import (
@@ -14,20 +12,19 @@ from factor import Factor
 
 class _DoubleClose(Factor):
     name = "double_close"
-    dependencies: ClassVar[list[str]] = ["close"]
     max_window = 1
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        return data["close"] * 2.0
+    def calc(self, close: pd.DataFrame) -> pd.Series:
+        return (close * 2.0).stack()
 
 
 class _NeedsVol(Factor):
     name = "vol_tag"
-    dependencies: ClassVar[list[str]] = ["close", "volume"]
     max_window = 5
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        return data["volume"].astype(float)
+    def calc(self, close: pd.DataFrame, volume: pd.DataFrame) -> pd.Series:
+        _ = close
+        return volume.astype(float).stack()
 
 
 def _sample_panel() -> pd.DataFrame:

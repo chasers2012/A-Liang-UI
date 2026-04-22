@@ -24,11 +24,10 @@ class EvalWorkflowFactor(Factor):
     name = "{name}"
     group = "g"
     description = ""
-    dependencies = ["close"]
     max_window = 2
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        return data["close"]
+    def calc(self, close: pd.DataFrame) -> pd.Series:
+        return close.stack()
 '''
 
 

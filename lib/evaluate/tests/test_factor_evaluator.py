@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import ClassVar
-
 import numpy as np
 import pandas as pd
 from evaluate import (
@@ -35,11 +33,10 @@ class _StaticPanelSource(FactorDataSource):
 
 class _RankFactor(Factor):
     name = "momentum_rank"
-    dependencies: ClassVar[list[str]] = ["close"]
     max_window = 1
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        return data.groupby(level="date", group_keys=False)["close"].rank(pct=True)
+    def calc(self, close: pd.DataFrame) -> pd.Series:
+        return close.rank(axis=1, pct=True).stack()
 
 
 def _panel_and_factor(

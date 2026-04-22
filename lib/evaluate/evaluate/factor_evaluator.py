@@ -190,7 +190,7 @@ class AlphalensFactorEvaluator:
         self.close_col = close_col
         self._close_wide: pd.DataFrame | None = None
 
-        fields = list(dict.fromkeys(list(factor.dependencies)))
+        fields = list(dict.fromkeys(list(factor.dependency_fields())))
         if close_col not in fields:
             fields.append(close_col)
         self._price_panel = factor._dependency_resolver.get_panel(

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -18,8 +19,7 @@ class Factor(ABC):
     - ``name``: factor id
     - ``group``: registry grouping (optional override; default ``"factor"``)
     - ``max_window``: maximum lookback length
-    - ``dependencies``: required column names in the panel
-    - ``calc(data)``: compute values from a MultiIndex (date, asset) DataFrame
+    - ``calc(**kwargs)``: compute values from dependency wide DataFrame (index=date, columns=asset)
     """
 
     name: str = "factor"
@@ -27,7 +27,6 @@ class Factor(ABC):
     group: str = "factor"
     description: str = "因子描述"
     max_window: int = 1
-    dependencies: ClassVar[list[str]] = ["close"]
 
     def __init__(
         self,
@@ -36,17 +35,51 @@ class Factor(ABC):
     ) -> None:
         self._dependency_resolver = dependency_resolver
 
+    def _get_dependencies(self) -> list[str]:
+        """
+        Determine dependency field names for this factor.
+
+        Notes:
+        - ``**kwargs`` is allowed as an extra sink and is ignored for dependency inference.
+        - If ``calc`` only declares ``**kwargs`` and no named parameters, inference fails.
+        """
+        sig = inspect.signature(self.calc)
+        deps: list[str] = []
+        for p in sig.parameters.values():
+            if p.name == "self":
+                continue
+            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.VAR_POSITIONAL):
+                raise ValueError(
+                    f"Factor {self.name}: calc must not use positional-only/*args; "
+                    "declare dependencies as named parameters (e.g. calc(self, close, volume, **kwargs))."
+                )
+            if p.kind == inspect.Parameter.VAR_KEYWORD:
+                continue
+            deps.append(p.name)
+
+        if not deps:
+            raise ValueError(
+                f"Factor {self.name}: cannot infer dependencies from calc signature. "
+                "Declare them as named parameters (e.g. calc(self, close, **kwargs))."
+            )
+        return deps
+
+    def dependency_fields(self) -> list[str]:
+        """Dependency field names inferred from ``calc`` signature."""
+        return self._get_dependencies()
+
     @abstractmethod
-    def calc(self, data: pd.DataFrame) -> pd.Series | pd.DataFrame:
+    def calc(self, **kwargs: pd.DataFrame) -> pd.DataFrame:
         """
         Compute factor values (must implement).
 
         Args:
-            data: MultiIndex DataFrame (date, asset) with ``dependencies`` columns.
+            **kwargs: One wide DataFrame per dependency field, passed by name.
+                Each value has index ``date`` and columns ``asset``.
+                Example: a factor declaring ``calc(self, close, **kwargs)`` will receive ``close=...``.
 
         Returns:
-            Series or DataFrame with MultiIndex (date, asset).
-            - Single-column results are renamed to ``name`` where noted below.
+            Wide DataFrame with index ``date`` and columns ``asset``.
         """
         raise NotImplementedError
 
@@ -58,35 +91,47 @@ class Factor(ABC):
         if "date" not in index_names or "asset" not in index_names:
             raise ValueError(f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels")
 
-        missing_cols = set(self.dependencies) - set(price_data.columns)
+        deps = self._get_dependencies()
+        missing_cols = set(deps) - set(price_data.columns)
         if missing_cols:
             raise ValueError(f"Factor {self.name}: missing required columns: {missing_cols}")
 
     def _normalize_calc_output_to_frame(
         self,
-        result: pd.Series | pd.DataFrame,
+        result: pd.DataFrame,
         price_data: pd.DataFrame,
     ) -> pd.DataFrame:
-        if not isinstance(result, (pd.DataFrame, pd.Series)):
-            raise ValueError(f"Factor {self.name}: calc must return a DataFrame or Series")
-
-        if not isinstance(result.index, pd.MultiIndex):
-            raise ValueError(f"Factor {self.name}: calc result must have MultiIndex (date, asset)")
-
-        index_names = list(result.index.names)
-        if index_names != ["date", "asset"]:
+        if not isinstance(result, pd.DataFrame):
             raise ValueError(
-                f"Factor {self.name}: MultiIndex must be exactly (date, asset), got {index_names}"
+                f"Factor {self.name}: calc must return a wide DataFrame with index=date and columns=asset"
             )
+        if isinstance(result.index, pd.MultiIndex):
+            raise ValueError(
+                f"Factor {self.name}: calc must return wide DataFrame (index=date, columns=asset), not MultiIndex"
+            )
+        expected = price_data.index.to_frame(index=False)
+        expected["date"] = pd.to_datetime(expected["date"])
+        expected["asset"] = expected["asset"].astype(str)
+        expected_dates = pd.Index(expected["date"].unique(), name="date")
+        expected_assets = pd.Index(expected["asset"].unique(), name="asset")
+        out = result.copy()
+        out.index = pd.to_datetime(out.index)
+        out = out.reindex(index=expected_dates, columns=expected_assets)
+        out.columns.name = "asset"
+        out.index.name = "date"
+        return out
 
-        if isinstance(result, pd.Series):
-            out = pd.DataFrame({self.name: result})
-        elif len(result.columns) == 1:
-            out = result.copy()
-            out.columns = [self.name]
-        else:
-            out = result
-        return out.reindex(price_data.index)
+    def _panel_to_dependency_wide(
+        self,
+        price_data: pd.DataFrame,
+        dep_names: list[str],
+    ) -> dict[str, pd.DataFrame]:
+        out: dict[str, pd.DataFrame] = {}
+        for name in dep_names:
+            wide = price_data[name].unstack(level="asset")
+            wide.columns.name = "asset"
+            out[name] = wide
+        return out
 
     def _slice_result_by_request_dates(
         self,
@@ -94,21 +139,21 @@ class Factor(ABC):
         start_date: str | None,
         end_date: str,
     ) -> pd.DataFrame:
-        date_level = result.index.get_level_values("date")
+        date_level = result.index
         end_dt = pd.to_datetime(end_date) if end_date is not None else None
         if start_date:
             start_dt = pd.to_datetime(start_date)
             mask = (date_level >= start_dt) & (date_level <= end_dt if end_dt is not None else True)
             return result.loc[mask]
 
-        dl = result.index.get_level_values("date")
+        dl = result.index
         if end_dt is not None:
             mask_end = np.asarray(dl <= end_dt, dtype=bool)
         else:
             mask_end = np.ones(len(dl), dtype=bool)
         if mask_end.any():
             last_day = dl[mask_end].max()
-            return result.loc[result.index.get_level_values("date") == last_day]
+            return result.loc[result.index == last_day]
         return result.iloc[0:0]
 
     def calculate(
@@ -130,7 +175,7 @@ class Factor(ABC):
             dependency_resolver: Override instance :class:`DependencyResolver` for this call.
 
         Returns:
-            DataFrame, MultiIndex (date, asset), columns named per ``calc`` rules.
+            Wide DataFrame with index ``date`` and columns ``asset``.
         """
         price_data = self._load_data(
             start_date,
@@ -140,19 +185,21 @@ class Factor(ABC):
         )
 
         self._validate_calculate_panel(price_data)
-        raw = self.calc(price_data)
+        dep_names = self._get_dependencies()
+        deps = self._panel_to_dependency_wide(price_data, dep_names)
+        raw = self.calc(**deps)
         framed = self._normalize_calc_output_to_frame(raw, price_data)
         return self._slice_result_by_request_dates(framed, start_date, end_date)
 
-    def calculate_from_data(self, price_data: pd.DataFrame) -> pd.Series:
+    def calculate_from_data(self, price_data: pd.DataFrame) -> pd.DataFrame:
         """
-        Compute from an existing panel (evaluator-style), returning a single Series.
+        Compute from an existing panel (evaluator-style), returning wide DataFrame.
 
         Args:
             price_data: MultiIndex (date, asset) with ``dependencies``.
 
         Returns:
-            Series, MultiIndex (date, asset), name set to ``name``.
+            Wide DataFrame with index ``date`` and columns ``asset``.
         """
         if not isinstance(price_data.index, pd.MultiIndex):
             raise ValueError(f"Factor {self.name}: price_data must have MultiIndex (date, asset)")
@@ -161,30 +208,14 @@ class Factor(ABC):
         if "date" not in index_names or "asset" not in index_names:
             raise ValueError(f"Factor {self.name}: MultiIndex must have 'date' and 'asset' levels")
 
-        missing_cols = set(self.dependencies) - set(price_data.columns)
+        dep_names = self._get_dependencies()
+        missing_cols = set(dep_names) - set(price_data.columns)
         if missing_cols:
             raise ValueError(f"Factor {self.name}: missing required columns: {missing_cols}")
 
-        result = self.calc(price_data)
-
-        if not isinstance(result, (pd.DataFrame, pd.Series)):
-            raise ValueError(f"Factor {self.name}: calc must return a DataFrame or Series")
-
-        if not isinstance(result.index, pd.MultiIndex):
-            raise ValueError(f"Factor {self.name}: calc result must have MultiIndex (date, asset)")
-
-        if isinstance(result, pd.DataFrame):
-            if len(result.columns) > 0:
-                result = result.iloc[:, 0]
-            else:
-                raise ValueError(
-                    f"Factor {self.name}: calc result DataFrame must have at least one column"
-                )
-
-        result = result.reindex(price_data.index)
-        result.name = self.name
-
-        return result
+        deps = self._panel_to_dependency_wide(price_data, dep_names)
+        result = self.calc(**deps)
+        return self._normalize_calc_output_to_frame(result, price_data)
 
     def __call__(
         self,
@@ -219,7 +250,7 @@ class Factor(ABC):
                 "or pass dependency_resolver= to calculate()"
             )
 
-        deps = dependencies if dependencies is not None else self.dependencies
+        deps = dependencies if dependencies is not None else self._get_dependencies()
         return resolver.get_panel(
             fields=deps,
             start_date=start_date,

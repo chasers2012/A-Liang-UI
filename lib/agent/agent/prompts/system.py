@@ -5,12 +5,12 @@ def factor_subclass_contract() -> str:
     return """
 你必须输出**一个**继承自 Factor 的类，满足：
 
-1. 类属性：name（英文蛇形，唯一）、label（中文短名）、group、description、max_window（整数，calc 所需最长历史）、dependencies（列表，只能从「可用字段」中选）。
-2. 实现 def calc(self, data: pd.DataFrame) -> pd.Series | pd.DataFrame：
-   - data 为 MultiIndex (date, asset)，列名与 dependencies 一致；**日期在索引 level `date`**，通常不必把 `trade_date` 放进 dependencies（除非计算里显式用到该列）。
-   - 返回值必须是 MultiIndex (date, asset) 的 Series 或单列 DataFrame。
+1. 类属性：name（英文蛇形，唯一）、label（中文短名）、group、description、max_window（整数，calc 所需最长历史）。
+2. 实现 def calc(self, close: pd.DataFrame, ... ) -> pd.Series | pd.DataFrame：
+   - 依赖字段通过 calc 具名参数声明（参数名必须来自「可用字段」），每个参数都是宽表：index=date, columns=asset。
+   - 返回值可为宽表（index=date, columns=asset）或长表（MultiIndex (date, asset)）的 Series/DataFrame。
 3. 仅用 pandas、numpy；执行环境已提供 ``np``、``pd`` 与基类 ``Factor``，可直接使用。如需封装可在类内定义私有方法或局部函数，不要使用未安装的第三方库。
-4. 按资产做时序用 data.groupby(level='asset', group_keys=False)；横截面用 groupby(level='date', group_keys=False)。
+4. 时序可直接对宽表按行计算（如 ``close.pct_change(n)``）；横截面可按行（axis=1）处理（如 ``close.rank(axis=1, pct=True)``）。
 5. 不要使用 print/input/文件/网络；不要定义 __main__。
 """
 

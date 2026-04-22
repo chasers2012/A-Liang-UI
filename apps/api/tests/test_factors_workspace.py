@@ -20,12 +20,11 @@ class NewFactor(Factor):
     name = "{name}"
     group = "custom"
     description = ""
-    dependencies = ["close"]
     max_window = 2
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
+    def calc(self, close: pd.DataFrame) -> pd.Series:
         # Minimal implementation; this test only checks loading.
-        return data["close"]
+        return close.stack()
 """
 
 

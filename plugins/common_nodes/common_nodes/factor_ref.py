@@ -24,16 +24,14 @@ from workflow.node_types import OptionsNodeParam
     output_sockets=[Socket("factor", required=True, value_type="dataframe", label="因子矩阵")],
     label="因子计算",
     description=(
-        "加载并计算因子，输出 date,asset MultiIndex 因子数据。\n"
+        "加载并计算因子，输出宽表因子矩阵（index=date, columns=asset）。\n"
         "\n"
         "示例输出：\n"
         "\n"
-        "| date       | asset | factor_value |\n"
-        "|------------|-------|--------------|\n"
-        "| 2026-04-01 | AAPL  | 1.23         |\n"
-        "| 2026-04-01 | MSFT  | 0.87         |\n"
-        "| 2026-04-02 | AAPL  | 1.18         |\n"
-        "| 2026-04-02 | MSFT  | 0.91         |\n"
+        "| date       | AAPL | MSFT |\n"
+        "|------------|------|------|\n"
+        "| 2026-04-01 | 1.23 | 0.87 |\n"
+        "| 2026-04-02 | 1.18 | 0.91 |\n"
     ),
     category="common",
 )
@@ -53,7 +51,5 @@ class FactorRefNode:
         df = factor.calculate(
             start_date=ds.start_date, end_date=ds.end_date, instrument_codes=ds.instrument_codes
         )
-        col = df.columns[0] if len(df.columns) else factor.name
-        factor_df = df[[col]].copy()
-        factor_df.index = factor_df.index.set_names(["date", "asset"])
-        return factor_df.sort_index()
+
+        return df.sort_index().sort_index(axis=1)
