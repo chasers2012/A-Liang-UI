@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 
 export function NodeDetailEditToolbarButton(props: {
   canEdit: boolean;
@@ -59,25 +59,17 @@ export function NodeDetailEditToolbarButton(props: {
   if (editing) {
     return (
       <div className="flex shrink-0 items-center gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => setCancelOpen(true)}>
+        <Button type="button" variant="outline" onClick={() => setCancelOpen(true)}>
           取消
         </Button>
-        <Button
-          type="button"
-          variant="default"
-          size="sm"
-          disabled={saving || saveDisabled}
-          onClick={() => setSaveOpen(true)}
-        >
-          {saving ? "保存中…" : "保存"}
+        <Button type="button" variant="default" disabled={saving || saveDisabled} onClick={() => setSaveOpen(true)}>
+          {saving ? '保存中…' : '保存'}
         </Button>
         <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>确认取消编辑？</AlertDialogTitle>
-              <AlertDialogDescription>
-                当前未保存的修改将会丢失。
-              </AlertDialogDescription>
+              <AlertDialogDescription>当前未保存的修改将会丢失。</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>继续编辑</AlertDialogCancel>
@@ -91,9 +83,7 @@ export function NodeDetailEditToolbarButton(props: {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>确认保存修改？</AlertDialogTitle>
-              <AlertDialogDescription>
-                保存后会覆盖当前节点的源码内容。
-              </AlertDialogDescription>
+              <AlertDialogDescription>保存后会覆盖当前节点的源码内容。</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>返回检查</AlertDialogCancel>
@@ -106,39 +96,24 @@ export function NodeDetailEditToolbarButton(props: {
   }
   if (!onDelete) {
     return (
-      <Button
-        type="button"
-        variant="default"
-        size="sm"
-        className="shrink-0"
-        disabled={editDisabled}
-        onClick={onStartEdit}
-      >
+      <Button type="button" variant="default" className="shrink-0" disabled={editDisabled} onClick={onStartEdit}>
         编辑
       </Button>
     );
   }
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <Button type="button" variant="default" size="sm" disabled={editDisabled} onClick={onStartEdit}>
+      <Button type="button" variant="default" disabled={editDisabled} onClick={onStartEdit}>
         编辑
       </Button>
-      <Button
-        type="button"
-        variant="destructive"
-        size="sm"
-        disabled={deleteDisabled}
-        onClick={() => setDeleteOpen(true)}
-      >
+      <Button type="button" variant="destructive" disabled={deleteDisabled} onClick={() => setDeleteOpen(true)}>
         删除
       </Button>
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除节点？</AlertDialogTitle>
-            <AlertDialogDescription>
-              删除后不可恢复，请谨慎操作。
-            </AlertDialogDescription>
+            <AlertDialogDescription>删除后不可恢复，请谨慎操作。</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
@@ -151,4 +126,3 @@ export function NodeDetailEditToolbarButton(props: {
     </div>
   );
 }
-

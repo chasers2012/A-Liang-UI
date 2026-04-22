@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import type { NodeDetailPublic, WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
 import { isWireInputSpec } from '@/components/workflow-graph/workflow-node-input-spec';
 import { SectionHeader } from '@/components/section-header';
-import { PREVIEW_SCROLL_CLASS, mergePreviewParamModels } from './shared';
+import { mergePreviewParamModels } from './shared';
 import { listNodeVisibilityConfigs, putNodeVisibilityConfig } from '@/api/nodes';
 import {
   Combobox,
@@ -179,7 +179,12 @@ export function PanelPreviewTab(props: {
 
   if (!detail) {
     return (
-      <div className={cn(PREVIEW_SCROLL_CLASS, 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
+      <div
+        className={cn(
+          'h-full max-h-[calc(100vh-10rem)] px-6 pb-6 pt-2',
+          'flex min-h-0 flex-1 flex-col overflow-hidden',
+        )}
+      >
         <p className="py-8 text-sm text-muted-foreground">{placeholder}</p>
       </div>
     );
@@ -190,7 +195,9 @@ export function PanelPreviewTab(props: {
   const mergedParamModels = mergePreviewParamModels(detail);
 
   return (
-    <div className={cn(PREVIEW_SCROLL_CLASS, 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
+    <div
+      className={cn('h-full max-h-[calc(100vh-10rem)] px-6 pb-6 pt-2', 'flex min-h-0 flex-1 flex-col overflow-hidden')}
+    >
       <div className="flex min-h-0 flex-1 flex-col gap-6 pb-2 pt-2 lg:flex-row lg:items-stretch lg:gap-8">
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
           <SectionHeader>可用领域</SectionHeader>

@@ -295,7 +295,7 @@ export default function FactorsPage() {
                         }}
                         inputAriaLabel="编辑因子标识 name"
                         editButtonAriaLabel="编辑因子标识 name"
-                        emptyDisplayText="（未命名因子）"
+                        placeholder="（未命名因子）"
                       />
                     ) : (
                       form.name || '因子详情'
