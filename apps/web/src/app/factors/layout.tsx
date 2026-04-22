@@ -31,16 +31,18 @@ export const FactorsLibrarySelectionContext = createContext<string | null>(null)
 
 function FactorSourceEditor(props: {
   factorId: string | null;
-  isCreateMode: boolean;
+  readonly: boolean;
+  saveVersion: number;
+  onSavingChange: (next: boolean) => void;
   onSaved: () => void;
   onCreated: (id: string) => void;
 }) {
-  const { factorId, isCreateMode, onSaved, onCreated } = props;
+  const { factorId, readonly, saveVersion, onSavingChange, onSaved, onCreated } = props;
+  const isCreateMode = !factorId;
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
   const [form, setForm] = useState<FactorFormState>(emptyForm());
   const [hasLoaded, setHasLoaded] = useState(false);
 
@@ -49,7 +51,6 @@ function FactorSourceEditor(props: {
     setLoading(true);
     setLoadError(null);
     setFormError(null);
-    setEditMode(isCreateMode);
     void (async () => {
       try {
         if (isCreateMode) {
@@ -85,6 +86,10 @@ function FactorSourceEditor(props: {
     };
   }, [factorId, isCreateMode]);
 
+  useEffect(() => {
+    onSavingChange(saving);
+  }, [onSavingChange, saving]);
+
   const onSave = async () => {
     setFormError(null);
     const validateError = validateFormForSubmit(form);
@@ -104,7 +109,6 @@ function FactorSourceEditor(props: {
       if (!factorId) return;
       const saved = await patchFactor(factorId, bodyFromForm(form));
       setForm(hydrateFromDetail(saved));
-      setEditMode(false);
       onSaved();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : String(e));
@@ -113,7 +117,14 @@ function FactorSourceEditor(props: {
     }
   };
 
-  if (!isCreateMode && !factorId) {
+  useEffect(() => {
+    if (saveVersion <= 0) return;
+    void onSave();
+    // saveVersion 仅用于触发保存动作，不应把 onSave 作为依赖导致重复触发
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saveVersion]);
+
+  if (!factorId && readonly) {
     return (
       <FramePanel>
         <p className="text-sm text-muted-foreground">请选择左侧因子后查看源码。</p>
@@ -141,29 +152,11 @@ function FactorSourceEditor(props: {
 
   return (
     <FramePanel className="space-y-4 overflow-auto">
-      <div className="flex items-center justify-end gap-2">
-        {isCreateMode ? (
-          <Button onClick={() => void onSave()} disabled={saving}>
-            {saving ? '创建中…' : '创建因子'}
-          </Button>
-        ) : !editMode ? (
-          <Button onClick={() => setEditMode(true)}>编辑源码</Button>
-        ) : (
-          <>
-            <Button variant="outline" onClick={() => setEditMode(false)} disabled={saving}>
-              取消
-            </Button>
-            <Button onClick={() => void onSave()} disabled={saving}>
-              {saving ? '保存中…' : '保存'}
-            </Button>
-          </>
-        )}
-      </div>
       <FactorFormFields
         form={form}
         setForm={setForm}
         formError={formError}
-        readOnly={!isCreateMode && !editMode}
+        readOnly={readonly}
         idPrefix={`factor-source-${factorId ?? 'new'}`}
       />
     </FramePanel>
@@ -190,11 +183,14 @@ async function deleteSelectedFactor(params: {
 // eslint-disable-next-line complexity
 export default function FactorsLayout({ children }: { children: ReactNode }) {
   void children;
+  const CREATE_SENTINEL = '__create__';
   const [detailTabValue, setDetailTabValue] = useState('overview');
   const { items, error: loadError } = useAtomValue(factorsListAtom);
   const refresh = useSetAtom(refreshFactorsListAtom);
   const [selectedIdState, setSelectedIdState] = useState<string | null>(null);
-  const [createMode, setCreateMode] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [sourceSaving, setSourceSaving] = useState(false);
+  const [sourceSaveVersion, setSourceSaveVersion] = useState(0);
 
   useEffectMicrotask(() => {
     void refresh();
@@ -213,7 +209,8 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
   }, [items, searchQuery]);
 
   const effectiveDefaultSelectedId = filteredItems?.[0]?.id ?? null;
-  const selectedId = createMode ? null : (selectedIdState ?? effectiveDefaultSelectedId);
+  const isCreating = selectedIdState === CREATE_SENTINEL;
+  const selectedId = isCreating ? null : (selectedIdState ?? effectiveDefaultSelectedId);
 
   const selectedFactor = useMemo(() => {
     if (!selectedId) return null;
@@ -221,7 +218,7 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
   }, [selectedId, items]);
 
   const onSelectFactor = (id: string) => {
-    setCreateMode(false);
+    setEditing(false);
     setSelectedIdState(id);
   };
 
@@ -260,7 +257,8 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
             aria-label="新增因子"
             className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
             onClick={() => {
-              setCreateMode(true);
+              setSelectedIdState(CREATE_SENTINEL);
+              setEditing(true);
               setDetailTabValue('source');
             }}
           >
@@ -280,30 +278,77 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
                     <TabsTrigger value="source">源码</TabsTrigger>
                   </TabsList>
                 </div>
-                <div className="flex">
-                  <Button
-                    disabled={!selectedId && !createMode}
-                    onClick={() => {
-                      setDetailTabValue('source');
-                    }}
-                  >
-                    编辑
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={!selectedId || createMode}
-                    onClick={() => {
-                      if (!selectedId) return;
-                      void deleteSelectedFactor({
-                        selectedId,
-                        selectedName: selectedFactor?.name ?? selectedId,
-                        refresh,
-                        onDeleted: () => setSelectedIdState(null),
-                      });
-                    }}
-                  >
-                    删除
-                  </Button>
+                <div className="flex items-center gap-2">
+                  {isCreating ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        disabled={sourceSaving}
+                        onClick={() => {
+                          setEditing(false);
+                          setSelectedIdState(effectiveDefaultSelectedId);
+                          setDetailTabValue('overview');
+                        }}
+                      >
+                        取消创建
+                      </Button>
+                      <Button
+                        disabled={sourceSaving}
+                        onClick={() => {
+                          setDetailTabValue('source');
+                          setSourceSaveVersion((v) => v + 1);
+                        }}
+                      >
+                        {sourceSaving ? '创建中…' : '创建因子'}
+                      </Button>
+                    </>
+                  ) : editing ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        disabled={sourceSaving}
+                        onClick={() => {
+                          setEditing(false);
+                        }}
+                      >
+                        取消
+                      </Button>
+                      <Button
+                        disabled={sourceSaving || !selectedId}
+                        onClick={() => {
+                          setSourceSaveVersion((v) => v + 1);
+                        }}
+                      >
+                        {sourceSaving ? '保存中…' : '保存'}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="destructive"
+                        disabled={!selectedId}
+                        onClick={() => {
+                          if (!selectedId) return;
+                          void deleteSelectedFactor({
+                            selectedId,
+                            selectedName: selectedFactor?.name ?? selectedId,
+                            refresh,
+                            onDeleted: () => setSelectedIdState(null),
+                          });
+                        }}
+                      >
+                        删除
+                      </Button>
+                      <Button
+                        disabled={!selectedId}
+                        onClick={() => {
+                          setEditing(true);
+                        }}
+                      >
+                        编辑
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </FrameHeader>
@@ -334,11 +379,16 @@ export default function FactorsLayout({ children }: { children: ReactNode }) {
               className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
             >
               <FactorSourceEditor
-                factorId={selectedId}
-                isCreateMode={createMode}
-                onSaved={() => void refresh()}
+                factorId={isCreating ? null : selectedId}
+                readonly={!editing}
+                saveVersion={sourceSaveVersion}
+                onSavingChange={setSourceSaving}
+                onSaved={() => {
+                  setEditing(false);
+                  void refresh();
+                }}
                 onCreated={(id) => {
-                  setCreateMode(false);
+                  setEditing(false);
                   setSelectedIdState(id);
                   setDetailTabValue('source');
                 }}
