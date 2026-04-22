@@ -40,7 +40,7 @@ function BacktestCatalogSelect(props: {
   return (
     <div className="grid gap-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Select value={value} onValueChange={(v) => v && onValueChange(v)}>
+      <Select modal={false} value={value} onValueChange={(v) => v && onValueChange(v)}>
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder={loading ? '加载中…' : placeholder}>{selectedLabel || undefined}</SelectValue>
         </SelectTrigger>
@@ -49,7 +49,6 @@ function BacktestCatalogSelect(props: {
             options.map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 <span className="truncate">{o.name}</span>
-                <span className="ml-2 font-mono text-xs text-muted-foreground">{o.id}</span>
               </SelectItem>
             ))
           ) : (
