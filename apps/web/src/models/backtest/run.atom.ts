@@ -1,36 +1,10 @@
 import { atom } from 'jotai';
-import { atomFamily } from 'jotai-family';
 
-import { deleteBacktest, getBacktest, listBacktests, runBacktest } from '@/api/backtests';
-import { listDataSets } from '@/api/data-sets';
-import { listStrategies } from '@/api/strategies';
-import type { DataSetPublic } from '@/models/data-set/dto';
-import type { StrategyListPublic } from '@/models/strategy/dto';
+import { runBacktest } from '@/api/backtests';
+import { dataSetsItemsAtom, refreshDataSetsAtom } from '@/models/data-set/panel-detail.atom';
+import { refreshStrategiesListAtom, strategiesListAtom } from '@/models/strategy/list-detail.atom';
 
-import type { BacktestRunDetail, BacktestRunSummary } from './dto';
-
-export type BacktestsListState = {
-  items: BacktestRunSummary[] | null;
-  error: string | null;
-};
-
-export const backtestsListAtom = atom<BacktestsListState>({
-  items: null,
-  error: null,
-});
-
-export const refreshBacktestsListAtom = atom(null, async (_get, set) => {
-  set(backtestsListAtom, (s) => ({ ...s, error: null }));
-  try {
-    const items = await listBacktests({ limit: 50 });
-    set(backtestsListAtom, { items, error: null });
-  } catch (e) {
-    set(backtestsListAtom, {
-      items: null,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
-});
+import { refreshBacktestsListAtom } from './list.atom';
 
 export type BacktestRunFormState = {
   strategyId: string;
@@ -54,21 +28,14 @@ export const backtestRunFormAtom = atom<BacktestRunFormState>({
   error: null,
 });
 
-export type BacktestRunCatalogState = {
-  strategies: StrategyListPublic[];
-  dataSets: DataSetPublic[];
-};
+export const backtestRunStrategiesAtom = atom(async (get) => (await get(strategiesListAtom)).items ?? []);
+export const backtestRunDataSetsAtom = atom(async (get) => (await get(dataSetsItemsAtom)) ?? []);
 
-export const backtestRunCatalogAtom = atom<BacktestRunCatalogState>({
-  strategies: [],
-  dataSets: [],
-});
-
-export const loadBacktestRunCatalogAtom = atom(null, async (_get, set) => {
+export const loadBacktestRunCatalogAtom = atom(null, async (get, set) => {
   set(backtestRunFormAtom, (s) => ({ ...s, catalogLoading: true, error: null }));
   try {
-    const [strategies, dataSets] = await Promise.all([listStrategies(), listDataSets()]);
-    set(backtestRunCatalogAtom, { strategies, dataSets });
+    await Promise.all([set(refreshStrategiesListAtom), set(refreshDataSetsAtom)]);
+    const [strategies, dataSets] = await Promise.all([get(backtestRunStrategiesAtom), get(backtestRunDataSetsAtom)]);
     set(backtestRunFormAtom, (s) => ({
       ...s,
       catalogLoading: false,
@@ -76,7 +43,6 @@ export const loadBacktestRunCatalogAtom = atom(null, async (_get, set) => {
       dataSetId: s.dataSetId || dataSets[0]?.id || '',
     }));
   } catch (e) {
-    set(backtestRunCatalogAtom, { strategies: [], dataSets: [] });
     set(backtestRunFormAtom, (s) => ({
       ...s,
       catalogLoading: false,
@@ -148,41 +114,3 @@ export const submitBacktestRunAtom = atom(null, async (get, set) => {
     }));
   }
 });
-
-export type BacktestDetailState = {
-  run: BacktestRunDetail | null;
-  error: string | null;
-};
-
-export const backtestDetailAtomFamily = atomFamily((runId: string) => {
-  void runId;
-  return atom<BacktestDetailState>({
-    run: null,
-    error: null,
-  });
-});
-
-export const loadBacktestDetailAtomFamily = atomFamily((runId: string) =>
-  atom(null, async (_get, set) => {
-    if (!runId) return;
-    set(backtestDetailAtomFamily(runId), { run: null, error: null });
-    try {
-      const run = await getBacktest(runId);
-      set(backtestDetailAtomFamily(runId), { run, error: null });
-    } catch (e) {
-      set(backtestDetailAtomFamily(runId), {
-        run: null,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-  }),
-);
-
-export const deleteBacktestAtomFamily = atomFamily((runId: string) =>
-  atom(null, async (_get, set) => {
-    if (!runId) return;
-    await deleteBacktest(runId);
-    set(backtestDetailAtomFamily(runId), { run: null, equity: null, trades: null, error: null });
-    await set(refreshBacktestsListAtom);
-  }),
-);

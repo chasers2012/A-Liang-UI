@@ -19,7 +19,7 @@ import {
   backtestDetailAtomFamily,
   deleteBacktestAtomFamily,
   loadBacktestDetailAtomFamily,
-} from '@/models/backtest/list-detail.atom';
+} from '@/models/backtest/detail.atom';
 import {
   loadStrategyDetailAtomFamily,
   refreshStrategyNodeTypesAtom,

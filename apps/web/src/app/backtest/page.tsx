@@ -8,7 +8,7 @@ import { Page } from '@/components/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BacktestRunForm } from './ui/backtest-run-form';
-import { refreshBacktestsListAtom, backtestsListAtom } from '@/models/backtest/list-detail.atom';
+import { refreshBacktestsListAtom, backtestsListAtom } from '@/models/backtest/list.atom';
 import { useBacktestsPolling } from '@/models/backtest/use-backtests-polling';
 
 export default function BacktestPage() {

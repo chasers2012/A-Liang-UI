@@ -11,22 +11,23 @@ export type StrategiesListState = {
   error: string | null;
 };
 
-export const strategiesListAtom = atom<StrategiesListState>({
-  items: null,
-  error: null,
+const strategiesListRevisionAtom = atom(0);
+
+export const strategiesListAtom = atom(async (get) => {
+  get(strategiesListRevisionAtom);
+  try {
+    const items = await listStrategies();
+    return { items, error: null as string | null };
+  } catch (e) {
+    return {
+      items: null as StrategyListPublic[] | null,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
 });
 
 export const refreshStrategiesListAtom = atom(null, async (_get, set) => {
-  set(strategiesListAtom, (s) => ({ ...s, error: null }));
-  try {
-    const items = await listStrategies();
-    set(strategiesListAtom, { items, error: null });
-  } catch (e) {
-    set(strategiesListAtom, {
-      items: null,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+  set(strategiesListRevisionAtom, (n) => n + 1);
 });
 
 export type StrategyDetailState = {

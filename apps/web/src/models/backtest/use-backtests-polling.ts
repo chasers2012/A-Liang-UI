@@ -3,7 +3,7 @@ import { useAtomValue } from 'jotai';
 
 import { usePolling } from '@/hooks/use-polling';
 
-import { backtestsListAtom } from './list-detail.atom';
+import { backtestsListAtom } from './list.atom';
 
 export function useBacktestsPolling(refresh: () => Promise<unknown> | void, intervalMs = 3000) {
   const { items } = useAtomValue(backtestsListAtom);
