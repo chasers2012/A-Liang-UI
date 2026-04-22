@@ -23,7 +23,6 @@ alphalens-nodes = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }
 factor = { workspace = true }
-agent = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
 workflow = { workspace = true }
@@ -36,7 +35,6 @@ members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/e
 dev = [
     "httpx>=0.27.0",
     "pytest>=8.0.0",
-    "agent",
     "datasources",
     "evaluate",
     "factor",
