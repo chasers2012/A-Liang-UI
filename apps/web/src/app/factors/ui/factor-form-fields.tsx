@@ -79,10 +79,6 @@ export function FactorFormFields({
               placeholder="my_factor"
               autoComplete="off"
             />
-            <p className="text-xs text-muted-foreground">
-              须为合法 Python 标识符；请与源码中 <span className="font-mono">NewFactor.name</span>{' '}
-              保持一致（可与代码编辑器双向同步）。
-            </p>
           </div>
         ) : null}
         <div className="min-w-0 space-y-2">

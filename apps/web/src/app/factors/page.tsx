@@ -25,6 +25,9 @@ import {
 import { applyFactorFormPatch, FactorFormFields } from './ui/factor-form-fields';
 import { FactorEvaluationTrigger } from './ui/factor-evaluation-trigger';
 import { FactorEvaluationResult } from './ui/factor-evaluation-result';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Item, ItemContent } from '@/components/ui/item';
+import { SectionHeader } from '@/components/section-header';
 
 /** 供 `/factors` 右侧详情区读取与左侧列表一致的选中项（默认首项）。 */
 export const FactorsLibrarySelectionContext = createContext<string | null>(null);
@@ -126,40 +129,48 @@ function FactorSourceEditor(props: {
 
   if (!factorId && readonly) {
     return (
-      <FramePanel>
-        <p className="text-sm text-muted-foreground">请选择左侧因子后查看源码。</p>
-      </FramePanel>
+      <Item variant="outline">
+        <ItemContent>
+          <p className="text-sm text-muted-foreground">请选择左侧因子后查看源码。</p>
+        </ItemContent>
+      </Item>
     );
   }
 
   if (loading) {
     return (
-      <FramePanel>
-        <p className="text-sm text-muted-foreground">源码加载中…</p>
-      </FramePanel>
+      <Item variant="outline">
+        <ItemContent>
+          <p className="text-sm text-muted-foreground">源码加载中…</p>
+        </ItemContent>
+      </Item>
     );
   }
 
   if (loadError) {
     return (
-      <FramePanel>
-        <p className="text-sm text-destructive">源码加载失败：{loadError}</p>
-      </FramePanel>
+      <Item variant="outline">
+        <ItemContent>
+          <p className="text-sm text-destructive">源码加载失败：{loadError}</p>
+        </ItemContent>
+      </Item>
     );
   }
 
   if (!hasLoaded) return null;
 
   return (
-    <FramePanel className="space-y-4 overflow-auto">
-      <FactorFormFields
-        form={form}
-        setForm={setForm}
-        formError={formError}
-        readOnly={readonly}
-        idPrefix={`factor-source-${factorId ?? 'new'}`}
-      />
-    </FramePanel>
+    <Item variant="outline">
+      <ItemContent>
+        <FactorFormFields
+          form={form}
+          setForm={setForm}
+          formError={formError}
+          readOnly={readonly}
+          idPrefix={`factor-source-${factorId ?? 'new'}`}
+        />
+      </ItemContent>
+    </Item>
   );
 }
 
@@ -264,137 +275,142 @@ export default function FactorsPage() {
         }
       />
       <FactorsLibrarySelectionContext.Provider value={selectedId}>
-        <Frame className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <Tabs value={detailTabValue} onValueChange={setDetailTabValue}>
-            <FrameHeader>
-              <FrameTitle>{selectedFactor?.name || '因子详情'}</FrameTitle>
-              <div className="flex flex-row justify-between">
-                <div className="flex">
+        <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <CardHeader>
+            <CardTitle>{selectedFactor?.name || '因子详情'}</CardTitle>
+            <div className="flex flex-row justify-between">
+              <div className="flex">
+                <Tabs value={detailTabValue} onValueChange={setDetailTabValue}>
                   <TabsList className="inline-flex h-9 w-fit flex-wrap items-center gap-1 rounded-lg bg-muted/80 p-1 text-muted-foreground">
                     <TabsTrigger value="overview">概览</TabsTrigger>
                     <TabsTrigger value="source">源码</TabsTrigger>
                   </TabsList>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isCreating ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        disabled={sourceSaving}
-                        onClick={() => {
-                          setEditing(false);
-                          setSelectedId(effectiveDefaultSelectedId);
-                          setDetailTabValue('overview');
-                        }}
-                      >
-                        取消创建
-                      </Button>
-                      <Button
-                        disabled={sourceSaving}
-                        onClick={() => {
-                          setDetailTabValue('source');
-                          setSourceSaveVersion((v) => v + 1);
-                        }}
-                      >
-                        {sourceSaving ? '创建中…' : '创建因子'}
-                      </Button>
-                    </>
-                  ) : editing ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        disabled={sourceSaving}
-                        onClick={() => {
-                          setEditing(false);
-                        }}
-                      >
-                        取消
-                      </Button>
-                      <Button
-                        disabled={sourceSaving || !selectedId}
-                        onClick={() => {
-                          setSourceSaveVersion((v) => v + 1);
-                        }}
-                      >
-                        {sourceSaving ? '保存中…' : '保存'}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="destructive"
-                        disabled={!selectedId}
-                        onClick={() => {
-                          if (!selectedId) return;
-                          void deleteSelectedFactor({
-                            selectedId,
-                            selectedName: selectedFactor?.name ?? selectedId,
-                            refresh,
-                            onDeleted: () => setSelectedId(null),
-                          });
-                        }}
-                      >
-                        删除
-                      </Button>
-                      <Button
-                        disabled={!selectedId}
-                        onClick={() => {
-                          setDetailTabValue('source');
-                          setSelectedId(selectedId ?? effectiveDefaultSelectedId);
-                          setEditing(true);
-                        }}
-                      >
-                        编辑
-                      </Button>
-                    </>
-                  )}
-                </div>
+                </Tabs>
               </div>
-            </FrameHeader>
-            <TabsContent
-              value="overview"
-              className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
-            >
-              {selectedId && (
-                <>
-                  <FramePanel>
-                    <h2 className="text-sm">因子简介</h2>
-                    <p className="text-muted-foreground text-sm">{selectedFactor?.description || '暂无简介'}</p>
-                  </FramePanel>
-                  <FramePanel>
-                    <h2 className="text-sm">因子评价</h2>
-                    <FactorEvaluationTrigger factorId={selectedId} />
-                  </FramePanel>
-                  <FramePanel>
-                    <h2 className="text-sm">评价结果</h2>
-                    <FactorEvaluationResult factorId={selectedId} />
-                  </FramePanel>
-                </>
-              )}
-            </TabsContent>
-
-            <TabsContent
-              value="source"
-              className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-hidden:hidden"
-            >
-              <FactorSourceEditor
-                factorId={selectedId}
-                readonly={!editing}
-                saveVersion={sourceSaveVersion}
-                onSavingChange={setSourceSaving}
-                onSaved={() => {
-                  setEditing(false);
-                  void refresh();
-                }}
-                onCreated={(id) => {
-                  setEditing(false);
-                  setSelectedId(id);
-                  setDetailTabValue('source');
-                }}
-              />
-            </TabsContent>
-          </Tabs>
-        </Frame>
+              <div className="flex items-center gap-2">
+                {isCreating ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      disabled={sourceSaving}
+                      onClick={() => {
+                        setEditing(false);
+                        setSelectedId(effectiveDefaultSelectedId);
+                        setDetailTabValue('overview');
+                      }}
+                    >
+                      取消创建
+                    </Button>
+                    <Button
+                      disabled={sourceSaving}
+                      onClick={() => {
+                        setDetailTabValue('source');
+                        setSourceSaveVersion((v) => v + 1);
+                      }}
+                    >
+                      {sourceSaving ? '创建中…' : '创建因子'}
+                    </Button>
+                  </>
+                ) : editing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      disabled={sourceSaving}
+                      onClick={() => {
+                        setEditing(false);
+                      }}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      disabled={sourceSaving || !selectedId}
+                      onClick={() => {
+                        setSourceSaveVersion((v) => v + 1);
+                      }}
+                    >
+                      {sourceSaving ? '保存中…' : '保存'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="destructive"
+                      disabled={!selectedId}
+                      onClick={() => {
+                        if (!selectedId) return;
+                        void deleteSelectedFactor({
+                          selectedId,
+                          selectedName: selectedFactor?.name ?? selectedId,
+                          refresh,
+                          onDeleted: () => setSelectedId(null),
+                        });
+                      }}
+                    >
+                      删除
+                    </Button>
+                    <Button
+                      disabled={!selectedId}
+                      onClick={() => {
+                        setDetailTabValue('source');
+                        setSelectedId(selectedId ?? effectiveDefaultSelectedId);
+                        setEditing(true);
+                      }}
+                    >
+                      编辑
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {detailTabValue === 'overview' && (
+              <div className="flex flex-col gap-2.5">
+                {selectedId && (
+                  <>
+                    <SectionHeader>因子简介</SectionHeader>
+                    <Item variant="outline">
+                      <ItemContent>
+                        <p className="text-muted-foreground text-sm">{selectedFactor?.description || '暂无简介'}</p>
+                      </ItemContent>
+                    </Item>
+                    <SectionHeader>因子评价</SectionHeader>
+                    <Item variant="outline">
+                      <ItemContent>
+                        <FactorEvaluationTrigger factorId={selectedId} />
+                      </ItemContent>
+                    </Item>
+                    <SectionHeader>评价结果</SectionHeader>
+                    <Item variant="outline">
+                      <ItemContent>
+                        <FactorEvaluationResult factorId={selectedId} />
+                      </ItemContent>
+                    </Item>
+                  </>
+                )}
+              </div>
+            )}
+            {detailTabValue === 'source' && (
+              <Item>
+                <FactorSourceEditor
+                  factorId={selectedId}
+                  readonly={!editing}
+                  saveVersion={sourceSaveVersion}
+                  onSavingChange={setSourceSaving}
+                  onSaved={() => {
+                    setEditing(false);
+                    void refresh();
+                  }}
+                  onCreated={(id) => {
+                    setEditing(false);
+                    setSelectedId(id);
+                    setDetailTabValue('source');
+                  }}
+                />
+              </Item>
+            )}
+          </CardContent>
+        </Card>
       </FactorsLibrarySelectionContext.Provider>
     </Page>
   );
