@@ -11,7 +11,7 @@ import { Page } from '@/components/page';
 import { StrategyWorkflowEditorBlock } from './strategy-editor-main-section';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
-import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { EditablePageTitle } from '@/components/editable-page-title';
 import {
   initStrategyFormAtomFamily,
   setStrategyFormDescriptionAtomFamily,
@@ -52,7 +52,12 @@ export function StrategyFormPage(props: Props) {
   };
 
   const pageTitle = isEdit ? (
-    <FactorEditPageTitle name={state.name} onNameChange={(name) => void setName(name)} nameAriaLabel="策略名称" />
+    <EditablePageTitle
+      value={state.name}
+      onChange={(name) => void setName(name)}
+      inputAriaLabel="策略名称"
+      editButtonAriaLabel="编辑名称"
+    />
   ) : (
     '新增策略'
   );

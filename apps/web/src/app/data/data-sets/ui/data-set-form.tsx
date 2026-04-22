@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Page } from '@/components/page';
 import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
-import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { EditablePageTitle } from '@/components/editable-page-title';
 import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
 import { AliasMapEditor, depsFromAliasRows, mapFromAliasRows, type AliasMapRow } from './alias-map-editor';
@@ -650,7 +650,14 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   return (
     <Page
       gap="none"
-      title={<FactorEditPageTitle name={form.name} onNameChange={(n) => set({ name: n })} nameAriaLabel="数据集名称" />}
+      title={
+        <EditablePageTitle
+          value={form.name}
+          onChange={(n) => set({ name: n })}
+          inputAriaLabel="数据集名称"
+          editButtonAriaLabel="编辑名称"
+        />
+      }
       description={
         <FactorEditPageDescription
           description={form.description}

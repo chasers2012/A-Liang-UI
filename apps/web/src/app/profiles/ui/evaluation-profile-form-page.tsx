@@ -15,7 +15,7 @@ import {
 } from '@/api/evaluation-profiles';
 
 import { FactorEditPageDescription } from '@/app/factors/ui/factor-edit-page-description';
-import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { EditablePageTitle } from '@/components/editable-page-title';
 import { Page } from '@/components/page';
 import { ProfileWorkflowEditorBlock } from './profile-editor-main-section';
 import { EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT } from './profile-form-shared';
@@ -149,7 +149,14 @@ export function EvaluationProfileFormPage(props: Props) {
 
   return (
     <Page
-      title={<FactorEditPageTitle name={name} onNameChange={setName} nameAriaLabel="评价方案名称" />}
+      title={
+        <EditablePageTitle
+          value={name}
+          onChange={setName}
+          inputAriaLabel="评价方案名称"
+          editButtonAriaLabel="编辑名称"
+        />
+      }
       description={
         <FactorEditPageDescription
           description={description}

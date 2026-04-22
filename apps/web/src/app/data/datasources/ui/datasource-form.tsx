@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Page } from '@/components/page';
 import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 
-import { FactorEditPageTitle } from '@/app/factors/ui/factor-edit-page-title';
+import { EditablePageTitle } from '@/components/editable-page-title';
 import type { DatasourcePluginPublic } from '@/models/datasource/dto';
 import type { EditorMode, FormState } from '../form-model';
 import { DatasourceFormPluginConfig } from './datasource-form-plugin-config';
@@ -48,7 +48,12 @@ export function DatasourceForm({
     <Page
       gap="none"
       title={
-        <FactorEditPageTitle name={form.name} onNameChange={(n) => set({ name: n })} nameAriaLabel="数据源显示名称" />
+        <EditablePageTitle
+          value={form.name}
+          onChange={(n) => set({ name: n })}
+          inputAriaLabel="数据源显示名称"
+          editButtonAriaLabel="编辑名称"
+        />
       }
       description={
         editorMode === 'create' ? '连接信息保存在服务端 workspace；接口不会返回密码明文。' : '密码留空表示保留原值。'
