@@ -9,7 +9,7 @@ import { createContext, useMemo, useState, type ReactNode } from 'react';
 
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { WorkflowNodeTypeList } from '@/components/workflow-graph/workflow-node-type-list';
+import { SearchList } from '@/components/search-list';
 import {
   Popover,
   PopoverContent,
@@ -348,7 +348,7 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <WorkflowNodeTypeList
+      <SearchList
         className="h-full min-h-0 w-[300px]"
         items={
           domainFilteredItems?.map((m) => ({
@@ -358,14 +358,19 @@ export function NodesLayoutClient({ children }: { children: ReactNode }) {
             category: m.category,
           })) ?? null
         }
-        selectedId={highlightId}
+        getGroupKey={(item) => item.category ?? '其他'}
+        renderTitle={(item) => item.label}
+        renderDescription={(item) => item.description ?? ''}
+        getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
+        title="节点列表"
         searchPlaceholder="搜索节点"
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
+        selectedId={highlightId}
         emptyText={
           (items?.length ?? 0) === 0 ? '暂无节点。请使用上方「新增节点」开始配置。' : '没有符合当前筛选条件的节点。'
         }
-        onSelectId={onSelectNode}
+        onItemSelected={(item) => onSelectNode(item.id)}
         toolbarRight={
           <>
             <NodesListFilterPopover

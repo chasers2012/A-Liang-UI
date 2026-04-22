@@ -1,33 +1,32 @@
 'use client';
 
-import { ChevronRight, Search } from 'lucide-react';
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { useCallback, useMemo, useState, type DragEvent, type ReactNode } from 'react';
 
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { Item, ItemContent, ItemDescription, ItemTitle } from '@/components/ui/item';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SectionHeader } from '@/components/section-header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SearchInput } from '@/components/search-input';
 
-import { WORKFLOW_GRAPH_NODE_DRAG_MIME } from './workflow-graph-canvas';
-import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+/** 列表拖拽时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
+export const SEARCH_LIST_DRAG_MIME = 'application/x-search-list';
 
-export type WorkflowNodeTypeListItem = {
+export type SearchListItemBase = {
   id: string;
-  label: string;
-  description?: string | null;
-  category?: string | null;
 };
 
-function NodeItem(props: {
-  item: WorkflowNodeTypeListItem;
+function SearchListItem<TItem extends SearchListItemBase>(props: {
+  item: TItem;
   selectedId?: string | null;
   description: string;
-  onSelectId?: (type: string) => void;
-  draggable: boolean;
-  dragMime: string;
+  title: ReactNode;
+  onItemSelected?: (item: TItem) => void;
+  onItemDrag?: (item: TItem, e: DragEvent<HTMLDivElement>) => void;
 }) {
-  const { item, selectedId, description, onSelectId, draggable, dragMime } = props;
+  const { item, selectedId, description, title, onItemSelected, onItemDrag } = props;
+  const draggable = Boolean(onItemDrag);
   return (
     <Item
       key={item.id}
@@ -40,24 +39,17 @@ function NodeItem(props: {
           role="button"
           tabIndex={0}
           className="w-full cursor-pointer text-left outline-none"
-          onClick={() => onSelectId?.(item.id)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              onSelectId?.(item.id);
-            }
-          }}
+          onClick={() => onItemSelected?.(item)}
           draggable={draggable}
           onDragStart={(e) => {
-            if (!draggable) return;
-            e.dataTransfer.setData(dragMime, item.id);
-            e.dataTransfer.effectAllowed = 'copy';
+            if (!onItemDrag) return;
+            onItemDrag(item, e);
           }}
         />
       }
     >
       <ItemContent className="min-h-18 overflow-hidden">
-        <ItemTitle className="truncate">{item.label}</ItemTitle>
+        <ItemTitle className="truncate">{title}</ItemTitle>
         <ItemDescription className="min-h-10 line-clamp-2">{description || '\u00A0'}</ItemDescription>
       </ItemContent>
     </Item>
@@ -93,134 +85,143 @@ function toPlainTextFirstLinePreview(input?: string | null, maxLength = 120): st
   return toPlainTextPreview(first, maxLength);
 }
 
-export function WorkflowNodeTypeList(props: {
-  items: WorkflowNodeTypeListItem[] | null;
+export function SearchList<TItem extends SearchListItemBase>(props: {
+  items: TItem[] | null;
+  getGroupKey: (item: TItem) => unknown;
+  renderTitle: (item: TItem) => ReactNode;
+  renderDescription?: (item: TItem) => ReactNode;
+  getSearchText?: (item: TItem) => string;
+  title?: string;
   searchPlaceholder?: string;
   searchQuery?: string;
   onSearchQueryChange?: (value: string) => void;
   selectedId?: string | null;
-  error?: string | null;
   loadingText?: string;
   emptyText?: string;
   className?: string;
   listClassName?: string;
   toolbarRight?: ReactNode;
-  onSelectId?: (id: string) => void;
-  draggable?: boolean;
-  dragMime?: string;
+  onItemSelected?: (item: TItem) => void;
+  onItemDrag?: (item: TItem, e: DragEvent<HTMLDivElement>) => void;
 }) {
   const {
     items,
-    searchPlaceholder = '搜索名称/描述',
+    getGroupKey,
+    renderTitle,
+    renderDescription,
+    getSearchText,
+    title = '列表',
+    searchPlaceholder = '搜索',
     searchQuery,
     onSearchQueryChange,
     selectedId,
-    error,
     loadingText = '加载中…',
-    emptyText = '暂无节点',
+    emptyText = '暂无数据',
     className,
     listClassName,
     toolbarRight,
-    onSelectId,
-    draggable = true,
-    dragMime = WORKFLOW_GRAPH_NODE_DRAG_MIME,
+    onItemSelected,
+    onItemDrag,
   } = props;
+
   const [innerQuery, setInnerQuery] = useState('');
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const effectiveQuery = searchQuery ?? innerQuery;
-  const toggleCategory = useCallback((category: string) => {
-    setCollapsedCategories((prev) => {
+
+  const toggleGroup = useCallback((group: string) => {
+    setCollapsedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(category)) next.delete(category);
-      else next.add(category);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
       return next;
     });
   }, []);
+
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      if (onSearchQueryChange) onSearchQueryChange(value);
+      else setInnerQuery(value);
+    },
+    [onSearchQueryChange],
+  );
 
   const filteredItems = useMemo(() => {
     if (!items) return null;
     const q = effectiveQuery.trim().toLocaleLowerCase('zh-CN');
     if (!q) return items;
     return items.filter((item) => {
-      const text = [item.label, item.description ?? '', item.category ?? ''].join(' ').toLocaleLowerCase('zh-CN');
+      const titleNode = renderTitle(item);
+      const fallbackText = typeof titleNode === 'string' ? titleNode : '';
+      const text = (getSearchText ? getSearchText(item) : fallbackText).toLocaleLowerCase('zh-CN');
       return text.includes(q);
     });
-  }, [items, effectiveQuery]);
+  }, [items, effectiveQuery, getSearchText, renderTitle]);
 
   const groupedItems = useMemo(() => {
     if (!filteredItems) return null;
-    const groups = new Map<string, WorkflowNodeTypeListItem[]>();
+    const groups = new Map<string, TItem[]>();
     for (const item of filteredItems) {
-      const key = item.category?.trim() || '其他';
+      const raw = getGroupKey(item);
+      const key = (typeof raw === 'string' ? raw : raw == null ? '' : String(raw)).trim() || '其他';
       const list = groups.get(key);
       if (list) list.push(item);
       else groups.set(key, [item]);
     }
     return [...groups.entries()];
-  }, [filteredItems]);
+  }, [filteredItems, getGroupKey]);
 
   return (
     <Card className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
       <CardHeader className="shrink-0">
-        <CardTitle>节点列表</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-2 pb-3 pt-0">
-          <InputGroup className="max-w-xs">
-            <InputGroupInput
-              placeholder={searchPlaceholder}
-              value={effectiveQuery}
-              onChange={(e) => {
-                if (onSearchQueryChange) onSearchQueryChange(e.target.value);
-                else setInnerQuery(e.target.value);
-              }}
-              aria-label={searchPlaceholder}
-            />
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-          </InputGroup>
+          <SearchInput
+            className="max-w-xs"
+            placeholder={searchPlaceholder}
+            value={effectiveQuery}
+            onValueChange={handleQueryChange}
+          />
           {toolbarRight ? <div className="flex flex-row justify-end gap-1">{toolbarRight}</div> : null}
         </div>
         <div className={cn('min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden pl-2 pr-1', listClassName)}>
           <div className="flex flex-col pb-2">
             {!filteredItems ? (
-              error ? (
-                <p className="p-6 text-sm text-destructive">{error}</p>
-              ) : (
-                <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
-              )
+              <p className="p-6 text-sm text-muted-foreground">{loadingText}</p>
             ) : filteredItems.length === 0 ? (
               <p className="p-6 text-sm text-muted-foreground">{emptyText}</p>
             ) : (
-              groupedItems?.map(([category, list]) => {
-                const isCollapsed = collapsedCategories.has(category);
+              groupedItems?.map(([group, list]) => {
+                const isCollapsed = collapsedGroups.has(group);
                 return (
                   <Collapsible
-                    key={category}
+                    key={group}
                     className="space-y-2"
                     open={!isCollapsed}
-                    onOpenChange={() => toggleCategory(category)}
+                    onOpenChange={() => toggleGroup(group)}
                   >
-                    <CollapsibleTrigger className="sticky left-0 right-0 top-0 z-10 w-full bg-card pl-2 py-3 text-left">
+                    <CollapsibleTrigger className="sticky left-0 right-0 top-0 z-10 w-full bg-card py-3 pl-2 text-left">
                       <SectionHeader className="mt-0 flex items-center gap-1 py-0">
                         <ChevronRight className={cn('size-4 transition-transform', !isCollapsed && 'rotate-90')} />
-                        <span>{category}</span>
+                        <span>{group}</span>
                         <span className="text-xs normal-case text-muted-foreground/80">({list.length})</span>
                       </SectionHeader>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-2">
                       {list.map((item) => {
-                        const description = toPlainTextFirstLinePreview(item.description);
+                        const descriptionNode = renderDescription?.(item);
+                        const description =
+                          typeof descriptionNode === 'string' ? toPlainTextFirstLinePreview(descriptionNode) : '';
                         return (
-                          <NodeItem
+                          <SearchListItem
                             key={item.id}
                             item={item}
+                            title={renderTitle(item)}
                             selectedId={selectedId}
                             description={description}
-                            onSelectId={onSelectId}
-                            draggable={draggable}
-                            dragMime={dragMime}
+                            onItemSelected={onItemSelected}
+                            onItemDrag={onItemDrag}
                           />
                         );
                       })}

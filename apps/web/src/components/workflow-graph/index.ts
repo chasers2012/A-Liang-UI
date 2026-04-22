@@ -13,8 +13,6 @@ export {
   type WorkflowGraphCanvasProps,
 } from './workflow-graph-canvas';
 
-export { WorkflowNodeTypeList, type WorkflowNodeTypeListItem } from './workflow-node-type-list';
-
 export function toWorkflowNodeTypes(catalog: NodeSummaryPublic[]): WorkflowNodeTypeDefinition[] {
   return catalog.map((c) => ({
     id: c.id,
