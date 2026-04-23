@@ -2,7 +2,6 @@ from typing import ClassVar
 
 from app.nodes.node_plugin import NodePlugin
 
-from common_nodes.calculate_factor_value import CalculateFactorValueNode
 from common_nodes.factor_ref import FactorRefNode
 from common_nodes.json_nodes import JsonParseNode, JsonToDataframeNode, LongTextParamsNode
 from common_nodes.lag_node import LagNode
@@ -23,7 +22,6 @@ class CommonNodesPlugin(NodePlugin):
     nodes: ClassVar[list[type]] = [
         LoadDataSet,
         FactorRefNode,
-        CalculateFactorValueNode,
         NumberParamsNode,
         BooleanParamsNode,
         StringParamsNode,

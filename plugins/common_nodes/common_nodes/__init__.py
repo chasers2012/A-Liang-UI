@@ -1,6 +1,5 @@
 """Common workflow node plugin package."""
 
-from common_nodes.calculate_factor_value import CalculateFactorValueNode
 from common_nodes.factor_ref import FactorRefNode
 from common_nodes.json_nodes import JsonParseNode, JsonToDataframeNode, LongTextParamsNode
 from common_nodes.load_data_set import LoadDataSet
@@ -16,7 +15,6 @@ from common_nodes.table_index_nodes import MultiIndexToWideNode, WideToMultiInde
 
 __all__ = [
     "BooleanParamsNode",
-    "CalculateFactorValueNode",
     "CommonNodesPlugin",
     "DateParamsNode",
     "DateTimeParamsNode",

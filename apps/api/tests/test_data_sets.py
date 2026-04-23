@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
-
 from app.data_set.models import DataSetRow
 from app.evaluation.profile.constants import EVALUATION_WORKFLOW_INPUTS
 from app.persistence.sqlite_db import get_session
@@ -9,7 +7,6 @@ from sqlmodel import select
 
 MIN_SOURCE = "x = 1\n"
 
-_CALC = "common_nodes.calculate_factor_value.CalculateFactorValueNode"
 _LOAD = "common_nodes.load_data_set.LoadDataSet"
 
 
@@ -42,17 +39,7 @@ def _profile_workflow_missing_data_set() -> dict:
                 "render_type": "appendable",
             }
         ],
-        "nodes": [
-            {
-                "id": "calc",
-                "type": _CALC,
-                "pos": [0, 0],
-                "params": {
-                    "quantiles": 5,
-                    "max_loss": 1.0,
-                },
-            }
-        ],
+        "nodes": [],
         "links": [],
     }
 
@@ -74,34 +61,13 @@ def _profile_workflow_with_data_set(ds_row_id: str) -> dict:
                 "type": _LOAD,
                 "pos": [0, 0],
                 "params": {"data_set": ds_row_id},
-            },
-            {
-                "id": "calc",
-                "type": _CALC,
-                "pos": [200, 0],
-                "params": {
-                    "quantiles": 5,
-                    "max_loss": 1.0,
-                },
-            },
+            }
         ],
         "links": [
             {
                 "from": {"kind": "workflow_input", "socket": "data_set"},
                 "to": {"kind": "node", "node_id": "load", "socket": "data_set"},
-            },
-            {
-                "from": {"kind": "workflow_input", "socket": "factor"},
-                "to": {"kind": "node", "node_id": "calc", "socket": "factor"},
-            },
-            {
-                "from": {"kind": "node", "node_id": "load", "socket": "data_set"},
-                "to": {"kind": "node", "node_id": "calc", "socket": "data_set"},
-            },
-            {
-                "from": {"kind": "node", "node_id": "calc", "socket": "clean_factor"},
-                "to": {"kind": "workflow_output", "socket": "result"},
-            },
+            }
         ],
     }
 
@@ -186,183 +152,3 @@ def test_data_sets_crud(client, workspace_tmp):
     r4 = client.delete(f"/data-sets/{row_id}")
     assert r4.status_code == 204
     assert client.get("/data-sets").json() == []
-
-
-def test_evaluation_run_with_data_set_id(client, workspace_tmp, monkeypatch):
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_START", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_END", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_START_DATE", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_END_DATE", raising=False)
-
-    csv_path = workspace_tmp / "eval_test_panel.csv"
-    lines = ["date,asset,close"]
-    d0 = date(2023, 1, 3)
-    for i in range(45):
-        lines.append(f"{(d0 + timedelta(days=i)).isoformat()},A,{10.0 + i * 0.02}")
-    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    r_ds = client.post("/datasources", json=_csv_datasource_body())
-    assert r_ds.status_code == 200
-    ds_id = r_ds.json()["id"]
-
-    r_ts = client.post(
-        "/data-sets",
-        json={
-            "name": "ts_run",
-            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
-            "start": "2023-01-01",
-            "end": "2023-12-31",
-            "instrument_codes": ["A"],
-        },
-    )
-    assert r_ts.status_code == 200
-    ds_row_id = r_ts.json()["id"]
-
-    r_prof = client.post(
-        "/evaluation/profile",
-        json={"name": "prof_ts", "workflow": _profile_workflow_with_data_set(ds_row_id)},
-    )
-    assert r_prof.status_code == 200
-    prof_id = r_prof.json()["id"]
-
-    r_f = client.post(
-        "/factors",
-        json={
-            "name": "f_ts",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": _factor_source_for_name("f_ts"),
-        },
-    )
-    assert r_f.status_code == 200
-    fid = r_f.json()["id"]
-
-    r_run = client.post(
-        "/evalation/run",
-        json={"profile_id": prof_id, "factor_id": fid},
-    )
-    assert r_run.status_code == 200
-    body = r_run.json()
-    assert body["factor_id"] == fid
-    assert (body.get("error") or "").strip() == ""
-    assert body.get("results") is not None
-
-
-def test_evaluation_run_data_set_id_overrides_profile_params(
-    client,
-    workspace_tmp,
-    monkeypatch,
-):
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_START", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_END", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_START_DATE", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_END_DATE", raising=False)
-
-    csv_path = workspace_tmp / "eval_test_panel.csv"
-    lines = ["date,asset,close"]
-    d0 = date(2023, 1, 3)
-    for i in range(45):
-        lines.append(f"{(d0 + timedelta(days=i)).isoformat()},A,{10.0 + i * 0.02}")
-    csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    r_ds = client.post("/datasources", json=_csv_datasource_body())
-    assert r_ds.status_code == 200
-    ds_id = r_ds.json()["id"]
-
-    r_ts = client.post(
-        "/data-sets",
-        json={
-            "name": "ts_override",
-            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
-            "start": "2023-01-01",
-            "end": "2023-12-31",
-            "instrument_codes": ["A"],
-        },
-    )
-    assert r_ts.status_code == 200
-    ds_row_id = r_ts.json()["id"]
-
-    r_prof = client.post(
-        "/evaluation/profile",
-        json={
-            "name": "prof_bad_embedded_ds",
-            "workflow": _profile_workflow_with_data_set("nonexistent-dataset-id"),
-        },
-    )
-    assert r_prof.status_code == 200
-    prof_id = r_prof.json()["id"]
-
-    r_f = client.post(
-        "/factors",
-        json={
-            "name": "f_override_ds",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": _factor_source_for_name("f_override_ds"),
-        },
-    )
-    assert r_f.status_code == 200
-    fid = r_f.json()["id"]
-
-    r_run = client.post(
-        "/evalation/run",
-        json={
-            "profile_id": prof_id,
-            "factor_id": fid,
-            "data_set_id": ds_row_id,
-        },
-    )
-    assert r_run.status_code == 200
-    body = r_run.json()
-    assert body["factor_id"] == fid
-    assert (body.get("error") or "").strip() == ""
-    assert body.get("results") is not None
-
-
-def test_evaluation_run_empty_body_requires_data_set(client, workspace_tmp, monkeypatch):
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_START", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_EVAL_END", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_START_DATE", raising=False)
-    monkeypatch.delenv("FACTOR_AGENT_END_DATE", raising=False)
-
-    csv_path = workspace_tmp / "eval_test_panel.csv"
-    csv_path.write_text("date,asset,close\n2023-01-01,A,1\n", encoding="utf-8")
-    r_ds = client.post("/datasources", json=_csv_datasource_body())
-    assert r_ds.status_code == 200
-    ds_id = r_ds.json()["id"]
-
-    r_ts = client.post(
-        "/data-sets",
-        json={
-            "name": "ts_only",
-            "datasource_bindings": [_ds_binding(ds_id, ["close"])],
-            "start": "2023-01-01",
-            "end": "2024-12-31",
-            "instrument_codes": [],
-        },
-    )
-    assert r_ts.status_code == 200
-
-    r_f = client.post(
-        "/factors",
-        json={
-            "name": "f_no_ds_in_body",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": _factor_source_for_name("f_no_ds_in_body"),
-        },
-    )
-    assert r_f.status_code == 200
-    fid = r_f.json()["id"]
-
-    r_prof = client.post(
-        "/evaluation/profile",
-        json={"name": "prof_no_ds", "workflow": _profile_workflow_missing_data_set()},
-    )
-    assert r_prof.status_code == 200
-    prof_id = r_prof.json()["id"]
-
-    r_run = client.post(
-        "/evalation/run",
-        json={"profile_id": prof_id, "factor_id": fid},
-    )
-    assert r_run.status_code == 200
-    assert "数据集" in (r_run.json().get("error") or "")

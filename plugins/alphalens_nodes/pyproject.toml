@@ -10,7 +10,6 @@ requires-python = ">=3.10"
 dependencies = [
     "quant-agent-api",
     "workflow",
-    "evaluate",
 ]
 
 [project.entry-points."quant-agent.plugins"]
@@ -19,7 +18,6 @@ alphalens = "alphalens_nodes.plugin:AlphalensNodesPlugin"
 [tool.uv.sources]
 quant-agent-api = { workspace = true }
 workflow = { workspace = true }
-evaluate = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["alphalens_nodes"]
