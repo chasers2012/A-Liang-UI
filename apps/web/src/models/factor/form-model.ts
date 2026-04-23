@@ -1,14 +1,5 @@
 import type { FactorDetailPublic } from '@/models/factor/dto';
 
-export type FactorFormState = {
-  name: string;
-  group: string;
-  description: string;
-  window: string;
-  dependencies_csv: string;
-  source: string;
-};
-
 /** 新建因子页默认标识：「新因子」+ 日期时间，须满足服务端 `name.isidentifier()`。 */
 export function defaultNewFactorName(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -22,54 +13,38 @@ export function defaultNewFactorName(d = new Date()): string {
 }
 
 /** Initial shell; `source` is filled from GET /factors/template on the new-factor page. */
-export function emptyForm(): FactorFormState {
+export function emptyForm(): FactorDetailPublic {
+  const nowIso = new Date().toISOString();
   return {
+    id: '__new__',
     name: '新因子',
     group: '未分组',
     description: '',
-    window: '1',
-    dependencies_csv: 'close',
+    window: 1,
+    dependencies: ['close'],
     source: '',
+    source_path: '',
+    created_at: nowIso,
+    updated_at: nowIso,
   };
 }
 
-export function hydrateFromDetail(d: FactorDetailPublic): FactorFormState {
-  return {
-    name: d.name,
-    group: d.group,
-    description: d.description,
-    window: String(d.window),
-    dependencies_csv: d.dependencies.join(', '),
-    source: d.source,
-  };
-}
-
-export function parseDependencies(csv: string): string[] {
-  return csv
-    .split(/[,，]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-export function validateFormForSubmit(form: FactorFormState): string | null {
+export function validateFormForSubmit(form: FactorDetailPublic): string | null {
   if (!form.name.trim()) return '因子标识（name）不能为空';
-  const w = Number.parseInt(form.window, 10);
+  const w = form.window;
   if (!Number.isFinite(w) || w < 1) return 'window 须为 >= 1 的整数';
-  const deps = parseDependencies(form.dependencies_csv);
-  if (deps.length === 0) return '至少填写一个依赖字段（如 close）';
+  if ((form.dependencies ?? []).length === 0) return '至少填写一个依赖字段（如 close）';
   if (!form.source.trim()) return '源码不能为空';
   return null;
 }
 
-export function bodyFromForm(form: FactorFormState): Record<string, unknown> {
-  const deps = parseDependencies(form.dependencies_csv);
-  const window = Number.parseInt(form.window, 10);
+export function bodyFromForm(form: FactorDetailPublic): Record<string, unknown> {
   return {
     name: form.name.trim(),
     group: form.group.trim(),
     description: form.description.trim(),
-    window,
-    dependencies: deps,
+    window: form.window,
+    dependencies: form.dependencies,
     source: form.source,
   };
 }

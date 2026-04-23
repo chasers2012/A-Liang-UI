@@ -1,5 +1,4 @@
-import type { FactorFormState } from './form-model';
-import { parseDependencies } from './form-model';
+import type { FactorDetailPublic } from './dto';
 
 function escapePyDoubleQuoted(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n/g, '\n').replace(/\n/g, '\\n');
@@ -29,13 +28,13 @@ function findUserFactorClassBodyRange(source: string): { start: number; end: num
   return { start: bodyStart, end };
 }
 
-function patchUserFactorBody(block: string, form: FactorFormState): string {
+function patchUserFactorBody(block: string, form: FactorDetailPublic): string {
   const name = form.name.trim() || 'my_factor';
   let b = block;
   b = replaceStringAttr(b, 'name', name);
   b = replaceStringAttr(b, 'group', form.group.trim());
   b = replaceStringAttr(b, 'description', form.description);
-  const w = Number.parseInt(form.window, 10);
+  const w = form.window;
   if (Number.isFinite(w) && w >= 1) {
     b = replaceNumberAttr(b, 'window', w);
   }
@@ -111,9 +110,9 @@ function replaceCalcDependenciesInSource(source: string, deps: string[]): string
  * Push form field values into `NewFactor` class attributes in source when that
  * class exists; otherwise returns the original source (no whole-file guess).
  */
-export function applyFormMetadataToSource(source: string, form: FactorFormState): string {
+export function applyFormMetadataToSource(source: string, form: FactorDetailPublic): string {
   const range = findUserFactorClassBodyRange(source);
-  const deps = parseDependencies(form.dependencies_csv);
+  const deps = form.dependencies;
   let out = source;
   if (range) {
     const { start, end } = range;
@@ -177,11 +176,11 @@ function parseDependenciesCsvFromCalc(source: string): string | null {
  * Read `NewFactor` class attributes from source into form-shaped fields.
  * Only keys that are successfully parsed are set (partial object).
  */
-export function parseUserFactorMetadataFromSource(source: string): Partial<FactorFormState> {
+export function parseUserFactorMetadataFromSource(source: string): Partial<FactorDetailPublic> {
   const block = getUserFactorClassBody(source);
   if (!block) return {};
 
-  const out: Partial<FactorFormState> = {};
+  const out: Partial<FactorDetailPublic> = {};
   const n = parseStringAttr(block, 'name');
   if (n !== null) out.name = n;
   const group = parseStringAttr(block, 'group');
@@ -189,8 +188,13 @@ export function parseUserFactorMetadataFromSource(source: string): Partial<Facto
   const description = parseStringAttr(block, 'description');
   if (description !== null) out.description = description;
   const w = parseWindow(block);
-  if (w !== null) out.window = w;
+  if (w !== null) out.window = Number.parseInt(w, 10);
   const deps = parseDependenciesCsvFromCalc(source);
-  if (deps !== null) out.dependencies_csv = deps;
+  if (deps !== null) {
+    out.dependencies = deps
+      .split(/[,，]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
   return out;
 }

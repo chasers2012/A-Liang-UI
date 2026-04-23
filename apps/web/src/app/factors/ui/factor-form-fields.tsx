@@ -1,27 +1,19 @@
 'use client';
 
-import type { Dispatch, SetStateAction } from 'react';
-
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/reui/badge';
 
-import {
-  applyFormMetadataToSource,
-  parseDependencies,
-  parseUserFactorMetadataFromSource,
-  type FactorFormState,
-} from '@/models/factor';
+import { applyFormMetadataToSource, parseUserFactorMetadataFromSource, type FactorDetailPublic } from '@/models/factor';
 import { CodeJar } from '@/components/ui/code-jar';
 import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
 import { FactorGroupCombobox } from './factor-group-combobox';
 
-const SYNC_FROM_FORM_FIELDS: (keyof FactorFormState)[] = ['name', 'group', 'description', 'window', 'dependencies_csv'];
+const SYNC_FROM_FORM_FIELDS: (keyof FactorDetailPublic)[] = ['name', 'group', 'description', 'window', 'dependencies'];
 
 /** 与表单内 `set` 一致：改元数据时写回源码，改 `source` 时从源码解析元数据。 */
-export function applyFactorFormPatch(f: FactorFormState, patch: Partial<FactorFormState>): FactorFormState {
+export function applyFactorFormPatch(f: FactorDetailPublic, patch: Partial<FactorDetailPublic>): FactorDetailPublic {
   if (Object.prototype.hasOwnProperty.call(patch, 'source')) {
     const src = patch.source as string;
     const parsed = parseUserFactorMetadataFromSource(src);
@@ -35,32 +27,21 @@ export function applyFactorFormPatch(f: FactorFormState, patch: Partial<FactorFo
   return next;
 }
 
-type Props = {
-  form: FactorFormState;
-  setForm: Dispatch<SetStateAction<FactorFormState>>;
-  formError: string | null;
-  /** 只读模式：仅展示内容，不允许编辑。 */
-  readOnly?: boolean;
-  /** Prefix for input ids to avoid duplicates across routes. */
-  idPrefix?: string;
-  /** 渲染哪些字段。 */
-  variant?: 'all' | 'meta' | 'source';
-  /** 编辑页在标题处改 name 时为 true */
-  hideNameField?: boolean;
-  /** 编辑页在副标题区改 description 时为 true */
-  hideDescriptionField?: boolean;
-};
-
-function FactorMetaFields(props: {
-  form: FactorFormState;
-  set: (patch: Partial<FactorFormState>) => void;
+type FactorFieldBaseProps = {
+  form: FactorDetailPublic;
+  set: (patch: Partial<FactorDetailPublic>) => void;
   readOnly: boolean;
   pid: (s: string) => string;
+};
+
+type FactorMetaFieldsProps = FactorFieldBaseProps & {
   hideNameField: boolean;
   hideDescriptionField: boolean;
-}) {
+};
+
+export function FactorMetaFields(props: FactorMetaFieldsProps) {
   const { form, set, readOnly, pid, hideNameField, hideDescriptionField } = props;
-  const dependencies = parseDependencies(form.dependencies_csv);
+  const dependencies = form.dependencies;
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -101,9 +82,12 @@ function FactorMetaFields(props: {
               type="number"
               min={1}
               className="font-mono"
-              value={form.window}
+              value={String(form.window)}
               readOnly={readOnly}
-              onChange={(e) => set({ window: e.target.value })}
+              onChange={(e) => {
+                const next = Number.parseInt(e.target.value, 10);
+                set({ window: Number.isFinite(next) ? next : 1 });
+              }}
             />
           )}
         </div>
@@ -143,8 +127,8 @@ function FactorMetaFields(props: {
         ) : (
           <FactorDependenciesCombobox
             id={pid('deps')}
-            valueCsv={form.dependencies_csv}
-            onValueCsvChange={(csv) => set({ dependencies_csv: csv })}
+            value={form.dependencies}
+            onValueChange={(dependencies) => set({ dependencies })}
           />
         )}
         <p className="text-xs text-muted-foreground">
@@ -155,12 +139,9 @@ function FactorMetaFields(props: {
   );
 }
 
-function FactorSourceField(props: {
-  form: FactorFormState;
-  set: (patch: Partial<FactorFormState>) => void;
-  readOnly: boolean;
-  pid: (s: string) => string;
-}) {
+type FactorSourceFieldProps = FactorFieldBaseProps;
+
+export function FactorSourceField(props: FactorSourceFieldProps) {
   const { form, set, readOnly, pid } = props;
   return (
     <div className="space-y-2">
@@ -170,47 +151,6 @@ function FactorSourceField(props: {
       ) : (
         <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
       )}
-    </div>
-  );
-}
-
-export function FactorFormFields({
-  form,
-  setForm,
-  formError,
-  readOnly = false,
-  idPrefix = 'factor',
-  variant = 'all',
-  hideNameField = false,
-  hideDescriptionField = false,
-}: Props) {
-  const set = (patch: Partial<FactorFormState>) => {
-    setForm((f) => applyFactorFormPatch(f, patch));
-  };
-
-  const pid = (s: string) => `${idPrefix}-${s}`;
-  const showMeta = variant === 'all' || variant === 'meta';
-  const showSource = variant === 'all' || variant === 'source';
-
-  return (
-    <div className="space-y-4">
-      {formError && (
-        <Alert variant="destructive">
-          <AlertTitle>无法保存</AlertTitle>
-          <AlertDescription>{formError}</AlertDescription>
-        </Alert>
-      )}
-      {showMeta ? (
-        <FactorMetaFields
-          form={form}
-          set={set}
-          readOnly={readOnly}
-          pid={pid}
-          hideNameField={hideNameField}
-          hideDescriptionField={hideDescriptionField}
-        />
-      ) : null}
-      {showSource ? <FactorSourceField form={form} set={set} readOnly={readOnly} pid={pid} /> : null}
     </div>
   );
 }

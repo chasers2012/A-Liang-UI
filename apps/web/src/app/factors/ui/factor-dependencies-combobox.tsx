@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { listFactors } from '@/api/factors';
 
-import { parseDependencies } from '@/models/factor';
 import {
   Combobox,
   ComboboxChip,
@@ -46,19 +45,13 @@ const itemClass = cn('items-start font-mono text-sm');
 
 export interface FactorDependenciesComboboxProps {
   id: string;
-  /** 逗号 / 中文逗号分隔，与 `FactorFormState.dependencies_csv` 一致 */
-  valueCsv: string;
-  onValueCsvChange: (csv: string) => void;
+  value: string[];
+  onValueChange: (next: string[]) => void;
   className?: string;
 }
 
-export function FactorDependenciesCombobox({
-  id,
-  valueCsv,
-  onValueCsvChange,
-  className,
-}: FactorDependenciesComboboxProps) {
-  const selected = useMemo(() => parseDependencies(valueCsv), [valueCsv]);
+export function FactorDependenciesCombobox({ id, value, onValueChange, className }: FactorDependenciesComboboxProps) {
+  const selected = value;
   const [pool, setPool] = useState<string[]>([...BASE_SUGGESTIONS]);
   const [inputValue, setInputValue] = useState('');
   const anchor = useComboboxAnchor();
@@ -99,7 +92,7 @@ export function FactorDependenciesCombobox({
       seen.add(t);
       return true;
     });
-    onValueCsvChange(unique.join(', '));
+    onValueChange(unique);
   };
 
   const handleValueChange = (next: string[] | null) => {

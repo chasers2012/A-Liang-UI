@@ -1,39 +1,53 @@
 'use client';
 
+import { useMemo, useState } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
+
 import { Button } from '@/components/ui/button';
+import {
+  factorsCreateModeAtom,
+  factorsEditingAtom,
+  factorsListAtom,
+  factorsSavingAtom,
+  factorsSelectedIdAtom,
+  handleCancelFactorEditAtom,
+  handleDeleteFactorAtom,
+  handleSaveFactorDetailAtom,
+  startEditFactorAtom,
+} from '@/models/factor';
+import { DeleteFactorDialog } from '../../ui/delete-factor-dialog';
 
-type FactorDetailToolbarButtonProps = {
-  editing: boolean;
-  isCreating: boolean;
-  sourceSaving: boolean;
-  selectedId: string | null;
-  onCancelCreate: () => void;
-  onCreate: () => void;
-  onCancelEdit: () => void;
-  onSave: () => void;
-  onDelete: () => void;
-  onEdit: () => void;
-};
+export function FactorDetailToolbarButton() {
+  const saveForm = useSetAtom(handleSaveFactorDetailAtom);
+  const startEdit = useSetAtom(startEditFactorAtom);
+  const cancelEdit = useSetAtom(handleCancelFactorEditAtom);
+  const deleteSelected = useSetAtom(handleDeleteFactorAtom);
+  const listItems = useAtomValue(factorsListAtom);
+  const selectedId = useAtomValue(factorsSelectedIdAtom);
+  const editing = useAtomValue(factorsEditingAtom);
+  const isCreating = useAtomValue(factorsCreateModeAtom);
+  const sourceSaving = useAtomValue(factorsSavingAtom);
 
-export function FactorDetailToolbarButton({
-  editing,
-  isCreating,
-  sourceSaving,
-  selectedId,
-  onCancelCreate,
-  onCreate,
-  onCancelEdit,
-  onSave,
-  onDelete,
-  onEdit,
-}: FactorDetailToolbarButtonProps) {
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteTarget = useMemo(() => {
+    if (!deleteTargetId) return null;
+    return listItems?.find((item) => item.id === deleteTargetId) ?? null;
+  }, [deleteTargetId, listItems]);
+
+  const onDelete = () => {
+    if (!selectedId) return;
+    setDeleteTargetId(selectedId);
+  };
+
   if (isCreating) {
     return (
       <>
-        <Button variant="outline" disabled={sourceSaving} onClick={onCancelCreate}>
+        <Button variant="outline" disabled={sourceSaving} onClick={cancelEdit}>
           取消创建
         </Button>
-        <Button disabled={sourceSaving} onClick={onCreate}>
+        <Button disabled={sourceSaving} onClick={() => void saveForm()}>
           {sourceSaving ? '创建中…' : '创建因子'}
         </Button>
       </>
@@ -43,10 +57,10 @@ export function FactorDetailToolbarButton({
   if (editing) {
     return (
       <>
-        <Button variant="outline" disabled={sourceSaving} onClick={onCancelEdit}>
+        <Button variant="outline" disabled={sourceSaving} onClick={cancelEdit}>
           取消
         </Button>
-        <Button disabled={sourceSaving || !selectedId} onClick={onSave}>
+        <Button disabled={sourceSaving || !selectedId} onClick={() => void saveForm()}>
           {sourceSaving ? '保存中…' : '保存'}
         </Button>
       </>
@@ -58,9 +72,31 @@ export function FactorDetailToolbarButton({
       <Button variant="destructive" disabled={!selectedId} onClick={onDelete}>
         删除
       </Button>
-      <Button disabled={!selectedId} onClick={onEdit}>
+      <Button disabled={!selectedId} onClick={startEdit}>
         编辑
       </Button>
+      <DeleteFactorDialog
+        target={deleteTarget}
+        deleting={deleting}
+        onDismiss={() => {
+          if (deleting) return;
+          setDeleteTargetId(null);
+        }}
+        onConfirm={() => {
+          if (deleting) return;
+          setDeleting(true);
+          void deleteSelected()
+            .then(() => {
+              setDeleteTargetId(null);
+            })
+            .catch((e) => {
+              window.alert(e instanceof Error ? e.message : String(e));
+            })
+            .finally(() => {
+              setDeleting(false);
+            });
+        }}
+      />
     </>
   );
 }
