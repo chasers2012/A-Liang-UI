@@ -101,23 +101,15 @@ export const factorsEditDependenciesAtom = withAtomEffect(atom<string[] | undefi
 });
 
 const factorsEditingStateAtom = atom(false);
-export const factorsEditingAtom = withAtomEffect(
-  atom(
-    (get) => get(factorsEditingStateAtom),
-    (get, set, next: boolean) => {
-      if (next) {
-        set(factorsSaveErrorAtom, null);
-      } else {
-        set(factorsSaveErrorAtom, null);
-        // Exiting create mode should restore default selection.
-        if (get(factorsSelectedIdAtom) == null) {
-          set(factorsSelectedIdAtom, get(factorsDefaultSelectedIdAtom));
-        }
-      }
-      set(factorsEditingStateAtom, next);
-    },
-  ),
-  (get, set) => {
+export const factorsEditingAtom = atom(
+  (get) => get(factorsEditingStateAtom),
+  (get, set, next: boolean) => {
+    // Exiting create mode should restore default selection.
+    if (!next && get(factorsSelectedIdAtom) == null) {
+      set(factorsSelectedIdAtom, get(factorsDefaultSelectedIdAtom));
+    }
+    set(factorsSaveErrorAtom, null);
+    set(factorsEditingStateAtom, next);
     set(factorsEditNameAtom, undefined);
     set(factorsEditGroupAtom, undefined);
     set(factorsEditDescriptionAtom, undefined);

@@ -111,7 +111,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
         <Label htmlFor={pid('deps')}>依赖列 dependencies</Label>
         {readOnly ? (
           dependencies.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1 h-[32px] items-center">
               {dependencies.map((dep) => (
                 <Badge key={dep} variant="secondary" size="default" className="font-mono">
                   {dep}
@@ -119,7 +119,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               ))}
             </div>
           ) : (
-            <div className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">-</div>
+            <div className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground h-[32px]">-</div>
           )
         ) : (
           <FactorDependenciesCombobox
@@ -128,9 +128,6 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
             onValueChange={(deps) => setDependencies(deps)}
           />
         )}
-        <p className="text-xs text-muted-foreground">
-          多选常用列；列表含当前 workspace 中因子已用过的列。新列名需符合标识符规则，输入后按 Enter 添加。
-        </p>
       </div>
     </>
   );

@@ -1,8 +1,8 @@
 import { atom } from 'jotai';
 
 import { runBacktest } from '@/api/backtests';
-import { dataSetsItemsAtom, refreshDataSetsAtom } from '@/models/data-set/panel-detail.atom';
-import { refreshStrategiesListAtom, strategiesListAtom } from '@/models/strategy/list-detail.atom';
+import { dataSetsItemsAtom } from '@/models/data-set/panel-detail.atom';
+import { strategiesListAtom } from '@/models/strategy/list-detail.atom';
 
 import { refreshBacktestsListAtom } from './list.atom';
 
@@ -34,7 +34,8 @@ export const backtestRunDataSetsAtom = atom(async (get) => (await get(dataSetsIt
 export const loadBacktestRunCatalogAtom = atom(null, async (get, set) => {
   set(backtestRunFormAtom, (s) => ({ ...s, catalogLoading: true, error: null }));
   try {
-    await Promise.all([set(refreshStrategiesListAtom), set(refreshDataSetsAtom)]);
+    // Read catalog atoms directly so initial load happens once per mount flow.
+    // Avoid forcing refresh here; otherwise it can trigger repeated fetch loops.
     const [strategies, dataSets] = await Promise.all([get(backtestRunStrategiesAtom), get(backtestRunDataSetsAtom)]);
     set(backtestRunFormAtom, (s) => ({
       ...s,
