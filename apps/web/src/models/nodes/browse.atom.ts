@@ -23,6 +23,7 @@ export const nodesBrowseStateAtom = atom<NodesBrowseState>({
 });
 
 export const nodesSelectedDomainsAtom = atom<string[]>([]);
+export const nodesSelectedIdAtom = atom<string | null>(null);
 
 const nodesDomainConfigsAsyncAtom = atom(async (): Promise<Record<string, Set<string>>> => {
   try {

@@ -20,6 +20,7 @@ import {
   applyTimestampSuffixToWorkflowNodeClassName,
   applyNameToWorkflowNodeLabel,
 } from '@/models/nodes/template.atom';
+import { nodesSelectedIdAtom } from '@/models/nodes/browse.atom';
 
 export type NodesNodeDetailPanelProps = {
   nodeId?: string | null;
@@ -34,6 +35,7 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
   const nodeTemplateState = useAtomValue(nodeTemplateAsyncStateAtom);
   const saveDetail = useSetAtom(saveNodesDetailAtomFamily(effectiveNodeId));
   const refreshNodesList = useSetAtom(refreshNodesListAtom);
+  const setSelectedId = useSetAtom(nodesSelectedIdAtom);
   const [deleting, setDeleting] = useState(false);
 
   const detail = detailState.value ?? null;
@@ -98,7 +100,10 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
       return;
     }
     setEditing(false);
-    if (isCreate && saved) router.push(`/nodes?id=${encodeURIComponent(saved.id)}`);
+    if (isCreate && saved) {
+      setSelectedId(saved.id);
+      router.push('/nodes');
+    }
   };
   const handleCancelEdit = () => {
     if (isCreate) return void router.push('/nodes');
@@ -115,6 +120,7 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
     try {
       await deleteNode(detail.id);
       await refreshNodesList();
+      setSelectedId(null);
       router.push('/nodes');
     } finally {
       setDeleting(false);

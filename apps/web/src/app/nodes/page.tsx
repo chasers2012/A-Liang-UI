@@ -3,8 +3,8 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -17,6 +17,7 @@ import {
   filteredNodesAtom,
   nodesBrowseStateAtom,
   nodesDefaultSelectedIdAtom,
+  nodesSelectedIdAtom,
   nodesSelectedDomainsAtom,
   setNodesSearchQueryAtom,
 } from '@/models/nodes/browse.atom';
@@ -25,37 +26,32 @@ import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
 function getNodesEffectiveSelectedId(params: {
-  pathname: string;
   selectedDomains: string[];
   defaultSelectedId: string | null;
   domainDefaultSelectedId: string | null;
 }): string | null {
-  const { pathname, selectedDomains, defaultSelectedId, domainDefaultSelectedId } = params;
-  if (pathname !== '/nodes') return null;
+  const { selectedDomains, defaultSelectedId, domainDefaultSelectedId } = params;
   if (selectedDomains.length === 0) return defaultSelectedId;
   return domainDefaultSelectedId;
 }
 
-function parseNodesBrowseQuery(params: URLSearchParams): { id: string | null; isCreate: boolean } {
+function parseNodesBrowseQuery(params: URLSearchParams): { isCreate: boolean } {
   const isCreate = params.get('new') === '1';
-  const raw = params.get('id');
-  const id = raw?.trim() ? raw.trim() : null;
-  return { id, isCreate };
+  return { isCreate };
 }
 
 export default function NodesPage() {
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const items = useAtomValue(nodesListAtom);
   const { searchQuery } = useAtomValue(nodesBrowseStateAtom);
   const filteredItems = useAtomValue(filteredNodesAtom);
   const defaultSelectedId = useAtomValue(nodesDefaultSelectedIdAtom);
   const domainConfigs = useAtomValue(nodesDomainConfigsAtom);
   const [selectedDomains] = useAtom(nodesSelectedDomainsAtom);
+  const [selectedId, setSelectedId] = useAtom(nodesSelectedIdAtom);
   const setSearchQuery = useSetAtom(setNodesSearchQueryAtom);
 
-  const { id: queryId, isCreate } = useMemo(() => parseNodesBrowseQuery(searchParams), [searchParams]);
+  const { isCreate } = useMemo(() => parseNodesBrowseQuery(searchParams), [searchParams]);
   const domainFilteredItems = useMemo(() => {
     if (!filteredItems) return null;
     if (selectedDomains.length === 0) return filteredItems;
@@ -71,22 +67,27 @@ export default function NodesPage() {
   /** `/nodes` 无 URL id 时，右侧与列表高亮均对齐当前筛选结果的第一条。 */
   const effectiveDefaultSelectedId = domainFilteredItems?.[0]?.id ?? null;
   const effectiveSelectedId = getNodesEffectiveSelectedId({
-    pathname,
     selectedDomains,
     defaultSelectedId,
     domainDefaultSelectedId: effectiveDefaultSelectedId,
   });
+  const nodeId = isCreate ? null : (selectedId ?? effectiveSelectedId);
+  const highlightId = isCreate ? null : nodeId;
 
-  const highlightId = pathname === '/nodes' && !isCreate ? (queryId ?? effectiveSelectedId) : null;
+  useEffect(() => {
+    if (isCreate) return;
+    const nextSelectedId = selectedId ?? effectiveSelectedId;
+    if (nextSelectedId !== selectedId) {
+      setSelectedId(nextSelectedId);
+    }
+  }, [effectiveSelectedId, isCreate, selectedId, setSelectedId]);
 
-  const onSelectNode = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('id', id);
-    next.delete('new');
-    router.push(`/nodes?${next.toString()}`);
-  };
-
-  const nodeId = isCreate ? null : (queryId ?? effectiveSelectedId);
+  const onSelectNode = useCallback(
+    (item: { id: string }) => {
+      setSelectedId(item.id);
+    },
+    [setSelectedId],
+  );
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -112,7 +113,7 @@ export default function NodesPage() {
         emptyText={
           (items?.length ?? 0) === 0 ? '暂无节点。请使用上方「新增节点」开始配置。' : '没有符合当前筛选条件的节点。'
         }
-        onItemSelected={(item) => onSelectNode(item.id)}
+        onItemSelected={onSelectNode}
         toolbarRight={
           <>
             <NodesListFilterPopover />
