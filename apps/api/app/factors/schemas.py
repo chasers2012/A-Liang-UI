@@ -57,6 +57,7 @@ class FactorCreate(BaseModel):
             name=self.name.strip(),
             group=self.group.strip(),
             description=self.description.strip(),
+            is_plugin=False,
             window=self.window,
             dependencies=list(self.dependencies),
             source_path=source_relative_path(factor_id),
@@ -81,6 +82,7 @@ class FactorSummaryPublic(BaseModel):
     name: str
     group: str
     description: str
+    is_plugin: bool = False
     window: int
     dependencies: list[str]
     source_path: str
@@ -98,6 +100,7 @@ def row_to_summary(row: FactorRow) -> FactorSummaryPublic:
         name=row.name,
         group=row.group,
         description=row.description,
+        is_plugin=row.is_plugin,
         window=row.window,
         dependencies=list(row.dependencies),
         source_path=row.source_path,

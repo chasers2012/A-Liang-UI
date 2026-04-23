@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 import re
 import sys
 
@@ -74,6 +75,8 @@ def update_factor(factor_id: str, body: FactorPatch) -> FactorRow:
     unset = body.model_dump(exclude_unset=True)
 
     def _apply(rec: FactorRow) -> None:
+        if rec.is_plugin:
+            raise ValueError("cannot patch plugin factor")
         patch_factor_validate_and_merge(rec, body, unset)
         if "source" in unset and body.source is not None:
             SourceFiles.write_source_text(
@@ -84,45 +87,65 @@ def update_factor(factor_id: str, body: FactorPatch) -> FactorRow:
     return FactorItemsRegistry.update_item(factor_id, _apply)
 
 
+def _load_user_factor_module(factor_id: str, source_path: str):
+    source_file = resolve_source_path(source_path)
+    if not source_file.is_file():
+        return None
+    safe_id = re.sub(r"\W+", "_", factor_id)
+    module_name = f"_quant_agent_user_factor_{safe_id}"
+    spec = importlib.util.spec_from_file_location(module_name, str(source_file))
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _pick_factor_class(module, expected_name: str) -> type[Factor] | None:
+    candidates = [
+        obj
+        for obj in module.__dict__.values()
+        if isinstance(obj, type) and issubclass(obj, Factor) and obj is not Factor
+    ]
+    if not candidates:
+        return None
+    for factor_cls in candidates:
+        candidate_name = getattr(factor_cls, "name", None)
+        if isinstance(candidate_name, str) and candidate_name.strip() == expected_name:
+            return factor_cls
+    return candidates[0]
+
+
 def get_factor(factor_id: str) -> type[Factor] | None:
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         return None
+    plugin_factor = FactorItemsRegistry.get_plugin_factor(factor_id)
+    if plugin_factor is not None:
+        return plugin_factor
     try:
-        source_file = resolve_source_path(rec.source_path)
-        if not source_file.is_file():
+        module = _load_user_factor_module(factor_id, rec.source_path)
+        if module is None:
             return None
-
-        safe_id = re.sub(r"\W+", "_", factor_id)
-        module_name = f"_quant_agent_user_factor_{safe_id}"
-        spec = importlib.util.spec_from_file_location(module_name, str(source_file))
-        if spec is None or spec.loader is None:
-            return None
-
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-        candidates: list[type[Factor]] = []
-        for obj in module.__dict__.values():
-            if isinstance(obj, type) and issubclass(obj, Factor) and obj is not Factor:
-                candidates.append(obj)
-        if not candidates:
-            return None
-        for c in candidates:
-            n = getattr(c, "name", None)
-            if isinstance(n, str) and n.strip() == rec.name:
-                return c
-        return candidates[0]
+        return _pick_factor_class(module, rec.name)
     except Exception:
         return None
 
 
 def read_factor_source(rec: FactorRow) -> str:
+    plugin_factor = FactorItemsRegistry.get_plugin_factor(rec.id)
+    if plugin_factor is not None:
+        try:
+            return inspect.getsource(plugin_factor)
+        except (OSError, TypeError):
+            return f"# 无法读取插件因子类 {rec.id} 的源码（可能为内置或动态定义）。\n"
     return SourceFiles.read_source_text(rec.source_path)
 
 
 def delete_factor_source_file(rec: FactorRow) -> None:
+    if FactorItemsRegistry.get_plugin_factor(rec.id) is not None:
+        return
     SourceFiles.delete_source_text_file(rec.source_path)
 
 

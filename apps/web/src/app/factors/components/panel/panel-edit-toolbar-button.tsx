@@ -6,7 +6,10 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Button } from '@/components/ui/button';
 import {
   creatingAtom,
+  factorsCanDeleteAtom,
+  factorsCanEditAtom,
   factorsEditingAtom,
+  factorsIsPluginFactorAtom,
   factorsListAtom,
   factorsSavingAtom,
   factorsSelectedIdAtom,
@@ -22,6 +25,9 @@ export function FactorDetailToolbarButton() {
   const listItems = useAtomValue(factorsListAtom);
   const selectedId = useAtomValue(factorsSelectedIdAtom);
   const editing = useAtomValue(factorsEditingAtom);
+  const canEdit = useAtomValue(factorsCanEditAtom);
+  const canDelete = useAtomValue(factorsCanDeleteAtom);
+  const isPluginFactor = useAtomValue(factorsIsPluginFactorAtom);
   const isCreating = useAtomValue(creatingAtom);
   const sourceSaving = useAtomValue(factorsSavingAtom);
 
@@ -34,7 +40,7 @@ export function FactorDetailToolbarButton() {
   }, [deleteTargetId, listItems]);
 
   const onDelete = () => {
-    if (!selectedId) return;
+    if (!selectedId || !canDelete || isPluginFactor) return;
     setDeleteTargetId(selectedId);
   };
 
@@ -64,14 +70,17 @@ export function FactorDetailToolbarButton() {
     );
   }
 
+  if (!canEdit) return null;
+
   return (
     <>
-      <Button variant="destructive" disabled={!selectedId} onClick={onDelete}>
+      <Button variant="destructive" disabled={!selectedId || !canDelete || isPluginFactor} onClick={onDelete}>
         删除
       </Button>
       <Button
-        disabled={!selectedId}
+        disabled={!selectedId || !canEdit || isPluginFactor}
         onClick={() => {
+          if (!canEdit || isPluginFactor) return;
           setEditing(true);
         }}
       >

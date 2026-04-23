@@ -10,6 +10,7 @@ dependencies = [
     "common-nodes",
     "strategy-nodes",
     "alphalens-nodes",
+    "technical-factors",
     "sqlmodel>=0.0.38",
 ]
 
@@ -20,6 +21,7 @@ echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
 strategy-nodes = { workspace = true }
 alphalens-nodes = { workspace = true }
+technical-factors = { workspace = true }
 datasources = { workspace = true }
 evaluate = { workspace = true }
 factor = { workspace = true }
@@ -29,7 +31,7 @@ workflow = { workspace = true }
 agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_factors"]
 
 [dependency-groups]
 dev = [

@@ -12,6 +12,7 @@ class FactorRow(SQLModel, table=True):
     name: str
     group: str
     description: str
+    is_plugin: bool = False
     window: int = 1
     dependencies: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
     source_path: str

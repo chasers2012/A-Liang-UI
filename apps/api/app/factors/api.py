@@ -70,6 +70,8 @@ def delete_factor(factor_id: str) -> None:
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
+    if rec.is_plugin:
+        raise HTTPException(status_code=404, detail="因子不存在")
     delete_factor_source_file(rec)
     FactorItemsRegistry.delete_item(factor_id)
     with contextlib.suppress(ValueError):

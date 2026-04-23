@@ -127,8 +127,15 @@ export const factorsEditingAtom = withAtomEffect(
   },
 );
 
-export const factorsCanEditAtom = atom((get) => get(factorsDetailAtom) != null || get(factorsEditingAtom));
-export const factorsCanDeleteAtom = atom((get) => get(factorsSelectedIdAtom) != null && get(factorsDetailAtom) != null);
+export const factorsIsPluginFactorAtom = atom((get) => get(factorsDetailAtom)?.is_plugin === true);
+export const factorsCanEditAtom = atom((get) => {
+  const isPlugin = get(factorsIsPluginFactorAtom);
+  return !isPlugin && (get(factorsDetailAtom) != null || get(factorsEditingAtom));
+});
+export const factorsCanDeleteAtom = atom((get) => {
+  const isPlugin = get(factorsIsPluginFactorAtom);
+  return !isPlugin && get(factorsSelectedIdAtom) != null && get(factorsDetailAtom) != null;
+});
 export const creatingAtom = atom(
   (get) => get(factorsEditingAtom) && get(factorsSelectedIdAtom) == null,
   (_get, set, next: boolean) => {
@@ -148,6 +155,7 @@ function resolveCreateForm(templateSource: string | null): FactorDetailPublic {
     id: '__new__',
     group: '未分组',
     description: '',
+    is_plugin: false,
     window: 1,
     dependencies: ['close'],
     source: '',
@@ -194,6 +202,7 @@ export const factorsVisibleDetailAtom = atom((get) => {
 
 export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
   if (get(factorsSavingAtom)) return null;
+  if (!get(factorsCanEditAtom)) return null;
   const form = get(factorsVisibleDetailAtom);
   if (!form) return null;
 
@@ -226,6 +235,7 @@ export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
 
 export const handleDeleteFactorAtom = atom(null, async (get, set) => {
   if (!get(factorsCanDeleteAtom)) return false;
+  if (get(factorsIsPluginFactorAtom)) return false;
   const selectedId = get(factorsSelectedIdAtom);
   if (!selectedId) return false;
   await deleteFactor(selectedId);

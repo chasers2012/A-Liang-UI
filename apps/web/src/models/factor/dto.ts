@@ -5,6 +5,7 @@ export interface FactorSummaryPublic {
   name: string;
   group: string;
   description: string;
+  is_plugin: boolean;
   window: number;
   dependencies: string[];
   source_path: string;
