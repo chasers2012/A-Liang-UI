@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CodeJar } from "@/components/ui/code-jar";
-import { Label } from "@/components/ui/label";
-import type { NodeDetailPublic } from "@/models/nodes/dto";
-import { applyNameToWorkflowNodeLabel } from "./shared";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CodeJar } from '@/components/ui/code-jar';
+import { Label } from '@/components/ui/label';
+import type { NodeDetailPublic } from '@/models/nodes/dto';
+import { applyNameToWorkflowNodeLabel } from '@/models/nodes/template.atom';
 
 export function PanelSourceTab(props: {
   detail: NodeDetailPublic | null;
@@ -19,8 +19,8 @@ export function PanelSourceTab(props: {
     detail,
     placeholder,
     editable = false,
-    editName = "",
-    sourceDraft = "",
+    editName = '',
+    sourceDraft = '',
     onSourceDraftChange,
     saveError = null,
   } = props;
@@ -66,4 +66,3 @@ export function PanelSourceTab(props: {
     </div>
   );
 }
-

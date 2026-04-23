@@ -9,22 +9,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditablePageTitle } from '@/components/editable-page-title';
-import {
-  cancelNodesDetailEditAtomFamily,
-  getNodesDetailStateKey,
-  loadNodesDetailPanelAtomFamily,
-  NEW_NODE_DETAIL_KEY,
-  nodesDetailPanelStateAtomFamily,
-  saveNodesDetailAtomFamily,
-  setNodesDetailEditDescriptionAtomFamily,
-  setNodesDetailEditNameAtomFamily,
-  setNodesDetailSourceDraftAtomFamily,
-  startNodesDetailEditAtomFamily,
-} from '@/models/nodes/detail.atom';
+import { defaultNewName } from '@/lib/default-new-name';
+import { nodesDetailAsyncStateAtomFamily, saveNodesDetailAtomFamily } from '@/models/nodes/detail.atom';
 import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
 import { NodeDetailEditToolbarButton } from './panel-edit-toolbar-button';
 import { PanelPreviewTab } from './panel-preview-tab';
 import { PanelSourceTab } from './panel-source-tab';
+import {
+  nodeTemplateAsyncStateAtom,
+  applyTimestampSuffixToWorkflowNodeClassName,
+  applyNameToWorkflowNodeLabel,
+} from '@/models/nodes/template.atom';
 
 export type NodesNodeDetailPanelProps = {
   nodeId?: string | null;
@@ -33,39 +28,86 @@ export type NodesNodeDetailPanelProps = {
 
 // eslint-disable-next-line complexity
 export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: NodesNodeDetailPanelProps) {
-  const effectiveNodeId = createMode ? NEW_NODE_DETAIL_KEY : nodeId;
-  const stateKey = getNodesDetailStateKey(effectiveNodeId);
+  const effectiveNodeId: string | null = createMode ? null : nodeId;
   const router = useRouter();
-  const { detail, editName, editDescription, editing, saveError, saving, sourceDraft, loadError } = useAtomValue(
-    nodesDetailPanelStateAtomFamily(stateKey),
-  );
-  const loadDetail = useSetAtom(loadNodesDetailPanelAtomFamily(stateKey));
-  const startEdit = useSetAtom(startNodesDetailEditAtomFamily(stateKey));
-  const cancelEdit = useSetAtom(cancelNodesDetailEditAtomFamily(stateKey));
-  const setEditName = useSetAtom(setNodesDetailEditNameAtomFamily(stateKey));
-  const setEditDescription = useSetAtom(setNodesDetailEditDescriptionAtomFamily(stateKey));
-  const setSourceDraft = useSetAtom(setNodesDetailSourceDraftAtomFamily(stateKey));
-  const saveDetail = useSetAtom(saveNodesDetailAtomFamily(stateKey));
+  const detailState = useAtomValue(nodesDetailAsyncStateAtomFamily(effectiveNodeId));
+  const nodeTemplateState = useAtomValue(nodeTemplateAsyncStateAtom);
+  const saveDetail = useSetAtom(saveNodesDetailAtomFamily(effectiveNodeId));
   const refreshNodesList = useSetAtom(refreshNodesListAtom);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    void loadDetail();
-  }, [loadDetail]);
+  const detail = detailState.value ?? null;
+  const loadError = detailState.error;
 
-  const isCreate = effectiveNodeId === NEW_NODE_DETAIL_KEY;
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [sourceDraft, setSourceDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (createMode) {
+      setSaveError(null);
+      setSaving(false);
+      setEditing(true);
+      setEditName('');
+      setEditDescription('');
+      if (!nodeTemplateState.loading && nodeTemplateState.value) {
+        const now = new Date();
+        const name = defaultNewName('新节点', now);
+        const sourceDraft = applyTimestampSuffixToWorkflowNodeClassName(
+          applyNameToWorkflowNodeLabel(nodeTemplateState.value, name.trim()),
+          now,
+        );
+        setEditName(name);
+        setSourceDraft(sourceDraft);
+      } else {
+        setSourceDraft('');
+      }
+      return;
+    }
+    if (!detail) return;
+    setSaveError(null);
+    setSaving(false);
+    setEditing(false);
+    setEditName(detail.name ?? '');
+    setEditDescription(detail.description ?? '');
+    setSourceDraft(detail.source ?? '');
+  }, [createMode, detail?.id, detail, nodeTemplateState.loading, nodeTemplateState.value]);
+
+  const isCreate = createMode;
   const isPluginNode = detail?.is_plugin === true;
   const canEdit = detail != null && !isPluginNode;
   const canDelete = !isCreate && detail != null;
   const editActive = canEdit && editing;
 
   const handleSaveSource = async () => {
-    const saved = await saveDetail();
+    if (saving) return;
+    setSaving(true);
+    setSaveError(null);
+    const saved = await saveDetail({
+      editName,
+      editDescription,
+      sourceDraft,
+      existingId: detail?.id ?? null,
+    });
+    setSaving(false);
+    if (!saved) {
+      setSaveError('保存失败');
+      return;
+    }
+    setEditing(false);
     if (isCreate && saved) router.push(`/nodes?id=${encodeURIComponent(saved.id)}`);
   };
   const handleCancelEdit = () => {
     if (isCreate) return void router.push('/nodes');
-    cancelEdit();
+    if (!detail) return;
+    setSaveError(null);
+    setEditing(false);
+    setEditName(detail.name ?? '');
+    setEditDescription(detail.description ?? '');
+    setSourceDraft(detail.source ?? '');
   };
   const handleDeleteNode = async () => {
     if (!canDelete || isPluginNode || deleting) return;
@@ -78,6 +120,17 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
       setDeleting(false);
     }
   };
+
+  if (detailState.loading && effectiveNodeId) {
+    return (
+      <>
+        <CardHeader className="shrink-0">
+          <CardTitle>节点</CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-4">加载中…</CardContent>
+      </>
+    );
+  }
 
   if (effectiveNodeId && loadError) {
     return (
@@ -104,7 +157,7 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
           <EditablePageTitle
             value={editName}
             showEdit={editActive && canEdit}
-            onChange={setEditName}
+            onChange={(v) => setEditName(v)}
             inputAriaLabel="节点名称"
             placeholder="节点详情"
             editButtonAriaLabel="编辑名称"
@@ -124,7 +177,11 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
               editing={editing}
               saving={editActive ? saving : false}
               saveDisabled={editActive ? !editName.trim() : true}
-              onStartEdit={startEdit}
+              onStartEdit={() => {
+                if (!canEdit) return;
+                setSaveError(null);
+                setEditing(true);
+              }}
               onCancelEdit={handleCancelEdit}
               onSave={editActive ? () => void handleSaveSource() : undefined}
               onDelete={canDelete ? () => void handleDeleteNode() : undefined}
@@ -138,7 +195,7 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
               editable={editActive}
               editName={editName}
               editDescription={editDescription}
-              onEditDescriptionChange={setEditDescription}
+              onEditDescriptionChange={(v) => setEditDescription(v)}
             />
           </TabsContent>
           <TabsContent value="source">
@@ -148,7 +205,7 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
               editable={editActive}
               editName={editName}
               sourceDraft={sourceDraft}
-              onSourceDraftChange={editActive ? setSourceDraft : undefined}
+              onSourceDraftChange={editActive ? (v) => setSourceDraft(v) : undefined}
               saveError={editActive ? saveError : null}
             />
           </TabsContent>
