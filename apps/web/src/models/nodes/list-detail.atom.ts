@@ -1,55 +1,23 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
 
-import { getNode, listNodes } from "@/api/nodes";
-import type { NodeDetailPublic, NodeSummaryPublic } from "./dto";
+import { listNodes } from '@/api/nodes';
+import { toAsyncValueStateAtom } from '@/lib/loadable';
+import type { NodeSummaryPublic } from './dto';
 
-export type NodesListState = {
-  items: NodeSummaryPublic[] | null;
-  error: string | null;
-};
+const nodesListRevisionAtom = atom(0);
 
-export const nodesListAtom = atom<NodesListState>({
-  items: null,
-  error: null,
+const nodesListAsyncAtom = atom(async (get): Promise<NodeSummaryPublic[]> => {
+  get(nodesListRevisionAtom);
+  return await listNodes();
 });
 
-export const refreshNodesListAtom = atom(null, async (_get, set) => {
-  set(nodesListAtom, (s) => ({ ...s, error: null }));
-  try {
-    const items = await listNodes();
-    set(nodesListAtom, { items, error: null });
-  } catch (e) {
-    set(nodesListAtom, {
-      items: null,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
+const nodesListAsyncStateAtom = toAsyncValueStateAtom(nodesListAsyncAtom);
+
+export const nodesListAtom = atom((get): NodeSummaryPublic[] | null => {
+  const state = get(nodesListAsyncStateAtom);
+  return state.value;
 });
 
-export type NodeDetailState = {
-  row: NodeDetailPublic | null;
-  error: string | null;
-};
-
-export const nodeDetailAtomFamily = atomFamily((id: string) => {
-  void id;
-  return atom<NodeDetailState>({ row: null, error: null });
+export const refreshNodesListAtom = atom(null, (_get, set) => {
+  set(nodesListRevisionAtom, (v) => v + 1);
 });
-
-export const loadNodeDetailAtomFamily = atomFamily((id: string) =>
-  atom(null, async (_get, set) => {
-    if (!id) return;
-    set(nodeDetailAtomFamily(id), { row: null, error: null });
-    try {
-      const row = await getNode(id);
-      set(nodeDetailAtomFamily(id), { row, error: null });
-    } catch (e) {
-      set(nodeDetailAtomFamily(id), {
-        row: null,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-  }),
-);
-

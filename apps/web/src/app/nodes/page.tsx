@@ -1,33 +1,26 @@
 'use client';
 
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
-import { listNodeVisibilityConfigs } from '@/api/nodes';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { cn } from '@/lib/utils';
 import type { NodeSummaryPublic } from '@/models/nodes/dto';
 import {
-  clearNodesCategoryFiltersAtom,
+  nodesDomainConfigsAtom,
   filteredNodesAtom,
   nodesBrowseStateAtom,
-  nodesCategoryOptionKeysAtom,
   nodesDefaultSelectedIdAtom,
-  nodesFilterPopoverActiveAtom,
-  nodesIncludedCategoriesSetAtom,
-  resetNodesBrowseFiltersAtom,
+  nodesSelectedDomainsAtom,
   setNodesSearchQueryAtom,
-  setNodesSourceFilterAtom,
-  toggleNodesCategoryFilterAtom,
 } from '@/models/nodes/browse.atom';
-import { nodesListAtom, refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
+import { nodesListAtom } from '@/models/nodes/list-detail.atom';
 import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
@@ -54,45 +47,15 @@ export default function NodesPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { items } = useAtomValue(nodesListAtom);
-  const refresh = useSetAtom(refreshNodesListAtom);
-  const { searchQuery, sourceFilter } = useAtomValue(nodesBrowseStateAtom);
-  const includedCategories = useAtomValue(nodesIncludedCategoriesSetAtom);
-  const categoryOptionKeys = useAtomValue(nodesCategoryOptionKeysAtom);
+  const items = useAtomValue(nodesListAtom);
+  const { searchQuery } = useAtomValue(nodesBrowseStateAtom);
   const filteredItems = useAtomValue(filteredNodesAtom);
-  const filterPopoverActive = useAtomValue(nodesFilterPopoverActiveAtom);
   const defaultSelectedId = useAtomValue(nodesDefaultSelectedIdAtom);
+  const domainConfigs = useAtomValue(nodesDomainConfigsAtom);
+  const [selectedDomains] = useAtom(nodesSelectedDomainsAtom);
   const setSearchQuery = useSetAtom(setNodesSearchQueryAtom);
-  const setSourceFilter = useSetAtom(setNodesSourceFilterAtom);
-  const toggleCategoryFilter = useSetAtom(toggleNodesCategoryFilterAtom);
-  const clearCategoryFilters = useSetAtom(clearNodesCategoryFiltersAtom);
-  const resetListFilters = useSetAtom(resetNodesBrowseFiltersAtom);
-  const [domainConfigs, setDomainConfigs] = useState<Record<string, Set<string>>>({});
-  const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
-
-  useEffectMicrotask(() => {
-    void refresh();
-  }, [refresh]);
-  useEffectMicrotask(() => {
-    void (async () => {
-      try {
-        const rows = await listNodeVisibilityConfigs();
-        const next: Record<string, Set<string>> = {};
-        for (const row of rows) {
-          next[row.domain] = new Set(row.hidden_node_ids);
-        }
-        setDomainConfigs(next);
-      } catch {
-        setDomainConfigs({});
-      }
-    })();
-  }, []);
 
   const { id: queryId, isCreate } = useMemo(() => parseNodesBrowseQuery(searchParams), [searchParams]);
-  const domainOptions = useMemo(
-    () => Object.keys(domainConfigs).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')),
-    [domainConfigs],
-  );
   const domainFilteredItems = useMemo(() => {
     if (!filteredItems) return null;
     if (selectedDomains.length === 0) return filteredItems;
@@ -115,7 +78,6 @@ export default function NodesPage() {
   });
 
   const highlightId = pathname === '/nodes' && !isCreate ? (queryId ?? effectiveSelectedId) : null;
-  const filterActive = filterPopoverActive || selectedDomains.length > 0;
 
   const onSelectNode = (id: string) => {
     const next = new URLSearchParams(searchParams);
@@ -153,22 +115,7 @@ export default function NodesPage() {
         onItemSelected={(item) => onSelectNode(item.id)}
         toolbarRight={
           <>
-            <NodesListFilterPopover
-              filterPopoverActive={filterActive}
-              sourceFilter={sourceFilter}
-              setSourceFilter={setSourceFilter}
-              domainOptions={domainOptions}
-              selectedDomains={selectedDomains}
-              setSelectedDomains={setSelectedDomains}
-              categoryOptionKeys={categoryOptionKeys}
-              includedCategories={includedCategories}
-              toggleCategoryFilter={toggleCategoryFilter}
-              clearCategoryFilters={() => clearCategoryFilters()}
-              resetListFilters={() => {
-                resetListFilters();
-                setSelectedDomains([]);
-              }}
-            />
+            <NodesListFilterPopover />
             <Link
               href="/nodes?new=1"
               aria-label="新增节点"

@@ -1,10 +1,11 @@
 import { atom } from 'jotai';
 
+import { listNodeVisibilityConfigs } from '@/api/nodes';
+import { toAsyncValueStateAtom } from '@/lib/loadable';
 import { nodesListAtom } from '@/models/nodes/list-detail.atom';
 import type { NodeSummaryPublic } from '@/models/nodes/dto';
 
 /** 与后端 ``PLUGIN_NODE_SOURCE_SENTINEL`` 一致 */
-export const PLUGIN_SOURCE_MARKER = '__plugin__';
 export const UNCATEGORIZED_KEY = '__uncategorized__';
 
 export type NodesSourceFilter = 'all' | 'user' | 'plugin';
@@ -19,6 +20,27 @@ export const nodesBrowseStateAtom = atom<NodesBrowseState>({
   searchQuery: '',
   sourceFilter: 'all',
   includedCategories: [],
+});
+
+export const nodesSelectedDomainsAtom = atom<string[]>([]);
+
+const nodesDomainConfigsAsyncAtom = atom(async (): Promise<Record<string, Set<string>>> => {
+  try {
+    const rows = await listNodeVisibilityConfigs();
+    const next: Record<string, Set<string>> = {};
+    for (const row of rows) {
+      next[row.domain] = new Set(row.hidden_node_ids);
+    }
+    return next;
+  } catch {
+    return {};
+  }
+});
+
+const nodesDomainConfigsAsyncStateAtom = toAsyncValueStateAtom(nodesDomainConfigsAsyncAtom);
+
+export const nodesDomainConfigsAtom = atom((get): Record<string, Set<string>> => {
+  return get(nodesDomainConfigsAsyncStateAtom).value ?? {};
 });
 
 export function parseNodesDetailRouteId(pathname: string): string | null {
@@ -81,7 +103,7 @@ export const resetNodesBrowseFiltersAtom = atom(null, (_get, set) => {
 export const nodesIncludedCategoriesSetAtom = atom((get) => new Set(get(nodesBrowseStateAtom).includedCategories));
 
 export const nodesCategoryOptionKeysAtom = atom((get) => {
-  const items = get(nodesListAtom).items;
+  const items = get(nodesListAtom);
   if (!items?.length) return [];
   const keys = new Set<string>();
   for (const m of items) {
@@ -91,7 +113,7 @@ export const nodesCategoryOptionKeysAtom = atom((get) => {
 });
 
 export const filteredNodesAtom = atom((get) => {
-  const items = get(nodesListAtom).items;
+  const items = get(nodesListAtom);
   const { searchQuery, sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
   if (!items) return null;
   const q = searchQuery.trim().toLowerCase();

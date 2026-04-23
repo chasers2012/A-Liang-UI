@@ -1,6 +1,8 @@
 'use client';
 
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Funnel } from 'lucide-react';
+import { useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +26,19 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { categoryLabel, type NodesSourceFilter } from '@/models/nodes/browse.atom';
+import {
+  categoryLabel,
+  clearNodesCategoryFiltersAtom,
+  nodesBrowseStateAtom,
+  nodesCategoryOptionKeysAtom,
+  nodesDomainConfigsAtom,
+  nodesFilterPopoverActiveAtom,
+  nodesIncludedCategoriesSetAtom,
+  nodesSelectedDomainsAtom,
+  resetNodesBrowseFiltersAtom,
+  setNodesSourceFilterAtom,
+  toggleNodesCategoryFilterAtom,
+} from '@/models/nodes/browse.atom';
 
 const DOMAIN_ALL_PLACEHOLDER = '不限（全部领域）';
 
@@ -34,32 +48,21 @@ const domainChipClassName = cn('text-xs');
 
 const domainComboboxItemClassName = cn('items-start text-sm');
 
-export function NodesListFilterPopover(props: {
-  filterPopoverActive: boolean;
-  sourceFilter: NodesSourceFilter;
-  setSourceFilter: (v: NodesSourceFilter) => void;
-  domainOptions: string[];
-  selectedDomains: string[];
-  setSelectedDomains: (v: string[]) => void;
-  categoryOptionKeys: string[];
-  includedCategories: Set<string>;
-  toggleCategoryFilter: (key: string) => void;
-  clearCategoryFilters: () => void;
-  resetListFilters: () => void;
-}) {
-  const {
-    filterPopoverActive,
-    sourceFilter,
-    setSourceFilter,
-    domainOptions,
-    selectedDomains,
-    setSelectedDomains,
-    categoryOptionKeys,
-    includedCategories,
-    toggleCategoryFilter,
-    clearCategoryFilters,
-    resetListFilters,
-  } = props;
+export function NodesListFilterPopover() {
+  const { sourceFilter } = useAtomValue(nodesBrowseStateAtom);
+  const domainConfigs = useAtomValue(nodesDomainConfigsAtom);
+  const categoryOptionKeys = useAtomValue(nodesCategoryOptionKeysAtom);
+  const includedCategories = useAtomValue(nodesIncludedCategoriesSetAtom);
+  const [selectedDomains, setSelectedDomains] = useAtom(nodesSelectedDomainsAtom);
+  const domainOptions = useMemo(
+    () => Object.keys(domainConfigs).sort((a, b) => a.localeCompare(b, 'zh-Hans-CN')),
+    [domainConfigs],
+  );
+  const filterPopoverActive = useAtomValue(nodesFilterPopoverActiveAtom) || selectedDomains.length > 0;
+  const setSourceFilter = useSetAtom(setNodesSourceFilterAtom);
+  const toggleCategoryFilter = useSetAtom(toggleNodesCategoryFilterAtom);
+  const clearCategoryFilters = useSetAtom(clearNodesCategoryFiltersAtom);
+  const resetNodesBrowseFilters = useSetAtom(resetNodesBrowseFiltersAtom);
 
   const domainAnchor = useComboboxAnchor();
 
@@ -202,7 +205,16 @@ export function NodesListFilterPopover(props: {
             </div>
           ) : null}
           <div className="flex justify-end border-t pt-3">
-            <Button type="button" variant="outline" size="sm" className="h-8" onClick={resetListFilters}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => {
+                resetNodesBrowseFilters();
+                setSelectedDomains([]);
+              }}
+            >
               重置筛选
             </Button>
           </div>
