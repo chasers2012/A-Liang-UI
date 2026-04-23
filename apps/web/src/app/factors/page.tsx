@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
@@ -9,23 +8,21 @@ import { SearchList } from '@/components/search-list';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
+  creatingAtom,
   factorsBrowseStateAtom,
   factorsListAtom,
   factorsEditingAtom,
   factorsListErrorAtom,
   factorsSelectedIdAtom,
   filteredFactorsAtom,
-  handleCancelFactorEditAtom,
-  refreshFactorsListAtom,
   setFactorsSearchQueryAtom,
-  startCreateFactorAtom,
 } from '@/models/factor';
 import { FactorDetailPanel } from './components/panel/factor-detail-panel';
 
 function FactorsListPane() {
   const setSearchQuery = useSetAtom(setFactorsSearchQueryAtom);
-  const startCreate = useSetAtom(startCreateFactorAtom);
-  const cancelEdit = useSetAtom(handleCancelFactorEditAtom);
+  const startCreate = useSetAtom(creatingAtom);
+  const setEditing = useSetAtom(factorsEditingAtom);
   const [selectedId, setSelectedId] = useAtom(factorsSelectedIdAtom);
   const [editing] = useAtom(factorsEditingAtom);
   const listItems = useAtomValue(factorsListAtom);
@@ -63,7 +60,7 @@ function FactorsListPane() {
       onItemSelected={(item) => {
         setSelectedId(item.id);
         if (editing) {
-          cancelEdit();
+          setEditing(false);
         }
       }}
       toolbarRight={
@@ -72,7 +69,7 @@ function FactorsListPane() {
           aria-label="新增因子"
           className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
           onClick={() => {
-            startCreate();
+            startCreate(true);
           }}
         >
           <Plus />
@@ -83,12 +80,6 @@ function FactorsListPane() {
 }
 
 export default function FactorsPage() {
-  const refresh = useSetAtom(refreshFactorsListAtom);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <FactorsListPane />

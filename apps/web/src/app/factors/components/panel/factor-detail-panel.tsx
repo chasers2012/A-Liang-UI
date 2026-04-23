@@ -12,7 +12,6 @@ import {
   factorsEditNameAtom,
   factorsEditingAtom,
   factorsVisibleDetailAtom,
-  factorsReadonlyAtom,
   factorsSelectedIdAtom,
 } from '@/models/factor';
 import { PanelOverviewTab } from './panel-overview-tab';
@@ -21,11 +20,11 @@ import { FactorDetailToolbarButton } from './panel-edit-toolbar-button';
 
 function FactorDetailPanelContent() {
   const selectedId = useAtomValue(factorsSelectedIdAtom);
-  const readonly = useAtomValue(factorsReadonlyAtom);
+  const editing = useAtomValue(factorsEditingAtom);
   const loading = useAtomValue(factorsDetailLoadingAtom) && selectedId != null;
   const loadError = useAtomValue(factorsDetailErrorAtom);
 
-  if (!selectedId && readonly) {
+  if (!selectedId && !editing) {
     return (
       <Alert>
         <AlertDescription>请选择左侧因子后查看详情。</AlertDescription>

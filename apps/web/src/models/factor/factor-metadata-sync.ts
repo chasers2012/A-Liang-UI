@@ -28,17 +28,12 @@ function findUserFactorClassBodyRange(source: string): { start: number; end: num
   return { start: bodyStart, end };
 }
 
-function patchUserFactorBody(block: string, form: FactorDetailPublic): string {
-  const name = form.name.trim() || 'my_factor';
-  let b = block;
-  b = replaceStringAttr(b, 'name', name);
-  b = replaceStringAttr(b, 'group', form.group.trim());
-  b = replaceStringAttr(b, 'description', form.description);
-  const w = form.window;
-  if (Number.isFinite(w) && w >= 1) {
-    b = replaceNumberAttr(b, 'window', w);
-  }
-  return b;
+function patchUserFactorClassBody(source: string, patch: (block: string) => string): string {
+  const range = findUserFactorClassBodyRange(source);
+  if (!range) return source;
+  const { start, end } = range;
+  const newMid = patch(source.slice(start, end));
+  return source.slice(0, start) + newMid + source.slice(end);
 }
 
 type CalcParam = {
@@ -106,20 +101,67 @@ function replaceCalcDependenciesInSource(source: string, deps: string[]): string
   return source.slice(0, sig.start) + replacement + source.slice(sig.end);
 }
 
-/**
- * Push form field values into `NewFactor` class attributes in source when that
- * class exists; otherwise returns the original source (no whole-file guess).
- */
-export function applyFormMetadataToSource(source: string, form: FactorDetailPublic): string {
-  const range = findUserFactorClassBodyRange(source);
-  const deps = form.dependencies;
-  let out = source;
-  if (range) {
-    const { start, end } = range;
-    const newMid = patchUserFactorBody(source.slice(start, end), form);
-    out = source.slice(0, start) + newMid + source.slice(end);
-  }
-  return replaceCalcDependenciesInSource(out, deps);
+export function applyFactorNameToSource(source: string, name: string): string {
+  const n = name.trim() || 'my_factor';
+  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'name', n));
+}
+
+export function applyFactorGroupToSource(source: string, group: string): string {
+  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'group', group.trim()));
+}
+
+export function applyFactorDescriptionToSource(source: string, description: string): string {
+  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'description', description));
+}
+
+export function applyFactorWindowToSource(source: string, window: number): string {
+  if (!Number.isFinite(window) || window < 1) return source;
+  return patchUserFactorClassBody(source, (block) => replaceNumberAttr(block, 'window', window));
+}
+
+export function applyFactorDependenciesToSource(source: string, deps: string[]): string {
+  return replaceCalcDependenciesInSource(source, deps);
+}
+
+export function parseFactorNameFromSource(source: string): string | undefined {
+  const block = getUserFactorClassBody(source);
+  if (!block) return;
+  const v = parseStringAttr(block, 'name');
+  if (v === null) return;
+  return v;
+}
+
+export function parseFactorGroupFromSource(source: string): string | undefined {
+  const block = getUserFactorClassBody(source);
+  if (!block) return;
+  const v = parseStringAttr(block, 'group');
+  if (v === null) return;
+  return v;
+}
+
+export function parseFactorDescriptionFromSource(source: string): string | undefined {
+  const block = getUserFactorClassBody(source);
+  if (!block) return;
+  const v = parseStringAttr(block, 'description');
+  if (v === null) return;
+  return v;
+}
+
+export function parseFactorWindowFromSource(source: string): number | undefined {
+  const block = getUserFactorClassBody(source);
+  if (!block) return;
+  const raw = parseWindow(block);
+  if (raw === null) return;
+  return Number.parseInt(raw, 10);
+}
+
+export function parseFactorDependenciesFromSource(source: string): string[] | undefined {
+  const deps = parseDependenciesCsvFromCalc(source);
+  if (deps === null) return;
+  return deps
+    .split(/[,，]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function getUserFactorClassBody(source: string): string | null {

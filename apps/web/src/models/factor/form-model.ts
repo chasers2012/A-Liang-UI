@@ -12,23 +12,6 @@ export function defaultNewFactorName(d = new Date()): string {
   return `新因子_${y}${mo}${day}_${h}${mi}${s}`;
 }
 
-/** Initial shell; `source` is filled from GET /factors/template on the new-factor page. */
-export function emptyForm(): FactorDetailPublic {
-  const nowIso = new Date().toISOString();
-  return {
-    id: '__new__',
-    name: '新因子',
-    group: '未分组',
-    description: '',
-    window: 1,
-    dependencies: ['close'],
-    source: '',
-    source_path: '',
-    created_at: nowIso,
-    updated_at: nowIso,
-  };
-}
-
 export function validateFormForSubmit(form: FactorDetailPublic): string | null {
   if (!form.name.trim()) return '因子标识（name）不能为空';
   const w = form.window;

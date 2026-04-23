@@ -4,32 +4,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/reui/badge';
+import { useAtomValue, useSetAtom } from 'jotai';
 
-import { applyFormMetadataToSource, parseUserFactorMetadataFromSource, type FactorDetailPublic } from '@/models/factor';
+import {
+  factorsEditDependenciesAtom,
+  factorsEditDescriptionAtom,
+  factorsEditGroupAtom,
+  factorsEditNameAtom,
+  factorsEditWindowAtom,
+  factorsSourceDraftAtom,
+  factorsVisibleDetailAtom,
+} from '@/models/factor';
 import { CodeJar } from '@/components/ui/code-jar';
 import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
 import { FactorGroupCombobox } from './factor-group-combobox';
 
-const SYNC_FROM_FORM_FIELDS: (keyof FactorDetailPublic)[] = ['name', 'group', 'description', 'window', 'dependencies'];
-
-/** 与表单内 `set` 一致：改元数据时写回源码，改 `source` 时从源码解析元数据。 */
-export function applyFactorFormPatch(f: FactorDetailPublic, patch: Partial<FactorDetailPublic>): FactorDetailPublic {
-  if (Object.prototype.hasOwnProperty.call(patch, 'source')) {
-    const src = patch.source as string;
-    const parsed = parseUserFactorMetadataFromSource(src);
-    return { ...f, ...patch, ...parsed };
-  }
-  const next = { ...f, ...patch };
-  const touchesMeta = SYNC_FROM_FORM_FIELDS.some((k) => k in patch);
-  if (touchesMeta) {
-    next.source = applyFormMetadataToSource(next.source, next);
-  }
-  return next;
-}
-
 type FactorFieldBaseProps = {
-  form: FactorDetailPublic;
-  set: (patch: Partial<FactorDetailPublic>) => void;
   readOnly: boolean;
   pid: (s: string) => string;
 };
@@ -40,12 +30,19 @@ type FactorMetaFieldsProps = FactorFieldBaseProps & {
 };
 
 export function FactorMetaFields(props: FactorMetaFieldsProps) {
-  const { form, set, readOnly, pid, hideNameField, hideDescriptionField } = props;
+  const { readOnly, pid, hideNameField, hideDescriptionField } = props;
+  const form = useAtomValue(factorsVisibleDetailAtom);
+  const setName = useSetAtom(factorsEditNameAtom);
+  const setGroup = useSetAtom(factorsEditGroupAtom);
+  const setDescription = useSetAtom(factorsEditDescriptionAtom);
+  const setWindow = useSetAtom(factorsEditWindowAtom);
+  const setDependencies = useSetAtom(factorsEditDependenciesAtom);
+  if (!form) return null;
   const dependencies = form.dependencies;
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2">
-        {!hideNameField ? (
+        {!hideNameField && (
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor={pid('name')}>标识 name</Label>
             {readOnly ? (
@@ -56,19 +53,19 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
                 className="font-mono text-sm"
                 value={form.name}
                 readOnly={readOnly}
-                onChange={(e) => set({ name: e.target.value })}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="my_factor"
                 autoComplete="off"
               />
             )}
           </div>
-        ) : null}
+        )}
         <div className="min-w-0 space-y-2">
           <Label htmlFor={pid('group')}>分组 group</Label>
           {readOnly ? (
             <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.group || '-'}</div>
           ) : (
-            <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => set({ group })} />
+            <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => setGroup(group)} />
           )}
           <p className="text-xs text-muted-foreground">可选已有分组或输入新名称。</p>
         </div>
@@ -86,7 +83,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               readOnly={readOnly}
               onChange={(e) => {
                 const next = Number.parseInt(e.target.value, 10);
-                set({ window: Number.isFinite(next) ? next : 1 });
+                setWindow(Number.isFinite(next) ? next : 1);
               }}
             />
           )}
@@ -105,7 +102,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               rows={2}
               value={form.description}
               readOnly={readOnly}
-              onChange={(e) => set({ description: e.target.value })}
+              onChange={(e) => setDescription(e.target.value)}
             />
           )}
         </div>
@@ -128,7 +125,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
           <FactorDependenciesCombobox
             id={pid('deps')}
             value={form.dependencies}
-            onValueChange={(dependencies) => set({ dependencies })}
+            onValueChange={(deps) => setDependencies(deps)}
           />
         )}
         <p className="text-xs text-muted-foreground">
@@ -142,14 +139,17 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
 type FactorSourceFieldProps = FactorFieldBaseProps;
 
 export function FactorSourceField(props: FactorSourceFieldProps) {
-  const { form, set, readOnly, pid } = props;
+  const { readOnly, pid } = props;
+  const form = useAtomValue(factorsVisibleDetailAtom);
+  const setSourceDraft = useSetAtom(factorsSourceDraftAtom);
+  if (!form) return null;
   return (
     <div className="space-y-2">
       <Label htmlFor={pid('source')}>Python 源码</Label>
       {readOnly ? (
         <CodeJar id={pid('source')} value={form.source} readOnly />
       ) : (
-        <CodeJar id={pid('source')} value={form.source} onChange={(source) => set({ source })} />
+        <CodeJar id={pid('source')} value={form.source} onChange={(source) => setSourceDraft(source)} />
       )}
     </div>
   );

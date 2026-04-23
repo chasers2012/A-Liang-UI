@@ -5,27 +5,24 @@ import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Button } from '@/components/ui/button';
 import {
-  factorsCreateModeAtom,
+  creatingAtom,
   factorsEditingAtom,
   factorsListAtom,
   factorsSavingAtom,
   factorsSelectedIdAtom,
-  handleCancelFactorEditAtom,
   handleDeleteFactorAtom,
   handleSaveFactorDetailAtom,
-  startEditFactorAtom,
 } from '@/models/factor';
 import { DeleteFactorDialog } from '../../ui/delete-factor-dialog';
 
 export function FactorDetailToolbarButton() {
   const saveForm = useSetAtom(handleSaveFactorDetailAtom);
-  const startEdit = useSetAtom(startEditFactorAtom);
-  const cancelEdit = useSetAtom(handleCancelFactorEditAtom);
+  const setEditing = useSetAtom(factorsEditingAtom);
   const deleteSelected = useSetAtom(handleDeleteFactorAtom);
   const listItems = useAtomValue(factorsListAtom);
   const selectedId = useAtomValue(factorsSelectedIdAtom);
   const editing = useAtomValue(factorsEditingAtom);
-  const isCreating = useAtomValue(factorsCreateModeAtom);
+  const isCreating = useAtomValue(creatingAtom);
   const sourceSaving = useAtomValue(factorsSavingAtom);
 
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -44,7 +41,7 @@ export function FactorDetailToolbarButton() {
   if (isCreating) {
     return (
       <>
-        <Button variant="outline" disabled={sourceSaving} onClick={cancelEdit}>
+        <Button variant="outline" disabled={sourceSaving} onClick={() => setEditing(false)}>
           取消创建
         </Button>
         <Button disabled={sourceSaving} onClick={() => void saveForm()}>
@@ -57,7 +54,7 @@ export function FactorDetailToolbarButton() {
   if (editing) {
     return (
       <>
-        <Button variant="outline" disabled={sourceSaving} onClick={cancelEdit}>
+        <Button variant="outline" disabled={sourceSaving} onClick={() => setEditing(false)}>
           取消
         </Button>
         <Button disabled={sourceSaving || !selectedId} onClick={() => void saveForm()}>
@@ -72,7 +69,12 @@ export function FactorDetailToolbarButton() {
       <Button variant="destructive" disabled={!selectedId} onClick={onDelete}>
         删除
       </Button>
-      <Button disabled={!selectedId} onClick={startEdit}>
+      <Button
+        disabled={!selectedId}
+        onClick={() => {
+          setEditing(true);
+        }}
+      >
         编辑
       </Button>
       <DeleteFactorDialog

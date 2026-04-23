@@ -1,47 +1,166 @@
 import { atom } from 'jotai';
+import { withAtomEffect } from 'jotai-effect';
 
 import { createFactor, deleteFactor, patchFactor } from '@/api/factors';
 import type { FactorDetailPublic } from './dto';
 import { factorsDefaultSelectedIdAtom } from './browse.atom';
 import { factorsDetailAtom, refreshFactorsDetailAtomFamily } from './detail.atom';
-import { applyFormMetadataToSource, parseUserFactorMetadataFromSource } from './factor-metadata-sync';
-import { bodyFromForm, defaultNewFactorName, emptyForm, validateFormForSubmit } from './form-model';
+import {
+  applyFactorDependenciesToSource,
+  applyFactorDescriptionToSource,
+  applyFactorGroupToSource,
+  applyFactorNameToSource,
+  applyFactorWindowToSource,
+  parseFactorDependenciesFromSource,
+  parseFactorDescriptionFromSource,
+  parseFactorGroupFromSource,
+  parseFactorNameFromSource,
+  parseFactorWindowFromSource,
+  parseUserFactorMetadataFromSource,
+} from './factor-metadata-sync';
+import { bodyFromForm, defaultNewFactorName, validateFormForSubmit } from './form-model';
 import { refreshFactorsListAtom } from './list-detail.atom';
 import { factorsSelectedIdAtom } from './selection.atom';
 import { factorTemplateAtom } from './template.atom';
 
-export const factorsEditingAtom = atom(false);
 export const factorsSavingAtom = atom(false);
 export const factorsSaveErrorAtom = atom<string | null>(null);
 
-export const factorsEditNameAtom = atom<string | undefined>(undefined);
-export const factorsEditGroupAtom = atom<string | undefined>(undefined);
-export const factorsEditDescriptionAtom = atom<string | undefined>(undefined);
-export const factorsEditWindowAtom = atom<number | undefined>(undefined);
-export const factorsEditDependenciesAtom = atom<string[] | undefined>(undefined);
-export const factorsSourceDraftAtom = atom<string | undefined>(undefined);
+export const factorsSourceDraftAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
+  const sourceDraft = get(factorsSourceDraftAtom);
+  if (!get(factorsEditingAtom)) return;
+  if (sourceDraft === undefined) return;
 
-const clearFactorDraftsAtom = atom(null, (_get, set) => {
-  set(factorsEditNameAtom, undefined);
-  set(factorsEditGroupAtom, undefined);
-  set(factorsEditDescriptionAtom, undefined);
-  set(factorsEditWindowAtom, undefined);
-  set(factorsEditDependenciesAtom, undefined);
-  set(factorsSourceDraftAtom, undefined);
+  const name = parseFactorNameFromSource(sourceDraft);
+  if (name !== get(factorsEditNameAtom)) set(factorsEditNameAtom, name);
+
+  const group = parseFactorGroupFromSource(sourceDraft);
+  if (group !== get(factorsEditGroupAtom)) set(factorsEditGroupAtom, group);
+
+  const description = parseFactorDescriptionFromSource(sourceDraft);
+  if (description !== get(factorsEditDescriptionAtom)) set(factorsEditDescriptionAtom, description);
+
+  const window = parseFactorWindowFromSource(sourceDraft);
+  if (window !== get(factorsEditWindowAtom)) set(factorsEditWindowAtom, window);
+
+  const dependencies = parseFactorDependenciesFromSource(sourceDraft);
+  const prevDeps = get(factorsEditDependenciesAtom);
+  const depsEqual =
+    dependencies === prevDeps ||
+    (dependencies !== undefined &&
+      prevDeps !== undefined &&
+      dependencies.length === prevDeps.length &&
+      dependencies.every((d, i) => d === prevDeps[i]));
+  if (!depsEqual) set(factorsEditDependenciesAtom, dependencies);
 });
+
+export const factorsEditNameAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
+  const name = get(factorsEditNameAtom);
+  if (!get(factorsEditingAtom)) return;
+  const currentSource = get(factorsSourceDraftAtom);
+  if (currentSource === undefined || name === undefined) return;
+  const nextSource = applyFactorNameToSource(currentSource, name);
+  if (nextSource === currentSource) return;
+  set(factorsSourceDraftAtom, nextSource);
+});
+export const factorsEditGroupAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
+  const group = get(factorsEditGroupAtom);
+  if (!get(factorsEditingAtom)) return;
+  const currentSource = get(factorsSourceDraftAtom);
+  if (currentSource === undefined || group === undefined) return;
+  const nextSource = applyFactorGroupToSource(currentSource, group);
+  if (nextSource === currentSource) return;
+  set(factorsSourceDraftAtom, nextSource);
+});
+export const factorsEditDescriptionAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
+  const description = get(factorsEditDescriptionAtom);
+  if (!get(factorsEditingAtom)) return;
+  const currentSource = get(factorsSourceDraftAtom);
+  if (currentSource === undefined || description === undefined) return;
+  const nextSource = applyFactorDescriptionToSource(currentSource, description);
+  if (nextSource === currentSource) return;
+  set(factorsSourceDraftAtom, nextSource);
+});
+export const factorsEditWindowAtom = withAtomEffect(atom<number | undefined>(undefined), (get, set) => {
+  const window = get(factorsEditWindowAtom);
+  if (!get(factorsEditingAtom)) return;
+  const currentSource = get(factorsSourceDraftAtom);
+  if (currentSource === undefined || window === undefined) return;
+  const nextSource = applyFactorWindowToSource(currentSource, window);
+  if (nextSource === currentSource) return;
+  set(factorsSourceDraftAtom, nextSource);
+});
+export const factorsEditDependenciesAtom = withAtomEffect(atom<string[] | undefined>(undefined), (get, set) => {
+  const dependencies = get(factorsEditDependenciesAtom);
+  if (!get(factorsEditingAtom)) return;
+  const currentSource = get(factorsSourceDraftAtom);
+  if (currentSource === undefined || dependencies === undefined) return;
+  const nextSource = applyFactorDependenciesToSource(currentSource, dependencies);
+  if (nextSource === currentSource) return;
+  set(factorsSourceDraftAtom, nextSource);
+});
+
+const factorsEditingStateAtom = atom(false);
+export const factorsEditingAtom = withAtomEffect(
+  atom(
+    (get) => get(factorsEditingStateAtom),
+    (get, set, next: boolean) => {
+      if (next) {
+        set(factorsSaveErrorAtom, null);
+      } else {
+        set(factorsSaveErrorAtom, null);
+        // Exiting create mode should restore default selection.
+        if (get(factorsSelectedIdAtom) == null) {
+          set(factorsSelectedIdAtom, get(factorsDefaultSelectedIdAtom));
+        }
+      }
+      set(factorsEditingStateAtom, next);
+    },
+  ),
+  (get, set) => {
+    set(factorsEditNameAtom, undefined);
+    set(factorsEditGroupAtom, undefined);
+    set(factorsEditDescriptionAtom, undefined);
+    set(factorsEditWindowAtom, undefined);
+    set(factorsEditDependenciesAtom, undefined);
+    set(factorsSourceDraftAtom, undefined);
+  },
+);
 
 export const factorsCanEditAtom = atom((get) => get(factorsDetailAtom) != null || get(factorsEditingAtom));
 export const factorsCanDeleteAtom = atom((get) => get(factorsSelectedIdAtom) != null && get(factorsDetailAtom) != null);
-export const factorsEditActiveAtom = atom((get) => get(factorsCanEditAtom) && get(factorsEditingAtom));
-export const factorsCreateModeAtom = atom((get) => get(factorsEditActiveAtom) && get(factorsSelectedIdAtom) == null);
-export const factorsReadonlyAtom = atom((get) => !get(factorsEditActiveAtom));
+export const creatingAtom = atom(
+  (get) => get(factorsEditingAtom) && get(factorsSelectedIdAtom) == null,
+  (_get, set, next: boolean) => {
+    if (next) {
+      set(factorsSelectedIdAtom, null);
+      set(factorsSaveErrorAtom, null);
+      set(factorsEditingAtom, true);
+    } else {
+      set(factorsEditingAtom, false);
+    }
+  },
+);
 
 function resolveCreateForm(templateSource: string | null): FactorDetailPublic {
+  const nowIso = new Date().toISOString();
   const defaults = {
-    ...emptyForm(),
+    id: '__new__',
+    group: '未分组',
+    description: '',
+    window: 1,
+    dependencies: ['close'],
+    source: '',
+    source_path: '',
+    created_at: nowIso,
+    updated_at: nowIso,
     name: defaultNewFactorName(),
   };
-  const source = templateSource ? applyFormMetadataToSource(templateSource, defaults) : '';
+  let source = '';
+  if (templateSource) {
+    source = templateSource;
+    source = applyFactorNameToSource(source, defaults.name);
+  }
   return {
     ...defaults,
     ...parseUserFactorMetadataFromSource(source),
@@ -49,83 +168,28 @@ function resolveCreateForm(templateSource: string | null): FactorDetailPublic {
   };
 }
 
-function applyPatch(form: FactorDetailPublic, patch: Partial<FactorDetailPublic>): FactorDetailPublic {
-  if (Object.prototype.hasOwnProperty.call(patch, 'source')) {
-    const source = patch.source ?? '';
-    const parsed = parseUserFactorMetadataFromSource(source);
-    return { ...form, ...patch, ...parsed, source };
-  }
-  const next = { ...form, ...patch };
-  const metadataChanged =
-    Object.prototype.hasOwnProperty.call(patch, 'name') ||
-    Object.prototype.hasOwnProperty.call(patch, 'group') ||
-    Object.prototype.hasOwnProperty.call(patch, 'description') ||
-    Object.prototype.hasOwnProperty.call(patch, 'window') ||
-    Object.prototype.hasOwnProperty.call(patch, 'dependencies');
-  if (!metadataChanged) return next;
-  return { ...next, source: applyFormMetadataToSource(next.source, next) };
-}
-
 export const factorsVisibleDetailAtom = atom((get) => {
   const detail = get(factorsDetailAtom);
-  const createMode = get(factorsCreateModeAtom);
+  const createMode = get(creatingAtom);
   if (!detail && !createMode) return null;
 
   const baseForm = detail ?? resolveCreateForm(get(factorTemplateAtom));
-  const editActive = get(factorsEditActiveAtom);
-  const patch: Partial<FactorDetailPublic> = {};
-  const draftName = get(factorsEditNameAtom);
-  const draftGroup = get(factorsEditGroupAtom);
-  const draftDescription = get(factorsEditDescriptionAtom);
-  const draftWindow = get(factorsEditWindowAtom);
-  const draftDependencies = get(factorsEditDependenciesAtom);
-  const draftSource = get(factorsSourceDraftAtom);
-  if (editActive) {
-    if (draftName !== undefined) patch.name = draftName;
-    if (draftGroup !== undefined) patch.group = draftGroup;
-    if (draftDescription !== undefined) patch.description = draftDescription;
-    if (draftWindow !== undefined) patch.window = draftWindow;
-    if (draftDependencies !== undefined) patch.dependencies = draftDependencies;
-    if (draftSource !== undefined) patch.source = draftSource;
-  }
-  return applyPatch(baseForm, patch);
-});
+  const editActive = get(factorsEditingAtom);
+  if (!editActive) return baseForm;
 
-export const setFactorsFormAtom = atom(
-  null,
-  (get, set, next: FactorDetailPublic | ((prev: FactorDetailPublic) => FactorDetailPublic)) => {
-    const current = get(factorsVisibleDetailAtom) ?? resolveCreateForm(get(factorTemplateAtom));
-    const target = typeof next === 'function' ? next(current) : next;
-    set(factorsEditNameAtom, target.name);
-    set(factorsEditGroupAtom, target.group);
-    set(factorsEditDescriptionAtom, target.description);
-    set(factorsEditWindowAtom, target.window);
-    set(factorsEditDependenciesAtom, target.dependencies);
-    set(factorsSourceDraftAtom, target.source);
-  },
-);
+  const drafts = {
+    name: get(factorsEditNameAtom),
+    group: get(factorsEditGroupAtom),
+    description: get(factorsEditDescriptionAtom),
+    window: get(factorsEditWindowAtom),
+    dependencies: get(factorsEditDependenciesAtom),
+    source: get(factorsSourceDraftAtom),
+  };
 
-export const startCreateFactorAtom = atom(null, (_get, set) => {
-  set(factorsSelectedIdAtom, null);
-  set(clearFactorDraftsAtom);
-  set(factorsSaveErrorAtom, null);
-  set(factorsEditingAtom, true);
-});
-
-export const startEditFactorAtom = atom(null, (_get, set) => {
-  set(factorsSaveErrorAtom, null);
-  set(factorsEditingAtom, true);
-});
-
-export const handleCancelFactorEditAtom = atom<null, [], void>(null, (get, set) => {
-  set(factorsSaveErrorAtom, null);
-  set(clearFactorDraftsAtom);
-  set(factorsEditingAtom, false);
-
-  // Creating mode uses `selectedId == null`; cancel should restore default selection.
-  if (get(factorsSelectedIdAtom) == null) {
-    set(factorsSelectedIdAtom, get(factorsDefaultSelectedIdAtom));
-  }
+  return {
+    ...baseForm,
+    ...Object.fromEntries(Object.entries(drafts).filter(([, value]) => value !== undefined)),
+  };
 });
 
 export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
@@ -150,7 +214,6 @@ export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
       await set(refreshFactorsDetailAtomFamily(selectedId));
     }
     set(factorsEditingAtom, false);
-    set(clearFactorDraftsAtom);
     set(factorsSelectedIdAtom, saved.id);
     return saved.id;
   } catch (e) {
@@ -167,8 +230,7 @@ export const handleDeleteFactorAtom = atom(null, async (get, set) => {
   if (!selectedId) return false;
   await deleteFactor(selectedId);
   await set(refreshFactorsListAtom);
-  set(factorsSelectedIdAtom, null);
   set(factorsEditingAtom, false);
-  set(clearFactorDraftsAtom);
+  set(factorsSelectedIdAtom, null);
   return true;
 });
