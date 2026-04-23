@@ -23,7 +23,6 @@ export const nodesBrowseStateAtom = atom<NodesBrowseState>({
 });
 
 export const nodesSelectedDomainsAtom = atom<string[]>([]);
-export const nodesSelectedIdAtom = atom<string | null>(null);
 
 const nodesDomainConfigsAsyncAtom = atom(async (): Promise<Record<string, Set<string>>> => {
   try {
@@ -116,6 +115,8 @@ export const nodesCategoryOptionKeysAtom = atom((get) => {
 export const filteredNodesAtom = atom((get) => {
   const items = get(nodesListAtom);
   const { searchQuery, sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
+  const selectedDomains = get(nodesSelectedDomainsAtom);
+  const domainConfigs = get(nodesDomainConfigsAtom);
   if (!items) return null;
   const q = searchQuery.trim().toLowerCase();
   const categorySet = new Set(includedCategories);
@@ -132,6 +133,14 @@ export const filteredNodesAtom = atom((get) => {
     if (q) {
       const hay = `${m.name}\n${m.description}\n${m.id}`.toLowerCase();
       if (!hay.includes(q)) return false;
+    }
+    if (selectedDomains.length > 0) {
+      const visibleInAnySelectedDomain = selectedDomains.some((domain) => {
+        const hidden = domainConfigs[domain];
+        if (!hidden) return true;
+        return !hidden.has(m.id);
+      });
+      if (!visibleInAnySelectedDomain) return false;
     }
     return true;
   });

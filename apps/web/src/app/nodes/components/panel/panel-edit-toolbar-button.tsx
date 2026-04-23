@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -13,57 +15,73 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  handleCancelNodesEditAtom,
+  handleDeleteNodeAtom,
+  handleSaveNodesDetailAtom,
+  nodesCanDeleteAtom,
+  nodesCanEditAtom,
+  nodesDeletingAtom,
+  nodesEditActiveAtom,
+  nodesEditNameAtom,
+  nodesEditingAtom,
+  nodesIsPluginNodeAtom,
+  nodesSaveErrorAtom,
+  nodesSavingAtom,
+  nodesVisibleDetailAtom,
+} from '@/models/nodes/edit.atom';
 
-export function NodeDetailEditToolbarButton(props: {
-  canEdit: boolean;
-  editDisabled?: boolean;
-  editing: boolean;
-  saving?: boolean;
-  saveDisabled?: boolean;
-  deleteDisabled?: boolean;
-  onStartEdit: () => void;
-  onCancelEdit: () => void;
-  onSave?: () => void;
-  onDelete?: () => void;
-}) {
-  const {
-    canEdit,
-    editDisabled = false,
-    editing,
-    saving = false,
-    saveDisabled = false,
-    deleteDisabled = false,
-    onStartEdit,
-    onCancelEdit,
-    onSave,
-    onDelete,
-  } = props;
+export function NodeDetailEditToolbarButton() {
+  const canEdit = useAtomValue(nodesCanEditAtom);
+  const canDelete = useAtomValue(nodesCanDeleteAtom);
+  const isPluginNode = useAtomValue(nodesIsPluginNodeAtom);
+  const deleting = useAtomValue(nodesDeletingAtom);
+  const editActive = useAtomValue(nodesEditActiveAtom);
+  const saving = useAtomValue(nodesSavingAtom);
+  const visibleDetail = useAtomValue(nodesVisibleDetailAtom);
+  const [editing, setEditing] = useAtom(nodesEditingAtom);
+  const [editName] = useAtom(nodesEditNameAtom);
+  const [, setSaveError] = useAtom(nodesSaveErrorAtom);
+  const handleSave = useSetAtom(handleSaveNodesDetailAtom);
+  const handleCancel = useSetAtom(handleCancelNodesEditAtom);
+  const handleDelete = useSetAtom(handleDeleteNodeAtom);
+
+  const visibleName = (editName ?? visibleDetail?.name ?? '').toString();
+  const editDisabled = isPluginNode;
+  const saveDisabled = editActive ? !visibleName.trim() : true;
+  const saveLoading = editActive ? saving : false;
+  const deleteDisabled = deleting || isPluginNode;
+
   const [cancelOpen, setCancelOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleConfirmCancel = () => {
     setCancelOpen(false);
-    onCancelEdit();
+    handleCancel();
   };
   const handleConfirmSave = () => {
     setSaveOpen(false);
-    onSave?.();
+    void handleSave();
   };
   const handleConfirmDelete = () => {
     setDeleteOpen(false);
-    onDelete?.();
+    void handleDelete();
   };
 
-  if (!canEdit) return null;
   if (editing) {
     return (
       <div className="flex shrink-0 items-center gap-2">
         <Button type="button" variant="outline" onClick={() => setCancelOpen(true)}>
           取消
         </Button>
-        <Button type="button" variant="default" disabled={saving || saveDisabled} onClick={() => setSaveOpen(true)}>
-          {saving ? '保存中…' : '保存'}
+        <Button
+          type="button"
+          variant="default"
+          disabled={saveLoading || saveDisabled}
+          onClick={() => setSaveOpen(true)}
+        >
+          {saveLoading ? '保存中…' : '保存'}
         </Button>
         <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
           <AlertDialogContent>
@@ -94,16 +112,37 @@ export function NodeDetailEditToolbarButton(props: {
       </div>
     );
   }
-  if (!onDelete) {
+  if (!canEdit) return null;
+
+  if (!canDelete) {
     return (
-      <Button type="button" variant="default" className="shrink-0" disabled={editDisabled} onClick={onStartEdit}>
+      <Button
+        type="button"
+        variant="default"
+        className="shrink-0"
+        disabled={editDisabled}
+        onClick={() => {
+          if (!canEdit) return;
+          setSaveError(null);
+          setEditing(true);
+        }}
+      >
         编辑
       </Button>
     );
   }
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <Button type="button" variant="default" disabled={editDisabled} onClick={onStartEdit}>
+      <Button
+        type="button"
+        variant="default"
+        disabled={editDisabled}
+        onClick={() => {
+          if (!canEdit) return;
+          setSaveError(null);
+          setEditing(true);
+        }}
+      >
         编辑
       </Button>
       <Button type="button" variant="destructive" disabled={deleteDisabled} onClick={() => setDeleteOpen(true)}>

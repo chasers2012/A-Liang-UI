@@ -1,168 +1,64 @@
 'use client';
 
 import { useAtomValue, useSetAtom } from 'jotai';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
-import { deleteNode } from '@/api/nodes';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EditablePageTitle } from '@/components/editable-page-title';
-import { defaultNewName } from '@/lib/default-new-name';
-import { nodesDetailAsyncStateAtomFamily, saveNodesDetailAtomFamily } from '@/models/nodes/detail.atom';
-import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
+import { nodesDetailAsyncStateAtomFamily } from '@/models/nodes/detail.atom';
 import { NodeDetailEditToolbarButton } from './panel-edit-toolbar-button';
 import { PanelPreviewTab } from './panel-preview-tab';
 import { PanelSourceTab } from './panel-source-tab';
-import {
-  nodeTemplateAsyncStateAtom,
-  applyTimestampSuffixToWorkflowNodeClassName,
-  applyNameToWorkflowNodeLabel,
-} from '@/models/nodes/template.atom';
-import { nodesSelectedIdAtom } from '@/models/nodes/browse.atom';
+import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
+import { nodesEditActiveAtom, nodesEditNameAtom, nodesVisibleDetailAtom } from '@/models/nodes/edit.atom';
+import { cn } from '@/lib/utils';
 
-export type NodesNodeDetailPanelProps = {
-  nodeId?: string | null;
-  createMode?: boolean;
-};
+function DetailPanelBody() {
+  const selectedId = useAtomValue(nodesSelectedIdAtom);
 
-// eslint-disable-next-line complexity
-export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: NodesNodeDetailPanelProps) {
-  const effectiveNodeId: string | null = createMode ? null : nodeId;
-  const router = useRouter();
-  const detailState = useAtomValue(nodesDetailAsyncStateAtomFamily(effectiveNodeId));
-  const nodeTemplateState = useAtomValue(nodeTemplateAsyncStateAtom);
-  const saveDetail = useSetAtom(saveNodesDetailAtomFamily(effectiveNodeId));
-  const refreshNodesList = useSetAtom(refreshNodesListAtom);
-  const setSelectedId = useSetAtom(nodesSelectedIdAtom);
-  const [deleting, setDeleting] = useState(false);
+  const detailState = useAtomValue(nodesDetailAsyncStateAtomFamily(selectedId));
 
-  const detail = detailState.value ?? null;
-  const loadError = detailState.error;
+  if (detailState.loading && selectedId) {
+    return <>加载中…</>;
+  }
 
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [sourceDraft, setSourceDraft] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (createMode) {
-      setSaveError(null);
-      setSaving(false);
-      setEditing(true);
-      setEditName('');
-      setEditDescription('');
-      if (!nodeTemplateState.loading && nodeTemplateState.value) {
-        const now = new Date();
-        const name = defaultNewName('新节点', now);
-        const sourceDraft = applyTimestampSuffixToWorkflowNodeClassName(
-          applyNameToWorkflowNodeLabel(nodeTemplateState.value, name.trim()),
-          now,
-        );
-        setEditName(name);
-        setSourceDraft(sourceDraft);
-      } else {
-        setSourceDraft('');
-      }
-      return;
-    }
-    if (!detail) return;
-    setSaveError(null);
-    setSaving(false);
-    setEditing(false);
-    setEditName(detail.name ?? '');
-    setEditDescription(detail.description ?? '');
-    setSourceDraft(detail.source ?? '');
-  }, [createMode, detail?.id, detail, nodeTemplateState.loading, nodeTemplateState.value]);
-
-  const isCreate = createMode;
-  const isPluginNode = detail?.is_plugin === true;
-  const canEdit = detail != null && !isPluginNode;
-  const canDelete = !isCreate && detail != null;
-  const editActive = canEdit && editing;
-
-  const handleSaveSource = async () => {
-    if (saving) return;
-    setSaving(true);
-    setSaveError(null);
-    const saved = await saveDetail({
-      editName,
-      editDescription,
-      sourceDraft,
-      existingId: detail?.id ?? null,
-    });
-    setSaving(false);
-    if (!saved) {
-      setSaveError('保存失败');
-      return;
-    }
-    setEditing(false);
-    if (isCreate && saved) {
-      setSelectedId(saved.id);
-      router.push('/nodes');
-    }
-  };
-  const handleCancelEdit = () => {
-    if (isCreate) return void router.push('/nodes');
-    if (!detail) return;
-    setSaveError(null);
-    setEditing(false);
-    setEditName(detail.name ?? '');
-    setEditDescription(detail.description ?? '');
-    setSourceDraft(detail.source ?? '');
-  };
-  const handleDeleteNode = async () => {
-    if (!canDelete || isPluginNode || deleting) return;
-    setDeleting(true);
-    try {
-      await deleteNode(detail.id);
-      await refreshNodesList();
-      setSelectedId(null);
-      router.push('/nodes');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  if (detailState.loading && effectiveNodeId) {
+  if (selectedId && detailState.error) {
     return (
       <>
-        <CardHeader className="shrink-0">
-          <CardTitle>节点</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">加载中…</CardContent>
+        <Alert variant="destructive">
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>{detailState.error}</AlertDescription>
+        </Alert>
       </>
     );
   }
+  return (
+    <>
+      <TabsContent value="preview">
+        <PanelPreviewTab />
+      </TabsContent>
+      <TabsContent value="source">
+        <PanelSourceTab />
+      </TabsContent>
+    </>
+  );
+}
 
-  if (effectiveNodeId && loadError) {
-    return (
-      <>
-        <CardHeader className="shrink-0">
-          <CardTitle>节点</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <Alert variant="destructive">
-            <AlertTitle>加载失败</AlertTitle>
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
-        </CardContent>
-      </>
-    );
-  }
-
-  const placeholder = !effectiveNodeId ? '请从左侧选择一个节点。' : '加载中…';
+export function NodesNodeDetailPanel() {
+  const editActive = useAtomValue(nodesEditActiveAtom);
+  const visibleDetail = useAtomValue(nodesVisibleDetailAtom);
+  const setEditName = useSetAtom(nodesEditNameAtom);
+  const selectedId = useAtomValue(nodesSelectedIdAtom);
+  const visibleName = (visibleDetail?.name ?? '').toString();
 
   return (
     <>
       <CardHeader className="shrink-0 space-y-2">
         <CardTitle className="space-y-2">
           <EditablePageTitle
-            value={editName}
-            showEdit={editActive && canEdit}
+            value={visibleName}
+            showEdit={editActive}
             onChange={(v) => setEditName(v)}
             inputAriaLabel="节点名称"
             placeholder="节点详情"
@@ -171,50 +67,22 @@ export function NodesNodeDetailPanel({ nodeId = null, createMode = false }: Node
         </CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <Tabs key={effectiveNodeId ?? 'none'} defaultValue="preview" className="flex min-h-0 flex-1 flex-col gap-0">
-          <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0">
+        <Tabs key={selectedId ?? 'none'} defaultValue="preview" className="flex min-h-0 flex-1 flex-col gap-0">
+          <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0 h-[48px] ">
             <TabsList className="inline-flex h-9 w-fit flex-wrap items-center gap-1 rounded-lg bg-muted/80 p-1 text-muted-foreground">
               <TabsTrigger value="preview">预览</TabsTrigger>
               <TabsTrigger value="source">源码</TabsTrigger>
             </TabsList>
-            <NodeDetailEditToolbarButton
-              canEdit={detail != null}
-              editDisabled={isPluginNode}
-              editing={editing}
-              saving={editActive ? saving : false}
-              saveDisabled={editActive ? !editName.trim() : true}
-              onStartEdit={() => {
-                if (!canEdit) return;
-                setSaveError(null);
-                setEditing(true);
-              }}
-              onCancelEdit={handleCancelEdit}
-              onSave={editActive ? () => void handleSaveSource() : undefined}
-              onDelete={canDelete ? () => void handleDeleteNode() : undefined}
-              deleteDisabled={deleting || isPluginNode}
-            />
+            <NodeDetailEditToolbarButton />
           </div>
-          <TabsContent value="preview">
-            <PanelPreviewTab
-              detail={detail}
-              placeholder={placeholder}
-              editable={editActive}
-              editName={editName}
-              editDescription={editDescription}
-              onEditDescriptionChange={(v) => setEditDescription(v)}
-            />
-          </TabsContent>
-          <TabsContent value="source">
-            <PanelSourceTab
-              detail={detail}
-              placeholder={placeholder}
-              editable={editActive}
-              editName={editName}
-              sourceDraft={sourceDraft}
-              onSourceDraftChange={editActive ? (v) => setSourceDraft(v) : undefined}
-              saveError={editActive ? saveError : null}
-            />
-          </TabsContent>
+          <div
+            className={cn(
+              'h-full max-h-[calc(100vh-10rem)] px-6 pb-6 pt-2',
+              'flex min-h-0 flex-1 flex-col overflow-hidden',
+            )}
+          >
+            <DetailPanelBody />
+          </div>
         </Tabs>
       </CardContent>
     </>

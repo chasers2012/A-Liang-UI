@@ -5,6 +5,7 @@ import { createNode, getNode, patchNode } from '@/api/nodes';
 import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
 import type { NodeDetailPublic } from '@/models/nodes/dto';
 import { toAsyncValueStateAtom } from '@/lib/loadable';
+import { nodesSelectedIdAtom } from './selection.atom';
 
 /**
  * 参考 `panel-detail.atom.ts`：用 async atom 直接表达「加载结果 + 错误」。
@@ -32,6 +33,12 @@ export const refreshNodesDetailAtomFamily = atomFamily((key: string) =>
 export const nodesDetailAsyncStateAtomFamily = atomFamily((nodeId: string | null) =>
   toAsyncValueStateAtom(nodesDetailAsyncAtomFamily(nodeId)),
 );
+
+export const nodesDetailAtom = atom((get) => {
+  const selectedId = get(nodesSelectedIdAtom);
+  const detailState = get(nodesDetailAsyncStateAtomFamily(selectedId));
+  return detailState.value ?? null;
+});
 
 export const saveNodesDetailAtomFamily = atomFamily((nodeId: string | null) =>
   atom(
