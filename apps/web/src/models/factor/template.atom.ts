@@ -5,7 +5,7 @@ import { toAsyncValueStateAtom } from '@/lib/loadable';
 
 const factorTemplateRevisionAtom = atom(0);
 
-const factorTemplateAsyncAtom = atom(async (get): Promise<string> => {
+export const factorTemplateAsyncAtom = atom(async (get): Promise<string> => {
   get(factorTemplateRevisionAtom);
   return await getFactorTemplate();
 });

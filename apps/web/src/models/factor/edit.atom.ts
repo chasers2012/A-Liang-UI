@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { withAtomEffect } from 'jotai-effect';
 
 import { createFactor, deleteFactor, patchFactor } from '@/api/factors';
-import type { FactorDetailPublic } from './dto';
+import type { FactorDetailPublic, FactorParamSpecPublic } from './dto';
 import { factorsDefaultSelectedIdAtom } from './browse.atom';
 import { factorsDetailAtom, refreshFactorsDetailAtomFamily } from './detail.atom';
 import {
@@ -10,21 +10,34 @@ import {
   applyFactorDescriptionToSource,
   applyFactorGroupToSource,
   applyFactorNameToSource,
+  applyFactorParamSpecsToSource,
   applyFactorWindowToSource,
   parseFactorDependenciesFromSource,
   parseFactorDescriptionFromSource,
   parseFactorGroupFromSource,
   parseFactorNameFromSource,
+  parseFactorParamSpecsFromSource,
   parseFactorWindowFromSource,
   parseUserFactorMetadataFromSource,
 } from './factor-metadata-sync';
 import { bodyFromForm, defaultNewFactorName, validateFormForSubmit } from './form-model';
 import { refreshFactorsListAtom } from './list-detail.atom';
 import { factorsSelectedIdAtom } from './selection.atom';
-import { factorTemplateAtom } from './template.atom';
+import { factorTemplateAsyncAtom, factorTemplateAtom } from './template.atom';
 
 export const factorsSavingAtom = atom(false);
 export const factorsSaveErrorAtom = atom<string | null>(null);
+
+function isSameParamSpec(a: FactorParamSpecPublic, b: FactorParamSpecPublic): boolean {
+  return a.name === b.name && a.label === b.label && a.default === b.default && a.min === b.min && a.max === b.max;
+}
+
+function isSameParamSpecs(a?: FactorParamSpecPublic[], b?: FactorParamSpecPublic[]): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if (a.length !== b.length) return false;
+  return a.every((row, i) => isSameParamSpec(row, b[i]));
+}
 
 export const factorsSourceDraftAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
   const sourceDraft = get(factorsSourceDraftAtom);
@@ -52,6 +65,10 @@ export const factorsSourceDraftAtom = withAtomEffect(atom<string | undefined>(un
       dependencies.length === prevDeps.length &&
       dependencies.every((d, i) => d === prevDeps[i]));
   if (!depsEqual) set(factorsEditDependenciesAtom, dependencies);
+
+  const paramSpecs = parseFactorParamSpecsFromSource(sourceDraft);
+  const prevParamSpecs = get(factorsEditParamSpecsAtom);
+  if (!isSameParamSpecs(paramSpecs, prevParamSpecs)) set(factorsEditParamSpecsAtom, paramSpecs);
 });
 
 export const factorsEditNameAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
@@ -63,6 +80,7 @@ export const factorsEditNameAtom = withAtomEffect(atom<string | undefined>(undef
   if (nextSource === currentSource) return;
   set(factorsSourceDraftAtom, nextSource);
 });
+
 export const factorsEditGroupAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
   const group = get(factorsEditGroupAtom);
   if (!get(factorsEditingAtom)) return;
@@ -72,6 +90,7 @@ export const factorsEditGroupAtom = withAtomEffect(atom<string | undefined>(unde
   if (nextSource === currentSource) return;
   set(factorsSourceDraftAtom, nextSource);
 });
+
 export const factorsEditDescriptionAtom = withAtomEffect(atom<string | undefined>(undefined), (get, set) => {
   const description = get(factorsEditDescriptionAtom);
   if (!get(factorsEditingAtom)) return;
@@ -81,6 +100,7 @@ export const factorsEditDescriptionAtom = withAtomEffect(atom<string | undefined
   if (nextSource === currentSource) return;
   set(factorsSourceDraftAtom, nextSource);
 });
+
 export const factorsEditWindowAtom = withAtomEffect(atom<number | undefined>(undefined), (get, set) => {
   const window = get(factorsEditWindowAtom);
   if (!get(factorsEditingAtom)) return;
@@ -90,6 +110,7 @@ export const factorsEditWindowAtom = withAtomEffect(atom<number | undefined>(und
   if (nextSource === currentSource) return;
   set(factorsSourceDraftAtom, nextSource);
 });
+
 export const factorsEditDependenciesAtom = withAtomEffect(atom<string[] | undefined>(undefined), (get, set) => {
   const dependencies = get(factorsEditDependenciesAtom);
   if (!get(factorsEditingAtom)) return;
@@ -100,22 +121,57 @@ export const factorsEditDependenciesAtom = withAtomEffect(atom<string[] | undefi
   set(factorsSourceDraftAtom, nextSource);
 });
 
+export const factorsEditParamSpecsAtom = withAtomEffect(
+  atom<FactorParamSpecPublic[] | undefined>(undefined),
+  (get, set) => {
+    const paramSpecs = get(factorsEditParamSpecsAtom);
+    if (!get(factorsEditingAtom)) return;
+    const currentSource = get(factorsSourceDraftAtom);
+    if (currentSource === undefined || paramSpecs === undefined) return;
+    const nextSource = applyFactorParamSpecsToSource(currentSource, paramSpecs);
+    if (nextSource === currentSource) return;
+    set(factorsSourceDraftAtom, nextSource);
+  },
+);
+
 const factorsEditingStateAtom = atom(false);
 export const factorsEditingAtom = atom(
   (get) => get(factorsEditingStateAtom),
-  (get, set, next: boolean) => {
+  async (get, set, next: boolean) => {
+    const prev = get(factorsEditingStateAtom);
+    if (prev === next) return;
+
     // Exiting create mode should restore default selection.
     if (!next && get(factorsSelectedIdAtom) == null) {
       set(factorsSelectedIdAtom, get(factorsDefaultSelectedIdAtom));
     }
     set(factorsSaveErrorAtom, null);
+
+    // Entering edit mode: initialize drafts from current visible form (baseForm).
+    if (next) {
+      const detail = get(factorsDetailAtom);
+      const baseForm = detail ?? resolveCreateForm(await get(factorTemplateAsyncAtom));
+      if (baseForm) {
+        set(factorsSourceDraftAtom, baseForm.source);
+        set(factorsEditNameAtom, baseForm.name);
+        set(factorsEditGroupAtom, baseForm.group);
+        set(factorsEditDescriptionAtom, baseForm.description);
+        set(factorsEditWindowAtom, baseForm.window);
+        set(factorsEditDependenciesAtom, baseForm.dependencies);
+        set(factorsEditParamSpecsAtom, baseForm.param_specs ?? []);
+      }
+    }
+
+    if (!next) {
+      set(factorsEditNameAtom, undefined);
+      set(factorsEditGroupAtom, undefined);
+      set(factorsEditDescriptionAtom, undefined);
+      set(factorsEditWindowAtom, undefined);
+      set(factorsEditDependenciesAtom, undefined);
+      set(factorsEditParamSpecsAtom, undefined);
+      set(factorsSourceDraftAtom, undefined);
+    }
     set(factorsEditingStateAtom, next);
-    set(factorsEditNameAtom, undefined);
-    set(factorsEditGroupAtom, undefined);
-    set(factorsEditDescriptionAtom, undefined);
-    set(factorsEditWindowAtom, undefined);
-    set(factorsEditDependenciesAtom, undefined);
-    set(factorsSourceDraftAtom, undefined);
   },
 );
 
@@ -165,10 +221,11 @@ function resolveCreateForm(templateSource: string | null): FactorDetailPublic {
     ...defaults,
     ...parseUserFactorMetadataFromSource(source),
     source,
+    param_specs: parseFactorParamSpecsFromSource(source) ?? [],
   };
 }
 
-export const factorsVisibleDetailAtom = atom((get) => {
+export const factorsVisibleDetailAtom = atom<FactorDetailPublic | null>((get) => {
   const detail = get(factorsDetailAtom);
   const createMode = get(creatingAtom);
   if (!detail && !createMode) return null;
@@ -184,6 +241,7 @@ export const factorsVisibleDetailAtom = atom((get) => {
     window: get(factorsEditWindowAtom),
     dependencies: get(factorsEditDependenciesAtom),
     source: get(factorsSourceDraftAtom),
+    param_specs: get(factorsEditParamSpecsAtom),
   };
 
   return {

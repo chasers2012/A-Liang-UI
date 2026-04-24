@@ -8,11 +8,13 @@ class NewFactor(Factor):
     name = ""
     group = "custom"
     description = ""
+    param_specs = ({"name": "lookback", "label": "回看周期", "default": 1, "min": 1, "max": 250},)
 
     @property
     def window(self) -> int:
-        return 1  # window 需要是 calc 中所使用的 data 最大窗口长度
+        return int(self.params["lookback"])  # window 需要是 calc 中所使用的 data 最大窗口长度
 
     def calc(self, close: pd.DataFrame) -> pd.DataFrame:
-        return close.pct_change(periods=1)
+        lookback = int(self.params["lookback"])
+        return close.pct_change(periods=lookback)
 """

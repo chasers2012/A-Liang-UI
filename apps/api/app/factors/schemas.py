@@ -86,6 +86,7 @@ class FactorSummaryPublic(BaseModel):
 
 class FactorDetailPublic(FactorSummaryPublic):
     source: str
+    param_specs: list[FactorParamSpecPublic] = Field(default_factory=list)
 
 
 class FactorParamSpecPublic(BaseModel):

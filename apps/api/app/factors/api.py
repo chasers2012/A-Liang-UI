@@ -12,7 +12,6 @@ from app.factors.controller import (
 from app.factors.controller import (
     delete_factor_source_file,
     factor_detail,
-    list_factor_param_specs,
     list_factors,
     update_factor,
 )
@@ -20,7 +19,6 @@ from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
-    FactorParamSpecPublic,
     FactorPatch,
     FactorSummaryPublic,
 )
@@ -45,17 +43,6 @@ def get_factor(factor_id: str) -> FactorDetailPublic:
     if rec is None:
         raise HTTPException(status_code=404, detail="因子不存在")
     return factor_detail(rec)
-
-
-@router.get("/{factor_id}/param-specs", response_model=list[FactorParamSpecPublic])
-def get_factor_param_specs_api(factor_id: str) -> list[FactorParamSpecPublic]:
-    rec = FactorItemsRegistry.get_item(factor_id)
-    if rec is None:
-        raise HTTPException(status_code=404, detail="因子不存在")
-    try:
-        return list_factor_param_specs(factor_id)
-    except ValueError as e:
-        http_bad_request(e)
 
 
 @router.post("", response_model=FactorDetailPublic)

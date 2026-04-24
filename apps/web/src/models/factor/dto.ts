@@ -15,6 +15,7 @@ export interface FactorSummaryPublic {
 
 export interface FactorDetailPublic extends FactorSummaryPublic {
   source: string;
+  param_specs: FactorParamSpecPublic[];
 }
 
 export interface FactorParamSpecPublic {

@@ -145,7 +145,13 @@ def delete_factor_source_file(rec: FactorRow) -> None:
 
 def factor_detail(rec: FactorRow) -> FactorDetailPublic:
     summary = row_to_summary(rec)
-    return FactorDetailPublic(**summary.model_dump(), source=read_factor_source(rec))
+    try:
+        param_specs = list_factor_param_specs(rec.id)
+    except ValueError:
+        param_specs = []
+    return FactorDetailPublic(
+        **summary.model_dump(), source=read_factor_source(rec), param_specs=param_specs
+    )
 
 
 def list_factors() -> list[FactorSummaryPublic]:

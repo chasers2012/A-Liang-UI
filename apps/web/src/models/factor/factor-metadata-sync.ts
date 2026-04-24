@@ -1,4 +1,4 @@
-import type { FactorDetailPublic } from './dto';
+import type { FactorDetailPublic, FactorParamSpecPublic } from './dto';
 
 function escapePyDoubleQuoted(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n/g, '\n').replace(/\n/g, '\\n');
@@ -121,6 +121,115 @@ export function applyFactorWindowToSource(source: string, window: number): strin
 
 export function applyFactorDependenciesToSource(source: string, deps: string[]): string {
   return replaceCalcDependenciesInSource(source, deps);
+}
+
+function parseNumberOrNull(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const s = raw.trim();
+  if (!s || s === 'None' || s === 'null') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractParamSpecsBodyFromClassBlock(block: string): string | null {
+  const assignMatch = /^([ \t]*)param_specs\s*=\s*/m.exec(block);
+  if (!assignMatch || assignMatch.index === undefined) return null;
+  const assignRange = parseParamSpecsAssignRange(block, assignMatch.index);
+  if (!assignRange) return null;
+
+  const assignText = block.slice(assignRange.start, assignRange.end);
+  const eqPos = assignText.indexOf('=');
+  if (eqPos < 0) return null;
+  const rhs = assignText.slice(eqPos + 1).trim();
+
+  // Accept tuple/list literal or a one-liner `param_specs = ()`.
+  if ((rhs.startsWith('(') && rhs.endsWith(')')) || (rhs.startsWith('[') && rhs.endsWith(']'))) return rhs.slice(1, -1);
+  return rhs;
+}
+
+export function parseFactorParamSpecsFromSource(source: string): FactorParamSpecPublic[] | undefined {
+  const block = getUserFactorClassBody(source);
+  if (!block) return;
+  const body = extractParamSpecsBodyFromClassBlock(block);
+  if (body === null) return [];
+  const dicts = body.match(/\{[^{}]*\}/g) ?? [];
+  const parsed: FactorParamSpecPublic[] = [];
+  for (const d of dicts) {
+    const name = d.match(/["']name["']\s*:\s*["']([^"']+)["']/)?.[1] ?? '';
+    if (!name) continue;
+    const label = d.match(/["']label["']\s*:\s*["']([^"']*)["']/)?.[1] ?? name;
+    const defRaw = d.match(/["']default["']\s*:\s*([^,}\n]+)/)?.[1];
+    const minRaw = d.match(/["']min["']\s*:\s*([^,}\n]+)/)?.[1];
+    const maxRaw = d.match(/["']max["']\s*:\s*([^,}\n]+)/)?.[1];
+    parsed.push({
+      name,
+      label,
+      default: parseNumberOrNull(defRaw),
+      min: parseNumberOrNull(minRaw),
+      max: parseNumberOrNull(maxRaw),
+    });
+  }
+  return parsed;
+}
+
+function formatNumberForPython(n: number | null | undefined): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return 'None';
+  return String(n);
+}
+
+function renderParamSpecsTuple(specs: FactorParamSpecPublic[], indent: string): string {
+  if (specs.length === 0) return `${indent}param_specs = ()`;
+  const rows = specs.map(
+    (p) =>
+      `${indent}    {"name": "${p.name}", "label": "${p.label}", "default": ${formatNumberForPython(p.default)}, "min": ${formatNumberForPython(p.min)}, "max": ${formatNumberForPython(p.max)}},`,
+  );
+  return [`${indent}param_specs = (`, ...rows, `${indent})`].join('\n');
+}
+
+function parseParamSpecsAssignRange(block: string, assignStart: number): { start: number; end: number } | null {
+  const eqPos = block.indexOf('=', assignStart);
+  if (eqPos < 0) return null;
+  let i = eqPos + 1;
+  while (i < block.length && /\s/.test(block[i])) i++;
+  if (i >= block.length) return null;
+  const open = block[i];
+  const close = open === '(' ? ')' : open === '[' ? ']' : null;
+  if (!close) {
+    let end = i;
+    while (end < block.length && block[end] !== '\n') end++;
+    return { start: assignStart, end };
+  }
+  let depth = 0;
+  let end = i;
+  for (; end < block.length; end++) {
+    const ch = block[end];
+    if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) {
+        end++;
+        break;
+      }
+    }
+  }
+  return { start: assignStart, end };
+}
+
+export function applyFactorParamSpecsToSource(source: string, specs: FactorParamSpecPublic[]): string {
+  const ret = patchUserFactorClassBody(source, (block) => {
+    const lineIndentMatch = block.match(/\n([ \t]+)[A-Za-z_]\w*\s*=/);
+    const indent = lineIndentMatch?.[1] ?? '    ';
+    const rendered = renderParamSpecsTuple(specs, indent);
+    const assignMatch = /^([ \t]*)param_specs\s*=\s*/m.exec(block);
+    if (!assignMatch || assignMatch.index === undefined) {
+      const leadingNl = block.startsWith('\n') ? '' : '\n';
+      return `${leadingNl}${rendered}\n${block}`;
+    }
+    const assignRange = parseParamSpecsAssignRange(block, assignMatch.index);
+    if (!assignRange) return block;
+    return `${block.slice(0, assignRange.start)}${rendered}${block.slice(assignRange.end)}`;
+  });
+  return ret;
 }
 
 export function parseFactorNameFromSource(source: string): string | undefined {
