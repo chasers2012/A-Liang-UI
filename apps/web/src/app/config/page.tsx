@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Form from '@rjsf/shadcn';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import { ApiError } from '@/api/client';
 import { getConfig, getConfigSpecs, putConfig } from '@/api/config';
 import { Page } from '@/components/page';
+import { RjsfStyledForm } from '@/components/rjsf-styled-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ConfigModuleSpecPublic } from '@/models/config/dto';
@@ -138,7 +138,7 @@ export default function AgentConfigPage() {
                   <p className="text-sm text-muted-foreground">{moduleSuccess[module.key]}</p>
                 ) : null}
                 <div className="max-w-xl">
-                  <Form
+                  <RjsfStyledForm
                     schema={schema}
                     uiSchema={uiSchemaForModule(module, busy.loading || busy.saving)}
                     validator={validator}

@@ -2,13 +2,13 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 
-import Form from '@rjsf/shadcn';
 import validator from '@rjsf/validator-ajv8';
 import type { RJSFSchema, UiSchema, WidgetProps } from '@rjsf/utils';
 
 import { ApiError } from '@/api/client';
 import { uploadFile } from '@/api/upload';
 import type { DatasourcePluginPublic } from '@/models/datasource/dto';
+import { RjsfStyledForm } from '@/components/rjsf-styled-form';
 import { FileUploadInput } from '@/components/ui/file-upload-input';
 
 import type { FormState } from '../form-model';
@@ -57,7 +57,7 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
   return (
     <FormSection title={plugin.title} description={plugin.description ?? undefined}>
       <div className="max-w-xl">
-        <Form
+        <RjsfStyledForm
           schema={schema}
           uiSchema={uiSchema}
           validator={validator}
@@ -73,7 +73,7 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
           noHtml5Validate
         >
           <></>
-        </Form>
+        </RjsfStyledForm>
       </div>
     </FormSection>
   );
