@@ -76,7 +76,6 @@ function FactorParamsField({
                               return (current ?? []).map((row, i) =>
                                 i === index ? { ...row, name: e.target.value } : row,
                               );
-                              return next;
                             });
                           }}
                         />

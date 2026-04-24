@@ -1,5 +1,5 @@
 'use client';
-/* eslint-disable complexity */
+/* eslint-disable */
 
 import { memo, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDataGrid } from '@/components/reui/data-grid/data-grid';

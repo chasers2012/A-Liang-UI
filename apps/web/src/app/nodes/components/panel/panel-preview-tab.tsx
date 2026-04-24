@@ -7,7 +7,6 @@ import { useAtomValue } from 'jotai';
 import { ParamItem, SocketItem } from '../node-preview-meta';
 import { PreviewDescriptionSection } from '../preview-description-section';
 import { WorkflowStepNodePreview } from '../preview/workflow-step-node-preview';
-import { cn } from '@/lib/utils';
 import type { WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
 import { isWireInputSpec } from '@/components/workflow-graph/workflow-node-input-spec';
 import { SectionHeader } from '@/components/section-header';

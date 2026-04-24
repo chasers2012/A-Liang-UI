@@ -12,7 +12,7 @@ import { refreshBacktestsListAtom, backtestsListAtom } from '@/models/backtest/l
 import { useBacktestsPolling } from '@/models/backtest/use-backtests-polling';
 
 export default function BacktestPage() {
-  const { items, error } = useAtomValue(backtestsListAtom);
+  const { items } = useAtomValue(backtestsListAtom);
 
   const refreshList = useSetAtom(refreshBacktestsListAtom);
 

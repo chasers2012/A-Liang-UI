@@ -18,10 +18,11 @@ import {
   strategyNodeTypesAtom,
 } from '@/models/strategy/list-detail.atom';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
+import type { StrategyPublic } from '@/models/strategy/dto';
 
 function StrategyDetailContent(props: {
   id: string;
-  data: { name: string; description?: string | null; workflow: unknown; updated_at: string } | null;
+  data: StrategyPublic | null;
   error: string | null;
   catalog: NodeSummaryPublic[] | null;
   catalogError: string | null;

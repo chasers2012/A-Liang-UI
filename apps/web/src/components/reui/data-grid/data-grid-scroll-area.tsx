@@ -194,10 +194,13 @@ function DataGridScrollArea({ children, className, orientation = 'both', ...prop
 
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleSync);
 
-    observer?.observe(viewport);
-    observedElementsRef.current.header && observer?.observe(observedElementsRef.current.header);
-    observedElementsRef.current.table && observer?.observe(observedElementsRef.current.table);
-    observedElementsRef.current.tableViewport && observer?.observe(observedElementsRef.current.tableViewport);
+    if (observer) {
+      observer.observe(viewport);
+      const { header, table, tableViewport } = observedElementsRef.current;
+      if (header) observer.observe(header);
+      if (table) observer.observe(table);
+      if (tableViewport) observer.observe(tableViewport);
+    }
 
     return () => {
       cancelAnimationFrame(frame);
