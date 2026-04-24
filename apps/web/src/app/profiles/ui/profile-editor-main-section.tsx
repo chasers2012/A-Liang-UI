@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useSetAtom } from 'jotai';
 
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ import {
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
 import { SearchList } from '@/components/search-list';
+import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
 export function ProfileWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
@@ -26,6 +28,7 @@ export function ProfileWorkflowEditorBlock(props: {
 
   const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
   const [wfMetaLoading, setWfMetaLoading] = useState(true);
+  const refreshProfileNodes = useSetAtom(refreshNodesByDomainAtomFamily('evaluation-profile'));
 
   useEffect(() => {
     void listNodes('evaluation-profile')
@@ -63,6 +66,7 @@ export function ProfileWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
+            onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshProfileNodes())}
             className="h-full flex-1"
           />
         </div>

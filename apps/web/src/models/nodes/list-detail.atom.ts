@@ -1,4 +1,5 @@
 import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
 import { listNodes } from '@/api/nodes';
 import { toAsyncValueStateAtom } from '@/lib/loadable';
@@ -21,3 +22,9 @@ export const nodesListAtom = atom((get): NodeSummaryPublic[] | null => {
 export const refreshNodesListAtom = atom(null, (_get, set) => {
   set(nodesListRevisionAtom, (v) => v + 1);
 });
+
+export const refreshNodesByDomainAtomFamily = atomFamily((domain: string) =>
+  atom(null, async () => {
+    return await listNodes(domain);
+  }),
+);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useSetAtom } from 'jotai';
 
 import { cn } from '@/lib/utils';
 import { listNodes } from '@/api/nodes';
@@ -14,6 +15,7 @@ import {
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
 import { SearchList } from '@/components/search-list';
+import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
 export function StrategyWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
@@ -24,6 +26,7 @@ export function StrategyWorkflowEditorBlock(props: {
   const { workflow, canvasKey, canvasRef, className } = props;
   const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
   const [loading, setLoading] = useState(true);
+  const refreshStrategyNodes = useSetAtom(refreshNodesByDomainAtomFamily('strategy'));
 
   useEffect(() => {
     void listNodes('strategy')
@@ -60,6 +63,7 @@ export function StrategyWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
+            onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshStrategyNodes())}
             className="h-full flex-1 min-w-0"
           />
         </div>

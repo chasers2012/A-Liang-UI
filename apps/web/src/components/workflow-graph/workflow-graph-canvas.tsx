@@ -1,7 +1,7 @@
 'use client';
 
-import { AlertTriangle, Maximize2, Minus, Plus, Trash2 } from 'lucide-react';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { AlertTriangle, Maximize2, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -46,9 +46,15 @@ function isProtectedPreprocessingNode(node: Node): boolean {
   return node.id === WORKFLOW_INPUT_NODE_ID || node.id === WORKFLOW_OUTPUT_NODE_ID;
 }
 
-export function WorkflowGraphZoomToolbar() {
+export function WorkflowGraphZoomToolbar(props: {
+  readOnly?: boolean;
+  onRefreshNodeDefinitions?: () => void;
+  refreshingNodeDefinitions?: boolean;
+}) {
+  const { readOnly: readOnlyFromProps, onRefreshNodeDefinitions, refreshingNodeDefinitions = false } = props;
   const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } = useReactFlow();
-  const { readOnly } = useWorkflowGraphContext();
+  const { readOnly: readOnlyFromContext } = useWorkflowGraphContext();
+  const readOnly = readOnlyFromProps ?? readOnlyFromContext;
   const hasDeletableSelection = useStore(
     useCallback(
       (s) =>
@@ -85,6 +91,20 @@ export function WorkflowGraphZoomToolbar() {
             title="删除选中（Delete / Backspace）"
           >
             <Trash2 className="size-4" />
+          </Button>
+        ) : null}
+        {!readOnly ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-none border-b border-border"
+            onClick={onRefreshNodeDefinitions}
+            disabled={refreshingNodeDefinitions}
+            aria-label="刷新当前工作流节点定义"
+            title="刷新节点定义"
+          >
+            <RefreshCw className={cn('size-4', refreshingNodeDefinitions && 'animate-spin')} />
           </Button>
         ) : null}
         <Button
@@ -136,6 +156,7 @@ export type WorkflowGraphCanvasProps = {
   initialGraph: WorkflowGraphPersisted;
   className?: string;
   readOnly?: boolean;
+  onRefreshNodeDefinitions?: () => Promise<WorkflowNodeTypeDefinition[] | void> | WorkflowNodeTypeDefinition[] | void;
   onNodeSelect?: (node: { id: string; label?: string | null; outputs?: WorkflowNodeTypeDefinition['outputs'] }) => void;
 };
 
@@ -171,7 +192,10 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
   );
 }
 export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps>(
-  function WorkflowGraphCanvas({ className, nodeTypes, initialGraph, readOnly = false, onNodeSelect }, ref) {
+  function WorkflowGraphCanvas(
+    { className, nodeTypes, initialGraph, readOnly = false, onRefreshNodeDefinitions, onNodeSelect },
+    ref,
+  ) {
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(
       () => Object.fromEntries(nodeTypes.map((d) => [d.id, d])),
       [nodeTypes],
@@ -184,6 +208,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
     const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
 
     const fitViewOptions = useMemo(() => ({ padding: 0.18, duration: 200 }), []);
+    const [refreshingNodeDefinitions, setRefreshingNodeDefinitions] = useState(false);
 
     const onInit = useCallback((inst: ReactFlowInstance) => {
       reactFlowRef.current = inst;
@@ -306,6 +331,48 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
       [catalog, readOnly],
     );
 
+    const applyNodeDefinitionsToCurrentGraph = useCallback((defs: WorkflowNodeTypeDefinition[]) => {
+      const rf = reactFlowRef.current;
+      if (!rf) return;
+      const nextCatalog = Object.fromEntries(defs.map((d) => [d.id, d]));
+      rf.setNodes((nodes) =>
+        nodes.map((node) => {
+          const data = (node.data ?? {}) as {
+            backendType?: string;
+            label?: string;
+            description?: string;
+            inputs?: WorkflowNodeTypeDefinition['inputs'];
+            outputs?: WorkflowNodeTypeDefinition['outputs'];
+          };
+          const backendType = data.backendType;
+          if (!backendType) return node;
+          const def = nextCatalog[backendType];
+          if (!def) return node;
+          return {
+            ...node,
+            data: {
+              ...data,
+              label: def.label ?? backendType,
+              description: def.description,
+              inputs: def.inputs ?? [],
+              outputs: def.outputs ?? [],
+            },
+          };
+        }),
+      );
+    }, []);
+
+    const onRefreshCurrentNodeDefinitions = useCallback(async () => {
+      if (readOnly || refreshingNodeDefinitions) return;
+      setRefreshingNodeDefinitions(true);
+      try {
+        const latestDefinitions = await onRefreshNodeDefinitions?.();
+        applyNodeDefinitionsToCurrentGraph(latestDefinitions ?? nodeTypes);
+      } finally {
+        setRefreshingNodeDefinitions(false);
+      }
+    }, [applyNodeDefinitionsToCurrentGraph, nodeTypes, onRefreshNodeDefinitions, readOnly, refreshingNodeDefinitions]);
+
     const getGraph = useCallback(() => {
       const rf = reactFlowRef.current;
       if (!rf) {
@@ -398,7 +465,11 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
                   variant={BackgroundVariant.Dots}
                   className="opacity-60"
                 />
-                <WorkflowGraphZoomToolbar />
+                <WorkflowGraphZoomToolbar
+                  readOnly={readOnly}
+                  onRefreshNodeDefinitions={onRefreshCurrentNodeDefinitions}
+                  refreshingNodeDefinitions={refreshingNodeDefinitions}
+                />
               </ReactFlow>
             </ErrorBoundary>
           </WorkflowGraphContextProvider>
