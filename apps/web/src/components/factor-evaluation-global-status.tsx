@@ -21,7 +21,7 @@ export function FactorEvaluationGlobalStatus() {
       <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
       <span className="min-w-0 truncate">
         评价进行中：
-        <span className="font-mono font-medium">{running.factorName}</span>
+        <span className="font-mono font-medium">{running.factorName ?? running.factorId}</span>
       </span>
     </Link>
   );

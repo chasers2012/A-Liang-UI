@@ -1,4 +1,5 @@
-import { ChatSummaryPublic, listAgentChats } from '@/api/chat';
+import { listAgentChats } from '@/api/chat';
+import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
 import { atom } from 'jotai';
 import { ApiError } from '@/api/client';
 import { startTransition } from 'react';

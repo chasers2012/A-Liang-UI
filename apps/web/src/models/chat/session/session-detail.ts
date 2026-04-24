@@ -1,4 +1,5 @@
-import { ChatMessagePublic, ChatDetailPublic, TextBlockPublic, getAgentChat } from '@/api/chat';
+import { getAgentChat } from '@/api/chat';
+import type { ChatDetailPublic, ChatMessagePublic, TextBlockPublic } from '@/models/agent-llm/dto';
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
