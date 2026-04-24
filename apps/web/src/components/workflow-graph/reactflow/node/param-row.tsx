@@ -55,17 +55,18 @@ export function nodeParamEffectiveValue(params: Record<string, unknown>, spec: N
   return spec.default;
 }
 
-const paramTypeMap = {
-  date: DateParamRow,
-  datetime: DateTimeParamRow,
-  select: SelectParamRow,
-  toggle: BooleanParamRow,
-  number: NumberParamRow,
+const paramRenderConfig = {
+  date: { Component: DateParamRow, supportsHandle: true },
+  datetime: { Component: DateTimeParamRow, supportsHandle: true },
+  select: { Component: SelectParamRow, supportsHandle: true },
+  toggle: { Component: BooleanParamRow, supportsHandle: true },
+  number: { Component: NumberParamRow, supportsHandle: true },
   // 后端 `StringNodeParam.render_type` 使用 `input`
-  input: StringParamRow,
-  string: StringParamRow,
-  textarea: TextareaParamRow,
-  rjsf: RjsfParamRow,
+  input: { Component: StringParamRow, supportsHandle: true },
+  string: { Component: StringParamRow, supportsHandle: true },
+  textarea: { Component: TextareaParamRow, supportsHandle: true },
+  // rjsf 为复合表单，不提供单字段输入句柄。
+  rjsf: { Component: RjsfParamRow, supportsHandle: false },
 } as const;
 
 export const ParamRow = memo(function ParamRow(props: {
@@ -117,12 +118,12 @@ export const ParamRow = memo(function ParamRow(props: {
   if (!rt) {
     return null;
   }
-  if (!(rt in paramTypeMap)) {
+  if (!(rt in paramRenderConfig)) {
     return null;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const Component: any = paramTypeMap[rt as keyof typeof paramTypeMap];
+  const { Component, supportsHandle } = paramRenderConfig[rt as keyof typeof paramRenderConfig] as any;
 
   return (
     <div
@@ -134,13 +135,15 @@ export const ParamRow = memo(function ParamRow(props: {
         setIsHovering(false);
       }}
     >
-      <WorkflowHandle
-        isInput
-        id={key}
-        hidden={!showHandle}
-        disabled={readOnly || isTypeMismatch}
-        mismatch={isTypeMismatch}
-      />
+      {supportsHandle ? (
+        <WorkflowHandle
+          isInput
+          id={key}
+          hidden={!showHandle}
+          disabled={readOnly || isTypeMismatch}
+          mismatch={isTypeMismatch}
+        />
+      ) : null}
       <div className="min-w-0">
         <Component label={renderLabel} readOnly={inputReadOnly} value={value} onChange={onChange} {...rest} />
       </div>
