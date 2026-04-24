@@ -20,25 +20,25 @@ function DetailPanelBody() {
   const detailState = useAtomValue(nodesDetailAsyncStateAtomFamily(selectedId));
 
   if (detailState.loading && selectedId) {
-    return <>加载中…</>;
+    return <div className="flex min-h-0 flex-1 flex-col">加载中…</div>;
   }
 
   if (selectedId && detailState.error) {
     return (
-      <>
+      <div className="flex min-h-0 flex-1 flex-col">
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>
           <AlertDescription>{detailState.error}</AlertDescription>
         </Alert>
-      </>
+      </div>
     );
   }
   return (
     <>
-      <TabsContent value="preview">
+      <TabsContent value="preview" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden">
         <PanelPreviewTab />
       </TabsContent>
-      <TabsContent value="source">
+      <TabsContent value="source" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden">
         <PanelSourceTab />
       </TabsContent>
     </>
