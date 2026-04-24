@@ -5,10 +5,10 @@ import vectorbt as vbt
 from factor import Factor
 
 
-class Ma20Factor(Factor):
-    name = "ma_20"
+class MaFactor(Factor):
+    name = "移动平均"
     group = "technical"
-    description = "20日移动平均（MA）"
+    description = "移动平均（MA）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -19,10 +19,10 @@ class Ma20Factor(Factor):
         return vbt.MA.run(close, window=int(self.params["window"]), ewm=False).ma
 
 
-class Ema20Factor(Factor):
-    name = "ema_20"
+class EmaFactor(Factor):
+    name = "指数移动平均"
     group = "technical"
-    description = "20日指数移动平均（EMA）"
+    description = "指数移动平均（EMA）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -33,10 +33,10 @@ class Ema20Factor(Factor):
         return vbt.MA.run(close, window=int(self.params["window"]), ewm=True).ma
 
 
-class Mstd20Factor(Factor):
-    name = "mstd_20"
+class MstdFactor(Factor):
+    name = "移动标准差"
     group = "technical"
-    description = "20日移动标准差（MSTD）"
+    description = "移动标准差（MSTD）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -47,10 +47,10 @@ class Mstd20Factor(Factor):
         return vbt.MSTD.run(close, window=int(self.params["window"]), ewm=False).mstd
 
 
-class BbandsMiddle20Factor(Factor):
-    name = "bbands_middle_20"
+class BbandsMiddleFactor(Factor):
+    name = "布林带中轨"
     group = "technical"
-    description = "20日布林带中轨（BBANDS middle）"
+    description = "布林带中轨（BBANDS middle）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -61,10 +61,10 @@ class BbandsMiddle20Factor(Factor):
         return vbt.BBANDS.run(close, window=int(self.params["window"])).middle
 
 
-class BbandsUpper20Factor(Factor):
-    name = "bbands_upper_20"
+class BbandsUpperFactor(Factor):
+    name = "布林带上轨"
     group = "technical"
-    description = "20日布林带上轨（BBANDS upper）"
+    description = "布林带上轨（BBANDS upper）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -75,10 +75,10 @@ class BbandsUpper20Factor(Factor):
         return vbt.BBANDS.run(close, window=int(self.params["window"])).upper
 
 
-class BbandsLower20Factor(Factor):
-    name = "bbands_lower_20"
+class BbandsLowerFactor(Factor):
+    name = "布林带下轨"
     group = "technical"
-    description = "20日布林带下轨（BBANDS lower）"
+    description = "布林带下轨（BBANDS lower）"
     param_specs = ({"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},)
 
     @property
@@ -89,10 +89,10 @@ class BbandsLower20Factor(Factor):
         return vbt.BBANDS.run(close, window=int(self.params["window"])).lower
 
 
-class Rsi14Factor(Factor):
-    name = "rsi_14"
+class RsiFactor(Factor):
+    name = "相对强弱指标"
     group = "technical"
-    description = "14日相对强弱指标（RSI）"
+    description = "相对强弱指标（RSI）"
     param_specs = ({"name": "window", "label": "窗口", "default": 14, "min": 1, "max": 250},)
 
     @property
@@ -103,10 +103,10 @@ class Rsi14Factor(Factor):
         return vbt.RSI.run(close, window=int(self.params["window"])).rsi
 
 
-class StochPercentK143Factor(Factor):
-    name = "stoch_k_14_3"
+class StochPercentKFactor(Factor):
+    name = "随机指标K线"
     group = "technical"
-    description = "随机指标K线（STOCH %K, 14/3）"
+    description = "随机指标K线（STOCH %K）"
     k_window = 14
     d_window = 3
     param_specs = (
@@ -128,10 +128,10 @@ class StochPercentK143Factor(Factor):
         ).percent_k
 
 
-class StochPercentD143Factor(Factor):
-    name = "stoch_d_14_3"
+class StochPercentDFactor(Factor):
+    name = "随机指标D线"
     group = "technical"
-    description = "随机指标D线（STOCH %D, 14/3）"
+    description = "随机指标D线（STOCH %D）"
     k_window = 14
     d_window = 3
     param_specs = (
@@ -153,10 +153,10 @@ class StochPercentD143Factor(Factor):
         ).percent_d
 
 
-class Macd12269Factor(Factor):
-    name = "macd_12_26_9"
+class MacdFactor(Factor):
+    name = "MACD主线"
     group = "technical"
-    description = "MACD主线（12,26,9）"
+    description = "MACD主线"
     fast_window = 12
     slow_window = 26
     signal_window = 9
@@ -183,10 +183,10 @@ class Macd12269Factor(Factor):
         ).macd
 
 
-class MacdSignal12269Factor(Factor):
-    name = "macd_signal_12_26_9"
+class MacdSignalFactor(Factor):
+    name = "MACD信号线"
     group = "technical"
-    description = "MACD信号线（12,26,9）"
+    description = "MACD信号线"
     fast_window = 12
     slow_window = 26
     signal_window = 9
@@ -213,10 +213,10 @@ class MacdSignal12269Factor(Factor):
         ).signal
 
 
-class MacdHist12269Factor(Factor):
-    name = "macd_hist_12_26_9"
+class MacdHistFactor(Factor):
+    name = "MACD柱"
     group = "technical"
-    description = "MACD柱（12,26,9）"
+    description = "MACD柱"
     fast_window = 12
     slow_window = 26
     signal_window = 9
@@ -243,10 +243,10 @@ class MacdHist12269Factor(Factor):
         ).hist
 
 
-class Atr14Factor(Factor):
-    name = "atr_14"
+class AtrFactor(Factor):
+    name = "平均真实波动幅度"
     group = "technical"
-    description = "14日平均真实波动幅度（ATR）"
+    description = "平均真实波动幅度（ATR）"
     param_specs = ({"name": "window", "label": "窗口", "default": 14, "min": 1, "max": 250},)
 
     @property
@@ -258,7 +258,7 @@ class Atr14Factor(Factor):
 
 
 class ObvFactor(Factor):
-    name = "obv"
+    name = "能量潮指标"
     group = "technical"
     description = "能量潮指标（OBV）"
 
