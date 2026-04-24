@@ -7,7 +7,7 @@ export interface NodeParamModel {
   type: string;
   /** 与 Socket / NodeParam 序列化字段一致，Markdown 说明 */
   description?: string | null;
-  default?: string | number | boolean | null;
+  default?: unknown;
   minimum?: number | null;
   maximum?: number | null;
   /**
@@ -19,6 +19,10 @@ export interface NodeParamModel {
   rows?: number | null;
   /** 仅当 render_type=select 时可能存在 */
   options?: Array<string | number | { label: string | number; value: string | number }> | null;
+  /** render_type=rjsf 时后端 RJSFNodeParam.json_schema */
+  json_schema?: unknown;
+  /** render_type=rjsf 时后端 RJSFNodeParam.ui_schema */
+  ui_schema?: unknown;
 }
 
 /** 与后端 ``WorkflowNodeSummaryPublic``（``GET /nodes``）一致。 */

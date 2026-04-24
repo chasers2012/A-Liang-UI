@@ -19,6 +19,10 @@ export type WorkflowNodeInputSpec = WorkflowSocketDefinition & {
   maximum?: number | null;
   /** TextareaNodeParam.rows */
   rows?: number | null;
+  /** RJSFNodeParam.json_schema */
+  json_schema?: unknown;
+  /** RJSFNodeParam.ui_schema */
+  ui_schema?: unknown;
 };
 
 /** 节点类型目录项：仅描述端口与展示名，不含业务扩展字段。 */

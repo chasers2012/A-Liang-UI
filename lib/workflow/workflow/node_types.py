@@ -281,6 +281,60 @@ class DateNodeParam(NodeParam):
         )
 
 
+class RJSFNodeParam(NodeParam):
+    """A NodeParam rendered by React JSONSchema Form (RJSF) on frontend."""
+
+    render_type: str = "rjsf"
+    json_schema: dict[str, Any] | Callable[[], dict[str, Any]]
+    ui_schema: dict[str, Any] | Callable[[], dict[str, Any]]
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        required: bool = False,
+        label: str = "",
+        description: str = "",
+        value_type: str = "",
+        json_schema: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
+        ui_schema: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
+        default: Any | None = None,
+        visible_domains: Sequence[str] | tuple[str, ...] | None = None,
+        **_ignored: Any,
+    ) -> None:
+        # Allow schema to be a function (e.g. depending on runtime settings).
+        # The function will be evaluated during serialization for API responses.
+        schema_preview: dict[str, Any] = {}
+        if isinstance(json_schema, dict):
+            schema_preview = json_schema
+        elif json_schema is None:
+            schema_preview = {}
+
+        if default is None and "default" in schema_preview:
+            default = schema_preview.get("default")
+
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type or schema_preview.get("type", "") or "object",
+            default=default,
+            visible_domains=visible_domains,
+            **_ignored,
+        )
+        self.json_schema = json_schema or {}
+        self.ui_schema = ui_schema or {}
+
+    def resolve_json_schema(self) -> dict[str, Any]:
+        raw = self.json_schema() if callable(self.json_schema) else self.json_schema
+        return dict(raw or {})
+
+    def resolve_ui_schema(self) -> dict[str, Any]:
+        raw = self.ui_schema() if callable(self.ui_schema) else self.ui_schema
+        return dict(raw or {})
+
+
 class Node:
     """Unified workflow node model for both type-definition and graph-instance data.
 

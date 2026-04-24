@@ -20,7 +20,13 @@ class Parser:
     @staticmethod
     def serialize_socket(socket: Socket) -> dict[str, Any]:
         """JSON-friendly socket / param specification used by API responses."""
-        from .node_types import NodeParam, NumberNodeParam, OptionsNodeParam, TextareaNodeParam
+        from .node_types import (
+            NodeParam,
+            NumberNodeParam,
+            OptionsNodeParam,
+            RJSFNodeParam,
+            TextareaNodeParam,
+        )
 
         if isinstance(socket, NumberNodeParam):
             return {
@@ -34,6 +40,16 @@ class Parser:
             opts = socket.options
             options = list(opts()) if callable(opts) else list(opts or [])
             return {**Parser._serialize_node_param(socket), "options": options}
+        if isinstance(socket, RJSFNodeParam):
+            schema = socket.resolve_json_schema()
+            ui = socket.resolve_ui_schema()
+            default = socket.default if socket.default is not None else schema.get("default")
+            return {
+                **Parser._serialize_node_param(socket),
+                "default": default,
+                "json_schema": schema,
+                "ui_schema": ui,
+            }
         if isinstance(socket, NodeParam):
             return Parser._serialize_node_param(socket)
         return {

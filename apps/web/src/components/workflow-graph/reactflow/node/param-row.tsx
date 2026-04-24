@@ -1,17 +1,17 @@
-
-import type { NodeParamModel } from "@/models/nodes/dto";
-import { memo, useCallback, useMemo, useState } from "react";
-import { useStore } from "reactflow";
+import type { NodeParamModel } from '@/models/nodes/dto';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { useStore } from 'reactflow';
 import {
   BooleanParamRow,
   DateParamRow,
   DateTimeParamRow,
   NumberParamRow,
+  RjsfParamRow,
   SelectParamRow,
   StringParamRow,
   TextareaParamRow,
-} from "./params";
-import { WorkflowHandle } from "./workflow-handle";
+} from './params';
+import { WorkflowHandle } from './workflow-handle';
 
 // eslint-disable-next-line complexity
 function pickSourceValueTypeFromStore(s: unknown): string | null {
@@ -30,25 +30,27 @@ function pickSourceValueTypeFromStore(s: unknown): string | null {
   if (!inProgress) return null;
   if (!anyState.getNodes) return null;
 
-  const sourceNodeId = (anyState.connection?.source ?? anyState.connectionNodeId) ?? null;
-  const sourceHandleId = (anyState.connection?.sourceHandle ?? anyState.connectionHandleId) ?? null;
+  const sourceNodeId = anyState.connection?.source ?? anyState.connectionNodeId ?? null;
+  const sourceHandleId = anyState.connection?.sourceHandle ?? anyState.connectionHandleId ?? null;
   if (!sourceNodeId || !sourceHandleId) return null;
 
   const nodes = anyState.getNodes();
   const n = nodes.find((x) => x.id === sourceNodeId);
-  const outputs =
-    (n?.data as { outputs?: { name: string; value_type: string }[] } | undefined)?.outputs ?? [];
+  const outputs = (n?.data as { outputs?: { name: string; value_type: string }[] } | undefined)?.outputs ?? [];
   const hit = outputs.find((o) => o.name === String(sourceHandleId));
   return hit?.value_type ?? null;
 }
 
-
-export function nodeParamEffectiveValue(
-  params: Record<string, unknown>,
-  spec: NodeParamModel,
-): unknown {
+export function nodeParamEffectiveValue(params: Record<string, unknown>, spec: NodeParamModel): unknown {
   if (Object.prototype.hasOwnProperty.call(params, spec.key)) {
-    return params[spec.key];
+    const v = params[spec.key];
+    // Persisted graphs may contain explicit `null` / `undefined` for a param key.
+    // In that case, fall back to spec default so schema-driven UI (e.g. RJSF dependencies)
+    // can still render correctly.
+    if (v === null || v === undefined) {
+      return spec.default;
+    }
+    return v;
   }
   return spec.default;
 }
@@ -63,8 +65,8 @@ const paramTypeMap = {
   input: StringParamRow,
   string: StringParamRow,
   textarea: TextareaParamRow,
+  rjsf: RjsfParamRow,
 } as const;
-
 
 export const ParamRow = memo(function ParamRow(props: {
   nodeId: string;
@@ -84,7 +86,7 @@ export const ParamRow = memo(function ParamRow(props: {
       const edges = anyState.edges ?? [];
       for (const e of edges) {
         if (e.target !== nodeId) continue;
-        if ((e.targetHandle ?? "") === key) return true;
+        if ((e.targetHandle ?? '') === key) return true;
       }
       return false;
     },
@@ -107,8 +109,8 @@ export const ParamRow = memo(function ParamRow(props: {
   );
   const isTypeMismatch = useMemo(() => {
     if (!isConnecting) return false;
-    const targetType = (spec.type ?? "").trim();
-    const sourceType = (sourceValueType ?? "").trim();
+    const targetType = (spec.type ?? '').trim();
+    const sourceType = (sourceValueType ?? '').trim();
     if (!targetType || !sourceType) return false;
     return targetType !== sourceType;
   }, [isConnecting, sourceValueType, spec.type]);
@@ -121,7 +123,6 @@ export const ParamRow = memo(function ParamRow(props: {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Component: any = paramTypeMap[rt as keyof typeof paramTypeMap];
-
 
   return (
     <div
@@ -141,15 +142,8 @@ export const ParamRow = memo(function ParamRow(props: {
         mismatch={isTypeMismatch}
       />
       <div className="min-w-0">
-        <Component
-          label={renderLabel}
-          readOnly={inputReadOnly}
-          value={value}
-          onChange={onChange}
-          {...rest}
-        />
+        <Component label={renderLabel} readOnly={inputReadOnly} value={value} onChange={onChange} {...rest} />
       </div>
     </div>
   );
-
 });
