@@ -127,7 +127,6 @@ class Factor(ABC):
                 continue
             default_value = spec.get("default")
             self.params[name] = default_value
-            setattr(self, name, default_value)
 
     def apply_params(self, params: dict[str, Any]) -> None:
         """Merge runtime params and apply safe attribute overrides."""
@@ -155,7 +154,6 @@ class Factor(ABC):
             if v_max is not None and value > v_max:
                 raise ValueError(f"Factor {self.name}: param '{key}' must be <= {v_max}")
             self.params[key] = value
-            setattr(self, key, value)
 
     def _get_dependencies(self) -> list[str]:
         """
