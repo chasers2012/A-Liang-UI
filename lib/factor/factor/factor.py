@@ -118,12 +118,6 @@ class Factor(ABC):
 
         return tuple(out)
 
-    @classmethod
-    def get_param_spec_map(cls) -> dict[str, dict[str, Any]]:
-        return {
-            s["name"]: s for s in cls.get_param_specs() if isinstance(s, dict) and s.get("name")
-        }
-
     def _init_params_with_defaults(self) -> None:
         for spec in self.get_param_specs():
             if not isinstance(spec, dict):
@@ -139,7 +133,9 @@ class Factor(ABC):
         """Merge runtime params and apply safe attribute overrides."""
         if not isinstance(params, dict):
             raise ValueError(f"Factor {self.name}: params must be a dict")
-        spec_map = self.get_param_spec_map()
+        spec_map = {
+            s["name"]: s for s in self.get_param_specs() if isinstance(s, dict) and s.get("name")
+        }
         for key, value in params.items():
             if not isinstance(key, str) or not key.strip():
                 continue

@@ -5,134 +5,79 @@ from typing import Any
 import pandas as pd
 from app.factors.controller import get_factor
 from app.factors.registry import FactorItemsRegistry
+from factor import Factor
 from workflow import Socket, workflow_node
 from workflow.node_types import RJSFNodeParam
 
 
-def _factor_ref_options() -> list[dict[str, str]]:
-    items = FactorItemsRegistry.list_items()
-    options = [
-        {"label": (getattr(f, "name", "") or str(getattr(f, "id", ""))), "value": str(f.id)}
-        for f in items
-    ]
-    out = [o for o in options if o.get("value", "").strip()]
-    out.sort(key=lambda x: str(x.get("label") or x.get("value")))
-    return out
+def _factor_param_specs(factor_cls: type[Factor]) -> dict[str, dict[str, Any]]:
+    specs = factor_cls.get_param_specs() or ()
+    return {str(s["name"]): s for s in specs}
 
 
-def _factor_param_specs(factor_id: str) -> dict[str, dict[str, Any]]:
-    fid = str(factor_id).strip()
-    if not fid:
-        return {}
-    try:
-        factor_cls = get_factor(fid)
-    except Exception:
-        factor_cls = None
-    if factor_cls is None:
-        return {}
-    if not callable(getattr(factor_cls, "get_param_specs", None)):
-        return {}
-    try:
-        # Normalize to a name->spec map.
-        if callable(getattr(factor_cls, "get_param_spec_map", None)):
-            return factor_cls.get_param_spec_map() or {}
-        specs = factor_cls.get_param_specs() or ()
-        return {str(s.get("name")): s for s in specs if isinstance(s, dict) and s.get("name")}
-    except Exception:
-        return {}
+def _factor_ref_factors() -> list[type[(str, Factor)]]:
+    return [(f.id, get_factor(str(f.id))) for f in FactorItemsRegistry.list_items()]
 
 
 def _factor_params_rjsf_properties(param_specs: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    field_map = {"default": "default", "min": "minimum", "max": "maximum"}
     props: dict[str, Any] = {}
-    for key, spec in (param_specs or {}).items():
-        if not isinstance(key, str) or not key.strip() or not isinstance(spec, dict):
-            continue
+    for key, spec in param_specs.items():
         item_schema: dict[str, Any] = {"type": "number", "title": spec.get("label") or key}
         desc = str(spec.get("description") or "").strip()
         if desc:
             item_schema["description"] = desc
-        if "default" in spec and spec["default"] is not None:
-            item_schema["default"] = spec["default"]
-        if "min" in spec and spec["min"] is not None:
-            item_schema["minimum"] = spec["min"]
-        if "max" in spec and spec["max"] is not None:
-            item_schema["maximum"] = spec["max"]
+        for source_key, target_key in field_map.items():
+            value = spec.get(source_key)
+            if value is not None:
+                item_schema[target_key] = value
         props[key] = item_schema
     return props
 
 
 def _factor_params_object_schema(param_specs: dict[str, dict[str, Any]]) -> dict[str, Any]:
     props = _factor_params_rjsf_properties(param_specs)
-    schema: dict[str, Any] = {
+    return {
         "type": "object",
         "title": "因子参数",
         "properties": props,
         "additionalProperties": False,
+        "default": {
+            k: s.get("default") for k, s in props.items() if isinstance(s, dict) and "default" in s
+        },
     }
-    defaults: dict[str, Any] = {}
-    for k, s in props.items():
-        if isinstance(s, dict) and "default" in s:
-            defaults[k] = s.get("default")
-    schema["default"] = defaults
-    return schema
 
 
-def _factor_ref_one_of(options: list[dict[str, str]]) -> list[dict[str, Any]]:
-    one_of: list[dict[str, Any]] = []
-    for opt in options:
-        fid = str(opt.get("value") or "").strip()
-        if not fid:
-            continue
-        title = str(opt.get("label") or fid)
-        param_specs = _factor_param_specs(fid)
-        one_of.append(
-            {
-                "title": title,
-                "type": "object",
-                "properties": {
-                    "factor_id": {"const": fid, "title": "因子"},
-                    "factor_params": _factor_params_object_schema(param_specs),
-                },
-                "required": ["factor_id"],
-            }
-        )
-    return one_of
+def _factor_ref_one_of(factors: list[type[str, Factor]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "title": factor.name or str(id),
+            "type": "object",
+            "properties": {
+                "factor_id": {"const": str(id), "title": "因子"},
+                "factor_params": _factor_params_object_schema(_factor_param_specs(factor)),
+            },
+            "required": ["factor_id"],
+        }
+        for id, factor in factors
+    ]
 
 
 def _factor_ref_rjsf_schema() -> dict[str, Any]:
-    options = _factor_ref_options()
-    factor_ids = [str(o["value"]) for o in options]
-    one_of = _factor_ref_one_of(options)
-    first_factor_id = factor_ids[0] if factor_ids else ""
-    first_param_defaults: dict[str, Any] = {}
-    if first_factor_id:
-        first_specs = _factor_param_specs(first_factor_id)
-        first_schema = _factor_params_object_schema(first_specs)
-        if isinstance(first_schema, dict):
-            first_param_defaults = dict(first_schema.get("default") or {})
+    factors = _factor_ref_factors()
+    one_of = _factor_ref_one_of(factors)
+    factor_one_of = [{"const": str(id), "title": factor.name or str(id)} for id, factor in factors]
     return {
         "type": "object",
-        "default": {"factor_id": first_factor_id, "factor_params": first_param_defaults},
         "properties": {
             "factor_id": {
                 "type": "string",
                 "title": "因子",
                 # Prefer `oneOf(const+title)` for labels in RJSF.
-                "oneOf": [
-                    {
-                        "const": str(o.get("value") or "").strip(),
-                        "title": str(o.get("label") or o.get("value")),
-                    }
-                    for o in options
-                    if str(o.get("value") or "").strip()
-                ],
-                "default": first_factor_id,
+                "oneOf": factor_one_of,
             },
-            # Keep a root-level placeholder so RJSF reliably renders this field,
-            # while `dependencies.factor_id.oneOf` provides the concrete schema per factor.
-            "factor_params": _factor_params_object_schema({}),
         },
-        "dependencies": {"factor_id": {"oneOf": one_of} if one_of else {}},
+        "dependencies": {"factor_id": {"oneOf": one_of}},
     }
 
 
@@ -194,12 +139,7 @@ class FactorRefNode:
     def _extract_factor_params(
         self, factor_cls: Any, kwargs: dict[str, Any]
     ) -> dict[str, float | int]:
-        if callable(getattr(factor_cls, "get_param_spec_map", None)):
-            spec_map = factor_cls.get_param_spec_map()
-        else:
-            spec_map = {
-                s.get("name"): s for s in factor_cls.get_param_specs() if isinstance(s, dict)
-            }
+        spec_map = {s.get("name"): s for s in factor_cls.get_param_specs() if isinstance(s, dict)}
         out: dict[str, float | int] = {}
 
         factor_params_raw = kwargs.get("factor_params")
