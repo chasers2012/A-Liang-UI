@@ -165,7 +165,7 @@ def stream_event_iter_for_chat(
     try:
         agent = create_main_agent(model=llm)
     except Exception as e:
-        yield ErrorEvent(payload=f"ReAct 初始化失败：{e}")
+        yield ErrorEvent(payload=f"初始化失败：{e}")
         return
 
     try:

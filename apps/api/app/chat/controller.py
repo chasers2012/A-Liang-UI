@@ -103,7 +103,7 @@ def _register_llm_settings_module() -> None:
         key=_LLM_CONFIG_MODULE,
         title="模型与密钥",
         description="配置因子挖掘智能体使用的 LLM。",
-        filename="agent/llm.json",
+        filename="chat/llm.json",
         default_values=defaults,
         json_schema=rjsf_schema,
         ui_schema=rjsf_ui_schema,

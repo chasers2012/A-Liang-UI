@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.tool.controller import ToolController
@@ -9,6 +10,8 @@ from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class PlanExecuteState(AgentState[Any], total=False):
@@ -63,8 +66,8 @@ def _plan_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanExecu
         plan = (
             structured_response.plan if isinstance(structured_response, PlannerPlanOutput) else None
         )
-    except Exception as e:
-        print(e)
+    except Exception:
+        logger.exception("planner.invoke failed")
         plan = None
 
     if not plan:
@@ -107,8 +110,12 @@ def _execute_node(state: PlanExecuteState, model: str | BaseChatModel) -> PlanEx
         current_step += 1
         completed_steps.append(step)
     except Exception as e:
-        print(e)
-        next_messages = [*messages, SystemMessage(content=f"执行失败: {e}")]
+        err_type = type(e).__name__
+        logger.exception("executor.invoke failed at step=%s", current_step)
+        next_messages = [
+            *messages,
+            SystemMessage(content=f"执行失败(step={current_step}): {err_type}: {e}"),
+        ]
 
     return {
         "messages": next_messages,
