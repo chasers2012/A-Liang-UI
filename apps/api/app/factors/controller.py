@@ -14,6 +14,7 @@ from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorCreate,
     FactorDetailPublic,
+    FactorParamSpecPublic,
     FactorPatch,
     FactorSummaryPublic,
     generate_id,
@@ -34,10 +35,6 @@ def merge_factor_patch(rec: FactorRow, patch: FactorPatch) -> None:
         rec.group = (data["group"] or "").strip()
     if "description" in data:
         rec.description = (data["description"] or "").strip()
-    if "window" in data:
-        w = data["window"]
-        if w is not None:
-            rec.window = w
     if "dependencies" in data and data["dependencies"] is not None:
         deps = [d.strip() for d in data["dependencies"] if str(d).strip()]
         if not deps:
@@ -54,9 +51,6 @@ def patch_factor_validate_and_merge(
         if body.name is None or not str(body.name).strip():
             raise ValueError("name 不能为空")
         validate_identifier_name(str(body.name))
-
-    if "window" in unset and body.window is not None and body.window < 1:
-        raise ValueError("window 须 >= 1")
 
     merge_factor_patch(rec, body)
 
@@ -156,3 +150,22 @@ def factor_detail(rec: FactorRow) -> FactorDetailPublic:
 
 def list_factors() -> list[FactorSummaryPublic]:
     return [row_to_summary(i) for i in FactorItemsRegistry.list_items()]
+
+
+def list_factor_param_specs(factor_id: str) -> list[FactorParamSpecPublic]:
+    factor_cls = get_factor(factor_id)
+    if factor_cls is None:
+        raise ValueError("因子不存在或无法加载")
+    out: list[FactorParamSpecPublic] = []
+    for spec in factor_cls.get_param_specs():
+        out.append(
+            FactorParamSpecPublic(
+                name=spec["name"],
+                label=str(spec.get("label") or spec["name"]),
+                description=str(spec.get("description") or ""),
+                default=spec.get("default"),
+                min=spec.get("min"),
+                max=spec.get("max"),
+            )
+        )
+    return out

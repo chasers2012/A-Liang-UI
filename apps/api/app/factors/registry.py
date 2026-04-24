@@ -40,7 +40,6 @@ class FactorItemsRegistry:
                     group=getattr(factor_cls, "group", "factor") or "factor",
                     description=getattr(factor_cls, "description", "") or "",
                     is_plugin=True,
-                    window=int(getattr(factor_cls, "window", 1) or 1),
                     dependencies=deps,
                     source_path="",
                     created_at=now,

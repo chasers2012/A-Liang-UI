@@ -83,6 +83,12 @@ def main() -> None:
         help="结束日期 YYYY-MM-DD（含）",
     )
     p.add_argument(
+        "--lookback",
+        type=int,
+        default=10,
+        help="动量回看窗口（默认: 10）",
+    )
+    p.add_argument(
         "-o",
         "--output",
         required=True,
@@ -104,7 +110,7 @@ def main() -> None:
     resolver = DependencyResolver()
     resolver.register_datasource(ds, ["close"])
 
-    factor = MomentumFactor(dependency_resolver=resolver)
+    factor = MomentumFactor(dependency_resolver=resolver, params={"lookback": args.lookback})
     out = factor.calculate(args.start_date, args.end_date)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     out.reset_index().to_csv(args.output, index=False)

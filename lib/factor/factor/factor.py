@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import inspect
+import math
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -15,6 +16,27 @@ class Factor(ABC):
     """
     Factor base class.
 
+    新建因子时建议按这个模板实现：
+
+    .. code-block:: python
+
+        class MyFactor(Factor):
+            name = "my_factor"
+            label = "我的因子"
+            group = "factor"
+            description = "因子说明"
+            param_specs = (
+                {"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},
+            )
+
+            @property
+            def window(self) -> int:
+                return int(self.params["window"])
+
+            def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+                window = int(self.params["window"])
+                return close.rolling(window).mean()
+
     Subclasses define:
     - ``name``: factor id
     - ``group``: registry grouping (optional override; default ``"factor"``)
@@ -26,14 +48,118 @@ class Factor(ABC):
     label: str = "因子"
     group: str = "factor"
     description: str = "因子描述"
-    window: int = 1
+
+    @property
+    def window(self) -> int:
+        return 1
+
+    # 显式参数定义；仅支持数值参数（int/float）。
+    param_specs: tuple[dict[str, Any], ...] = ()
+
+    @classmethod
+    def _normalize_param_spec_item(cls, item: dict[str, Any]) -> dict[str, Any] | None:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            return None
+
+        v_min = item.get("min", item.get("minimum"))
+        v_max = item.get("max", item.get("maximum"))
+        if v_min is None or v_max is None:
+            raise ValueError(f"Factor {cls.name}: param spec '{name}' must set both min and max")
+
+        spec: dict[str, Any] = {
+            "name": name,
+            "label": str(item.get("label") or name),
+            "description": str(item.get("description") or ""),
+        }
+
+        def put_number(k_out: str, v: Any) -> None:
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+                raise ValueError(
+                    f"Factor {cls.name}: param spec '{name}' field '{k_out}' must be finite number"
+                )
+            spec[k_out] = v
+
+        if "default" in item and item["default"] is not None:
+            put_number("default", item["default"])
+        put_number("min", v_min)
+        put_number("max", v_max)
+
+        if spec["min"] > spec["max"]:
+            raise ValueError(f"Factor {cls.name}: param spec '{name}' min must be <= max")
+        return spec
 
     def __init__(
         self,
         *,
         dependency_resolver: DependencyResolver | None = None,
+        params: dict[str, Any] | None = None,
     ) -> None:
         self._dependency_resolver = dependency_resolver
+        self.params: dict[str, Any] = {}
+        self._init_params_with_defaults()
+        if params:
+            self.apply_params(params)
+
+    @classmethod
+    def get_param_specs(cls) -> dict[str, dict[str, Any]]:
+        raw = getattr(cls, "param_specs", None)
+        if not isinstance(raw, (list, tuple)):
+            return ()
+
+        out: list[dict[str, Any]] = []
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            spec = cls._normalize_param_spec_item(item)
+            if spec is None:
+                continue
+            out.append(spec)
+
+        return tuple(out)
+
+    @classmethod
+    def get_param_spec_map(cls) -> dict[str, dict[str, Any]]:
+        return {
+            s["name"]: s for s in cls.get_param_specs() if isinstance(s, dict) and s.get("name")
+        }
+
+    def _init_params_with_defaults(self) -> None:
+        for spec in self.get_param_specs():
+            if not isinstance(spec, dict):
+                continue
+            name = str(spec.get("name") or "").strip()
+            if not name or "default" not in spec:
+                continue
+            default_value = spec.get("default")
+            self.params[name] = default_value
+            setattr(self, name, default_value)
+
+    def apply_params(self, params: dict[str, Any]) -> None:
+        """Merge runtime params and apply safe attribute overrides."""
+        if not isinstance(params, dict):
+            raise ValueError(f"Factor {self.name}: params must be a dict")
+        spec_map = self.get_param_spec_map()
+        for key, value in params.items():
+            if not isinstance(key, str) or not key.strip():
+                continue
+            if key not in spec_map:
+                raise ValueError(f"Factor {self.name}: unknown param '{key}'")
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"Factor {self.name}: param '{key}' must be finite number")
+            spec = spec_map[key]
+            v_min = spec.get("min")
+            v_max = spec.get("max")
+            if v_min is not None and value < v_min:
+                raise ValueError(f"Factor {self.name}: param '{key}' must be >= {v_min}")
+            if v_max is not None and value > v_max:
+                raise ValueError(f"Factor {self.name}: param '{key}' must be <= {v_max}")
+            self.params[key] = value
+            setattr(self, key, value)
 
     def _get_dependencies(self) -> list[str]:
         """

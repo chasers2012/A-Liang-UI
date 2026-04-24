@@ -17,6 +17,15 @@ export interface FactorDetailPublic extends FactorSummaryPublic {
   source: string;
 }
 
+export interface FactorParamSpecPublic {
+  name: string;
+  label: string;
+  description?: string;
+  default?: number | null;
+  min?: number | null;
+  max?: number | null;
+}
+
 export interface FactorEvaluationRowPublic {
   /** Evaluation run primary key (not factor_id/profile_id). */
   id?: string | null;

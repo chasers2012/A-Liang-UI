@@ -9,8 +9,12 @@ class MomentumFactor(Factor):
 
     name = "mom_10d"
     label = "10日动量"
-    window = 11
     lookback = 10
+    param_specs = ({"name": "lookback", "label": "回看周期", "default": 10, "min": 1, "max": 250},)
 
-    def calc(self, close: pd.DataFrame) -> pd.Series:
-        return close.pct_change(periods=self.lookback).stack()
+    @property
+    def window(self) -> int:
+        return int(self.lookback + 1)
+
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        return close.pct_change(periods=int(self.lookback))

@@ -1,4 +1,4 @@
-import type { FactorDetailPublic, FactorSummaryPublic } from '@/models/factor/dto';
+import type { FactorDetailPublic, FactorParamSpecPublic, FactorSummaryPublic } from '@/models/factor/dto';
 import { apiFetchJson } from './client';
 
 export function listFactors(): Promise<FactorSummaryPublic[]> {
@@ -7,6 +7,10 @@ export function listFactors(): Promise<FactorSummaryPublic[]> {
 
 export function getFactor(id: string): Promise<FactorDetailPublic> {
   return apiFetchJson<FactorDetailPublic>(`/factors/${encodeURIComponent(id)}`);
+}
+
+export function getFactorParamSpecs(id: string): Promise<FactorParamSpecPublic[]> {
+  return apiFetchJson<FactorParamSpecPublic[]>(`/factors/${encodeURIComponent(id)}/param-specs`);
 }
 
 export function getFactorTemplate(): Promise<string> {

@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.factors.registry import FactorItemsRegistry, read_source, resolve_source_path
+from app.factors.controller import resolve_source_path
+from app.factors.registry import FactorItemsRegistry, read_source
 from custom_code import validate_identifier_name as validate_factor_name
 from custom_code import validate_source_syntax
 from factor import Factor
@@ -177,3 +178,41 @@ def test_get_factor_loads_from_source(workspace_tmp, client):
     assert isinstance(factor_cls, type)
     assert issubclass(factor_cls, Factor)
     assert factor_cls.name == "alpha_test"
+
+
+def test_factor_instance_accepts_params_override(workspace_tmp, client):
+    src = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class ParamFactor(Factor):
+    name = "param_factor"
+    lookback = 5
+    window = 6
+    param_specs = ({"name": "lookback", "default": 5, "min": 1, "max": 250},)
+
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        return close.pct_change(periods=int(self.lookback))
+"""
+    r = client.post(
+        "/factors",
+        json={
+            "name": "param_factor",
+            "group": "custom",
+            "description": "",
+            "window": 6,
+            "dependencies": ["close"],
+            "source": src,
+        },
+    )
+    assert r.status_code == 200, r.text
+    fid = r.json()["id"]
+    factor_cls = FactorItemsRegistry.get_factor(fid)
+    assert factor_cls is not None
+    factor = factor_cls(params={"lookback": 20})
+    assert factor.lookback == 20
+    assert factor.params["lookback"] == 20
+    with pytest.raises(ValueError, match="unknown param"):
+        factor_cls(params={"new_key": 1})

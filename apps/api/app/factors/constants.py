@@ -8,7 +8,10 @@ class NewFactor(Factor):
     name = ""
     group = "custom"
     description = ""
-    window = 1 # window 需要是 calc 中所使用的 data 最大窗口长度
+
+    @property
+    def window(self) -> int:
+        return 1  # window 需要是 calc 中所使用的 data 最大窗口长度
 
     def calc(self, close: pd.DataFrame) -> pd.DataFrame:
         return close.pct_change(periods=1)
