@@ -131,6 +131,7 @@ export type AgentChatStreamOptions = {
   onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
   onToolResult?: (payload: { id: string; result: unknown }) => void;
   onToolError?: (payload: { id: string; error: string }) => void;
+  signal?: AbortSignal;
 };
 
 /** @returns ``true`` to keep reading the stream; ``false`` when a terminal ``done`` event was handled. */
@@ -185,6 +186,7 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
       Accept: 'text/event-stream',
     },
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) {
     const text = await res.text();
@@ -198,17 +200,12 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
   let buffer = '';
 
   const flushBuffer = (): boolean => {
-    // SSE events are separated by a blank line.
-    // We support both \n\n and \r\n\r\n because servers vary.
+    // SSE events are separated by a blank line (\n\n).
     while (true) {
       const idxLF = buffer.indexOf('\n\n');
-      const idxCRLF = buffer.indexOf('\r\n\r\n');
-      const idx = idxLF === -1 ? idxCRLF : idxCRLF === -1 ? idxLF : Math.min(idxLF, idxCRLF);
-      if (idx === -1) return true;
-
-      const sepLen = buffer.startsWith('\r\n\r\n', idx) ? 4 : 2;
-      const block = buffer.slice(0, idx).trim();
-      buffer = buffer.slice(idx + sepLen);
+      if (idxLF === -1) return true;
+      const block = buffer.slice(0, idxLF).trim();
+      buffer = buffer.slice(idxLF + 2);
       if (!block) continue;
 
       const ev = parseAgentChatSseBlock(block);

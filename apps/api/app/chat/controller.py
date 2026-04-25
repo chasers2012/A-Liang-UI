@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-import queue
-import threading
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import suppress
 from typing import Any
 
-from app.chat.agent import stream_event_iter_for_chat
+from app.chat.agent import stream_event_aiter_for_chat
 from app.chat.events import (
     DeltaEvent,
     DoneEvent,
@@ -313,7 +312,11 @@ def _prepare_chat_stream(
     return body.session_id, incoming_user, persisted_context_messages, context_messages
 
 
-def stream(body: ChatRequest) -> Iterator[str]:
+async def stream_async(  # noqa: C901
+    body: ChatRequest,
+    *,
+    is_disconnected: Callable[[], Awaitable[bool]],
+) -> AsyncIterator[str]:
     # Request carries exactly one new user message; model context is built from
     # persisted history + this single incoming turn.
     session_id, incoming_user, persisted_context_messages, context_messages = _prepare_chat_stream(
@@ -321,28 +324,37 @@ def stream(body: ChatRequest) -> Iterator[str]:
     )
     last_user_id = incoming_user.id
     assistant_message_id = str(uuid.uuid4())
+    blocks: list[AssistantBlockPublic] = []
 
     _persist_user_messages_on_receive(session_id, incoming_user)
-    out: queue.Queue[str | None] = queue.Queue()
+    out: asyncio.Queue[str | None] = asyncio.Queue()
 
-    def _producer() -> None:
-        blocks: list[AssistantBlockPublic] = []
+    async def _producer() -> None:
         try:
+            if await is_disconnected():
+                return
             message_ids_event = MessageIdsEvent(
                 payload=MessageIdsPayload(
                     user=last_user_id,
                     assistant=assistant_message_id,
                 ),
             )
-            out.put(_sse_wire_frame(message_ids_event))
+            if await is_disconnected():
+                return
+            await out.put(_sse_wire_frame(message_ids_event))
             llm = _build_llm_from_workspace()
 
-            for event in stream_event_iter_for_chat(llm, chat_messages=context_messages):
+            async for event in stream_event_aiter_for_chat(llm, chat_messages=context_messages):
+                if await is_disconnected():
+                    break
                 _apply_stream_event_to_blocks(blocks, event)
-                out.put(_sse_wire_frame(event))
+                if await is_disconnected():
+                    break
+                await out.put(_sse_wire_frame(event))
         except ValueError as e:
-            err_event = ErrorEvent(payload=f"{e}")
-            out.put(_sse_wire_frame(err_event))
+            if not await is_disconnected():
+                err_event = ErrorEvent(payload=f"{e}")
+                await out.put(_sse_wire_frame(err_event))
             return
         finally:
             try:
@@ -353,18 +365,26 @@ def stream(body: ChatRequest) -> Iterator[str]:
                     assistant_message_id,
                 )
             finally:
-                out.put(None)
+                await out.put(None)
 
-    threading.Thread(target=_producer, daemon=True).start()
+    producer_task = asyncio.create_task(_producer())
 
-    def _iter() -> Iterator[str]:
+    try:
         while True:
-            ev = out.get()
+            if await is_disconnected():
+                return
+            try:
+                ev = await asyncio.wait_for(out.get(), timeout=0.2)
+            except asyncio.TimeoutError:
+                continue
             if ev is None:
                 return
             yield ev
-
-    return _iter()
+    finally:
+        if not producer_task.done():
+            producer_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await producer_task
 
 
 def list_chats() -> list[ChatSummaryPublic]:

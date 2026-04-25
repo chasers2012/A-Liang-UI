@@ -12,7 +12,7 @@ from app.chat.schemas import (
     ChatSummaryPublic,
     LlmSettings,
 )
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -29,10 +29,10 @@ def put_llm_settings(body: LlmSettings) -> LlmSettings:
 
 
 @router.post("/message")
-def chat_stream(body: ChatRequest) -> StreamingResponse:
+def chat_stream(body: ChatRequest, request: Request) -> StreamingResponse:
     """SSE (``text/event-stream``): ``event:`` = stream kind; ``data:`` = JSON payload only."""
     try:
-        stream = controller.stream(body)
+        stream = controller.stream_async(body, is_disconnected=request.is_disconnected)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return StreamingResponse(

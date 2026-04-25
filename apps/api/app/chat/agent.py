@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import AsyncIterable, Iterable
 from typing import Any
 
 from app.chat.agents.main_agent import create_main_agent
@@ -92,7 +92,6 @@ def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseM
 
 def _iter_stream_events_from_mode_data(  # noqa: C901
     chunk_data: tuple[AnyMessage, dict[str, Any]],
-    pending_tool_names: dict[str, str],
     emitted_tool_event_keys: set[tuple[str, str]],
 ) -> Iterable[StreamEventAny]:
 
@@ -108,7 +107,6 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
             for tc in token.tool_call_chunks:
                 name = tc.get("name")
                 tc_id = tc.get("id")
-                pending_tool_names[tc_id] = name
                 event_key = ("start", tc_id)
                 if event_key in emitted_tool_event_keys:
                     continue
@@ -160,12 +158,12 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     return
 
 
-def stream_event_iter_for_chat(
+async def stream_event_aiter_for_chat(
     llm: Any,
     *,
     chat_messages: list[ChatMessageIn],
     max_tool_rounds: int = _MAX_TOOL_ROUNDS,
-) -> Iterable[StreamEventAny]:
+) -> AsyncIterable[StreamEventAny]:
     lc_messages = _lc_messages_from_chat_messages(chat_messages)
 
     try:
@@ -175,9 +173,8 @@ def stream_event_iter_for_chat(
         return
 
     try:
-        pending_tool_names: dict[str, str] = {}
         emitted_tool_event_keys: set[tuple[str, str]] = set()
-        for chunk in agent.stream(
+        async for chunk in agent.astream(
             {"messages": lc_messages},
             {"recursion_limit": max_tool_rounds * 2},
             stream_mode=["messages"],
@@ -188,12 +185,11 @@ def stream_event_iter_for_chat(
                 continue
             if chunk.get("type") != "messages":
                 continue
-
-            yield from _iter_stream_events_from_mode_data(
+            for event in _iter_stream_events_from_mode_data(
                 chunk.get("data"),
-                pending_tool_names,
                 emitted_tool_event_keys,
-            )
+            ):
+                yield event
         yield DoneEvent()
     except Exception as e:
         yield ErrorEvent(payload=f"LLM 调用失败：{e}")

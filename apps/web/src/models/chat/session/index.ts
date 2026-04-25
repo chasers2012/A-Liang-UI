@@ -3,6 +3,7 @@ import { atom, type Setter } from 'jotai';
 import { archiveAgentChat, createAgentChat, listAgentChats, postAgentChatStream, renameAgentChat } from '@/api/chat';
 import type { ChatMessagePublic } from '@/models/agent-llm/dto';
 import {
+  chatAbortControllerAtom,
   chatErrorAtom,
   chatHydratedAtom,
   chatInputAtom,
@@ -45,6 +46,7 @@ import { ApiError } from '@/api/client';
 
 export {
   activeUserMessageIdsAtom,
+  chatAbortControllerAtom,
   chatErrorAtom,
   chatHydratedAtom,
   chatInputAtom,
@@ -102,6 +104,31 @@ function rollbackOptimisticSend(set: Setter, targetSessionId: string, userId: st
   set(messagesAtomFamily(userId), undefined);
   set(messagesAtomFamily(assistantId), undefined);
   userMessageReplieIdsAtomFamily.remove(userId);
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+function handleSendChatMessageError(
+  set: Setter,
+  payload: {
+    error: unknown;
+    hasServerMessageIds: boolean;
+    sessionId: string;
+    userId: string;
+    assistantId: string;
+    trimmedInput: string;
+  },
+): void {
+  const { error, hasServerMessageIds, sessionId, userId, assistantId, trimmedInput } = payload;
+  if (hasServerMessageIds) return;
+
+  if (!isAbortError(error)) {
+    set(chatErrorAtom, error instanceof ApiError ? error.message : '请求失败，请检查 API 与网络。');
+  }
+  rollbackOptimisticSend(set, sessionId, userId, assistantId);
+  set(chatInputAtom, trimmedInput);
 }
 
 export const hydrateChatStateAtom = atom(null, async (get, set) => {
@@ -165,6 +192,12 @@ export const archiveChatAtom = atom(null, async (get, set, sessionId: string) =>
   if (fallback) await set(sessionDetailAtomFamily(fallback));
 });
 
+export const stopChatMessageAtom = atom(null, (get, set) => {
+  if (!get(chatIsSendingAtom)) return;
+  get(chatAbortControllerAtom)?.abort();
+  set(chatAbortControllerAtom, null);
+});
+
 export const sendChatMessageAtom = atom(null, async (get, set) => {
   const trimmed = get(chatInputAtom).trim();
   if (!trimmed || get(chatIsSendingAtom)) return;
@@ -195,10 +228,13 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   };
   let streamUserId = provisionalUserId;
   let streamAssistantId = provisionalAssistantId;
+  let hasServerMessageIds = false;
+  const abortController = new AbortController();
 
   set(chatErrorAtom, null);
   set(chatInputAtom, '');
   set(chatIsSendingAtom, true);
+  set(chatAbortControllerAtom, abortController);
   set(chatStreamingReplyIdAtom, provisionalAssistantId);
   set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
   set(messagesAtomFamily(userTurn.id), userTurn);
@@ -215,8 +251,10 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     await postAgentChatStream(
       { session_id: sessionId, message: payloadMessage },
       {
+        signal: abortController.signal,
         onMessageIds: (ids) => {
           if (!ids.user || !ids.assistant) return;
+          hasServerMessageIds = true;
           set(remapPendingChatMessageIdsAtom, {
             sessionId,
             fromUser: streamUserId,
@@ -266,10 +304,16 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
       }
     }
   } catch (e) {
-    set(chatErrorAtom, e instanceof ApiError ? e.message : '请求失败，请检查 API 与网络。');
-    rollbackOptimisticSend(set, sessionId, streamUserId, streamAssistantId);
-    set(chatInputAtom, trimmed);
+    handleSendChatMessageError(set, {
+      error: e,
+      hasServerMessageIds,
+      sessionId,
+      userId: streamUserId,
+      assistantId: streamAssistantId,
+      trimmedInput: trimmed,
+    });
   } finally {
+    set(chatAbortControllerAtom, null);
     set(chatIsSendingAtom, false);
     set(chatStreamingReplyIdAtom, null);
   }
