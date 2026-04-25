@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -15,12 +15,8 @@ export function ThemeToggle() {
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const isDark = resolvedTheme === "dark";
-  const label = mounted
-    ? isDark
-      ? "切换为浅色"
-      : "切换为深色"
-    : "切换主题";
+  const isDark = resolvedTheme === 'dark';
+  const label = mounted ? (isDark ? '切换为浅色' : '切换为深色') : '切换主题';
 
   return (
     <Button
@@ -28,7 +24,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       className="shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={label}
       title={label}
       disabled={!mounted}

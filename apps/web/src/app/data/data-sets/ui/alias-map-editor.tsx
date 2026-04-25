@@ -1,19 +1,12 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 export type AliasMapRow = {
   /** 物理列名（数据源字段名） */
@@ -50,10 +43,7 @@ export function depsFromAliasRows(rows: AliasMapRow[]): string[] {
 }
 
 /** 将物理列清单与已有映射合并成完整行（用于有字段列表时的勾选 UI）。 */
-export function mergePhysicalColumns(
-  physicalColumns: string[],
-  prev: AliasMapRow[],
-): AliasMapRow[] {
+export function mergePhysicalColumns(physicalColumns: string[], prev: AliasMapRow[]): AliasMapRow[] {
   const colToFactor = new Map<string, string>();
   for (const r of prev) {
     if (r.enabled === false) continue;
@@ -63,7 +53,7 @@ export function mergePhysicalColumns(
   }
   return physicalColumns.map((column) => ({
     column,
-    factor: colToFactor.get(column) ?? "",
+    factor: colToFactor.get(column) ?? '',
     enabled: colToFactor.has(column),
   }));
 }
@@ -77,13 +67,7 @@ type Props = {
   onRemoveRow: (index: number) => void;
 };
 
-export function AliasMapEditor({
-  physicalColumns,
-  rows,
-  onChangeRows,
-  onAddRow,
-  onRemoveRow,
-}: Props) {
+export function AliasMapEditor({ physicalColumns, rows, onChangeRows, onAddRow, onRemoveRow }: Props) {
   const [showAllPhysical, setShowAllPhysical] = useState(true);
 
   const hasPhysicalList = physicalColumns.length > 0;
@@ -105,13 +89,8 @@ export function AliasMapEditor({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Label className="text-sm font-medium">字段映射（数据集 alias）</Label>
         {hasPhysicalList ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowAllPhysical((v) => !v)}
-          >
-            {showAllPhysical ? "仅显示已启用" : "显示全部"}
+          <Button type="button" variant="secondary" size="sm" onClick={() => setShowAllPhysical((v) => !v)}>
+            {showAllPhysical ? '仅显示已启用' : '显示全部'}
           </Button>
         ) : (
           <Button type="button" variant="outline" size="sm" onClick={onAddRow}>
@@ -155,10 +134,7 @@ export function AliasMapEditor({
                       <TableCell className="pl-3">
                         <input
                           type="checkbox"
-                          className={cn(
-                            "size-4 rounded border border-input accent-primary",
-                            "cursor-pointer",
-                          )}
+                          className={cn('size-4 rounded border border-input accent-primary', 'cursor-pointer')}
                           checked={row.enabled !== false}
                           onChange={(e) => {
                             const on = e.target.checked;
@@ -172,9 +148,7 @@ export function AliasMapEditor({
                         />
                       </TableCell>
                       <TableCell>
-                        <span className="font-mono text-xs text-foreground/90">
-                          {row.column}
-                        </span>
+                        <span className="font-mono text-xs text-foreground/90">{row.column}</span>
                       </TableCell>
                       <TableCell className="pr-2">
                         <Input
@@ -237,4 +211,3 @@ export function AliasMapEditor({
     </div>
   );
 }
-

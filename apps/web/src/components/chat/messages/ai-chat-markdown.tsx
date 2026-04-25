@@ -1,11 +1,9 @@
-"use client";
+'use client';
 
-import { IncremarkContent } from "@incremark/react";
-import { memo } from "react";
+import { IncremarkContent } from '@incremark/react';
+import { memo } from 'react';
 
-import { cn } from "@/lib/utils";
-
-
+import { cn } from '@/lib/utils';
 
 export const AiChatMarkdown = memo(function AiChatMarkdown({
   content,
@@ -15,7 +13,7 @@ export const AiChatMarkdown = memo(function AiChatMarkdown({
   className?: string;
 }) {
   return (
-    <div className={cn("ai-chat-md wrap-break-word text-sm leading-relaxed", className)}>
+    <div className={cn('ai-chat-md wrap-break-word text-sm leading-relaxed', className)}>
       <IncremarkContent content={content} />
     </div>
   );

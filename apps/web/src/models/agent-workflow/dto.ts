@@ -1,5 +1,5 @@
-import type { WorkflowNodeTypeDefinition } from "@/components/workflow-graph";
-import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import type { WorkflowNodeTypeDefinition } from '@/components/workflow-graph';
+import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 
 export type AgentWorkflowSummaryPublic = {
   id: string;

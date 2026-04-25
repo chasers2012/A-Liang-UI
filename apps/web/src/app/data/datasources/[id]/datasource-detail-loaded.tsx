@@ -1,38 +1,30 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Pencil, Trash2, Zap } from "lucide-react";
+import Link from 'next/link';
+import { Pencil, Trash2, Zap } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Page } from "@/components/page";
-import { cn } from "@/lib/utils";
-import type { DatasourceDetailState } from "@/models/datasource/detail.atom";
-import type { DataSourcePublic } from "@/models/datasource/dto";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Page } from '@/components/page';
+import { cn } from '@/lib/utils';
+import type { DatasourceDetailState } from '@/models/datasource/detail.atom';
+import type { DataSourcePublic } from '@/models/datasource/dto';
 
-import { datasourceSummary } from "../datasource-summary";
-import { DeleteDatasourceDialog } from "../ui/delete-datasource-dialog";
+import { datasourceSummary } from '../datasource-summary';
+import { DeleteDatasourceDialog } from '../ui/delete-datasource-dialog';
 
 function formatIso(iso: string): string {
-  return iso.replace("T", " ").replace("+00:00", " UTC");
+  return iso.replace('T', ' ').replace('+00:00', ' UTC');
 }
 
-type SetDetailState = (
-  update: (prev: DatasourceDetailState) => DatasourceDetailState,
-) => void;
+type SetDetailState = (update: (prev: DatasourceDetailState) => DatasourceDetailState) => void;
 
 type Props = {
   ds: DataSourcePublic;
   id: string;
   busy: boolean;
-  testHint: DatasourceDetailState["testHint"];
+  testHint: DatasourceDetailState['testHint'];
   deleteOpen: boolean;
   deleting: boolean;
   setState: SetDetailState;
@@ -83,7 +75,7 @@ export function DatasourceDetailLoaded({
           </Button>
           <Link
             href={`/data/datasources/${encodeURIComponent(id)}/edit`}
-            className={cn(buttonVariants({ variant: "default" }), "gap-1.5")}
+            className={cn(buttonVariants({ variant: 'default' }), 'gap-1.5')}
           >
             <Pencil className="size-4" />
             编辑
@@ -101,7 +93,7 @@ export function DatasourceDetailLoaded({
       }
     >
       {testHint && (
-        <Alert variant={testHint.ok ? "default" : "destructive"}>
+        <Alert variant={testHint.ok ? 'default' : 'destructive'}>
           <AlertTitle>连接测试</AlertTitle>
           <AlertDescription>{testHint.message}</AlertDescription>
         </Alert>

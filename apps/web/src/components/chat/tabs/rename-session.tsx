@@ -1,24 +1,15 @@
-"use client";
+'use client';
 
-import { memo, useCallback, useState } from "react";
-import { Pencil } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { memo, useCallback, useState } from 'react';
+import { Pencil } from 'lucide-react';
+import { useAtomValue, useSetAtom } from 'jotai';
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  chatSessionSummaryAtomFamily,
-  renameChatAtom,
-} from "@/models/chat/session";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { chatSessionSummaryAtomFamily, renameChatAtom } from '@/models/chat/session';
 
-import { ActiveSessionSnapshotTrigger } from "./active-session-snapshot-trigger";
+import { ActiveSessionSnapshotTrigger } from './active-session-snapshot-trigger';
 
 const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
   sessionId,
@@ -51,7 +42,7 @@ const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
             value={renameValue}
             onChange={(ev) => setRenameValue(ev.target.value)}
             onKeyDown={(ev) => {
-              if (ev.key !== "Enter") return;
+              if (ev.key !== 'Enter') return;
               ev.preventDefault();
               submitRename();
             }}
@@ -64,11 +55,7 @@ const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
         <Button type="button" variant="outline" onClick={onClose}>
           取消
         </Button>
-        <Button
-          type="button"
-          onClick={submitRename}
-          disabled={!active || !renameValue.trim()}
-        >
+        <Button type="button" onClick={submitRename} disabled={!active || !renameValue.trim()}>
           保存
         </Button>
       </DialogFooter>
@@ -76,11 +63,7 @@ const RenameSessionDialogForm = memo(function RenameSessionDialogForm({
   );
 });
 
-export const RenameButton = memo(function RenameButton({
-  disabled,
-}: {
-  disabled: boolean;
-}) {
+export const RenameButton = memo(function RenameButton({ disabled }: { disabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [payload, setPayload] = useState<{
     sessionId: string;
@@ -106,11 +89,7 @@ export const RenameButton = memo(function RenameButton({
 
   return (
     <>
-      <ActiveSessionSnapshotTrigger
-        disabled={disabled}
-        onRequestOpen={onRequestOpen}
-        ariaLabel="重命名当前会话"
-      >
+      <ActiveSessionSnapshotTrigger disabled={disabled} onRequestOpen={onRequestOpen} ariaLabel="重命名当前会话">
         <Pencil className="size-4" aria-hidden />
       </ActiveSessionSnapshotTrigger>
       <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,8 +1,8 @@
-import type { AssistantBlock, ChatToolCallDisplay } from "../chat/types";
+import type { AssistantBlock, ChatToolCallDisplay } from '../chat/types';
 
-export type { TextBlockPublic } from "../chat/types";
+export type { TextBlockPublic } from '../chat/types';
 
-export type LlmProvider = "ollama" | "openai";
+export type LlmProvider = 'ollama' | 'openai';
 
 /** 与 FastAPI ``AgentLlmSettings`` 一致。 */
 export type LlmSettingsPublic = {
@@ -17,12 +17,12 @@ export type LlmSettingsPublic = {
   ollama_reasoning: boolean | null;
 };
 
-export type ChatRolePublic = "user" | "assistant" | "system";
+export type ChatRolePublic = 'user' | 'assistant' | 'system';
 
 /** 与后端 ``ChatToolCallPublic`` 一致（同 {@link ChatToolCallDisplay}）。 */
 export type ChatToolCallPublic = ChatToolCallDisplay;
 
-export type ToolBlockPublic = { kind: "tool"; call: ChatToolCallPublic };
+export type ToolBlockPublic = { kind: 'tool'; call: ChatToolCallPublic };
 
 /** 与后端 ``AssistantBlockPublic`` 一致（同 {@link AssistantBlock}）。 */
 export type AssistantBlockPublic = AssistantBlock;
@@ -38,7 +38,7 @@ export type ChatMessagePublic = {
 /** ``POST /chat/message`` 请求体中的单条 user 消息：``id`` 可省略（由服务端 SSE ``message_ids`` 分配）。 */
 export type ChatRequestMessage = {
   id?: string | null;
-  role: "user";
+  role: 'user';
   blocks: AssistantBlockPublic[];
 };
 

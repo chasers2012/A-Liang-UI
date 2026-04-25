@@ -1,28 +1,28 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono, Public_Sans } from 'next/font/google';
 
-import { AppShell } from "@/components/app-shell";
-import { Providers } from "@/components/providers";
+import { AppShell } from '@/components/app-shell';
+import { Providers } from '@/components/providers';
 
-import "./globals.css";
-import "@incremark/theme/styles.css";
-import { cn } from "@/lib/utils";
+import './globals.css';
+import '@incremark/theme/styles.css';
+import { cn } from '@/lib/utils';
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "quant-agent",
-  description: "Next.js + Python monorepo",
+  title: 'quant-agent',
+  description: 'Next.js + Python monorepo',
 };
 
 export default function RootLayout({
@@ -34,7 +34,13 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("overflow-hidden h-full antialiased", geistSans.variable, geistMono.variable, "font-sans", publicSans.variable)}
+      className={cn(
+        'overflow-hidden h-full antialiased',
+        geistSans.variable,
+        geistMono.variable,
+        'font-sans',
+        publicSans.variable,
+      )}
     >
       <body className="overflow-hidden flex min-h-dvh flex-col h-screen w-screen">
         <Providers>

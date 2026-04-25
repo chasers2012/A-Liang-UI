@@ -1,27 +1,24 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useAtom, useSetAtom } from "jotai";
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useAtom, useSetAtom } from 'jotai';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
-import { Page } from "@/components/page";
-import { useEffectMicrotask } from "@/hooks/use-effect-microtask";
-import { cn } from "@/lib/utils";
-import {
-  datasourceDetailAtomFamily,
-  loadDatasourceDetailAtomFamily,
-} from "@/models/datasource/detail.atom";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
+import { Page } from '@/components/page';
+import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
+import { cn } from '@/lib/utils';
+import { datasourceDetailAtomFamily, loadDatasourceDetailAtomFamily } from '@/models/datasource/detail.atom';
 
-import { confirmDeleteDatasource, runDatasourceConnectionTest } from "./datasource-detail-actions";
-import { DatasourceDetailLoaded } from "./datasource-detail-loaded";
+import { confirmDeleteDatasource, runDatasourceConnectionTest } from './datasource-detail-actions';
+import { DatasourceDetailLoaded } from './datasource-detail-loaded';
 
 export default function DatasourceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
 
   const [state, setState] = useAtom(datasourceDetailAtomFamily(id));
   const load = useSetAtom(loadDatasourceDetailAtomFamily(id));
@@ -62,9 +59,9 @@ export default function DatasourceDetailPage() {
       <Page gap="sm">
         <Alert variant="destructive">
           <AlertTitle>无法加载数据源</AlertTitle>
-          <AlertDescription>{error ?? "未知错误"}</AlertDescription>
+          <AlertDescription>{error ?? '未知错误'}</AlertDescription>
         </Alert>
-        <Link href="/data/datasources" className={cn(buttonVariants({ variant: "outline" }))}>
+        <Link href="/data/datasources" className={cn(buttonVariants({ variant: 'outline' }))}>
           返回列表
         </Link>
       </Page>

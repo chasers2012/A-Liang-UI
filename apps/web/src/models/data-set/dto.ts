@@ -1,6 +1,6 @@
 /** 数据集 DTO（与后端 `/data-sets` API 契约一致）。 */
 
-import type { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 
 export interface DataSetDatasourceBindingPublic {
   datasource_id: string;

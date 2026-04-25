@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-import "./code-jar.css";
+import './code-jar.css';
 
 type CodeJarApi = {
   updateCode: (code: string, callOnUpdate?: boolean) => void;
@@ -13,7 +13,7 @@ type CodeJarApi = {
   toString: () => string;
 };
 
-export type CodeJarLanguage = "python";
+export type CodeJarLanguage = 'python';
 
 type CodeJarBaseProps = {
   id: string;
@@ -21,7 +21,7 @@ type CodeJarBaseProps = {
   className?: string;
   /** Prism grammar; more languages can be wired in `loadCodeJarWithHighlight`. */
   language?: CodeJarLanguage;
-  "aria-label"?: string;
+  'aria-label'?: string;
 };
 
 export type CodeJarProps = CodeJarBaseProps &
@@ -36,30 +36,25 @@ export type CodeJarProps = CodeJarBaseProps &
       }
   );
 
-async function loadCodeJarWithHighlight(
-  language: CodeJarLanguage,
-): Promise<{
-  CodeJar: typeof import("codejar").CodeJar;
+async function loadCodeJarWithHighlight(language: CodeJarLanguage): Promise<{
+  CodeJar: typeof import('codejar').CodeJar;
   highlight: (editor: HTMLElement) => void;
 }> {
-  const [{ CodeJar }, Prism] = await Promise.all([
-    import("codejar"),
-    import("prismjs"),
-  ]);
+  const [{ CodeJar }, Prism] = await Promise.all([import('codejar'), import('prismjs')]);
 
-  if (language === "python") {
-    await import("prismjs/components/prism-python");
+  if (language === 'python') {
+    await import('prismjs/components/prism-python');
     const grammar = Prism.default.languages.python;
     const highlight = (editor: HTMLElement) => {
-      const code = editor.textContent ?? "";
+      const code = editor.textContent ?? '';
       if (!code) {
-        editor.innerHTML = "";
+        editor.innerHTML = '';
         return;
       }
       if (!grammar) {
         return;
       }
-      editor.innerHTML = Prism.default.highlight(code, grammar, "python");
+      editor.innerHTML = Prism.default.highlight(code, grammar, 'python');
     };
     return { CodeJar, highlight };
   }
@@ -73,18 +68,9 @@ async function loadCodeJarWithHighlight(
  * the SSR graph.
  */
 export function CodeJar(props: CodeJarProps) {
-  const {
-    id,
-    value,
-    className,
-    language = "python",
-    "aria-label": ariaLabelProp,
-    readOnly = false,
-  } = props;
-  const onChange: (code: string) => void =
-    props.readOnly === true ? () => {} : props.onChange;
-  const ariaLabel =
-    ariaLabelProp ?? (language === "python" ? "Python 源码" : "Code editor");
+  const { id, value, className, language = 'python', 'aria-label': ariaLabelProp, readOnly = false } = props;
+  const onChange: (code: string) => void = props.readOnly === true ? () => {} : props.onChange;
+  const ariaLabel = ariaLabelProp ?? (language === 'python' ? 'Python 源码' : 'Code editor');
   const elRef = useRef<HTMLDivElement>(null);
   const jarRef = useRef<CodeJarApi | null>(null);
   const onChangeRef = useRef(onChange);
@@ -110,7 +96,7 @@ export function CodeJar(props: CodeJarProps) {
     void loadCodeJarWithHighlight(lang).then(({ CodeJar, highlight }) => {
       if (gen !== mountGenRef.current || !elRef.current) return;
       const j = CodeJar(elRef.current, highlight, {
-        tab: "  ",
+        tab: '  ',
         spellcheck: false,
       });
       if (cancelled) {
@@ -124,7 +110,7 @@ export function CodeJar(props: CodeJarProps) {
         onChangeRef.current(code);
       });
       if (readOnly && elRef.current) {
-        elRef.current.setAttribute("contenteditable", "false");
+        elRef.current.setAttribute('contenteditable', 'false');
       }
     });
 
@@ -151,11 +137,11 @@ export function CodeJar(props: CodeJarProps) {
       aria-readonly={readOnly || undefined}
       aria-label={ariaLabel}
       className={cn(
-        "code-jar-editor",
-        "min-h-[min(50vh,28rem)] w-full overflow-auto rounded-md border border-input px-3 py-2 font-mono text-xs leading-relaxed shadow-xs transition-[color,box-shadow] outline-none sm:min-h-88",
+        'code-jar-editor',
+        'min-h-[min(50vh,28rem)] w-full overflow-auto rounded-md border border-input px-3 py-2 font-mono text-xs leading-relaxed shadow-xs transition-[color,box-shadow] outline-none sm:min-h-88',
         readOnly
-          ? "cursor-default bg-muted/30 focus-visible:border-input focus-visible:ring-0 dark:bg-muted/20"
-          : "bg-transparent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30",
+          ? 'cursor-default bg-muted/30 focus-visible:border-input focus-visible:ring-0 dark:bg-muted/20'
+          : 'bg-transparent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30',
         className,
       )}
     />

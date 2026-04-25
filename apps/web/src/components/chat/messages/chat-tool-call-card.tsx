@@ -1,14 +1,13 @@
-"use client";
+'use client';
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from "lucide-react";
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from 'lucide-react';
 
-
-import type { ChatToolCallDisplay } from "@/models/chat/types";
-import { cn } from "@/lib/utils";
+import type { ChatToolCallDisplay } from '@/models/chat/types';
+import { cn } from '@/lib/utils';
 
 function formatJson(v: unknown): string {
-  if (v === undefined) return "";
+  if (v === undefined) return '';
   try {
     return JSON.stringify(v, null, 2);
   } catch {
@@ -16,57 +15,50 @@ function formatJson(v: unknown): string {
   }
 }
 
-
 const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDisplay['status'] }) {
-  return status === "running" ? (
-    <Loader2
-      className="size-3.5 shrink-0 animate-spin text-muted-foreground"
-      aria-hidden
-    />
-  ) : status === "ok" ? (
-    <CheckCircle2
-      className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
-      aria-hidden
-    />
+  return status === 'running' ? (
+    <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+  ) : status === 'ok' ? (
+    <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
   ) : (
     <XCircle className="size-3.5 shrink-0 text-destructive" aria-hidden />
-  )
+  );
 });
 
-const ToolCallHeader = memo(function ToolCallHeader({ name, status }: { name: ChatToolCallDisplay['name'], status: ChatToolCallDisplay['status'] }) {
+const ToolCallHeader = memo(function ToolCallHeader({
+  name,
+  status,
+}: {
+  name: ChatToolCallDisplay['name'];
+  status: ChatToolCallDisplay['status'];
+}) {
   return (
     <>
       <Wrench className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
-      <span className="font-mono text-foreground">{name || "(工具)"}</span>
+      <span className="font-mono text-foreground">{name || '(工具)'}</span>
       <span className="sr-only">工具调用状态：</span>
       <StatusIcon status={status} />
     </>
-  )
+  );
 });
 
 const ToolCallArgs = memo(function ToolCallArgs({ args }: { args: unknown }) {
-  const argsJson = useMemo(
-    () => formatJson(args),
-    [args],
-  );
+  const argsJson = useMemo(() => formatJson(args), [args]);
   return (
     <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
       {argsJson}
     </pre>
-  )
+  );
 });
 
 const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknown }) {
-  const resultJson = useMemo(
-    () => formatJson(result),
-    [result],
-  );
+  const resultJson = useMemo(() => formatJson(result), [result]);
 
   return (
     <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
       {resultJson}
     </pre>
-  )
+  );
 });
 
 export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
@@ -79,7 +71,7 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
     }
     initRef.current = true;
     setTimeout(() => {
-      setOpen(status === "running" || status === "error");
+      setOpen(status === 'running' || status === 'error');
     }, 0);
   });
 
@@ -91,8 +83,8 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
       >
         <ChevronRight
           className={cn(
-            "size-3.5 shrink-0 text-muted-foreground transition-transform duration-200",
-            open && "rotate-90",
+            'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-90',
           )}
           aria-hidden
         />
@@ -106,15 +98,13 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
               <ToolCallArgs args={args} />
             </div>
           ) : null}
-          {status === "ok" && result !== undefined ? (
+          {status === 'ok' && result !== undefined ? (
             <div>
               <span className="text-[11px] text-muted-foreground">结果</span>
               <ToolCallResult result={result} />
             </div>
           ) : null}
-          {status === "error" && error ? (
-            <p className="text-[11px] leading-relaxed text-destructive">{error}</p>
-          ) : null}
+          {status === 'error' && error ? <p className="text-[11px] leading-relaxed text-destructive">{error}</p> : null}
         </div>
       )}
     </div>

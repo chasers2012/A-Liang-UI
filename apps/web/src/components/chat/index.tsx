@@ -1,28 +1,24 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
-import {
-
-  chatErrorAtom,
-  chatHydratedAtom,
-  hydrateChatStateAtom,
-} from "@/models/chat/session";
-import { AiChatComposer } from "@/components/chat/chat-composer";
-import { AiChatMessages } from "@/components/chat/messages";
-import { ChatTabs } from "./tabs";
-import { GeneratingIndicator } from "./messages/generating-indicator";
+import { useEffect } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
+import { chatErrorAtom, chatHydratedAtom, hydrateChatStateAtom } from '@/models/chat/session';
+import { AiChatComposer } from '@/components/chat/chat-composer';
+import { AiChatMessages } from '@/components/chat/messages';
+import { ChatTabs } from './tabs';
+import { GeneratingIndicator } from './messages/generating-indicator';
 
 function ChatError() {
   const errorText = useAtomValue(chatErrorAtom);
   if (!errorText) {
-    return null
+    return null;
   }
-  return <p className="shrink-0 px-6 text-sm text-destructive" role="alert">
-    {errorText}
-  </p>
+  return (
+    <p className="shrink-0 px-6 text-sm text-destructive" role="alert">
+      {errorText}
+    </p>
+  );
 }
-
 
 function HydrateChatState() {
   const hydrated = useAtomValue(chatHydratedAtom);
@@ -35,8 +31,6 @@ function HydrateChatState() {
 }
 
 export function HomeAiChat() {
-
-
   return (
     <div className="flex flex-1 flex-col overflow-hidden w-full h-full">
       <HydrateChatState />

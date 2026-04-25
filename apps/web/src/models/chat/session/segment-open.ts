@@ -1,9 +1,9 @@
-import { atom, type SetStateAction } from "jotai";
-import { atomFamily } from "jotai-family";
-import { startTransition } from "react";
-import { activeSessionIdAtom } from "./active-session";
-import { sessionUserMessageIdsAtomFamily } from "./session-detail";
-import { atomEffect } from "jotai-effect";
+import { atom, type SetStateAction } from 'jotai';
+import { atomFamily } from 'jotai-family';
+import { startTransition } from 'react';
+import { activeSessionIdAtom } from './active-session';
+import { sessionUserMessageIdsAtomFamily } from './session-detail';
+import { atomEffect } from 'jotai-effect';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const segmentOpenAtomFamily = atomFamily((_id: string) => {
@@ -30,16 +30,16 @@ const stableDelayMs = 20;
 
 const scrollAfterDomSettles = (target: HTMLElement) => {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-  const container = document.getElementById("chat-messages-container");
+  const container = document.getElementById('chat-messages-container');
   if (!container) return;
   const observer = new MutationObserver(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       requestAnimationFrame(() => {
         target.scrollIntoView({
-          behavior: "auto",
-          block: "nearest",
-          inline: "nearest",
+          behavior: 'auto',
+          block: 'nearest',
+          inline: 'nearest',
         });
       });
       observer.disconnect();
@@ -58,9 +58,9 @@ const scrollAfterDomSettles = (target: HTMLElement) => {
   debounceTimer = setTimeout(() => {
     requestAnimationFrame(() => {
       target.scrollIntoView({
-        behavior: "auto",
-        block: "nearest",
-        inline: "nearest",
+        behavior: 'auto',
+        block: 'nearest',
+        inline: 'nearest',
       });
     });
     observer.disconnect();
@@ -68,10 +68,7 @@ const scrollAfterDomSettles = (target: HTMLElement) => {
   }, stableDelayMs);
 };
 
-export function openLatestSegmentAndScroll(
-  userMessageIds: string[],
-  setOpen: (id: string) => void,
-): void {
+export function openLatestSegmentAndScroll(userMessageIds: string[], setOpen: (id: string) => void): void {
   if (!userMessageIds?.length) return;
 
   const lastMessageIds = userMessageIds.slice(-1);
@@ -97,7 +94,7 @@ export function openLatestSegmentAndScroll(
       scrollAfterDomSettles(el);
     });
 
-    const container = document.getElementById("chat-messages-container");
+    const container = document.getElementById('chat-messages-container');
     if (!container) return;
     appearObserver.observe(container, {
       childList: true,

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 
-import * as echarts from "echarts";
+import * as echarts from 'echarts';
 
 export type EchartsOptionChartProps = {
   option: unknown;
@@ -20,9 +20,7 @@ export function EchartsOptionChart(props: EchartsOptionChartProps) {
   // 只用于触发 setOption 更新；option 可能很大，避免多余 effect 依赖导致反复加载 echarts。
   const optionKey = useMemo(() => {
     try {
-      return typeof option === "object" && option != null
-        ? JSON.stringify(option)
-        : String(option);
+      return typeof option === 'object' && option != null ? JSON.stringify(option) : String(option);
     } catch {
       return String(option);
     }
@@ -37,7 +35,7 @@ export function EchartsOptionChart(props: EchartsOptionChartProps) {
     if (!chartRef.current) {
       chartRef.current = echarts.init(root);
 
-      if (typeof ResizeObserver !== "undefined") {
+      if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => chartRef.current?.resize());
         resizeObserver.observe(root);
       }
@@ -61,11 +59,7 @@ export function EchartsOptionChart(props: EchartsOptionChartProps) {
   }, [optionKey]);
 
   return (
-    <div
-      ref={rootRef}
-      className={className ?? "relative h-[360px] min-h-[360px] w-full min-w-0"}
-      style={style}
-    >
+    <div ref={rootRef} className={className ?? 'relative h-[360px] min-h-[360px] w-full min-w-0'} style={style}>
       {error ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 p-4 text-sm text-destructive">
           {error}
@@ -74,4 +68,3 @@ export function EchartsOptionChart(props: EchartsOptionChartProps) {
     </div>
   );
 }
-

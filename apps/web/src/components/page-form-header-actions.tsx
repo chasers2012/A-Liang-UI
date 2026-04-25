@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useContext, useLayoutEffect } from "react";
+import Link from 'next/link';
+import { useContext, useLayoutEffect } from 'react';
 
-import { PageAppHeaderContext } from "@/components/page-app-header-context";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { PageAppHeaderContext } from '@/components/page-app-header-context';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export function PageFormHeaderActions({
   formId,
   submitting,
   submitDisabled = false,
-  submitLabel = "保存",
-  submittingLabel = "保存中…",
+  submitLabel = '保存',
+  submittingLabel = '保存中…',
   cancelHref,
-  cancelLabel = "取消",
+  cancelLabel = '取消',
 }: {
   formId: string;
   submitting: boolean;
@@ -37,19 +37,11 @@ export function PageFormHeaderActions({
   return (
     <>
       {cancelHref != null ? (
-        <Link
-          href={cancelHref}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-        >
+        <Link href={cancelHref} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
           {cancelLabel}
         </Link>
       ) : null}
-      <Button
-        type="submit"
-        form={formId}
-        disabled={submitting || submitDisabled}
-        size="sm"
-      >
+      <Button type="submit" form={formId} disabled={submitting || submitDisabled} size="sm">
         {submitting ? submittingLabel : submitLabel}
       </Button>
     </>

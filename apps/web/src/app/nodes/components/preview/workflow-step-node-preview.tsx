@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -11,22 +11,19 @@ import {
   useReactFlow,
   type FitViewOptions,
   type Node,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-import { cn } from "@/lib/utils";
-import { WorkflowGraphContextProvider } from "@/components/workflow-graph/workflow-graph-context";
+import { cn } from '@/lib/utils';
+import { WorkflowGraphContextProvider } from '@/components/workflow-graph/workflow-graph-context';
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
-} from "@/components/workflow-graph/reactflow/workflow-graph-reactflow-defaults";
-import type { WorkflowStepNodeData } from "@/components/workflow-graph/reactflow/node/nodes";
-import type {
-  WorkflowNodeInputSpec,
-  WorkflowSocketDefinition,
-} from "@/components/workflow-graph/types";
+} from '@/components/workflow-graph/reactflow/workflow-graph-reactflow-defaults';
+import type { WorkflowStepNodeData } from '@/components/workflow-graph/reactflow/node/nodes';
+import type { WorkflowNodeInputSpec, WorkflowSocketDefinition } from '@/components/workflow-graph/types';
 
-const PREVIEW_NODE_ID = "workflow-node-preview";
+const PREVIEW_NODE_ID = 'workflow-node-preview';
 const PREVIEW_FIT_VIEW: FitViewOptions = {
   padding: 0.32,
   duration: 220,
@@ -68,7 +65,7 @@ function Flow(props: WorkflowStepNodePreviewProps) {
   const { label, description, inputs, outputs, params = {}, selected = true } = props;
   const nodeData: WorkflowStepNodeData = useMemo(
     () => ({
-      backendType: "preview",
+      backendType: 'preview',
       label,
       description: description?.trim() ? description.trim() : undefined,
       inputs,
@@ -80,16 +77,14 @@ function Flow(props: WorkflowStepNodePreviewProps) {
   const nextNode: Node<WorkflowStepNodeData> = useMemo(
     () => ({
       id: PREVIEW_NODE_ID,
-      type: "workflowStep",
+      type: 'workflowStep',
       position: { x: 0, y: 0 },
       selected,
       data: nodeData,
     }),
     [nodeData, selected],
   );
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowStepNodeData>([
-    nextNode,
-  ]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowStepNodeData>([nextNode]);
   const fitKey = useMemo(
     () => JSON.stringify({ label, description, inputs, outputs, params, selected }),
     [label, description, inputs, outputs, params, selected],
@@ -130,7 +125,7 @@ export function WorkflowStepNodePreview(props: WorkflowStepNodePreviewProps) {
   return (
     <div
       className={cn(
-        "workflow-step-node-preview relative h-[min(400px,55vh)] w-full min-h-[200px] overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/15",
+        'workflow-step-node-preview relative h-[min(400px,55vh)] w-full min-h-[200px] overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/15',
         className,
       )}
     >
@@ -142,4 +137,3 @@ export function WorkflowStepNodePreview(props: WorkflowStepNodePreviewProps) {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-import type { Node } from "reactflow";
+import type { Node } from 'reactflow';
 
 export type ResolveCollisionsOptions = {
   /**
@@ -40,22 +40,13 @@ type CollisionState = {
 };
 
 function clampFinite(n: unknown, fallback: number): number {
-  const v = typeof n === "number" ? n : Number(n);
+  const v = typeof n === 'number' ? n : Number(n);
   return Number.isFinite(v) ? v : fallback;
 }
 
-function rectOfNode(
-  n: Node,
-  fallback: { width: number; height: number },
-): Rect {
-  const w = clampFinite(
-    (n as unknown as { width?: number }).width,
-    fallback.width,
-  );
-  const h = clampFinite(
-    (n as unknown as { height?: number }).height,
-    fallback.height,
-  );
+function rectOfNode(n: Node, fallback: { width: number; height: number }): Rect {
+  const w = clampFinite((n as unknown as { width?: number }).width, fallback.width);
+  const h = clampFinite((n as unknown as { height?: number }).height, fallback.height);
   const x = clampFinite(n.position?.x, 0);
   const y = clampFinite(n.position?.y, 0);
   return { x, y, w, h };
@@ -129,11 +120,7 @@ function applySeparation(
   return true;
 }
 
-function tryResolvePair(
-  state: CollisionState,
-  aId: string,
-  bId: string,
-): boolean {
+function tryResolvePair(state: CollisionState, aId: string, bId: string): boolean {
   const nA = state.byId.get(aId);
   const nB = state.byId.get(bId);
   if (!nA || !nB) return false;
@@ -161,15 +148,10 @@ function tryResolvePair(
   return applySeparation(state, aId, bId, pushX, sign, sep);
 }
 
-function buildState(
-  nodes: Node[],
-  opts: ResolveCollisionsOptions,
-): CollisionState {
+function buildState(nodes: Node[], opts: ResolveCollisionsOptions): CollisionState {
   return {
     byId: new Map(nodes.map((n) => [n.id, n])),
-    pos: new Map(
-      nodes.map((n) => [n.id, { x: n.position.x, y: n.position.y }]),
-    ),
+    pos: new Map(nodes.map((n) => [n.id, { x: n.position.x, y: n.position.y }])),
     ids: nodes.map((n) => n.id),
     margin: opts.margin ?? 16,
     overlapThreshold: opts.overlapThreshold ?? 0.15,
@@ -194,10 +176,7 @@ function withUpdatedPositions(nodes: Node[], pos: Map<string, Pos>): Node[] {
  * - 以节点 `position` + 节点测量宽高组成矩形
  * - 迭代地把相交矩形沿最小位移方向推开
  */
-export function resolveCollisions(
-  nodes: Node[],
-  opts: ResolveCollisionsOptions = {},
-): Node[] {
+export function resolveCollisions(nodes: Node[], opts: ResolveCollisionsOptions = {}): Node[] {
   const maxIterations = opts.maxIterations ?? 60;
 
   if (nodes.length <= 1) return nodes;

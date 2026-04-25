@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useParams } from "next/navigation";
+import { useParams } from 'next/navigation';
 
-import { DataSetForm } from "../../ui/data-set-form";
+import { DataSetForm } from '../../ui/data-set-form';
 
 export default function EditDataSetPage() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
-  const id = Array.isArray(raw) ? raw[0] ?? "" : raw ?? "";
+  const id = Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '');
 
   if (!id) {
     return (

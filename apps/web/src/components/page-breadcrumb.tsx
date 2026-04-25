@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import Link from "next/link";
+import * as React from 'react';
+import Link from 'next/link';
 
 import {
   Breadcrumb,
@@ -10,8 +10,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/breadcrumb';
+import { cn } from '@/lib/utils';
 
 export type PageBreadcrumbItem = {
   href?: string;
@@ -21,36 +21,27 @@ export type PageBreadcrumbItem = {
 /** 通用面包屑；末项无 href 表示当前页 */
 export const PageBreadcrumb = React.memo(function PageBreadcrumb({
   items,
-  variant = "default",
+  variant = 'default',
 }: {
   items: PageBreadcrumbItem[];
   /** header：顶栏用大号字号 */
-  variant?: "default" | "header";
+  variant?: 'default' | 'header';
 }) {
   if (items.length === 0) return null;
-  const header = variant === "header";
+  const header = variant === 'header';
   return (
     <Breadcrumb aria-label="面包屑" className="min-w-0 flex-1 -ml-0.5">
-      <BreadcrumbList
-        className={cn(
-          header
-            ? "gap-2 text-base md:text-lg leading-snug"
-            : "gap-1 text-sm",
-        )}
-      >
+      <BreadcrumbList className={cn(header ? 'gap-2 text-base md:text-lg leading-snug' : 'gap-1 text-sm')}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
-          const hasLink =
-            item.href != null && item.href !== "" && !isLast;
+          const hasLink = item.href != null && item.href !== '' && !isLast;
           return (
             <React.Fragment key={`${index}-${item.label}`}>
               {index > 0 ? (
                 <BreadcrumbSeparator
                   className={cn(
-                    "shrink-0 text-muted-foreground/50",
-                    header
-                      ? "[&>svg]:size-4 md:[&>svg]:size-4.5"
-                      : "[&>svg]:size-3.5",
+                    'shrink-0 text-muted-foreground/50',
+                    header ? '[&>svg]:size-4 md:[&>svg]:size-4.5' : '[&>svg]:size-3.5',
                   )}
                 />
               ) : null}
@@ -59,8 +50,8 @@ export const PageBreadcrumb = React.memo(function PageBreadcrumb({
                   <BreadcrumbLink
                     render={<Link href={item.href!} />}
                     className={cn(
-                      "truncate rounded-md px-0.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      header && "font-medium",
+                      'truncate rounded-md px-0.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      header && 'font-medium',
                     )}
                   >
                     {item.label}
@@ -68,10 +59,8 @@ export const PageBreadcrumb = React.memo(function PageBreadcrumb({
                 ) : isLast ? (
                   <BreadcrumbPage
                     className={cn(
-                      "truncate px-0.5 py-0.5",
-                      header
-                        ? "text-lg font-semibold md:text-xl"
-                        : "font-medium",
+                      'truncate px-0.5 py-0.5',
+                      header ? 'text-lg font-semibold md:text-xl' : 'font-medium',
                     )}
                   >
                     {item.label}
@@ -86,4 +75,4 @@ export const PageBreadcrumb = React.memo(function PageBreadcrumb({
       </BreadcrumbList>
     </Breadcrumb>
   );
-})
+});

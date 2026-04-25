@@ -6,7 +6,11 @@ import { listTools, setToolDisabled, type ToolRecord } from '@/api/tools';
 import { Page } from '@/components/page';
 import { Button } from '@/components/ui/button';
 
-type LoadState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; data: ToolRecord[] };
+type LoadState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; data: ToolRecord[] };
 
 function uniqSorted(items: string[]): string[] {
   return Array.from(new Set(items.map((s) => s.trim()).filter(Boolean))).sort();

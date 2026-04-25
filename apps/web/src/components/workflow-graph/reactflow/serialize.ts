@@ -1,27 +1,17 @@
-import type { Edge, Node } from "reactflow";
+import type { Edge, Node } from 'reactflow';
 
-import type {
-  WorkflowNodeInputSpec,
-  WorkflowNodeTypeDefinition,
-  WorkflowSocketDefinition,
-} from "../types";
-import type { WorkflowGraphLink, WorkflowGraphPersisted } from "./types";
-import {
-  appendableHandleId,
-  appendableSlotSortKey,
-  normalizeAppendableHandle,
-} from "./appendable-handle";
+import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition, WorkflowSocketDefinition } from '../types';
+import type { WorkflowGraphLink, WorkflowGraphPersisted } from './types';
+import { appendableHandleId, appendableSlotSortKey, normalizeAppendableHandle } from './appendable-handle';
 
 // UI-only boundary node ids (NOT persisted in workflow.nodes).
-export const WORKFLOW_INPUT_NODE_ID = "workflow-input";
-export const WORKFLOW_OUTPUT_NODE_ID = "workflow-output";
+export const WORKFLOW_INPUT_NODE_ID = 'workflow-input';
+export const WORKFLOW_OUTPUT_NODE_ID = 'workflow-output';
 
-function appendableSocketNamesFromInputs(
-  inputs: WorkflowNodeInputSpec[],
-): Set<string> {
+function appendableSocketNamesFromInputs(inputs: WorkflowNodeInputSpec[]): Set<string> {
   const names = new Set<string>();
   for (const s of inputs) {
-    if (s?.render_type === "appendable" && s.name) {
+    if (s?.render_type === 'appendable' && s.name) {
       names.add(s.name);
     }
   }
@@ -29,16 +19,16 @@ function appendableSocketNamesFromInputs(
 }
 
 function isRecord(x: unknown): x is Record<string, unknown> {
-  return Boolean(x) && typeof x === "object" && !Array.isArray(x);
+  return Boolean(x) && typeof x === 'object' && !Array.isArray(x);
 }
 
 function num(x: unknown, fallback = 0): number {
-  const n = typeof x === "number" ? x : Number(x);
+  const n = typeof x === 'number' ? x : Number(x);
   return Number.isFinite(n) ? n : fallback;
 }
 
 function str(x: unknown): string | undefined {
-  return typeof x === "string" ? x : undefined;
+  return typeof x === 'string' ? x : undefined;
 }
 
 function arrayOrEmpty<T>(x: unknown): T[] {
@@ -54,9 +44,9 @@ function mergeInputsWithDynamicOptions(
 
   const catalogByName = new Map(catalogInputs.map((s) => [s.name, s] as const));
   return persistedInputs.map((input) => {
-    if (input.render_type !== "select") return input;
+    if (input.render_type !== 'select') return input;
     const latest = catalogByName.get(input.name);
-    if (!latest || latest.render_type !== "select") return input;
+    if (!latest || latest.render_type !== 'select') return input;
     return {
       ...input,
       options: Array.isArray(latest.options) ? latest.options : [],
@@ -78,9 +68,7 @@ export const EMPTY_WORKFLOW: WorkflowGraphPersisted = {
 function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
   const appendableBasesByTargetNode = new Map<string, Set<string>>();
   for (const n of persisted.nodes) {
-    const names = appendableSocketNamesFromInputs(
-      arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
-    );
+    const names = appendableSocketNamesFromInputs(arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs));
     if (names.size > 0) {
       appendableBasesByTargetNode.set(n.id, names);
     }
@@ -88,39 +76,32 @@ function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
 
   const edges: Edge[] = [];
   const workflowOutputSocketByName = new Map(
-    arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_outputs).map((s) => [
-      s.name,
-      s,
-    ]),
+    arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_outputs).map((s) => [s.name, s]),
   );
   const workflowOutputAppendableCount = new Map<string, number>();
 
   for (const l of persisted.links) {
-    const toNodeId = l.to.kind === "node" ? l.to.node_id : WORKFLOW_OUTPUT_NODE_ID;
+    const toNodeId = l.to.kind === 'node' ? l.to.node_id : WORKFLOW_OUTPUT_NODE_ID;
     const toSocket = l.to.socket;
-    const fromNodeId = l.from.kind === "node" ? l.from.node_id : WORKFLOW_INPUT_NODE_ID;
+    const fromNodeId = l.from.kind === 'node' ? l.from.node_id : WORKFLOW_INPUT_NODE_ID;
     const fromSocket = l.from.socket;
 
     const bases = appendableBasesByTargetNode.get(toNodeId);
     if (bases?.has(toSocket)) {
       continue;
     }
-    if (l.to.kind === "workflow_output") {
+    if (l.to.kind === 'workflow_output') {
       const socket = workflowOutputSocketByName.get(toSocket);
-      const isAppendable = socket?.render_type === "appendable";
+      const isAppendable = socket?.render_type === 'appendable';
       const nextCount = (workflowOutputAppendableCount.get(toSocket) ?? 0) + 1;
       workflowOutputAppendableCount.set(toSocket, nextCount);
       edges.push({
-        id:
-          l.id ??
-          `${fromNodeId}:${fromSocket}->${toNodeId}:${toSocket}:${nextCount}`,
+        id: l.id ?? `${fromNodeId}:${fromSocket}->${toNodeId}:${toSocket}:${nextCount}`,
         source: fromNodeId,
         sourceHandle: fromSocket,
         target: toNodeId,
-        targetHandle: isAppendable
-          ? appendableHandleId(toSocket, nextCount)
-          : toSocket,
-        type: "default",
+        targetHandle: isAppendable ? appendableHandleId(toSocket, nextCount) : toSocket,
+        type: 'default',
       });
       continue;
     }
@@ -130,7 +111,7 @@ function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
       sourceHandle: fromSocket,
       target: toNodeId,
       targetHandle: toSocket,
-      type: "default",
+      type: 'default',
     });
   }
 
@@ -140,9 +121,7 @@ function buildEdgesFromLinks(persisted: WorkflowGraphPersisted): Edge[] {
 function buildAppendableEdgesFromParams(persisted: WorkflowGraphPersisted): Edge[] {
   const edges: Edge[] = [];
   for (const n of persisted.nodes) {
-    const names = appendableSocketNamesFromInputs(
-      arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
-    );
+    const names = appendableSocketNamesFromInputs(arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs));
     if (names.size === 0) continue;
     const params = isRecord(n.params) ? n.params : {};
     for (const socketName of names) {
@@ -152,14 +131,14 @@ function buildAppendableEdgesFromParams(persisted: WorkflowGraphPersisted): Edge
         if (!isRecord(item)) return;
         const fn = item.from_node;
         const fs = item.from_socket;
-        if (typeof fn !== "string" || typeof fs !== "string") return;
+        if (typeof fn !== 'string' || typeof fs !== 'string') return;
         edges.push({
           id: `${fn}:${fs}->${n.id}:${socketName}:${index}`,
           source: fn,
           sourceHandle: fs,
           target: n.id,
           targetHandle: appendableHandleId(socketName, index + 1),
-          type: "default",
+          type: 'default',
         });
       });
     }
@@ -167,13 +146,11 @@ function buildAppendableEdgesFromParams(persisted: WorkflowGraphPersisted): Edge
   return edges;
 }
 
-function parsePersistedNode(
-  n: unknown,
-): WorkflowGraphPersisted["nodes"][number] | null {
+function parsePersistedNode(n: unknown): WorkflowGraphPersisted['nodes'][number] | null {
   if (!isRecord(n)) return null;
   const id = n.id;
   const type = n.type;
-  if (typeof id !== "string" || typeof type !== "string") return null;
+  if (typeof id !== 'string' || typeof type !== 'string') return null;
   const pos = n.pos;
   const px = Array.isArray(pos) ? num(pos[0]) : 0;
   const py = Array.isArray(pos) ? num(pos[1]) : 0;
@@ -193,37 +170,35 @@ function parsePersistedNode(
 
 function parsePersistedLink(l: unknown): WorkflowGraphLink | null {
   if (!isRecord(l)) return null;
-  const id = typeof l.id === "string" || l.id === null ? l.id : undefined;
+  const id = typeof l.id === 'string' || l.id === null ? l.id : undefined;
   const from = parsePersistedEndpoint(l.from);
   const to = parsePersistedEndpoint(l.to);
   if (!from || !to) return null;
-  if (from.kind === "workflow_output") return null;
-  if (to.kind === "workflow_input") return null;
+  if (from.kind === 'workflow_output') return null;
+  if (to.kind === 'workflow_input') return null;
   return { id, from, to } as WorkflowGraphLink;
 }
 
 function parsePersistedEndpoint(
   raw: unknown,
 ):
-  | { kind: "node"; node_id: string; socket: string }
-  | { kind: "workflow_input"; socket: string }
-  | { kind: "workflow_output"; socket: string }
+  | { kind: 'node'; node_id: string; socket: string }
+  | { kind: 'workflow_input'; socket: string }
+  | { kind: 'workflow_output'; socket: string }
   | null {
   if (!isRecord(raw)) return null;
   const kind = raw.kind;
   const socket = raw.socket;
-  if (typeof kind !== "string" || typeof socket !== "string" || !socket) return null;
-  if (kind === "workflow_input") return { kind: "workflow_input", socket };
-  if (kind === "workflow_output") return { kind: "workflow_output", socket };
-  if (kind !== "node") return null;
+  if (typeof kind !== 'string' || typeof socket !== 'string' || !socket) return null;
+  if (kind === 'workflow_input') return { kind: 'workflow_input', socket };
+  if (kind === 'workflow_output') return { kind: 'workflow_output', socket };
+  if (kind !== 'node') return null;
   const nodeId = raw.node_id;
-  if (typeof nodeId !== "string" || !nodeId) return null;
-  return { kind: "node", node_id: nodeId, socket };
+  if (typeof nodeId !== 'string' || !nodeId) return null;
+  return { kind: 'node', node_id: nodeId, socket };
 }
 
-export function parsePersistedWorkflowGraphPayload(
-  raw: unknown,
-): WorkflowGraphPersisted {
+export function parsePersistedWorkflowGraphPayload(raw: unknown): WorkflowGraphPersisted {
   if (!isRecord(raw)) return EMPTY_WORKFLOW;
 
   const nodes = arrayOrEmpty(raw.nodes)
@@ -233,9 +208,7 @@ export function parsePersistedWorkflowGraphPayload(
     .map(parsePersistedLink)
     .filter((x): x is NonNullable<typeof x> => Boolean(x));
 
-  const boundaryRaw = isRecord(raw.workflow_boundary_positions)
-    ? raw.workflow_boundary_positions
-    : null;
+  const boundaryRaw = isRecord(raw.workflow_boundary_positions) ? raw.workflow_boundary_positions : null;
   const inputPosRaw = boundaryRaw ? boundaryRaw.input : null;
   const outputPosRaw = boundaryRaw ? boundaryRaw.output : null;
   const boundaryPositions = {
@@ -273,7 +246,7 @@ export function toReactFlowNodes(
     const catalogInputs = def?.inputs ?? [];
     return {
       id: n.id,
-      type: "workflowStep",
+      type: 'workflowStep',
       position: { x: num(n.pos?.[0]), y: num(n.pos?.[1]) },
       deletable: true,
       data: {
@@ -283,11 +256,8 @@ export function toReactFlowNodes(
         // Prefer persisted sockets when available, so dynamic node sockets
         // (e.g. DataSetFramesInput per-datasource outputs) are preserved.
         inputs:
-          persistedInputs.length > 0
-            ? mergeInputsWithDynamicOptions(persistedInputs, catalogInputs)
-            : catalogInputs,
-        outputs:
-          persistedOutputs.length > 0 ? persistedOutputs : (def?.outputs ?? []),
+          persistedInputs.length > 0 ? mergeInputsWithDynamicOptions(persistedInputs, catalogInputs) : catalogInputs,
+        outputs: persistedOutputs.length > 0 ? persistedOutputs : (def?.outputs ?? []),
         params: { ...(n.params ?? {}) },
       },
     } satisfies Node;
@@ -295,14 +265,14 @@ export function toReactFlowNodes(
   return [
     {
       id: WORKFLOW_INPUT_NODE_ID,
-      type: "workflowBoundary",
+      type: 'workflowBoundary',
       position: { x: num(inputBoundaryPos[0], -220), y: num(inputBoundaryPos[1], 0) },
       deletable: false,
       draggable: !readOnly,
       selectable: true,
       data: {
-        label: "输入",
-        side: "input",
+        label: '输入',
+        side: 'input',
         sockets: arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_inputs),
         inputs: [],
         outputs: arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_inputs),
@@ -311,14 +281,14 @@ export function toReactFlowNodes(
     ...flowNodes,
     {
       id: WORKFLOW_OUTPUT_NODE_ID,
-      type: "workflowBoundary",
+      type: 'workflowBoundary',
       position: { x: num(outputBoundaryPos[0], 1100), y: num(outputBoundaryPos[1], 0) },
       deletable: false,
       draggable: !readOnly,
       selectable: true,
       data: {
-        label: "输出",
-        side: "output",
+        label: '输出',
+        side: 'output',
         sockets: arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_outputs),
         inputs: arrayOrEmpty<WorkflowSocketDefinition>(persisted.workflow_outputs),
         outputs: [],
@@ -354,35 +324,35 @@ function appendableNamesForTargetNode(nodes: Node[], to_node: string): Set<strin
 }
 
 function pushBoundaryLink(outLinks: WorkflowGraphLink[], e: Edge) {
-  const fromSocket = normalizeAppendableHandle(e.sourceHandle ?? "");
-  const toSocket = normalizeAppendableHandle(e.targetHandle ?? "");
+  const fromSocket = normalizeAppendableHandle(e.sourceHandle ?? '');
+  const toSocket = normalizeAppendableHandle(e.targetHandle ?? '');
   outLinks.push({
     id: e.id,
     from:
       e.source === WORKFLOW_INPUT_NODE_ID
-        ? { kind: "workflow_input", socket: fromSocket }
-        : { kind: "node", node_id: e.source, socket: fromSocket },
+        ? { kind: 'workflow_input', socket: fromSocket }
+        : { kind: 'node', node_id: e.source, socket: fromSocket },
     to:
       e.target === WORKFLOW_OUTPUT_NODE_ID
-        ? { kind: "workflow_output", socket: toSocket }
-        : { kind: "node", node_id: e.target, socket: toSocket },
+        ? { kind: 'workflow_output', socket: toSocket }
+        : { kind: 'node', node_id: e.target, socket: toSocket },
   });
 }
 
 function pushNormalLink(outLinks: WorkflowGraphLink[], e: Edge, appendableNames: Set<string>) {
-  const tgtRaw = e.targetHandle ?? "";
+  const tgtRaw = e.targetHandle ?? '';
   const base = normalizeAppendableHandle(tgtRaw);
   const to_socket = appendableNames.has(base) ? base : normalizeAppendableHandle(tgtRaw);
   outLinks.push({
     id: e.id,
     from:
       e.source === WORKFLOW_INPUT_NODE_ID
-        ? { kind: "workflow_input", socket: normalizeAppendableHandle(e.sourceHandle ?? "") }
-        : { kind: "node", node_id: e.source, socket: normalizeAppendableHandle(e.sourceHandle ?? "") },
+        ? { kind: 'workflow_input', socket: normalizeAppendableHandle(e.sourceHandle ?? '') }
+        : { kind: 'node', node_id: e.source, socket: normalizeAppendableHandle(e.sourceHandle ?? '') },
     to:
       e.target === WORKFLOW_OUTPUT_NODE_ID
-        ? { kind: "workflow_output", socket: to_socket }
-        : { kind: "node", node_id: e.target, socket: to_socket },
+        ? { kind: 'workflow_output', socket: to_socket }
+        : { kind: 'node', node_id: e.target, socket: to_socket },
   });
 }
 
@@ -392,7 +362,7 @@ function pushAppendableWireAccum(
   appendableNames: Set<string>,
 ) {
   const to_node = e.target;
-  const tgtRaw = e.targetHandle ?? "";
+  const tgtRaw = e.targetHandle ?? '';
   const base = normalizeAppendableHandle(tgtRaw);
   if (!appendableNames.has(base)) return;
 
@@ -405,21 +375,15 @@ function pushAppendableWireAccum(
   acc.push({
     internalTargetHandle: tgtRaw || appendableHandleId(base, 1),
     from_node: e.source,
-    from_socket: normalizeAppendableHandle(e.sourceHandle ?? ""),
+    from_socket: normalizeAppendableHandle(e.sourceHandle ?? ''),
   });
   bySocket.set(base, acc);
 }
 
-function sortAppendableWireAccum(
-  appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>,
-) {
+function sortAppendableWireAccum(appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>) {
   for (const bySocket of appendableWiresByNode.values()) {
     for (const acc of bySocket.values()) {
-      acc.sort(
-        (a, b) =>
-          appendableSlotSortKey(a.internalTargetHandle) -
-          appendableSlotSortKey(b.internalTargetHandle),
-      );
+      acc.sort((a, b) => appendableSlotSortKey(a.internalTargetHandle) - appendableSlotSortKey(b.internalTargetHandle));
     }
   }
 }
@@ -453,55 +417,47 @@ function linksAndAppendableWireAccumFromEdges(
 function persistedNodesWithAppendableParams(
   nodes: Node[],
   appendableWiresByNode: Map<string, Map<string, EdgeWireAcc[]>>,
-): WorkflowGraphPersisted["nodes"] {
+): WorkflowGraphPersisted['nodes'] {
   return nodes
     .filter((n) => n.id !== WORKFLOW_INPUT_NODE_ID && n.id !== WORKFLOW_OUTPUT_NODE_ID)
     .map((n) => {
-    const data = (n.data ?? {}) as Record<string, unknown>;
-    const backendType =
-      typeof data.backendType === "string" ? data.backendType : "node";
-    const rawParams = isRecord(data.params) ? { ...data.params } : {};
-    const inputs = arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs);
-    const appendableNames = appendableSocketNamesFromInputs(inputs);
-    for (const name of appendableNames) {
-      delete rawParams[name];
-    }
-
-    const bySocket = appendableWiresByNode.get(n.id);
-    if (bySocket && bySocket.size > 0) {
-      for (const [socketBase, acc] of bySocket) {
-        rawParams[socketBase] = acc.map(({ from_node, from_socket }) => ({
-          from_node,
-          from_socket,
-        }));
+      const data = (n.data ?? {}) as Record<string, unknown>;
+      const backendType = typeof data.backendType === 'string' ? data.backendType : 'node';
+      const rawParams = isRecord(data.params) ? { ...data.params } : {};
+      const inputs = arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs);
+      const appendableNames = appendableSocketNamesFromInputs(inputs);
+      for (const name of appendableNames) {
+        delete rawParams[name];
       }
-    }
 
-    return {
-      id: n.id,
-      type: backendType,
-      label: str(data.label) ?? backendType,
-      category: str(data.category),
-      description: str(data.description),
-      inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
-      outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
-      pos: [n.position.x, n.position.y],
-      params: rawParams,
-    };
+      const bySocket = appendableWiresByNode.get(n.id);
+      if (bySocket && bySocket.size > 0) {
+        for (const [socketBase, acc] of bySocket) {
+          rawParams[socketBase] = acc.map(({ from_node, from_socket }) => ({
+            from_node,
+            from_socket,
+          }));
+        }
+      }
+
+      return {
+        id: n.id,
+        type: backendType,
+        label: str(data.label) ?? backendType,
+        category: str(data.category),
+        description: str(data.description),
+        inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
+        outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
+        pos: [n.position.x, n.position.y],
+        params: rawParams,
+      };
     });
 }
 
-export function toPersistedWorkflowGraph(
-  nodes: Node[],
-  edges: Edge[],
-): WorkflowGraphPersisted {
-  const { outLinks, appendableWiresByNode } =
-    linksAndAppendableWireAccumFromEdges(nodes, edges);
+export function toPersistedWorkflowGraph(nodes: Node[], edges: Edge[]): WorkflowGraphPersisted {
+  const { outLinks, appendableWiresByNode } = linksAndAppendableWireAccumFromEdges(nodes, edges);
   sortAppendableWireAccum(appendableWiresByNode);
-  const outNodes = persistedNodesWithAppendableParams(
-    nodes,
-    appendableWiresByNode,
-  );
+  const outNodes = persistedNodesWithAppendableParams(nodes, appendableWiresByNode);
 
   const inputBoundaryNode = nodes.find((n) => n.id === WORKFLOW_INPUT_NODE_ID);
   const outputBoundaryNode = nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID);
@@ -510,22 +466,14 @@ export function toPersistedWorkflowGraph(
     nodes: outNodes,
     links: outLinks,
     workflow_inputs: arrayOrEmpty<WorkflowSocketDefinition>(
-      ((nodes.find((n) => n.id === WORKFLOW_INPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>)
-        .outputs,
+      ((nodes.find((n) => n.id === WORKFLOW_INPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>).outputs,
     ),
     workflow_outputs: arrayOrEmpty<WorkflowSocketDefinition>(
-      ((nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>)
-        .inputs,
+      ((nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>).inputs,
     ),
     workflow_boundary_positions: {
-      input: [
-        num(inputBoundaryNode?.position?.x, -220),
-        num(inputBoundaryNode?.position?.y, 0),
-      ],
-      output: [
-        num(outputBoundaryNode?.position?.x, 1100),
-        num(outputBoundaryNode?.position?.y, 0),
-      ],
+      input: [num(inputBoundaryNode?.position?.x, -220), num(inputBoundaryNode?.position?.y, 0)],
+      output: [num(outputBoundaryNode?.position?.x, 1100), num(outputBoundaryNode?.position?.y, 0)],
     },
   };
 }
