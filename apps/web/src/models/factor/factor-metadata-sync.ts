@@ -1,175 +1,210 @@
 import type { FactorDetailPublic, FactorParamSpecPublic } from './dto';
+import {
+  findCalcFunctionNode,
+  findClassAssignmentNode,
+  findClassBlockNode,
+  withPythonTree,
+  withPythonTreeAsync,
+  type TSNode,
+} from './web-tree-sitter-loader';
+
+function findTopLevelClassAssignmentValue(classBlock: TSNode, attr: string): TSNode | null {
+  const assignment = findClassAssignmentNode(classBlock, attr);
+  return assignment?.childForFieldName('right') ?? null;
+}
+
+function parsePythonEscapeSequence(raw: string): string {
+  if (raw === '\\n') return '\n';
+  if (raw === '\\r') return '\r';
+  if (raw === '\\t') return '\t';
+  if (raw === '\\\\') return '\\';
+  if (raw === '\\"') return '"';
+  if (raw === "\\'") return "'";
+  return raw.startsWith('\\') ? raw.slice(1) : raw;
+}
+
+function parseStringValueNode(node: TSNode | null | undefined): string | undefined {
+  if (!node || node.type !== 'string') return;
+  const chunks: string[] = [];
+  const textParts = node.descendantsOfType(['string_content', 'escape_sequence']);
+  if (textParts.length === 0) return '';
+  for (const part of textParts) {
+    if (part.type === 'escape_sequence') {
+      chunks.push(parsePythonEscapeSequence(part.text));
+    } else {
+      chunks.push(part.text);
+    }
+  }
+  return chunks.join('');
+}
+
+function parseNumberValueNode(node: TSNode | null | undefined): number | undefined {
+  if (!node) return;
+  if (node.type === 'none') return;
+  if (node.type !== 'integer' && node.type !== 'float') return;
+  const n = Number(node.text);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+type CalcParamsInfo = {
+  deps: string[];
+  varKeywordRaw: string | null;
+};
+
+function extractParameterName(node: TSNode): string | null {
+  const byField = node.childForFieldName('name')?.text?.trim();
+  if (byField) return byField;
+  if (node.type === 'identifier') {
+    const id = node.text.trim();
+    return id || null;
+  }
+  const ids = node.descendantsOfType('identifier');
+  if (ids.length > 0) {
+    const id = ids[0].text.trim();
+    return id || null;
+  }
+  return null;
+}
+
+function parseCalcParamsInfo(paramsNode: TSNode | null | undefined): CalcParamsInfo | null {
+  if (!paramsNode) return null;
+  const deps: string[] = [];
+  let varKeywordRaw: string | null = null;
+  for (const node of paramsNode.namedChildren) {
+    if (node.type === 'keyword_separator') continue;
+    const raw = node.text.trim();
+    if (!raw || raw === '*' || raw === '/') continue;
+    if (raw.startsWith('**')) {
+      varKeywordRaw = raw;
+      continue;
+    }
+    const name = extractParameterName(node) ?? '';
+    if (!name || name === 'self') continue;
+    deps.push(name);
+  }
+  return { deps, varKeywordRaw };
+}
+
+function getCalcParamsFromTree(root: TSNode): string[] | null {
+  const calcNode = findCalcFunctionNode(root);
+  const info = parseCalcParamsInfo(calcNode?.childForFieldName('parameters'));
+  return info?.deps ?? null;
+}
+
+function parseParamSpecsFromTree(root: TSNode): FactorParamSpecPublic[] | undefined {
+  const classBlock = findClassBlockNode(root);
+  if (!classBlock) return;
+  const rhs = findTopLevelClassAssignmentValue(classBlock, 'param_specs');
+  if (!rhs) return [];
+  const dictNodes = rhs.descendantsOfType('dictionary');
+  const parsed: FactorParamSpecPublic[] = [];
+  for (const dictNode of dictNodes) {
+    const pairNodes = dictNode.namedChildren.filter((n) => n.type === 'pair');
+    const values = new Map<string, TSNode>();
+    for (const pair of pairNodes) {
+      const keyNode = pair.childForFieldName('key');
+      const valueNode = pair.childForFieldName('value');
+      if (!keyNode || !valueNode) continue;
+      const key = parseStringValueNode(keyNode);
+      if (!key) continue;
+      values.set(key, valueNode);
+    }
+    const name = parseStringValueNode(values.get('name'));
+    if (!name) continue;
+    const label = parseStringValueNode(values.get('label')) ?? name;
+    parsed.push({
+      name,
+      label,
+      default: parseNumberValueNode(values.get('default')) ?? null,
+      min: parseNumberValueNode(values.get('min')) ?? null,
+      max: parseNumberValueNode(values.get('max')) ?? null,
+    });
+  }
+  return parsed;
+}
 
 function escapePyDoubleQuoted(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n/g, '\n').replace(/\n/g, '\\n');
 }
 
-/** Replace `attr = "..."` or `attr = '...'` on a line (multiline ^). */
-function replaceStringAttr(block: string, attr: string, value: string): string {
-  const py = `"${escapePyDoubleQuoted(value)}"`;
-  const re = new RegExp(`^([ \\t]*)${attr}\\s*=\\s*(?:"(?:[^"\\\\]|\\\\.)*"|'(?:[^'\\\\]|\\\\.)*')`, 'm');
-  return re.test(block) ? block.replace(re, `$1${attr} = ${py}`) : block;
+function getLineIndent(source: string, index: number): string {
+  const lineStart = source.lastIndexOf('\n', Math.max(0, index - 1)) + 1;
+  let i = lineStart;
+  while (i < source.length && (source[i] === ' ' || source[i] === '\t')) i++;
+  return source.slice(lineStart, i);
 }
 
-function replaceNumberAttr(block: string, attr: string, n: number): string {
-  const re = new RegExp(`^([ \\t]*)${attr}\\s*=\\s*\\d+`, 'm');
-  return re.test(block) ? block.replace(re, `$1${attr} = ${n}`) : block;
-}
-
-/** Single-line `dependencies = [...]` in class body. */
-function findUserFactorClassBodyRange(source: string): { start: number; end: number } | null {
-  const classRe = /^class\s+NewFactor\s*\(\s*Factor\s*\)\s*:\s*/m;
-  const m = classRe.exec(source);
-  if (!m || m.index === undefined) return null;
-  const bodyStart = m.index + m[0].length;
-  const after = source.slice(bodyStart);
-  const defMatch = /\n[ \t]*def\s+\w+\s*\(/.exec(after);
-  const end = defMatch ? bodyStart + defMatch.index : source.length;
-  return { start: bodyStart, end };
-}
-
-function patchUserFactorClassBody(source: string, patch: (block: string) => string): string {
-  const range = findUserFactorClassBodyRange(source);
-  if (!range) return source;
-  const { start, end } = range;
-  const newMid = patch(source.slice(start, end));
-  return source.slice(0, start) + newMid + source.slice(end);
-}
-
-type CalcParam = {
-  raw: string;
-  name: string;
-  isVarKeyword: boolean;
-};
-
-function splitTopLevelParams(s: string): string[] {
-  const out: string[] = [];
-  let start = 0;
-  let depth = 0;
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    if (ch === '(' || ch === '[' || ch === '{') depth++;
-    else if (ch === ')' || ch === ']' || ch === '}') depth = Math.max(0, depth - 1);
-    else if (ch === ',' && depth === 0) {
-      out.push(s.slice(start, i));
-      start = i + 1;
-    }
+async function replaceClassAttrValue(source: string, attr: string, nextValue: string): Promise<string> {
+  try {
+    return (
+      (await withPythonTreeAsync(source, (root) => {
+        const classBlock = findClassBlockNode(root);
+        if (!classBlock) throw new Error('class block not found');
+        const assignments = classBlock.namedChildren.filter((n) => n.type === 'assignment');
+        console.log('[factor][replaceClassAttrValue] target attr:', attr);
+        console.log('[factor][replaceClassAttrValue] class block text preview:', classBlock.text.slice(0, 400));
+        console.log(
+          '[factor][replaceClassAttrValue] assignments:',
+          assignments.map((a) => {
+            const left = a.childForFieldName('left')?.text ?? '<missing-left>';
+            const right = a.childForFieldName('right')?.text ?? '<missing-right>';
+            return { left, right };
+          }),
+        );
+        const assignment = findClassAssignmentNode(classBlock, attr);
+        if (!assignment) throw new Error(`assignment not found for ${attr}`);
+        const right = assignment.childForFieldName('right');
+        if (!right) throw new Error(`assignment right value not found for ${attr}`);
+        return source.slice(0, right.startIndex) + nextValue + source.slice(right.endIndex);
+      })) ?? source
+    );
+  } catch (e) {
+    console.error(e);
+    return source;
   }
-  out.push(s.slice(start));
-  return out.map((x) => x.trim()).filter(Boolean);
 }
 
-function parseCalcParams(rawParams: string): CalcParam[] {
-  return splitTopLevelParams(rawParams)
-    .map((raw) => {
-      const p = raw.trim();
-      if (!p) return null;
-      const isVarKeyword = p.startsWith('**');
-      const core = p.replace(/^\*\*?/, '');
-      const name = core.split(':', 1)[0].split('=', 1)[0].trim();
-      if (!name || name === 'self') return null;
-      return { raw: p, name, isVarKeyword };
-    })
-    .filter((x): x is CalcParam => x !== null);
+async function replaceCalcDependenciesInSource(source: string, deps: string[]): Promise<string> {
+  return (
+    (await withPythonTreeAsync(source, (root) => {
+      const calcNode = findCalcFunctionNode(root);
+      const paramsNode = calcNode?.childForFieldName('parameters');
+      if (!paramsNode) return source;
+      const info = parseCalcParamsInfo(paramsNode);
+      if (!info) return source;
+      const depParams = deps.map((d) => `${d}: pd.DataFrame`);
+      const merged = info.varKeywordRaw ? [...depParams, info.varKeywordRaw] : depParams;
+      const joined = merged.join(', ');
+      const replacement = `(${['self', joined].filter(Boolean).join(', ')})`;
+      return source.slice(0, paramsNode.startIndex) + replacement + source.slice(paramsNode.endIndex);
+    })) ?? source
+  );
 }
 
-function findCalcSignatureRange(source: string): { start: number; end: number; indent: string; params: string } | null {
-  const re = /^([ \t]*)def\s+calc\s*\(\s*self(?:\s*,\s*([^)]*))?\)\s*(?:->\s*[^:]+)?\s*:/m;
-  const m = re.exec(source);
-  if (!m || m.index === undefined) return null;
-  const full = m[0];
-  const start = m.index;
-  const end = start + full.length;
-  return {
-    start,
-    end,
-    indent: m[1] ?? '',
-    params: (m[2] ?? '').trim(),
-  };
-}
-
-function replaceCalcDependenciesInSource(source: string, deps: string[]): string {
-  const sig = findCalcSignatureRange(source);
-  if (!sig) return source;
-
-  const existing = parseCalcParams(sig.params);
-  const varKeyword = existing.find((p) => p.isVarKeyword);
-  const depParams = deps.map((d) => `${d}: pd.DataFrame`);
-  const merged = varKeyword ? [...depParams, varKeyword.raw] : depParams;
-  const joined = merged.join(', ');
-  const replacement = `${sig.indent}def calc(self${joined ? `, ${joined}` : ''}) -> pd.DataFrame:`;
-  return source.slice(0, sig.start) + replacement + source.slice(sig.end);
-}
-
-export function applyFactorNameToSource(source: string, name: string): string {
+export async function applyFactorNameToSource(source: string, name: string): Promise<string> {
   const n = name.trim() || 'my_factor';
-  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'name', n));
+  return await replaceClassAttrValue(source, 'name', `"${escapePyDoubleQuoted(n)}"`);
 }
 
-export function applyFactorGroupToSource(source: string, group: string): string {
-  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'group', group.trim()));
+export async function applyFactorGroupToSource(source: string, group: string): Promise<string> {
+  return await replaceClassAttrValue(source, 'group', `"${escapePyDoubleQuoted(group.trim())}"`);
 }
 
-export function applyFactorDescriptionToSource(source: string, description: string): string {
-  return patchUserFactorClassBody(source, (block) => replaceStringAttr(block, 'description', description));
+export async function applyFactorDescriptionToSource(source: string, description: string): Promise<string> {
+  return await replaceClassAttrValue(source, 'description', `"${escapePyDoubleQuoted(description)}"`);
 }
 
-export function applyFactorWindowToSource(source: string, window: number): string {
+export async function applyFactorWindowToSource(source: string, window: number): Promise<string> {
   if (!Number.isFinite(window) || window < 1) return source;
-  return patchUserFactorClassBody(source, (block) => replaceNumberAttr(block, 'window', window));
+  return await replaceClassAttrValue(source, 'window', String(window));
 }
 
-export function applyFactorDependenciesToSource(source: string, deps: string[]): string {
-  return replaceCalcDependenciesInSource(source, deps);
-}
-
-function parseNumberOrNull(raw: string | undefined): number | null {
-  if (!raw) return null;
-  const s = raw.trim();
-  if (!s || s === 'None' || s === 'null') return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function extractParamSpecsBodyFromClassBlock(block: string): string | null {
-  const assignMatch = /^([ \t]*)param_specs\s*=\s*/m.exec(block);
-  if (!assignMatch || assignMatch.index === undefined) return null;
-  const assignRange = parseParamSpecsAssignRange(block, assignMatch.index);
-  if (!assignRange) return null;
-
-  const assignText = block.slice(assignRange.start, assignRange.end);
-  const eqPos = assignText.indexOf('=');
-  if (eqPos < 0) return null;
-  const rhs = assignText.slice(eqPos + 1).trim();
-
-  // Accept tuple/list literal or a one-liner `param_specs = ()`.
-  if ((rhs.startsWith('(') && rhs.endsWith(')')) || (rhs.startsWith('[') && rhs.endsWith(']'))) return rhs.slice(1, -1);
-  return rhs;
+export async function applyFactorDependenciesToSource(source: string, deps: string[]): Promise<string> {
+  return await replaceCalcDependenciesInSource(source, deps);
 }
 
 export function parseFactorParamSpecsFromSource(source: string): FactorParamSpecPublic[] | undefined {
-  const block = getUserFactorClassBody(source);
-  if (!block) return;
-  const body = extractParamSpecsBodyFromClassBlock(block);
-  if (body === null) return [];
-  const dicts = body.match(/\{[^{}]*\}/g) ?? [];
-  const parsed: FactorParamSpecPublic[] = [];
-  for (const d of dicts) {
-    const name = d.match(/["']name["']\s*:\s*["']([^"']+)["']/)?.[1] ?? '';
-    if (!name) continue;
-    const label = d.match(/["']label["']\s*:\s*["']([^"']*)["']/)?.[1] ?? name;
-    const defRaw = d.match(/["']default["']\s*:\s*([^,}\n]+)/)?.[1];
-    const minRaw = d.match(/["']min["']\s*:\s*([^,}\n]+)/)?.[1];
-    const maxRaw = d.match(/["']max["']\s*:\s*([^,}\n]+)/)?.[1];
-    parsed.push({
-      name,
-      label,
-      default: parseNumberOrNull(defRaw),
-      min: parseNumberOrNull(minRaw),
-      max: parseNumberOrNull(maxRaw),
-    });
-  }
-  return parsed;
+  return withPythonTree(source, parseParamSpecsFromTree);
 }
 
 function formatNumberForPython(n: number | null | undefined): string {
@@ -186,141 +221,66 @@ function renderParamSpecsTuple(specs: FactorParamSpecPublic[], indent: string): 
   return [`${indent}param_specs = (`, ...rows, `${indent})`].join('\n');
 }
 
-function parseParamSpecsAssignRange(block: string, assignStart: number): { start: number; end: number } | null {
-  const eqPos = block.indexOf('=', assignStart);
-  if (eqPos < 0) return null;
-  let i = eqPos + 1;
-  while (i < block.length && /\s/.test(block[i])) i++;
-  if (i >= block.length) return null;
-  const open = block[i];
-  const close = open === '(' ? ')' : open === '[' ? ']' : null;
-  if (!close) {
-    let end = i;
-    while (end < block.length && block[end] !== '\n') end++;
-    return { start: assignStart, end };
-  }
-  let depth = 0;
-  let end = i;
-  for (; end < block.length; end++) {
-    const ch = block[end];
-    if (ch === open) depth++;
-    else if (ch === close) {
-      depth--;
-      if (depth === 0) {
-        end++;
-        break;
+export async function applyFactorParamSpecsToSource(source: string, specs: FactorParamSpecPublic[]): Promise<string> {
+  if (!Array.isArray(specs)) return source;
+  return (
+    (await withPythonTreeAsync(source, (root) => {
+      const classBlock = findClassBlockNode(root);
+      if (!classBlock) return source;
+      const assignment = findClassAssignmentNode(classBlock, 'param_specs');
+      const indent = assignment ? getLineIndent(source, assignment.startIndex) : '    ';
+      const rendered = renderParamSpecsTuple(specs, indent);
+      if (!assignment) {
+        const blockText = source.slice(classBlock.startIndex, classBlock.endIndex);
+        const leadingNl = blockText.startsWith('\n') ? '' : '\n';
+        return (
+          source.slice(0, classBlock.startIndex) + `${leadingNl}${rendered}\n` + source.slice(classBlock.startIndex)
+        );
       }
-    }
-  }
-  return { start: assignStart, end };
-}
-
-export function applyFactorParamSpecsToSource(source: string, specs: FactorParamSpecPublic[]): string {
-  const ret = patchUserFactorClassBody(source, (block) => {
-    const lineIndentMatch = block.match(/\n([ \t]+)[A-Za-z_]\w*\s*=/);
-    const indent = lineIndentMatch?.[1] ?? '    ';
-    const rendered = renderParamSpecsTuple(specs, indent);
-    const assignMatch = /^([ \t]*)param_specs\s*=\s*/m.exec(block);
-    if (!assignMatch || assignMatch.index === undefined) {
-      const leadingNl = block.startsWith('\n') ? '' : '\n';
-      return `${leadingNl}${rendered}\n${block}`;
-    }
-    const assignRange = parseParamSpecsAssignRange(block, assignMatch.index);
-    if (!assignRange) return block;
-    return `${block.slice(0, assignRange.start)}${rendered}${block.slice(assignRange.end)}`;
-  });
-  return ret;
+      const replaceStart = source.lastIndexOf('\n', Math.max(0, assignment.startIndex - 1)) + 1;
+      return source.slice(0, replaceStart) + rendered + source.slice(assignment.endIndex);
+    })) ?? source
+  );
 }
 
 export function parseFactorNameFromSource(source: string): string | undefined {
-  const block = getUserFactorClassBody(source);
-  if (!block) return;
-  const v = parseStringAttr(block, 'name');
-  if (v === null) return;
-  return v;
+  return withPythonTree(source, (root) => {
+    const classBlock = findClassBlockNode(root);
+    if (!classBlock) return;
+    const v = findTopLevelClassAssignmentValue(classBlock, 'name');
+    return parseStringValueNode(v);
+  });
 }
 
 export function parseFactorGroupFromSource(source: string): string | undefined {
-  const block = getUserFactorClassBody(source);
-  if (!block) return;
-  const v = parseStringAttr(block, 'group');
-  if (v === null) return;
-  return v;
+  return withPythonTree(source, (root) => {
+    const classBlock = findClassBlockNode(root);
+    if (!classBlock) return;
+    const v = findTopLevelClassAssignmentValue(classBlock, 'group');
+    return parseStringValueNode(v);
+  });
 }
 
 export function parseFactorDescriptionFromSource(source: string): string | undefined {
-  const block = getUserFactorClassBody(source);
-  if (!block) return;
-  const v = parseStringAttr(block, 'description');
-  if (v === null) return;
-  return v;
+  return withPythonTree(source, (root) => {
+    const classBlock = findClassBlockNode(root);
+    if (!classBlock) return;
+    const v = findTopLevelClassAssignmentValue(classBlock, 'description');
+    return parseStringValueNode(v);
+  });
 }
 
 export function parseFactorWindowFromSource(source: string): number | undefined {
-  const block = getUserFactorClassBody(source);
-  if (!block) return;
-  const raw = parseWindow(block);
-  if (raw === null) return;
-  return Number.parseInt(raw, 10);
+  return withPythonTree(source, (root) => {
+    const classBlock = findClassBlockNode(root);
+    if (!classBlock) return;
+    const v = findTopLevelClassAssignmentValue(classBlock, 'window');
+    return parseNumberValueNode(v);
+  });
 }
 
 export function parseFactorDependenciesFromSource(source: string): string[] | undefined {
-  const deps = parseDependenciesCsvFromCalc(source);
-  if (deps === null) return;
-  return deps
-    .split(/[,，]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-function getUserFactorClassBody(source: string): string | null {
-  const range = findUserFactorClassBodyRange(source);
-  if (!range) return null;
-  return source.slice(range.start, range.end);
-}
-
-function unescapePyString(raw: string): string {
-  let out = '';
-  for (let i = 0; i < raw.length; i++) {
-    const c = raw[i];
-    if (c === '\\' && i + 1 < raw.length) {
-      const n = raw[++i];
-      if (n === 'n') out += '\n';
-      else if (n === 'r') out += '\r';
-      else if (n === 't') out += '\t';
-      else if (n === '\\') out += '\\';
-      else if (n === '"') out += '"';
-      else if (n === "'") out += "'";
-      else out += n;
-    } else {
-      out += c;
-    }
-  }
-  return out;
-}
-
-function parseStringAttr(block: string, attr: string): string | null {
-  const reD = new RegExp(`^\\s*${attr}\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"`, 'm');
-  let m = reD.exec(block);
-  if (m) return unescapePyString(m[1]);
-  const reS = new RegExp(`^\\s*${attr}\\s*=\\s*'((?:[^'\\\\]|\\\\.)*)'`, 'm');
-  m = reS.exec(block);
-  if (m) return unescapePyString(m[1]);
-  return null;
-}
-
-function parseWindow(block: string): string | null {
-  const m = block.match(/^\s*window\s*=\s*(\d+)/m);
-  return m ? m[1] : null;
-}
-
-function parseDependenciesCsvFromCalc(source: string): string | null {
-  const sig = findCalcSignatureRange(source);
-  if (!sig) return null;
-  const deps = parseCalcParams(sig.params)
-    .filter((p) => !p.isVarKeyword)
-    .map((p) => p.name);
-  return deps.join(', ');
+  return withPythonTree(source, (root) => getCalcParamsFromTree(root) ?? undefined);
 }
 
 /**
@@ -328,24 +288,35 @@ function parseDependenciesCsvFromCalc(source: string): string | null {
  * Only keys that are successfully parsed are set (partial object).
  */
 export function parseUserFactorMetadataFromSource(source: string): Partial<FactorDetailPublic> {
-  const block = getUserFactorClassBody(source);
-  if (!block) return {};
+  return (
+    withPythonTree(source, (root) => {
+      const classBlock = findClassBlockNode(root);
+      if (!classBlock) return {};
 
-  const out: Partial<FactorDetailPublic> = {};
-  const n = parseStringAttr(block, 'name');
-  if (n !== null) out.name = n;
-  const group = parseStringAttr(block, 'group');
-  if (group !== null) out.group = group;
-  const description = parseStringAttr(block, 'description');
-  if (description !== null) out.description = description;
-  const w = parseWindow(block);
-  if (w !== null) out.window = Number.parseInt(w, 10);
-  const deps = parseDependenciesCsvFromCalc(source);
-  if (deps !== null) {
-    out.dependencies = deps
-      .split(/[,，]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return out;
+      const out: Partial<FactorDetailPublic> = {};
+      const name = findTopLevelClassAssignmentValue(classBlock, 'name');
+      if (name) {
+        const v = parseStringValueNode(name);
+        if (v !== undefined) out.name = v;
+      }
+      const group = findTopLevelClassAssignmentValue(classBlock, 'group');
+      if (group) {
+        const v = parseStringValueNode(group);
+        if (v !== undefined) out.group = v;
+      }
+      const description = findTopLevelClassAssignmentValue(classBlock, 'description');
+      if (description) {
+        const v = parseStringValueNode(description);
+        if (v !== undefined) out.description = v;
+      }
+      const window = findTopLevelClassAssignmentValue(classBlock, 'window');
+      if (window) {
+        const v = parseNumberValueNode(window);
+        if (v !== undefined) out.window = v;
+      }
+      const deps = getCalcParamsFromTree(root);
+      if (deps) out.dependencies = deps;
+      return out;
+    }) ?? {}
+  );
 }
