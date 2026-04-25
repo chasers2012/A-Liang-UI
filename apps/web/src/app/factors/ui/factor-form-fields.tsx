@@ -351,13 +351,15 @@ export function FactorSourceField(props: FactorSourceFieldProps) {
   const setSourceDraft = useSetAtom(factorsSourceDraftAtom);
   if (!form) return null;
   return (
-    <div className="space-y-2">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       <Label htmlFor={pid('source')}>Python 源码</Label>
-      {readOnly ? (
-        <CodeJar id={pid('source')} value={form.source} readOnly />
-      ) : (
-        <CodeJar id={pid('source')} value={form.source} onChange={(source) => setSourceDraft(source)} />
-      )}
+      <CodeJar
+        id={pid('source')}
+        value={form.source}
+        readOnly={readOnly}
+        onChange={setSourceDraft}
+        className="h-full min-h-0 flex-1"
+      />
     </div>
   );
 }

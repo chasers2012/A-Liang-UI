@@ -15,16 +15,18 @@ export function PanelSourceTab() {
   const pid = (s: string) => `factor-source-${selectedId ?? 'new'}-${s}`;
 
   return (
-    <Item variant="outline">
-      <ItemContent>
-        <div className="space-y-4">
+    <Item variant="outline" className="h-full min-h-0">
+      <ItemContent className="h-full min-h-0">
+        <div className="flex h-full min-h-0 flex-col gap-4">
           {formError ? (
             <Alert variant="destructive">
               <AlertTitle>无法保存</AlertTitle>
               <AlertDescription>{formError}</AlertDescription>
             </Alert>
           ) : null}
-          <FactorSourceField readOnly={!editing} pid={pid} />
+          <div className="min-h-0 flex-1">
+            <FactorSourceField readOnly={!editing} pid={pid} />
+          </div>
         </div>
       </ItemContent>
     </Item>
