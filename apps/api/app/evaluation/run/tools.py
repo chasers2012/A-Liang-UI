@@ -23,12 +23,13 @@ from app.evaluation.run.controller import (
 
 
 @tool(
+    "运行评价任务",
     description=(
         "异步触发一次因子评价运行（run）。"
         "入参 profile_id（评价方案 id）与 factor_id（因子 id），"
         "行为与 POST /evaluation/run 一致。"
         "返回调度任务信息（job）。"
-    )
+    ),
 )
 def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
     try:
@@ -41,11 +42,12 @@ def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
 
 
 @tool(
+    "获取评价运行列表",
     description=(
         "查询评价运行记录列表。"
         "可按 factor_id 过滤，并通过 limit 限制数量。"
         "返回每条 run 的时间、状态错误信息和 results 等字段。"
-    )
+    ),
 )
 def list_evaluation_runs(
     factor_id: str | None = None,
@@ -55,7 +57,7 @@ def list_evaluation_runs(
     return [row.model_dump(mode="json") for row in rows]
 
 
-@tool(description=("按 run_id 查询评价运行详情；不存在时报错。"))
+@tool("获取评价运行详情", description=("按 run_id 查询评价运行详情；不存在时报错。"))
 def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     try:
         row = get_evaluation_run_detail_controller(run_id)
@@ -64,7 +66,7 @@ def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     return row.model_dump(mode="json")
 
 
-@tool(description="按 run_id 删除评价运行记录；不存在时报错，成功无返回。")
+@tool("删除评价运行记录", description="按 run_id 删除评价运行记录；不存在时报错，成功无返回。")
 def delete_evaluation_run(run_id: str) -> None:
     try:
         delete_evaluation_run_controller(run_id)

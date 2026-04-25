@@ -8,7 +8,7 @@ from app.tool.controller import ToolController
 
 
 @tool(
-    "list_available_tools",
+    "列出可用工具",
     description="查询系统当前可用的工具列表、名称和简要描述。该列表会返回系统中所有的工具，并不代表你能调用它们，仅将它作为系统能力的参考。",
 )
 def list_available_tools() -> list[dict[str, Any]]:

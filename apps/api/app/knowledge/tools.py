@@ -26,7 +26,7 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
 
 
 @tool(
-    "knowledge_search",
+    "知识库检索",
     description="在知识库中检索与用户问题最相关的文档片段，并返回命中的文档名称和内容。",
 )
 def knowledge_search_tool(query: str) -> list[dict[str, Any]]:

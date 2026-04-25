@@ -20,21 +20,23 @@ from app.factors.schemas import FactorCreate, FactorPatch
 
 
 @tool(
+    "获取新因子模板",
     description=(
         "获取内置因子源码模板（NEW_FACTOR_TEMPLATE）。"
         "通常先取模板并填充源码，再调用 create_factor 保存因子。"
-    )
+    ),
 )
 def get_new_factor_template() -> str:
     return NEW_FACTOR_TEMPLATE
 
 
 @tool(
+    "创建因子",
     description=(
         "创建因子并持久化。"
         "入参 body 需包含 name（合法 Python 标识符）和 source（完整 Python 源码）；"
         "若 source 为空会自动基于模板补全。返回创建后的因子详情。"
-    )
+    ),
 )
 def create_factor(body: FactorCreate) -> dict[str, Any]:
     """
@@ -58,7 +60,7 @@ def create_factor(body: FactorCreate) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool(description="按 factor_id 查询因子详情；不存在时报错。")
+@tool("获取因子详情", description="按 factor_id 查询因子详情；不存在时报错。")
 def get_factor_detail(factor_id: str) -> dict[str, Any]:
     rec = FactorItemsRegistry.get_item(factor_id)
     if rec is None:
@@ -66,12 +68,12 @@ def get_factor_detail(factor_id: str) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool(description="获取因子列表。")
+@tool("获取因子列表", description="获取因子列表。")
 def get_factor_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_factors()]
 
 
-@tool(description="更新因子并返回更新后的详情；不存在时报错。")
+@tool("更新因子", description="更新因子并返回更新后的详情；不存在时报错。")
 def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
     rec = update_factor_controller(factor_id, body)
     if rec is None:
@@ -79,7 +81,7 @@ def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool(description="删除因子并返回删除前记录；不存在时报错。")
+@tool("删除因子", description="删除因子并返回删除前记录；不存在时报错。")
 def delete_factor(factor_id: str) -> dict[str, Any]:
     rec = FactorItemsRegistry.delete_item(factor_id)
     if rec is None:

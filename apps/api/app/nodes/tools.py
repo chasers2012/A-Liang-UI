@@ -16,12 +16,15 @@ from app.nodes.controller import (
 from app.nodes.schemas import WorkflowNodeCreate, WorkflowNodePatch
 
 
-@tool(description="获取工作流节点源码模板（DEFAULT_NODE_SOURCE）。")
+@tool("获取新工作流节点模板", description="获取工作流节点源码模板（DEFAULT_NODE_SOURCE）。")
 def get_new_workflow_node_template() -> str:
     return DEFAULT_NODE_SOURCE
 
 
-@tool(description="创建工作流节点并返回详情；入参 body 可提供 source，缺省使用内置模板。")
+@tool(
+    "创建工作流节点",
+    description="创建工作流节点并返回详情；入参 body 可提供 source，缺省使用内置模板。",
+)
 def create_workflow_node_tool(body: dict[str, Any]) -> dict[str, Any]:
     src = (body.get("source") or "").strip()
     if not src:
@@ -33,7 +36,7 @@ def create_workflow_node_tool(body: dict[str, Any]) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@tool(description="按 node_id 查询节点详情（含完整 source）；不存在时报错。")
+@tool("获取工作流节点详情", description="按 node_id 查询节点详情（含完整 source）；不存在时报错。")
 def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     detail = load_node_detail(node_id)
     if detail is None:
@@ -41,12 +44,12 @@ def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@tool(description="获取工作流节点列表。")
+@tool("获取工作流节点列表", description="获取工作流节点列表。")
 def get_workflow_node_list() -> list[dict[str, Any]]:
     return [x.model_dump() for x in list_nodes()]
 
 
-@tool(description="按 node_id 获取可直接放入 workflow.nodes 的格式化节点。")
+@tool("获取格式化工作流节点", description="按 node_id 获取可直接放入 workflow.nodes 的格式化节点。")
 def get_formatted_workflow_node(
     node_id: str,
     instance_id: str = "",
@@ -63,7 +66,7 @@ def get_formatted_workflow_node(
     return node
 
 
-@tool(description="更新节点并返回更新后的详情；不存在时报错。")
+@tool("更新工作流节点", description="更新节点并返回更新后的详情；不存在时报错。")
 def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any]:
     rec = update_node_record(node_id, body)
     if rec is None:
@@ -74,7 +77,7 @@ def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any
     return detail.model_dump()
 
 
-@tool(description="删除节点并返回删除记录；不存在时报错。")
+@tool("删除工作流节点", description="删除节点并返回删除记录；不存在时报错。")
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
     deleted = delete_workflow_node(node_id)
     if deleted is None:
