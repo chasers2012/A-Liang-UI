@@ -23,7 +23,7 @@ import { defaultNewFactorName, validateFormForSubmit } from './form-model';
 import { refreshFactorsListAtom } from './list-detail.atom';
 import { factorsSelectedIdAtom } from './selection.atom';
 import { factorTemplateAsyncAtom, factorTemplateAtom } from './template.atom';
-import { ensurePythonParser } from './web-tree-sitter-loader';
+import { getPythonParser } from './web-tree-sitter-loader';
 
 export const factorsSavingAtom = atom(false);
 export const factorsSaveErrorAtom = atom<string | null>(null);
@@ -148,7 +148,7 @@ export const factorsEditingAtom = atom(
 
     // Entering edit mode: initialize drafts from current visible form (baseForm).
     if (next) {
-      await ensurePythonParser();
+      await getPythonParser();
       const detail = get(factorsDetailAtom);
       const baseForm = detail ?? (await resolveCreateFormForEditing(await get(factorTemplateAsyncAtom)));
       if (baseForm) {

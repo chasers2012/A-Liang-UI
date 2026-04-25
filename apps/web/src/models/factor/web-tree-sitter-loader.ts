@@ -20,30 +20,36 @@ type TSRuntimeModule = {
 };
 
 let pythonParser: TSParserInstance | null = null;
-let pythonParserInitPromise: Promise<TSParserInstance | null> | null = null;
 
-export async function ensurePythonParser(): Promise<TSParserInstance | null> {
-  if (pythonParser) return pythonParser;
-  if (typeof window === 'undefined') return null;
-  if (!pythonParserInitPromise) {
-    pythonParserInitPromise = (async () => {
-      try {
-        const runtimePath = '/web-tree-sitter.js';
-        const mod = (await import(/* webpackIgnore: true */ runtimePath)) as TSRuntimeModule;
-        await mod.Parser.init({ locateFile: (scriptName: string) => `/${scriptName}` });
-        const language = await mod.Language.load('/tree-sitter-python.wasm');
-        const parser = new mod.Parser();
-        parser.setLanguage(language);
-        pythonParser = parser;
-        return parser;
-      } catch (error) {
-        console.error('[factor] failed to initialize web-tree-sitter parser', error);
-        return null;
-      }
-    })();
+async function createPythonParser(): Promise<TSParserInstance | null> {
+  try {
+    const runtimePath = '/web-tree-sitter.js';
+    const mod = (await import(/* webpackIgnore: true */ runtimePath)) as TSRuntimeModule;
+    await mod.Parser.init({ locateFile: (scriptName: string) => `/${scriptName}` });
+    const language = await mod.Language.load('/tree-sitter-python.wasm');
+    const parser = new mod.Parser();
+    parser.setLanguage(language);
+    pythonParser = parser;
+    return parser;
+  } catch (error) {
+    console.error('[factor] failed to initialize web-tree-sitter parser', error);
+    return null;
   }
-  return await pythonParserInitPromise;
 }
+
+type GetPythonParserFn = (() => Promise<TSParserInstance | null>) & {
+  initPromise?: Promise<TSParserInstance | null>;
+};
+
+export const getPythonParser: GetPythonParserFn =
+  async function getPythonParserImpl(): Promise<TSParserInstance | null> {
+    if (pythonParser) return pythonParser;
+    if (typeof window === 'undefined') return null;
+    if (!getPythonParser.initPromise) {
+      getPythonParser.initPromise = createPythonParser();
+    }
+    return await getPythonParser.initPromise;
+  };
 
 export function withPythonTree<T>(source: string, runner: (root: TSNode) => T | undefined): T | undefined {
   const parser = pythonParser;
@@ -61,7 +67,7 @@ export async function withPythonTreeAsync<T>(
   source: string,
   runner: (root: TSNode) => T | undefined,
 ): Promise<T | undefined> {
-  const parser = await ensurePythonParser();
+  const parser = await getPythonParser();
   if (!parser) return;
   const tree = parser.parse(source);
   if (!tree) return;

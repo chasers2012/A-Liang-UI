@@ -140,17 +140,6 @@ async function replaceClassAttrValue(source: string, attr: string, nextValue: st
       (await withPythonTreeAsync(source, (root) => {
         const classBlock = findClassBlockNode(root);
         if (!classBlock) throw new Error('class block not found');
-        const assignments = classBlock.namedChildren.filter((n) => n.type === 'assignment');
-        console.log('[factor][replaceClassAttrValue] target attr:', attr);
-        console.log('[factor][replaceClassAttrValue] class block text preview:', classBlock.text.slice(0, 400));
-        console.log(
-          '[factor][replaceClassAttrValue] assignments:',
-          assignments.map((a) => {
-            const left = a.childForFieldName('left')?.text ?? '<missing-left>';
-            const right = a.childForFieldName('right')?.text ?? '<missing-right>';
-            return { left, right };
-          }),
-        );
         const assignment = findClassAssignmentNode(classBlock, attr);
         if (!assignment) throw new Error(`assignment not found for ${attr}`);
         const right = assignment.childForFieldName('right');
