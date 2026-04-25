@@ -16,27 +16,6 @@ class Factor(ABC):
     """
     Factor base class.
 
-    新建因子时建议按这个模板实现：
-
-    .. code-block:: python
-
-        class MyFactor(Factor):
-            name = "my_factor"
-            label = "我的因子"
-            group = "factor"
-            description = "因子说明"
-            param_specs = (
-                {"name": "window", "label": "窗口", "default": 20, "min": 1, "max": 250},
-            )
-
-            @property
-            def window(self) -> int:
-                return int(self.params["window"])
-
-            def calc(self, close: pd.DataFrame) -> pd.DataFrame:
-                window = int(self.params["window"])
-                return close.rolling(window).mean()
-
     Subclasses define:
     - ``name``: factor id
     - ``group``: registry grouping (optional override; default ``"factor"``)
@@ -102,15 +81,17 @@ class Factor(ABC):
             self.apply_params(params)
 
     @classmethod
-    def get_param_specs(cls) -> dict[str, dict[str, Any]]:
+    def get_param_specs(cls) -> tuple[dict[str, Any], ...]:
         raw = getattr(cls, "param_specs", None)
-        if not isinstance(raw, (list, tuple)):
+        if raw is None:
             return ()
+        if not isinstance(raw, (list, tuple)):
+            raise ValueError(f"Factor {cls.name}: param_specs must be a list/tuple")
 
         out: list[dict[str, Any]] = []
         for item in raw:
             if not isinstance(item, dict):
-                continue
+                raise ValueError(f"Factor {cls.name}: each param spec item must be a dict")
             spec = cls._normalize_param_spec_item(item)
             if spec is None:
                 continue

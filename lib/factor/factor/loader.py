@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 import types
 import uuid
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -73,13 +74,16 @@ def load_factor_instance_from_source(source: str, *, module_name: str | None = N
         raise ValueError(f"无法实例化因子类: {exc}") from exc
 
 
-def parse_factor_meta_from_source(source: str) -> tuple[str, str, str, list[str]]:
+def parse_factor_meta_from_source(
+    source: str,
+) -> tuple[str, str, str, list[str], tuple[dict[str, Any], ...]]:
     factor = load_factor_instance_from_source(source)
     name = str(getattr(factor, "name", "") or "").strip()
     group = str(getattr(factor, "group", "factor") or "factor").strip() or "factor"
     description = str(getattr(factor, "description", "") or "").strip()
     dependencies = factor.dependency_fields()
-    return name, group, description, dependencies
+    param_specs = factor.get_param_specs()
+    return name, group, description, dependencies, param_specs
 
 
 __all__ = [

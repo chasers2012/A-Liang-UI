@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import math
 import re
 import sys
+from typing import Any
 
 from custom_code import SourceFiles, validate_identifier_name, validate_source_syntax
 from factor import Factor
@@ -24,10 +26,75 @@ from app.factors.schemas import (
 resolve_source_path = SourceFiles.resolve_source_path
 
 
+def _validate_dependencies(dependencies: list[str]) -> list[str]:
+    if not isinstance(dependencies, list):
+        raise ValueError("因子 dependencies 必须是字符串列表")
+    parsed_dependencies: list[str] = []
+    for dep in dependencies:
+        dep_name = str(dep or "").strip()
+        if not dep_name:
+            raise ValueError("因子 dependencies 不能包含空字段名")
+        parsed_dependencies.append(dep_name)
+    return parsed_dependencies
+
+
+def _validate_param_specs(param_specs: tuple[dict[str, Any], ...]) -> tuple[dict[str, Any], ...]:
+    if not isinstance(param_specs, tuple):
+        raise ValueError("因子 param_specs 必须是元组")
+    parsed_param_specs: list[dict[str, Any]] = []
+    for idx, spec in enumerate(param_specs):
+        if not isinstance(spec, dict):
+            raise ValueError(f"因子 param_specs[{idx}] 必须是对象")
+        spec_name = str(spec.get("name") or "").strip()
+        if not spec_name:
+            raise ValueError(f"因子 param_specs[{idx}].name 不能为空")
+        for key in ("default", "min", "max"):
+            if key not in spec or spec[key] is None:
+                continue
+            value = spec[key]
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
+                raise ValueError(f"因子 param_specs[{idx}].{key} 必须是有限数值")
+        parsed_param_specs.append(spec)
+    return tuple(parsed_param_specs)
+
+
+def _validate_factor_metadata(
+    name: str,
+    group: str,
+    description: str,
+    dependencies: list[str],
+    param_specs: tuple[dict[str, Any], ...],
+) -> tuple[str, str, str, list[str], tuple[dict[str, Any], ...]]:
+    parsed_name = str(name or "").strip()
+    if not parsed_name:
+        raise ValueError("因子 name 不能为空")
+
+    parsed_group = str(group or "").strip()
+    if not parsed_group:
+        raise ValueError("因子 group 不能为空")
+
+    parsed_description = str(description or "").strip()
+    parsed_dependencies = _validate_dependencies(dependencies)
+    parsed_param_specs = _validate_param_specs(param_specs)
+
+    return parsed_name, parsed_group, parsed_description, parsed_dependencies, parsed_param_specs
+
+
 def create_factor(source: str) -> FactorRow:
     fid = generate_id()
     now = utc_now_iso()
-    name, group, description, dependencies = parse_factor_meta_from_source(source)
+    name, group, description, dependencies, param_specs = parse_factor_meta_from_source(source)
+    name, group, description, dependencies, param_specs = _validate_factor_metadata(
+        name,
+        group,
+        description,
+        dependencies,
+        param_specs,
+    )
     validate_identifier_name(name)
     rec = FactorRow(
         id=fid,
@@ -49,7 +116,14 @@ def update_factor(factor_id: str, source: str) -> FactorRow:
         if rec.is_plugin:
             raise ValueError("cannot patch plugin factor")
 
-        name, group, description, dependencies = parse_factor_meta_from_source(source)
+        name, group, description, dependencies, param_specs = parse_factor_meta_from_source(source)
+        name, group, description, dependencies, param_specs = _validate_factor_metadata(
+            name,
+            group,
+            description,
+            dependencies,
+            param_specs,
+        )
         validate_identifier_name(name)
         rec.name = name
         rec.group = group
