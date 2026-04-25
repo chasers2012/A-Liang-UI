@@ -3,7 +3,7 @@
 import { memo, useState } from 'react';
 import { Brain, ChevronRight } from 'lucide-react';
 
-import { AiChatMarkdown } from './ai-chat-markdown';
+import { MarkdownContent } from '@/components/markdown/markdown-content';
 import { cn } from '@/lib/utils';
 
 export const ChatReasoningCard = memo(function ChatReasoningCard({ content }: { content: string }) {
@@ -29,7 +29,7 @@ export const ChatReasoningCard = memo(function ChatReasoningCard({ content }: { 
       </button>
       {open ? (
         <div className="border-border/40 border-t px-3 py-2">
-          <AiChatMarkdown content={content} />
+          <MarkdownContent content={content} />
         </div>
       ) : null}
     </div>

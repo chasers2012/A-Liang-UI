@@ -2,6 +2,7 @@ import { getAgentChat } from '@/api/chat';
 import type { ChatDetailPublic, ChatMessagePublic, TextBlockPublic } from '@/models/agent-llm/dto';
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
+import { chatIsSendingAtom, chatStreamingReplyIdAtom } from './atoms.base';
 
 /**
  * message id → message(ChatMessagePublic)
@@ -32,6 +33,19 @@ export const replyOfMessageAtomFamily = atomFamily((id: string) =>
     const rid = get(replieIdOfMessageAtomFamily(id));
     if (!rid) return undefined;
     return get(messagesAtomFamily(rid));
+  }),
+);
+
+/**
+ * user message id -> whether its assistant reply is currently streaming.
+ * This narrows chat sending updates to the active reply only.
+ */
+export const isReplyStreamingOfMessageAtomFamily = atomFamily((id: string) =>
+  atom((get) => {
+    if (!get(chatIsSendingAtom)) return false;
+    const rid = get(replieIdOfMessageAtomFamily(id));
+    if (!rid) return false;
+    return rid === get(chatStreamingReplyIdAtom);
   }),
 );
 

@@ -2,7 +2,13 @@ import { atom, type Setter } from 'jotai';
 
 import { archiveAgentChat, createAgentChat, listAgentChats, postAgentChatStream, renameAgentChat } from '@/api/chat';
 import type { ChatMessagePublic } from '@/models/agent-llm/dto';
-import { chatErrorAtom, chatHydratedAtom, chatInputAtom, chatIsSendingAtom } from './atoms.base';
+import {
+  chatErrorAtom,
+  chatHydratedAtom,
+  chatInputAtom,
+  chatIsSendingAtom,
+  chatStreamingReplyIdAtom,
+} from './atoms.base';
 
 import { CHAT_DEFAULT_TITLE } from './constants';
 import {
@@ -24,6 +30,7 @@ import {
 } from './active-session';
 import {
   messagesAtomFamily,
+  isReplyStreamingOfMessageAtomFamily,
   removeSessionMessageAtom,
   replieIdOfMessageAtomFamily,
   replyOfMessageAtomFamily,
@@ -42,7 +49,9 @@ export {
   chatHydratedAtom,
   chatInputAtom,
   chatIsSendingAtom,
+  chatStreamingReplyIdAtom,
   chatSessionsAtom,
+  isReplyStreamingOfMessageAtomFamily,
   replieIdOfMessageAtomFamily,
   userMessageReplieIdsAtomFamily,
   messagesAtomFamily,
@@ -190,6 +199,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(chatErrorAtom, null);
   set(chatInputAtom, '');
   set(chatIsSendingAtom, true);
+  set(chatStreamingReplyIdAtom, provisionalAssistantId);
   set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
   set(messagesAtomFamily(userTurn.id), userTurn);
   set(messagesAtomFamily(provisionalAssistantId), {
@@ -216,6 +226,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           });
           streamUserId = ids.user;
           streamAssistantId = ids.assistant;
+          set(chatStreamingReplyIdAtom, ids.assistant);
         },
         onDelta: (delta) => {
           set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantDelta(prev, delta));
@@ -260,5 +271,6 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     set(chatInputAtom, trimmed);
   } finally {
     set(chatIsSendingAtom, false);
+    set(chatStreamingReplyIdAtom, null);
   }
 });

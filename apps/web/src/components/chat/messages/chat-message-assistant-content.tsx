@@ -3,13 +3,14 @@
 import { memo } from 'react';
 import { useAtomValue } from 'jotai';
 
-import { replyOfMessageAtomFamily } from '@/models/chat/session';
+import { MarkdownContent } from '@/components/markdown/markdown-content';
+import { isReplyStreamingOfMessageAtomFamily, replyOfMessageAtomFamily } from '@/models/chat/session';
 import type { AssistantBlock } from '@/models/chat/types';
-import { AiChatMarkdown } from './ai-chat-markdown';
 import { ChatReasoningCard } from './chat-reasoning-card';
 import { ChatToolCallCard } from './chat-tool-call-card';
 
 export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({ mid }: { mid: string }) {
+  const isSending = useAtomValue(isReplyStreamingOfMessageAtomFamily(mid));
   const message = useAtomValue(replyOfMessageAtomFamily(mid));
 
   if (!message) return null;
@@ -22,7 +23,7 @@ export const ChatMessageAssistantContent = memo(function ChatMessageAssistantCon
       {blocks.map((b, i) => {
         if (b.kind === 'text') {
           if (!b.content.trim()) return null;
-          return <AiChatMarkdown key={`t-${i}`} content={b.content} />;
+          return <MarkdownContent key={`t-${i}`} content={b.content} isFinished={!isSending || !!b.completed} />;
         }
         if (b.kind === 'reasoning') {
           return <ChatReasoningCard key={`r-${i}`} content={b.content} />;
