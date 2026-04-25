@@ -19,6 +19,7 @@ from app.chat.schemas import ChatMessageIn, message_text_for_model
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
+    AnyMessage,
     BaseMessage,
     HumanMessage,
     SystemMessage,
@@ -90,67 +91,72 @@ def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseM
 
 
 def _iter_stream_events_from_mode_data(  # noqa: C901
-    mode: str,
-    data: Any,
+    chunk_data: tuple[AnyMessage, dict[str, Any]],
     pending_tool_names: dict[str, str],
     emitted_tool_event_keys: set[tuple[str, str]],
 ) -> Iterable[StreamEventAny]:
-    if mode == "messages":
-        # stream_mode="messages" carries incremental reasoning and text deltas.
-        if isinstance(data, tuple) and data:
-            chunk = data[0]
-            if isinstance(chunk, AIMessageChunk):
-                reasoning = _ai_message_reasoning_content(chunk)
-                if reasoning:
-                    yield ReasoningEvent(payload=reasoning)
-                for tc in chunk.tool_calls:
-                    name = tc.get("name") or ""
-                    tc_id = str(tc.get("id") or "") or name or "tool_call"
-                    pending_tool_names[tc_id] = name
-                    event_key = ("start", tc_id)
-                    if event_key in emitted_tool_event_keys:
-                        continue
-                    emitted_tool_event_keys.add(event_key)
-                    yield ToolEvent(
-                        payload=ToolPayload(
-                            stage="start",
-                            name=name,
-                            id=tc_id,
-                            args=tc.get("args"),
-                        )
+
+    token, _metadata = chunk_data
+
+    if isinstance(token, AIMessageChunk):
+        reasoning = _ai_message_reasoning_content(token)
+        if reasoning:
+            yield ReasoningEvent(payload=reasoning)
+
+        if token.tool_call_chunks:
+            # Per Deep Agents streaming docs, tool calls surface as tool_call_chunks.
+            for tc in token.tool_call_chunks:
+                name = tc.get("name")
+                tc_id = tc.get("id")
+                pending_tool_names[tc_id] = name
+                event_key = ("start", tc_id)
+                if event_key in emitted_tool_event_keys:
+                    continue
+                emitted_tool_event_keys.add(event_key)
+                yield ToolEvent(
+                    payload=ToolPayload(
+                        stage="start",
+                        name=name,
+                        id=tc_id,
+                        args=tc.get("args"),
                     )
-            if isinstance(chunk, ToolMessage):
-                tc_id = chunk.tool_call_id
-                name = pending_tool_names.get(tc_id, "")
-                if chunk.status == "error":
-                    event_key = ("error", tc_id or name or "tool_call")
-                    if event_key not in emitted_tool_event_keys:
-                        emitted_tool_event_keys.add(event_key)
-                        yield ToolEvent(
-                            payload=ToolPayload(
-                                stage="error",
-                                name=name,
-                                id=tc_id or name or "tool_call",
-                                error=str(chunk.content),
-                            )
-                        )
-                else:
-                    result = chunk.artifact if chunk.artifact is not None else chunk.content
-                    event_key = ("result", tc_id or name or "tool_call")
-                    if event_key not in emitted_tool_event_keys:
-                        emitted_tool_event_keys.add(event_key)
-                        yield ToolEvent(
-                            payload=ToolPayload(
-                                stage="result",
-                                name=name,
-                                id=tc_id or name or "tool_call",
-                                result=result,
-                            )
-                        )
-        text = _stream_token_text(data)
+                )
+
+        text = _chunk_text(token.content)
         if text:
             yield DeltaEvent(payload=text)
         return
+
+    if not isinstance(token, ToolMessage):
+        return
+
+    tc_id = token.tool_call_id
+    if token.status == "error":
+        event_key = ("error", tc_id)
+        if event_key in emitted_tool_event_keys:
+            return
+        emitted_tool_event_keys.add(event_key)
+        yield ToolEvent(
+            payload=ToolPayload(
+                stage="error",
+                id=tc_id,
+                error=str(token.content),
+            )
+        )
+        return
+
+    result = token.artifact if token.artifact is not None else token.content
+    event_key = ("result", tc_id)
+    if event_key in emitted_tool_event_keys:
+        return
+    emitted_tool_event_keys.add(event_key)
+    yield ToolEvent(
+        payload=ToolPayload(
+            stage="result",
+            id=tc_id,
+            result=result,
+        )
+    )
     return
 
 
@@ -171,23 +177,20 @@ def stream_event_iter_for_chat(
     try:
         pending_tool_names: dict[str, str] = {}
         emitted_tool_event_keys: set[tuple[str, str]] = set()
-        for item in agent.stream(
+        for chunk in agent.stream(
             {"messages": lc_messages},
             {"recursion_limit": max_tool_rounds * 2},
             stream_mode=["messages"],
             subgraphs=True,
+            version="v2",
         ):
-            if not isinstance(item, tuple):
+            if not isinstance(chunk, dict):
                 continue
-            if len(item) == 3 and isinstance(item[1], str):
-                _, mode, data = item
-            elif len(item) == 2 and isinstance(item[0], str):
-                mode, data = item
-            else:
+            if chunk.get("type") != "messages":
                 continue
+
             yield from _iter_stream_events_from_mode_data(
-                mode,
-                data,
+                chunk.get("data"),
                 pending_tool_names,
                 emitted_tool_event_keys,
             )

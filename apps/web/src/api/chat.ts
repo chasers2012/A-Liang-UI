@@ -9,14 +9,10 @@ import type {
 import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './client';
 
 /** Mirrors ``app.chat.events.ToolPayload``. */
-type ChatSseToolPayload = {
-  stage: 'start' | 'result' | 'error';
-  name: string;
-  id: string;
-  args?: unknown;
-  result?: unknown;
-  error?: string | null;
-};
+type ChatSseToolPayload =
+  | { stage: 'start'; id: string; name: string; args?: unknown }
+  | { stage: 'result'; id: string; result?: unknown }
+  | { stage: 'error'; id: string; error?: string | null };
 
 /** Mirrors ``app.chat.events.MessageIdsPayload``. */
 type ChatSseMessageIdsPayload = {
@@ -47,22 +43,28 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
   if (!payload || typeof payload !== 'object') return undefined;
   const p = payload as Record<string, unknown>;
   const stage = sseStringField(p.stage);
-  const base = { name: sseStringField(p.name), id: sseStringField(p.id) };
   if (stage === 'start') {
-    return { type: 'tool', payload: { stage: 'start', ...base, args: p.args } };
+    const name = sseStringField(p.name);
+    const id = sseStringField(p.id);
+    if (!name || !id) return undefined;
+    return { type: 'tool', payload: { stage: 'start', name, id, args: p.args } };
   }
   if (stage === 'result') {
+    const id = sseStringField(p.id);
+    if (!id) return undefined;
     return {
       type: 'tool',
-      payload: { stage: 'result', ...base, result: p.result },
+      payload: { stage: 'result', id, result: p.result },
     };
   }
   if (stage === 'error') {
+    const id = sseStringField(p.id);
+    if (!id) return undefined;
     return {
       type: 'tool',
       payload: {
         stage: 'error',
-        ...base,
+        id,
         error: typeof p.error === 'string' ? p.error : String(p.error ?? ''),
       },
     };
@@ -127,8 +129,8 @@ export type AgentChatStreamOptions = {
   onDelta: (text: string) => void;
   onReasoning?: (text: string) => void;
   onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
-  onToolResult?: (payload: { name: string; id: string; result: unknown }) => void;
-  onToolError?: (payload: { name: string; id: string; error: string }) => void;
+  onToolResult?: (payload: { id: string; result: unknown }) => void;
+  onToolError?: (payload: { id: string; error: string }) => void;
 };
 
 /** @returns ``true`` to keep reading the stream; ``false`` when a terminal ``done`` event was handled. */
@@ -159,14 +161,12 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
   }
   if (stage === 'result') {
     options.onToolResult?.({
-      name: ev.payload.name,
       id: ev.payload.id,
       result: ev.payload.result,
     });
     return true;
   }
   options.onToolError?.({
-    name: ev.payload.name,
     id: ev.payload.id,
     error: ev.payload.error ?? '',
   });
