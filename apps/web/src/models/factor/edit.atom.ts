@@ -20,7 +20,7 @@ import {
   parseFactorWindowFromSource,
   parseUserFactorMetadataFromSource,
 } from './factor-metadata-sync';
-import { bodyFromForm, defaultNewFactorName, validateFormForSubmit } from './form-model';
+import { defaultNewFactorName, validateFormForSubmit } from './form-model';
 import { refreshFactorsListAtom } from './list-detail.atom';
 import { factorsSelectedIdAtom } from './selection.atom';
 import { factorTemplateAsyncAtom, factorTemplateAtom } from './template.atom';
@@ -266,8 +266,8 @@ export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
   set(factorsSavingAtom, true);
   try {
     const selectedId = get(factorsSelectedIdAtom);
-    const saved =
-      selectedId == null ? await createFactor(bodyFromForm(form)) : await patchFactor(selectedId, bodyFromForm(form));
+    const source = get(factorsSourceDraftAtom) ?? form.source;
+    const saved = selectedId == null ? await createFactor(source) : await patchFactor(selectedId, source);
     await set(refreshFactorsListAtom);
     if (selectedId != null) {
       await set(refreshFactorsDetailAtomFamily(selectedId));

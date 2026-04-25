@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
 
 from app.common import datetime_utils
 from app.common.id import create_id_generator
@@ -19,57 +19,6 @@ def source_relative_path(factor_id: str) -> str:
 class FactorRegistryFile(BaseModel):
     version: int = Field(description="因子注册文件版本", default=1)
     items: list[FactorRow] = Field(description="因子注册文件中的因子列表", default_factory=list)
-
-
-class FactorCreate(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    name: str = Field(description="因子名称")
-    group: str = Field(description="因子组", default="factor")
-    description: str = Field(description="因子描述", default="")
-    dependencies: list[str] = Field(
-        description="因子依赖的列这些列会在data中传给因子calc方法",
-        default_factory=lambda: ["close"],
-    )
-    source: str | None = Field(description="因子源码", default=None)
-
-    @field_validator("name")
-    @classmethod
-    def _strip_name(cls, v: str) -> str:
-        s = v.strip()
-        if not s:
-            raise ValueError("name 不能为空")
-        return s
-
-    @model_validator(mode="after")
-    def _deps(self) -> FactorCreate:
-        deps = [d.strip() for d in self.dependencies if str(d).strip()]
-        if not deps:
-            raise ValueError("dependencies 不能为空")
-        return self.model_copy(update={"dependencies": deps})
-
-    def to_row(self, factor_id: str, now: str) -> FactorRow:
-        return FactorRow(
-            id=factor_id,
-            name=self.name.strip(),
-            group=self.group.strip(),
-            description=self.description.strip(),
-            is_plugin=False,
-            dependencies=list(self.dependencies),
-            source_path=source_relative_path(factor_id),
-            created_at=now,
-            updated_at=now,
-        )
-
-
-class FactorPatch(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    name: str | None = None
-    group: str | None = None
-    description: str | None = None
-    dependencies: list[str] | None = None
-    source: str | None = None
 
 
 class FactorSummaryPublic(BaseModel):

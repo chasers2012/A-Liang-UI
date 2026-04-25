@@ -9,6 +9,7 @@ from app.factors.controller import (
     create_factor as create_factor_controller,
 )
 from app.factors.controller import (
+    delete_factor_record,
     factor_detail,
     list_factors,
 )
@@ -16,14 +17,13 @@ from app.factors.controller import (
     update_factor as update_factor_controller,
 )
 from app.factors.registry import FactorItemsRegistry
-from app.factors.schemas import FactorCreate, FactorPatch
 
 
 @tool(
     "获取新因子模板",
     description=(
         "获取内置因子源码模板（NEW_FACTOR_TEMPLATE）。"
-        "通常先取模板并填充源码，再调用 create_factor 保存因子。"
+        "通常先取模板并填充源码，再调用“创建因子”工具保存因子。"
     ),
 )
 def get_new_factor_template() -> str:
@@ -32,30 +32,15 @@ def get_new_factor_template() -> str:
 
 @tool(
     "创建因子",
-    description=(
-        "创建因子并持久化。"
-        "入参 body 需包含 name（合法 Python 标识符）和 source（完整 Python 源码）；"
-        "若 source 为空会自动基于模板补全。返回创建后的因子详情。"
-    ),
+    description=("创建因子并持久化。返回创建后的因子详情。"),
 )
-def create_factor(body: FactorCreate) -> dict[str, Any]:
-    """
-    body: FactorCreate = {
-        "name": "因子名称",
-        "group": "因子组",
-        "description": "因子描述",
-        "dependencies": ["close"],
-        "source": "因子源码"
-    }
-    """
+def create_factor(source: str | None = None) -> dict[str, Any]:
     # Models sometimes omit `source` when tool-calling; use a safe default template.
-    src = (body.source or "").strip()
+    src = (source or "").strip()
     if not src:
-        src = NEW_FACTOR_TEMPLATE.replace("class NewFactor(", f"class {body.name}(")
-        src = src.replace('name = ""', f'name = "{body.name}"')
-        body = body.model_copy(update={"source": src})
+        src = NEW_FACTOR_TEMPLATE.replace('name = ""', 'name = "new_factor"')
 
-    rec = create_factor_controller(body)
+    rec = create_factor_controller(src)
 
     return factor_detail(rec).model_dump()
 
@@ -74,8 +59,8 @@ def get_factor_list() -> list[dict[str, Any]]:
 
 
 @tool("更新因子", description="更新因子并返回更新后的详情；不存在时报错。")
-def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
-    rec = update_factor_controller(factor_id, body)
+def update_factor(factor_id: str, source: str) -> dict[str, Any]:
+    rec = update_factor_controller(factor_id, source)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
     return factor_detail(rec).model_dump()
@@ -83,9 +68,7 @@ def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
 
 @tool("删除因子", description="删除因子并返回删除前记录；不存在时报错。")
 def delete_factor(factor_id: str) -> dict[str, Any]:
-    rec = FactorItemsRegistry.delete_item(factor_id)
-    if rec is None:
-        raise ValueError(f"因子 {factor_id} 不存在")
+    rec = delete_factor_record(factor_id)
     return rec.model_dump()
 
 

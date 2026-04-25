@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 
 import pytest
-from app.factors.controller import resolve_source_path
-from app.factors.registry import FactorItemsRegistry, read_source
+from app.factors.controller import get_factor, read_factor_source, resolve_source_path
+from app.factors.registry import FactorItemsRegistry
 from custom_code import validate_identifier_name as validate_factor_name
 from custom_code import validate_source_syntax
 from factor import Factor
@@ -66,22 +66,29 @@ def test_default_source(client):
 
 
 def test_create_roundtrip_files(workspace_tmp, client):
+    src = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class AlphaOne(Factor):
+    name = "alpha_one"
+    group = "g"
+    description = "d"
+
+    def calc(self, close: pd.DataFrame, volume: pd.DataFrame) -> pd.DataFrame:
+        return close
+"""
     r = client.post(
         "/factors",
-        json={
-            "name": "alpha_one",
-            "group": "g",
-            "description": "d",
-            "window": 3,
-            "dependencies": ["close", "volume"],
-            "source": MIN_SOURCE,
-        },
+        json=src,
     )
     assert r.status_code == 200, r.text
     data = r.json()
     assert data["name"] == "alpha_one"
     assert data["dependencies"] == ["close", "volume"]
-    assert data["source"] == MIN_SOURCE
+    assert data["source"] == src
     fid = data["id"]
 
     cfg = workspace_tmp / "factors" / "registry.json"
@@ -92,22 +99,28 @@ def test_create_roundtrip_files(workspace_tmp, client):
 
     py_path = workspace_tmp / "factors" / "source" / f"{fid}.py"
     assert py_path.is_file()
-    assert py_path.read_text(encoding="utf-8") == MIN_SOURCE
+    assert py_path.read_text(encoding="utf-8") == src
 
     r2 = client.get(f"/factors/{fid}")
     assert r2.status_code == 200
-    assert r2.json()["source"] == MIN_SOURCE
+    assert r2.json()["source"] == src
 
 
 def test_create_bad_name(client):
+    src = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class BadFactor(Factor):
+    name = "not-valid!"
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        return close
+"""
     r = client.post(
         "/factors",
-        json={
-            "name": "not-valid!",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": MIN_SOURCE,
-        },
+        json=src,
     )
     assert r.status_code == 400
 
@@ -115,40 +128,53 @@ def test_create_bad_name(client):
 def test_create_syntax_error(client):
     r = client.post(
         "/factors",
-        json={
-            "name": "okname",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": "def x(",
-        },
+        json="def x(",
     )
     assert r.status_code == 400
 
 
 def test_patch_and_delete(workspace_tmp, client):
+    src = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class ToPatch(Factor):
+    name = "to_patch"
+    description = ""
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        return close
+"""
     r = client.post(
         "/factors",
-        json={
-            "name": "to_patch",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": MIN_SOURCE,
-        },
+        json=src,
     )
     assert r.status_code == 200
     fid = r.json()["id"]
 
-    new_src = "y = 2\n"
+    new_src = """from __future__ import annotations
+
+import pandas as pd
+from factor.factor import Factor
+
+
+class ToPatch(Factor):
+    name = "to_patch"
+    description = "Patched"
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        return close
+"""
     r2 = client.patch(
         f"/factors/{fid}",
-        json={"source": new_src, "description": "Patched"},
+        json=new_src,
     )
     assert r2.status_code == 200, r2.text
     assert r2.json()["description"] == "Patched"
     assert r2.json()["source"] == new_src
 
     rec = FactorItemsRegistry.list_items()[0]
-    assert read_source(rec) == new_src
+    assert read_factor_source(rec) == new_src
     assert resolve_source_path(rec.source_path).read_text(encoding="utf-8") == new_src
 
     r3 = client.delete(f"/factors/{fid}")
@@ -161,19 +187,12 @@ def test_get_factor_loads_from_source(workspace_tmp, client):
     src = FACTOR_SOURCE_TEMPLATE.format(name="alpha_test")
     r = client.post(
         "/factors",
-        json={
-            "name": "alpha_test",
-            "group": "custom",
-            "description": "",
-            "window": 2,
-            "dependencies": ["close"],
-            "source": src,
-        },
+        json=src,
     )
     assert r.status_code == 200, r.text
     fid = r.json()["id"]
 
-    factor_cls = FactorItemsRegistry.get_factor(fid)
+    factor_cls = get_factor(fid)
     assert factor_cls is not None
     assert isinstance(factor_cls, type)
     assert issubclass(factor_cls, Factor)
@@ -198,18 +217,11 @@ class ParamFactor(Factor):
 """
     r = client.post(
         "/factors",
-        json={
-            "name": "param_factor",
-            "group": "custom",
-            "description": "",
-            "window": 6,
-            "dependencies": ["close"],
-            "source": src,
-        },
+        json=src,
     )
     assert r.status_code == 200, r.text
     fid = r.json()["id"]
-    factor_cls = FactorItemsRegistry.get_factor(fid)
+    factor_cls = get_factor(fid)
     assert factor_cls is not None
     factor = factor_cls(params={"lookback": 20})
     assert factor.lookback == 20
