@@ -75,9 +75,9 @@ export function FactorDetailPanel() {
             onChange={(name) => {
               setEditName(name);
             }}
-            inputAriaLabel="编辑因子标识 name"
-            editButtonAriaLabel="编辑因子标识 name"
-            placeholder="（未命名因子）"
+            inputAriaLabel="编辑因子名称"
+            editButtonAriaLabel="编辑因子名称"
+            placeholder="因子详情"
           />
         </CardTitle>
       </CardHeader>

@@ -42,7 +42,8 @@ export function PanelSourceTab() {
             key={detail.id}
             id={codeJarId}
             value={value}
-            {...(canEditSource ? { readOnly: false as const, onChange: setSourceDraft } : { readOnly: true as const })}
+            readOnly={!canEditSource}
+            onChange={setSourceDraft}
             className="h-full min-h-0 w-full max-w-full flex-1 sm:min-h-0"
             aria-label="节点 Python 源码"
           />
