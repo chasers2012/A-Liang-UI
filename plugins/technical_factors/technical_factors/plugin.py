@@ -1,41 +1,30 @@
 from typing import ClassVar
 
-from app.factors.factor_plugin import FactorPlugin
-from factor import Factor
+from app.nodes.node_plugin import NodePlugin
 
-from technical_factors.factors import (
-    AtrFactor,
-    BbandsLowerFactor,
-    BbandsMiddleFactor,
-    BbandsUpperFactor,
-    EmaFactor,
-    MacdFactor,
-    MacdHistFactor,
-    MacdSignalFactor,
-    MaFactor,
-    MstdFactor,
-    ObvFactor,
-    RsiFactor,
-    StochPercentDFactor,
-    StochPercentKFactor,
+from technical_factors.nodes import (
+    AtrNode,
+    BbandsNode,
+    EmaNode,
+    MacdNode,
+    MaNode,
+    MstdNode,
+    ObvNode,
+    RsiNode,
+    StochNode,
 )
 
 
-class TechnicalFactorsPlugin(FactorPlugin):
+class TechnicalFactorsPlugin(NodePlugin):
     name = "technical-factors"
-    factors: ClassVar[list[type[Factor]]] = [
-        MaFactor,
-        EmaFactor,
-        MstdFactor,
-        BbandsMiddleFactor,
-        BbandsUpperFactor,
-        BbandsLowerFactor,
-        RsiFactor,
-        StochPercentKFactor,
-        StochPercentDFactor,
-        MacdFactor,
-        MacdSignalFactor,
-        MacdHistFactor,
-        AtrFactor,
-        ObvFactor,
+    nodes: ClassVar[list[type]] = [
+        MaNode,
+        EmaNode,
+        MstdNode,
+        BbandsNode,
+        RsiNode,
+        StochNode,
+        MacdNode,
+        AtrNode,
+        ObvNode,
     ]

@@ -6029,16 +6029,16 @@ name = "technical-factors"
 version = "0.1.0"
 source = { editable = "plugins/technical_factors" }
 dependencies = [
-    { name = "factor" },
     { name = "quant-agent-api" },
     { name = "vectorbt" },
+    { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "factor", editable = "lib/factor" },
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "vectorbt" },
+    { name = "workflow", editable = "lib/workflow" },
 ]
 
 [[package]]
