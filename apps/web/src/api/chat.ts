@@ -175,7 +175,6 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
 
 /**
  * POST ``/chat/message`` (SSE). Wire: ``event:`` + payload-only ``data:`` (see ``app.chat`` controller stream).
- * **Contract:** each ``reader.read()`` chunk is one complete SSE event; no cross-chunk framing.
  */
 export async function postAgentChatStream(body: ChatRequestPublic, options: AgentChatStreamOptions): Promise<void> {
   const url = `${getQuantAgentApiBase()}/chat/message`;
@@ -196,15 +195,40 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
     throw new ApiError('响应无正文', res.status || 502);
   }
   const decoder = new TextDecoder();
+  let buffer = '';
+
+  const flushBuffer = (): boolean => {
+    // SSE events are separated by a blank line.
+    // We support both \n\n and \r\n\r\n because servers vary.
+    while (true) {
+      const idxLF = buffer.indexOf('\n\n');
+      const idxCRLF = buffer.indexOf('\r\n\r\n');
+      const idx = idxLF === -1 ? idxCRLF : idxCRLF === -1 ? idxLF : Math.min(idxLF, idxCRLF);
+      if (idx === -1) return true;
+
+      const sepLen = buffer.startsWith('\r\n\r\n', idx) ? 4 : 2;
+      const block = buffer.slice(0, idx).trim();
+      buffer = buffer.slice(idx + sepLen);
+      if (!block) continue;
+
+      const ev = parseAgentChatSseBlock(block);
+      const keepGoing = handleParsedAgentChatSseEvent(ev, options);
+      if (!keepGoing) return false;
+    }
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     if (!value?.byteLength) continue;
-    const block = decoder.decode(value);
-    const ev = parseAgentChatSseBlock(block);
-    const keepGoing = handleParsedAgentChatSseEvent(ev, options);
+    buffer += decoder.decode(value, { stream: true });
+    const keepGoing = flushBuffer();
     if (!keepGoing) return;
   }
+
+  // Flush any remaining decoder state and buffered events.
+  buffer += decoder.decode();
+  flushBuffer();
 }
 
 export function listAgentChats(): Promise<ChatSummaryPublic[]> {

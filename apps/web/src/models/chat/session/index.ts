@@ -1,5 +1,4 @@
 import { atom, type Setter } from 'jotai';
-import { startTransition } from 'react';
 
 import { archiveAgentChat, createAgentChat, listAgentChats, postAgentChatStream, renameAgentChat } from '@/api/chat';
 import type { ChatMessagePublic } from '@/models/agent-llm/dto';
@@ -95,27 +94,6 @@ function rollbackOptimisticSend(set: Setter, targetSessionId: string, userId: st
   set(messagesAtomFamily(assistantId), undefined);
   userMessageReplieIdsAtomFamily.remove(userId);
 }
-
-const patchAssistantMessageAtom = atom(
-  null,
-  (
-    get,
-    set,
-    {
-      mid,
-      patch,
-    }: {
-      mid: string;
-      patch: (message: ChatMessagePublic | undefined) => ChatMessagePublic | undefined;
-    },
-  ) => {
-    startTransition(() => {
-      const message = get(messagesAtomFamily(mid));
-      if (!message) return;
-      set(messagesAtomFamily(mid), patch);
-    });
-  },
-);
 
 export const hydrateChatStateAtom = atom(null, async (get, set) => {
   if (get(chatHydratedAtom)) return;
@@ -240,42 +218,29 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           streamAssistantId = ids.assistant;
         },
         onDelta: (delta) => {
-          set(patchAssistantMessageAtom, {
-            mid: streamAssistantId,
-            patch: (message) => appendAssistantDelta(message, delta),
-          });
+          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantDelta(prev, delta));
         },
         onReasoning: (reasoning) => {
-          set(patchAssistantMessageAtom, {
-            mid: streamAssistantId,
-            patch: (message) => appendAssistantReasoning(message, reasoning),
-          });
+          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantReasoning(prev, reasoning));
         },
         onToolStart: (payload) => {
-          set(patchAssistantMessageAtom, {
-            mid: streamAssistantId,
-            patch: (message) => applyToolStart(message, payload),
-          });
+          set(messagesAtomFamily(streamAssistantId), (prev) => applyToolStart(prev, payload));
         },
         onToolResult: (payload) => {
-          set(patchAssistantMessageAtom, {
-            mid: streamAssistantId,
-            patch: (message) =>
-              patchToolInBlocks(message, payload.id, {
-                status: 'ok',
-                result: payload.result,
-              }),
-          });
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, payload.id, {
+              status: 'ok',
+              result: payload.result,
+            }),
+          );
         },
         onToolError: (payload) => {
-          set(patchAssistantMessageAtom, {
-            mid: streamAssistantId,
-            patch: (message) =>
-              patchToolInBlocks(message, payload.id, {
-                status: 'error',
-                error: payload.error,
-              }),
-          });
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, payload.id, {
+              status: 'error',
+              error: payload.error,
+            }),
+          );
         },
       },
     );
