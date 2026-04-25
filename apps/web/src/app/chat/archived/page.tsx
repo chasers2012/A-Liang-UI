@@ -1,28 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
-import { ArchiveRestore, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 
+import {
+  archiveAgentChat,
+  listAgentChats,
+  listArchivedAgentChats,
+  purgeArchivedAgentChat,
+  restoreAgentChat,
+} from '@/api/chat';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { ChatArchivedSummaryPublic } from '@/models/agent-llm/dto';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import {
-  archiveConfirmDeleteAtom,
-  archiveDeletingIdAtom,
-  archiveErrorAtom,
-  archivedSessionsAtom,
-  archiveRestoringIdAtom,
-  loadArchivedSessionsAtom,
-  purgeArchivedSessionAtom,
-  restoreArchivedSessionAtom,
-} from '@/models/chat/archive';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { ChatArchivedSummaryPublic, ChatSummaryPublic } from '@/models/agent-llm/dto';
+import { ApiError } from '@/api/client';
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -30,167 +28,137 @@ function formatWhen(iso: string): string {
   return d.toLocaleString();
 }
 
-type ArchivedItem = ChatArchivedSummaryPublic;
-
-type ArchivedActionsProps = {
-  restoringId: string | null;
-  deletingId: string | null;
-  onRestore: (id: string) => void;
-  onDeleteIntent: (session: ArchivedItem) => void;
+type ManagedSession = (ChatSummaryPublic | ChatArchivedSummaryPublic) & {
+  is_archived: boolean;
+  archived_at: string | null;
 };
 
-type ArchivedSessionRowProps = ArchivedActionsProps & {
-  session: ArchivedItem;
-};
-
-function ArchivedSessionRow({ session, restoringId, deletingId, onRestore, onDeleteIntent }: ArchivedSessionRowProps) {
-  return (
-    <TableRow>
-      <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
-      <TableCell className="hidden text-muted-foreground sm:table-cell">{session.message_count}</TableCell>
-      <TableCell className="hidden text-muted-foreground md:table-cell">{formatWhen(session.archived_at)}</TableCell>
-      <TableCell className="text-right">
-        <div className="inline-flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={restoringId !== null || deletingId !== null}
-            onClick={() => onRestore(session.id)}
-          >
-            <ArchiveRestore className="size-3.5" aria-hidden />
-            {restoringId === session.id ? '恢复中…' : '恢复'}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            size="sm"
-            className="gap-1.5"
-            disabled={restoringId !== null || deletingId !== null}
-            onClick={() => onDeleteIntent(session)}
-          >
-            <Trash2 className="size-3.5" aria-hidden />
-            {deletingId === session.id ? '删除中…' : '删除'}
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-type ArchivedSessionsTableProps = ArchivedActionsProps & {
-  items: ArchivedItem[] | null;
-};
-
-function ArchivedSessionsTable({
-  items,
-  restoringId,
-  deletingId,
-  onRestore,
-  onDeleteIntent,
-}: ArchivedSessionsTableProps) {
-  if (items === null) {
-    return <p className="p-6 text-sm text-muted-foreground">加载中…</p>;
-  }
-
-  if (items.length === 0) {
-    return (
-      <p className="p-6 text-sm text-muted-foreground">
-        暂无已归档会话。在对话页会话标签栏使用归档按钮即可将当前会话移入此处。
-      </p>
-    );
-  }
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>标题</TableHead>
-          <TableHead className="hidden w-28 sm:table-cell">消息数</TableHead>
-          <TableHead className="hidden md:table-cell">归档时间</TableHead>
-          <TableHead className="text-right">操作</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((session) => (
-          <ArchivedSessionRow
-            key={session.id}
-            session={session}
-            restoringId={restoringId}
-            deletingId={deletingId}
-            onRestore={onRestore}
-            onDeleteIntent={onDeleteIntent}
-          />
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-type ArchivedDeleteDialogProps = {
-  deletingId: string | null;
-  confirmDelete: ArchivedItem | null;
-  onClose: () => void;
-  onConfirm: (id: string) => void;
-};
-
-function ArchivedDeleteDialog({ deletingId, confirmDelete, onClose, onConfirm }: ArchivedDeleteDialogProps) {
-  return (
-    <ConfirmDialog
-      open={confirmDelete !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-      title="删除已归档会话"
-      description={
-        <div className="space-y-2">
-          <p className="text-sm text-foreground">确认永久删除会话「{confirmDelete?.title ?? ''}」？</p>
-          <p className="text-sm text-muted-foreground">删除后将无法恢复，历史消息会一并移除。</p>
-        </div>
-      }
-      confirmLabel={deletingId ? '删除中…' : '删除'}
-      onConfirm={() => {
-        if (!confirmDelete) return;
-        onConfirm(confirmDelete.id);
-      }}
-    />
-  );
+function toManagedSessions(active: ChatSummaryPublic[], archived: ChatArchivedSummaryPublic[]): ManagedSession[] {
+  const activeSessions: ManagedSession[] = active.map((session) => ({
+    ...session,
+    is_archived: false,
+    archived_at: null,
+  }));
+  const archivedSessions: ManagedSession[] = archived.map((session) => ({
+    ...session,
+    is_archived: true,
+    archived_at: session.archived_at,
+  }));
+  return [...activeSessions, ...archivedSessions].sort((a, b) => {
+    const aTs = new Date(a.archived_at ?? a.updated_at).getTime();
+    const bTs = new Date(b.archived_at ?? b.updated_at).getTime();
+    return bTs - aTs;
+  });
 }
 
 export default function ArchivedChatsPage() {
-  const router = useRouter();
-  const [items] = useAtom(archivedSessionsAtom);
-  const [error] = useAtom(archiveErrorAtom);
-  const [restoringId] = useAtom(archiveRestoringIdAtom);
-  const [deletingId] = useAtom(archiveDeletingIdAtom);
-  const [confirmDelete, setConfirmDelete] = useAtom(archiveConfirmDeleteAtom);
+  const [items, setItems] = useState<ManagedSession[] | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+  const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<'archive' | 'restore' | 'delete' | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const loadArchivedSessions = useSetAtom(loadArchivedSessionsAtom);
-  const restoreArchivedSession = useSetAtom(restoreArchivedSessionAtom);
-  const purgeArchivedSession = useSetAtom(purgeArchivedSessionAtom);
+  const visibleItems = useMemo(
+    () => (items ?? []).filter((session) => (activeTab === 'active' ? !session.is_archived : session.is_archived)),
+    [activeTab, items],
+  );
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectedItems = useMemo(
+    () => visibleItems.filter((session) => selectedSet.has(session.id)),
+    [visibleItems, selectedSet],
+  );
+
+  const allIds = useMemo(() => visibleItems.map((session) => session.id), [visibleItems]);
+  const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
+  const isBusy = pendingAction !== null;
+
+  const loadSessions = useCallback(async () => {
+    setError(null);
+    try {
+      const [active, archived] = await Promise.all([listAgentChats(), listArchivedAgentChats()]);
+      const merged = toManagedSessions(active, archived);
+      setItems(merged);
+      setSelectedIds((prev) => prev.filter((id) => merged.some((session) => session.id === id)));
+    } catch (e) {
+      setItems([]);
+      setError(e instanceof ApiError ? e.message : '加载会话失败，请检查网络与 API。');
+    }
+  }, []);
 
   useEffect(() => {
-    void loadArchivedSessions();
-  }, [loadArchivedSessions]);
+    const timer = window.setTimeout(() => {
+      void loadSessions();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadSessions]);
 
-  const onRestore = async (id: string) => {
-    const result = await restoreArchivedSession(id);
-    if (result.ok) {
-      router.push('/');
+  const toggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(allIds);
+      return;
     }
+    setSelectedIds([]);
   };
 
-  const onDelete = async (id: string) => {
-    await purgeArchivedSession(id);
+  const toggleSelectOne = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev, id];
+      return prev.filter((x) => x !== id);
+    });
   };
+
+  const runBatchAction = async (action: 'archive' | 'restore' | 'delete') => {
+    if (selectedItems.length === 0) return;
+    setPendingAction(action);
+    setError(null);
+
+    const failures: string[] = [];
+    for (const session of selectedItems) {
+      try {
+        if (action === 'archive') {
+          if (session.is_archived) continue;
+          await archiveAgentChat(session.id);
+          continue;
+        }
+        if (action === 'restore') {
+          if (!session.is_archived) continue;
+          await restoreAgentChat(session.id);
+          continue;
+        }
+        if (!session.is_archived) {
+          await archiveAgentChat(session.id);
+        }
+        await purgeArchivedAgentChat(session.id);
+      } catch {
+        failures.push(session.title || session.id);
+      }
+    }
+
+    if (failures.length > 0) {
+      setError(`部分会话操作失败：${failures.slice(0, 5).join('、')}${failures.length > 5 ? ' 等' : ''}`);
+    }
+
+    await loadSessions();
+    setPendingAction(null);
+  };
+
+  const archiveSelected = () => void runBatchAction('archive');
+  const restoreSelected = () => void runBatchAction('restore');
+  const deleteSelected = () => {
+    setIsDeleteDialogOpen(false);
+    void runBatchAction('delete');
+  };
+
+  const archiveTargetCount = selectedItems.filter((session) => !session.is_archived).length;
+  const restoreTargetCount = selectedItems.filter((session) => session.is_archived).length;
 
   return (
     <Page
-      title="已归档会话"
+      title="会话管理"
       description={
         <p className="text-sm text-muted-foreground">
-          归档后的会话会出现在此列表。恢复后将重新出现在{' '}
+          统一管理全部会话，支持批量归档、恢复与删除。恢复后的会话会重新出现在{' '}
           <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
             对话
           </Link>{' '}
@@ -207,25 +175,133 @@ export default function ArchivedChatsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>归档列表</CardTitle>
-          <CardDescription>按归档时间从新到旧排序。恢复不会丢失历史消息。</CardDescription>
+          <CardTitle>会话列表</CardTitle>
+          <CardDescription>按标签页查看会话，可多选后执行批量操作。</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <ArchivedSessionsTable
-            items={items}
-            restoringId={restoringId}
-            deletingId={deletingId}
-            onRestore={(id) => void onRestore(id)}
-            onDeleteIntent={setConfirmDelete}
-          />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Tabs
+              className="data-horizontal:flex-row items-center"
+              value={activeTab}
+              onValueChange={(value) => {
+                setActiveTab(value as 'active' | 'archived');
+                setSelectedIds([]);
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value="active">未归档</TabsTrigger>
+                <TabsTrigger value="archived">已归档</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {activeTab === 'active' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={isBusy || archiveTargetCount === 0}
+                  onClick={archiveSelected}
+                >
+                  <Archive className="size-3.5" aria-hidden />
+                  {pendingAction === 'archive' ? '归档中…' : `归档 (${archiveTargetCount})`}
+                </Button>
+              )}
+              {activeTab === 'archived' && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={isBusy || restoreTargetCount === 0}
+                    onClick={restoreSelected}
+                  >
+                    <ArchiveRestore className="size-3.5" aria-hidden />
+                    {pendingAction === 'restore' ? '恢复中…' : `恢复 (${restoreTargetCount})`}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={isBusy || selectedItems.length === 0}
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="size-3.5" aria-hidden />
+                    {pendingAction === 'delete' ? '删除中…' : `删除 (${selectedItems.length})`}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {items === null ? (
+            <p className="py-6 text-sm text-muted-foreground">加载中…</p>
+          ) : visibleItems.length === 0 ? (
+            <p className="py-6 text-sm text-muted-foreground">
+              {activeTab === 'active' ? '暂无未归档会话。' : '暂无已归档会话。'}
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={(checked) => toggleSelectAll(Boolean(checked))}
+                      aria-label="全选会话"
+                    />
+                  </TableHead>
+                  <TableHead>标题</TableHead>
+                  <TableHead className="w-24">状态</TableHead>
+                  <TableHead className="hidden w-20 sm:table-cell">消息数</TableHead>
+                  <TableHead className="hidden w-44 lg:table-cell">更新时间</TableHead>
+                  <TableHead className="hidden w-44 lg:table-cell">归档时间</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleItems.map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedSet.has(session.id)}
+                        onCheckedChange={(checked) => toggleSelectOne(session.id, Boolean(checked))}
+                        aria-label={`选择会话 ${session.title}`}
+                      />
+                    </TableCell>
+                    <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
+                    <TableCell className="w-24">{session.is_archived ? '已归档' : '进行中'}</TableCell>
+                    <TableCell className="hidden w-20 text-muted-foreground sm:table-cell">
+                      {session.message_count}
+                    </TableCell>
+                    <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+                      {formatWhen(session.updated_at)}
+                    </TableCell>
+                    <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+                      {session.archived_at ? formatWhen(session.archived_at) : '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-      <ArchivedDeleteDialog
-        deletingId={deletingId}
-        confirmDelete={confirmDelete}
-        onClose={() => setConfirmDelete(null)}
-        onConfirm={(id) => void onDelete(id)}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="删除会话"
+        description={
+          <div className="space-y-2">
+            <p className="text-sm text-foreground">确认永久删除所选 {selectedItems.length} 个会话？</p>
+            <p className="text-sm text-muted-foreground">删除后将无法恢复，历史消息会一并移除。</p>
+          </div>
+        }
+        confirmLabel={pendingAction === 'delete' ? '删除中…' : '删除'}
+        onConfirm={deleteSelected}
       />
     </Page>
   );

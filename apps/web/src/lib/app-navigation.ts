@@ -33,7 +33,7 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
     title: '对话',
     url: '/',
     icon: MessageCircle,
-    items: [{ title: '已归档会话', url: '/chat/archived', icon: Archive }],
+    items: [{ title: '会话管理', url: '/chat/archived', icon: Archive }],
   },
   {
     title: '数据',
