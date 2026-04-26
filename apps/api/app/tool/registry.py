@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from sqlmodel import select
+
 from app.persistence.sqlite_db import get_session
 from app.tool.models import ChatToolRow, ToolAuthorization
 
@@ -14,7 +16,6 @@ class ChatToolRegistry:
 
     def __init__(self) -> None:
         self._tools: dict[str, Any] = {}
-        self._tools_cache: dict[str, Any] | None = None
 
     @classmethod
     def instance(cls) -> ChatToolRegistry:
@@ -42,7 +43,6 @@ class ChatToolRegistry:
         if not hasattr(tool, "invoke"):
             raise ValueError(f"tool `{tool_name}` 必须实现 invoke(...)")
         self._tools[tool_name] = tool
-        self._tools_cache = None
         category_value = (category or "").strip()
         tool_authorization = authorization
 
@@ -50,22 +50,16 @@ class ChatToolRegistry:
         with get_session() as session:
             existing = session.get(ChatToolRow, tool_name)
             if existing is not None:
-                existing.updated_at = now
-                existing.name = tool_display_name
-                if category_value:
-                    existing.category = category_value
-                existing.authorization = tool_authorization
-                session.add(existing)
-            else:
-                session.add(
-                    ChatToolRow(
-                        id=tool_name,
-                        name=tool_display_name,
-                        category=category_value,
-                        updated_at=now,
-                        authorization=tool_authorization,
-                    )
+                return
+            session.add(
+                ChatToolRow(
+                    id=tool_name,
+                    name=tool_display_name,
+                    category=category_value,
+                    updated_at=now,
+                    authorization=tool_authorization,
                 )
+            )
             session.commit()
 
     def register_tools(
@@ -84,9 +78,13 @@ class ChatToolRegistry:
             )
 
     def get_tools(self) -> dict[str, Any]:
-        cached = self._tools_cache
-        if cached is not None:
-            return dict(cached)
-        # Snapshot cache to avoid repeated copy/build on hot path.
-        self._tools_cache = dict(self._tools)
-        return dict(self._tools_cache)
+        tool_ids = list(self._tools.keys())
+        if not tool_ids:
+            return {}
+
+        with get_session() as session:
+            rows = list(session.exec(select(ChatToolRow).where(ChatToolRow.id.in_(tool_ids))))
+
+        # Intersect DB records with in-memory tool functions and keep latest auth from DB.
+        allowed_ids = {row.id for row in rows if row.authorization != ToolAuthorization.disabled}
+        return {tool_id: tool for tool_id, tool in self._tools.items() if tool_id in allowed_ids}
