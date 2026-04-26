@@ -23,7 +23,7 @@ class SkillSource:
 
     @property
     def store_path(self) -> str:
-        return f"{_SKILL_ROOT}/{self.module}/{self.skill_name}.md"
+        return f"/{self.module}_{self.skill_name}/SKILL.md"
 
 
 _SKILL_SOURCES: dict[tuple[str, str], SkillSource] = {}
@@ -64,8 +64,8 @@ def _to_store_value(content: str) -> dict[str, object]:
 
 
 @register_startup_job
-def sync_registered_skills_to_store() -> None:
-    store = get_agent_store()
+async def sync_registered_skills_to_store() -> None:
+    store = await get_agent_store()
     overwrite = _is_truthy(os.getenv("OVERWRITE_SKILLS", "false"))
     total = len(_SKILL_SOURCES)
     created = 0
@@ -79,13 +79,13 @@ def sync_registered_skills_to_store() -> None:
                 raise FileNotFoundError(f"skill file not found: {source.file_path}")
 
             key = source.store_path
-            existing = store.get(_SKILL_NAMESPACE, key)
+            existing = await store.aget(_SKILL_NAMESPACE, key)
             if existing is not None and not overwrite:
                 skipped += 1
                 continue
 
             content = source.file_path.read_text(encoding="utf-8")
-            store.put(_SKILL_NAMESPACE, key, _to_store_value(content))
+            await store.aput(_SKILL_NAMESPACE, key, _to_store_value(content))
             if existing is None:
                 created += 1
             else:

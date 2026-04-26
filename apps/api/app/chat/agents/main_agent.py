@@ -11,7 +11,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
 
-def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any, Any, Any]:
+async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any, Any, Any]:
     ctrl = ToolController()
     tools_by_id = ctrl.get_tools()
     disabled, need_authorize = ctrl.split_tool_ids_by_authorization(tools_by_id.keys())
@@ -31,17 +31,17 @@ def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any
     return create_deep_agent(
         model=model,
         tools=enabled_tools,
-        memory=["/memories/AGENTS.md"],
+        memory=["/memories/"],
         skills=["/skills/"],
         system_prompt="你是一个量化研究执行助手，请优先基于可用能力完成用户请求。",
         backend=CompositeBackend(
             default=StateBackend(),
             routes={
-                "/memories/": StoreBackend(),
-                "/skills/": StoreBackend(),
+                "/memories/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
+                "/skills/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
             },
         ),
         interrupt_on=interrupt_on or None,
         checkpointer=get_hitl_checkpointer() if interrupt_on else None,
-        store=get_agent_store(),
+        store=await get_agent_store(),
     )

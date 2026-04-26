@@ -176,6 +176,7 @@ class ChatRenameBody(BaseModel):
 
 class LlmSettings(BaseModel):
     provider: LlmProvider = "ollama"
+    max_tool_rounds: int = Field(default=100, ge=1)
     model: str = Field(default="qwen3.5:9b", min_length=1)
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", min_length=1)
     openai_base_url: str | None = None
@@ -270,8 +271,14 @@ class LlmSettings(BaseModel):
                     "type": "number",
                     "default": defaults["temperature"],
                 },
+                "max_tool_rounds": {
+                    "title": "工具最大轮数",
+                    "type": "number",
+                    "default": defaults["max_tool_rounds"],
+                    "minimum": 1,
+                },
             },
-            "required": ["provider", "model", "temperature"],
+            "required": ["provider", "model", "temperature", "max_tool_rounds"],
             "dependencies": {
                 "provider": {
                     "oneOf": [

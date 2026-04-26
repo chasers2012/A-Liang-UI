@@ -28,8 +28,6 @@ from langchain_core.messages import (
 )
 from langgraph.types import Command
 
-_MAX_TOOL_ROUNDS = 10
-
 
 def _canonicalize_args(value: Any) -> str:
     if isinstance(value, str):
@@ -292,14 +290,19 @@ async def _stream_events_from_agent_astream(
     yield DoneEvent()
 
 
-async def stream_event_aiter_for_chat(
+async def stream_event_aiter_for_chat(  # noqa: C901
     llm: Any,
     *,
     chat_messages: list[ChatMessageIn] | None = None,
     decision: dict[str, Any] | None = None,
-    max_tool_rounds: int = _MAX_TOOL_ROUNDS,
+    max_tool_rounds: int | None = None,
     thread_id: str | None = None,
 ) -> AsyncIterable[StreamEventAny]:
+    if max_tool_rounds is None:
+        from app.chat.schemas import LlmSettings
+
+        max_tool_rounds = LlmSettings().max_tool_rounds
+
     use_resume = decision is not None
     if use_resume:
         tid = (thread_id or "").strip()
@@ -311,7 +314,7 @@ async def stream_event_aiter_for_chat(
         return
 
     try:
-        agent = create_main_agent(model=llm)
+        agent = await create_main_agent(model=llm)
     except Exception as e:
         yield ErrorEvent(payload=f"初始化失败：{e}")
         return
