@@ -1,9 +1,18 @@
 import { atom, type Setter } from 'jotai';
 
-import { archiveAgentChat, createAgentChat, listAgentChats, postAgentChatStream, renameAgentChat } from '@/api/chat';
+import {
+  archiveAgentChat,
+  createAgentChat,
+  listAgentChats,
+  postAgentChatAuthorize,
+  postAgentChatStream,
+  renameAgentChat,
+} from '@/api/chat';
 import type { ChatMessagePublic } from '@/models/agent-llm/dto';
 import {
   chatAbortControllerAtom,
+  chatAuthorizationAtom,
+  chatAuthorizationDecisionAtom,
   chatErrorAtom,
   chatHydratedAtom,
   chatInputAtom,
@@ -47,6 +56,8 @@ import { ApiError } from '@/api/client';
 export {
   activeUserMessageIdsAtom,
   chatAbortControllerAtom,
+  chatAuthorizationAtom,
+  chatAuthorizationDecisionAtom,
   chatErrorAtom,
   chatHydratedAtom,
   chatInputAtom,
@@ -291,6 +302,15 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
             }),
           );
         },
+        onToolAuthorize: (payload) => {
+          set(chatAuthorizationDecisionAtom, null);
+          set(chatAuthorizationAtom, {
+            sessionId,
+            assistantMessageId: streamAssistantId,
+            toolCallId: payload.id,
+            request: payload.id ? { tool_call_id: payload.id } : {},
+          });
+        },
       },
     );
 
@@ -318,3 +338,37 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     set(chatStreamingReplyIdAtom, null);
   }
 });
+
+export const authorizeToolCallAtom = atom(
+  null,
+  async (
+    get,
+    set,
+    payload: {
+      decision: 'approve' | 'reject';
+    },
+  ) => {
+    const auth = get(chatAuthorizationAtom);
+    if (!auth) return;
+    const { sessionId, assistantMessageId, toolCallId, request } = auth;
+    set(chatAuthorizationDecisionAtom, {
+      assistantMessageId,
+      toolCallId,
+      decision: payload.decision,
+      request,
+    });
+    set(chatAuthorizationAtom, null);
+    set(chatErrorAtom, null);
+    try {
+      await postAgentChatAuthorize({
+        session_id: sessionId,
+        assistant_message_id: assistantMessageId,
+        decision: { type: payload.decision },
+      });
+    } catch (e) {
+      if (!isAbortError(e)) {
+        set(chatErrorAtom, e instanceof ApiError ? e.message : '授权请求失败，请检查 API 与网络。');
+      }
+    }
+  },
+);

@@ -1,8 +1,11 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useSetAtom } from 'jotai';
 import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
+import { authorizeToolCallAtom } from '@/models/chat/session';
 import type { ChatToolCallDisplay } from '@/models/chat/types';
 import { cn } from '@/lib/utils';
 
@@ -61,10 +64,23 @@ const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknow
   );
 });
 
-export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
+type ToolAuthorizationUi =
+  | { stage: 'pending'; request: unknown }
+  | { stage: 'decided'; decision: 'approve' | 'reject'; request: unknown }
+  | null;
+
+export function ChatToolCallCard({
+  call,
+  authorization,
+}: {
+  call: ChatToolCallDisplay;
+  authorization?: ToolAuthorizationUi;
+}) {
   const { name, status, args, result, error } = call;
+  const authorize = useSetAtom(authorizeToolCallAtom);
   const initRef = useRef(false);
   const [open, setOpen] = useState(false);
+  const [authorizing, setAuthorizing] = useState(false);
   useEffect(() => {
     if (initRef.current) {
       return;
@@ -105,6 +121,47 @@ export function ChatToolCallCard({ call }: { call: ChatToolCallDisplay }) {
             </div>
           ) : null}
           {status === 'error' && error ? <p className="text-[11px] leading-relaxed text-destructive">{error}</p> : null}
+          {authorization ? (
+            <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/5 p-2">
+              <div className="mb-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">授权确认</div>
+              {authorization.stage === 'decided' ? (
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  已{authorization.decision === 'approve' ? '允许' : '拒绝'}本次工具调用。
+                </p>
+              ) : (
+                <>
+                  <p className="mb-2 text-[11px] text-muted-foreground">请确认是否允许本次工具调用继续执行。</p>
+                  <div className="mb-2 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={authorizing}
+                      onClick={() => {
+                        if (authorizing) return;
+                        setAuthorizing(true);
+                        void authorize({ decision: 'reject' }).finally(() => setAuthorizing(false));
+                      }}
+                    >
+                      拒绝
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={authorizing}
+                      onClick={() => {
+                        if (authorizing) return;
+                        setAuthorizing(true);
+                        void authorize({ decision: 'approve' }).finally(() => setAuthorizing(false));
+                      }}
+                    >
+                      {authorizing ? '提交中…' : '允许'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
+
+from sqlmodel import select
 
 from app.persistence.sqlite_db import get_session
 from app.tool.models import ChatToolRow, ToolAuthorization
@@ -69,3 +72,24 @@ class ToolController:
         if tool is None:
             raise ValueError(f"不允许调用工具：{tool_name}")
         return tool.invoke(args)
+
+    def split_tool_ids_by_authorization(self, tool_ids: Iterable[str]) -> tuple[set[str], set[str]]:
+        """
+        Returns:
+            - disabled ids
+            - need_authorize ids
+        """
+        ids = [i for i in tool_ids if i]
+        if not ids:
+            return set(), set()
+
+        disabled: set[str] = set()
+        need_authorize: set[str] = set()
+        with get_session() as session:
+            rows = list(session.exec(select(ChatToolRow).where(ChatToolRow.id.in_(ids))))
+            for row in rows:
+                if row.authorization == ToolAuthorization.disabled:
+                    disabled.add(row.id)
+                elif row.authorization == ToolAuthorization.need_authorize:
+                    need_authorize.add(row.id)
+        return disabled, need_authorize

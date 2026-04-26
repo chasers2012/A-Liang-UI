@@ -9,7 +9,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import suppress
 from typing import Any
 
-from app.chat.agent import stream_event_aiter_for_chat
+from app.chat.agent import (
+    stream_event_aiter_for_chat,
+)
 from app.chat.events import (
     DeltaEvent,
     DoneEvent,
@@ -30,6 +32,7 @@ from app.chat.registry import (
 from app.chat.schemas import (
     AssistantBlockPublic,
     ChatArchivedSummaryPublic,
+    ChatAuthorizationRequest,
     ChatCreateBody,
     ChatDetailPublic,
     ChatMessageIn,
@@ -46,12 +49,47 @@ from app.common.id import create_id_generator
 from app.config import controller as config_controller
 from app.config import register_config_spec
 from app.config.schema import ConfigModuleSpec
+from diskcache import Cache
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
+from workspace import workspace_path
 
 _LLM_CONFIG_MODULE = "agent_llm"
 MAX_SESSION_MESSAGES = 200
 _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
+_AUTH_PENDING_TTL_SECONDS = 10 * 60
+_AUTH_WAIT_POLL_SECONDS = 0.2
+_AUTH_CACHE = Cache(str(workspace_path(".quant-agent/chat_auth_cache")))
+
+
+def _auth_pending_key(thread_id: str) -> str:
+    return f"chat_auth:pending:{thread_id}"
+
+
+def _auth_decision_key(thread_id: str) -> str:
+    return f"chat_auth:decision:{thread_id}"
+
+
+def _register_pending_auth(
+    *,
+    thread_id: str,
+    session_id: str,
+    assistant_message_id: str,
+) -> None:
+    _AUTH_CACHE.set(
+        _auth_pending_key(thread_id),
+        {
+            "session_id": session_id,
+            "assistant_message_id": assistant_message_id,
+        },
+        expire=_AUTH_PENDING_TTL_SECONDS,
+    )
+    _AUTH_CACHE.delete(_auth_decision_key(thread_id))
+
+
+def _clear_pending_auth(thread_id: str) -> None:
+    _AUTH_CACHE.delete(_auth_pending_key(thread_id))
+    _AUTH_CACHE.delete(_auth_decision_key(thread_id))
 
 
 def build_chat_model_from_workspace_settings(
@@ -215,6 +253,8 @@ def _apply_stream_event_to_blocks(
             _patch_tool_terminal_event(blocks, tool, ok=True)
         elif tool.stage == "error":
             _patch_tool_terminal_event(blocks, tool, ok=False)
+        elif tool.stage == "authorize":
+            return
 
 
 def _sse_wire_frame(ev: StreamEventAny) -> str:
@@ -312,6 +352,22 @@ def _prepare_chat_stream(
     return body.session_id, incoming_user, persisted_context_messages, context_messages
 
 
+async def _wait_for_authorization_decision(
+    *,
+    thread_id: str,
+    is_disconnected: Callable[[], Awaitable[bool]],
+) -> dict[str, Any] | None:
+    decision_key = _auth_decision_key(thread_id)
+    while True:
+        if await is_disconnected():
+            return None
+        decision = _AUTH_CACHE.get(decision_key, default=None)
+        if isinstance(decision, dict):
+            _AUTH_CACHE.delete(decision_key)
+            return decision
+        await asyncio.sleep(_AUTH_WAIT_POLL_SECONDS)
+
+
 async def stream_async(  # noqa: C901
     body: ChatRequest,
     *,
@@ -324,12 +380,13 @@ async def stream_async(  # noqa: C901
     )
     last_user_id = incoming_user.id
     assistant_message_id = str(uuid.uuid4())
+    thread_id = f"{session_id}:{assistant_message_id}"
     blocks: list[AssistantBlockPublic] = []
 
     _persist_user_messages_on_receive(session_id, incoming_user)
     out: asyncio.Queue[str | None] = asyncio.Queue()
 
-    async def _producer() -> None:
+    async def _producer() -> None:  # noqa: C901
         try:
             if await is_disconnected():
                 return
@@ -343,14 +400,53 @@ async def stream_async(  # noqa: C901
                 return
             await out.put(_sse_wire_frame(message_ids_event))
             llm = _build_llm_from_workspace()
+            pending_decision: dict[str, Any] | None = None
+            while True:
+                stream_kwargs: dict[str, Any] = {
+                    "thread_id": thread_id,
+                }
+                if pending_decision is None:
+                    stream_kwargs["chat_messages"] = context_messages
+                else:
+                    stream_kwargs["decision"] = pending_decision
 
-            async for event in stream_event_aiter_for_chat(llm, chat_messages=context_messages):
-                if await is_disconnected():
-                    break
-                _apply_stream_event_to_blocks(blocks, event)
-                if await is_disconnected():
-                    break
-                await out.put(_sse_wire_frame(event))
+                interrupted = False
+                async for event in stream_event_aiter_for_chat(
+                    llm,
+                    **stream_kwargs,
+                ):
+                    if await is_disconnected():
+                        return
+                    _apply_stream_event_to_blocks(blocks, event)
+                    is_authorize_event = (
+                        isinstance(event, ToolEvent) and event.payload.stage == "authorize"
+                    )
+                    if is_authorize_event:
+                        interrupted = True
+                        # Register pending authorization before emitting SSE authorize event,
+                        # so fast clients cannot race /chat/authorize ahead of this context.
+                        _register_pending_auth(
+                            thread_id=thread_id,
+                            session_id=session_id,
+                            assistant_message_id=assistant_message_id,
+                        )
+                    if await is_disconnected():
+                        return
+                    await out.put(_sse_wire_frame(event))
+                    if is_authorize_event:
+                        try:
+                            pending_decision = await _wait_for_authorization_decision(
+                                thread_id=thread_id,
+                                is_disconnected=is_disconnected,
+                            )
+                        finally:
+                            _clear_pending_auth(thread_id)
+                        if pending_decision is None:
+                            return
+                        break
+
+                if not interrupted:
+                    return
         except ValueError as e:
             if not await is_disconnected():
                 err_event = ErrorEvent(payload=f"{e}")
@@ -358,6 +454,7 @@ async def stream_async(  # noqa: C901
             return
         finally:
             try:
+                _clear_pending_auth(thread_id)
                 _persist_chat_if_needed(
                     session_id,
                     persisted_context_messages,
@@ -391,6 +488,29 @@ def list_chats() -> list[ChatSummaryPublic]:
     items = [i for i in ChatRegistry.list_items() if i.archived_at is None]
     items.sort(key=lambda i: i.updated_at, reverse=True)
     return [record_to_summary(i) for i in items]
+
+
+def submit_authorization(
+    body: ChatAuthorizationRequest,
+) -> dict[str, Any]:
+    thread_id = f"{body.session_id}:{body.assistant_message_id}"
+
+    pending = _AUTH_CACHE.get(_auth_pending_key(thread_id), default=None)
+    if not pending:
+        raise ValueError("未找到待授权的运行上下文，可能已超时或已完成。")
+
+    session_id = pending["session_id"]
+    if session_id != body.session_id:
+        raise ValueError("session_id 不匹配")
+    if pending["assistant_message_id"] != body.assistant_message_id:
+        raise ValueError("assistant_message_id 不匹配")
+
+    _AUTH_CACHE.set(
+        _auth_decision_key(thread_id),
+        body.decision.model_dump(mode="json"),
+        expire=_AUTH_PENDING_TTL_SECONDS,
+    )
+    return {"status": "accepted"}
 
 
 def list_archived_chats() -> list[ChatArchivedSummaryPublic]:

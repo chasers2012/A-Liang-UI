@@ -38,6 +38,7 @@ dependencies = [
   "rank-bm25>=0.2.2",
   "deepagents>=0.5.3",
   "langgraph-checkpoint-sqlite>=3.0.3",
+  "diskcache>=5.6.3",
 ]
 
 [tool.uv.sources]

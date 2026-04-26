@@ -12,7 +12,7 @@ EventType = Literal["message_ids", "delta", "reasoning", "tool", "done", "error"
 
 
 class ToolPayload(BaseModel):
-    stage: Literal["start", "result", "error"]
+    stage: Literal["start", "result", "error", "authorize"]
     # Only required for stage="start". For terminal events ("result"/"error"),
     # the client can reconcile by tool call id.
     name: str | None = None

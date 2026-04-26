@@ -12,7 +12,8 @@ import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './cli
 type ChatSseToolPayload =
   | { stage: 'start'; id: string; name: string; args?: unknown }
   | { stage: 'result'; id: string; result?: unknown }
-  | { stage: 'error'; id: string; error?: string | null };
+  | { stage: 'error'; id: string; error?: string | null }
+  | { stage: 'authorize'; id: string };
 
 /** Mirrors ``app.chat.events.MessageIdsPayload``. */
 type ChatSseMessageIdsPayload = {
@@ -66,6 +67,17 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
         stage: 'error',
         id,
         error: typeof p.error === 'string' ? p.error : String(p.error ?? ''),
+      },
+    };
+  }
+  if (stage === 'authorize') {
+    const id = sseStringField(p.id);
+    if (!id) return undefined;
+    return {
+      type: 'tool',
+      payload: {
+        stage: 'authorize',
+        id,
       },
     };
   }
@@ -131,10 +143,12 @@ export type AgentChatStreamOptions = {
   onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
   onToolResult?: (payload: { id: string; result: unknown }) => void;
   onToolError?: (payload: { id: string; error: string }) => void;
+  onToolAuthorize?: (payload: { id?: string }) => void;
   signal?: AbortSignal;
 };
 
 /** @returns ``true`` to keep reading the stream; ``false`` when a terminal ``done`` event was handled. */
+// eslint-disable-next-line complexity
 function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentChatStreamOptions): boolean {
   if (ev === undefined) return true;
   if (ev.type === 'error') throw new ApiError(ev.payload, 502);
@@ -151,6 +165,7 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
     options.onMessageIds?.(ev.payload);
     return true;
   }
+  if (ev.type !== 'tool') return true;
   const { stage } = ev.payload;
   if (stage === 'start') {
     options.onToolStart?.({
@@ -164,6 +179,12 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
     options.onToolResult?.({
       id: ev.payload.id,
       result: ev.payload.result,
+    });
+    return true;
+  }
+  if (stage === 'authorize') {
+    options.onToolAuthorize?.({
+      id: ev.payload.id || undefined,
     });
     return true;
   }
@@ -226,6 +247,25 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
   // Flush any remaining decoder state and buffered events.
   buffer += decoder.decode();
   flushBuffer();
+}
+
+export async function postAgentChatAuthorize(body: {
+  session_id: string;
+  assistant_message_id: string;
+  decision: { type: 'approve' | 'reject' };
+}): Promise<void> {
+  const url = `${getQuantAgentApiBase()}/chat/authorize`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(parseDetail(text), res.status);
+  }
 }
 
 export function listAgentChats(): Promise<ChatSummaryPublic[]> {

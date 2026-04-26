@@ -98,6 +98,20 @@ class ChatRequest(BaseModel):
         return self
 
 
+class ChatAuthorizationDecision(BaseModel):
+    """Decision payload for DeepAgents HITL resume."""
+
+    type: Literal["approve", "reject"] = "approve"
+
+
+class ChatAuthorizationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., min_length=1)
+    assistant_message_id: str = Field(..., min_length=1)
+    decision: ChatAuthorizationDecision
+
+
 class ChatRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
 

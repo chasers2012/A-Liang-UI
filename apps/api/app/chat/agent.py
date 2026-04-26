@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterable, Iterable
 from typing import Any
 
@@ -25,8 +26,75 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+from langgraph.types import Command
 
 _MAX_TOOL_ROUNDS = 10
+
+
+def _canonicalize_args(value: Any) -> str:
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            try:
+                value = json.loads(stripped)
+            except Exception:
+                # Keep raw string when not valid JSON.
+                value = stripped
+    try:
+        return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+    except Exception:
+        return str(value)
+
+
+def _normalize_args_shape(value: Any) -> Any:
+    """Normalize args shape across tool_call_chunks and action_requests."""
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            try:
+                value = json.loads(stripped)
+            except Exception:
+                return stripped
+        else:
+            return ""
+    if isinstance(value, dict):
+        # HITL action request often wraps original args under `args`.
+        inner = value.get("args")
+        if inner is not None:
+            return _normalize_args_shape(inner)
+    return value
+
+
+def _extract_interrupt_action_request(interrupt_data: Any) -> tuple[str | None, str]:
+    """Return (tool_name, canonical_args) from interrupt payload action request."""
+    if not isinstance(interrupt_data, dict):
+        return None, ""
+    action_requests = interrupt_data.get("action_requests")
+    if not isinstance(action_requests, list) or not action_requests:
+        return None, ""
+    first = action_requests[0]
+    if not isinstance(first, dict):
+        return None, ""
+    name = first.get("name")
+    tool_name = name.strip() if isinstance(name, str) and name.strip() else None
+    args = _normalize_args_shape(first.get("args"))
+    return tool_name, _canonicalize_args(args)
+
+
+def _match_tool_call_id_from_pending(
+    pending_starts: list[tuple[str, str | None, str]],
+    interrupt_data: Any,
+) -> str:
+    """Match tool call id using interrupt action_requests name+args."""
+    req_name, req_args = _extract_interrupt_action_request(interrupt_data)
+    if req_name is None:
+        return ""
+
+    for idx in range(len(pending_starts) - 1, -1, -1):
+        tc_id, tc_name, tc_args = pending_starts[idx]
+        if tc_name == req_name and tc_args == req_args:
+            return tc_id
+    return ""
 
 
 def _chunk_text(content: Any) -> str:
@@ -158,13 +226,89 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     return
 
 
+async def _stream_events_from_agent_astream(
+    agent: Any,
+    *,
+    astream_input: Any,
+    max_tool_rounds: int,
+    configurable: dict[str, Any],
+) -> AsyncIterable[StreamEventAny]:
+    emitted_tool_event_keys: set[tuple[str, str]] = set()
+    pending_tool_starts: list[tuple[str, str | None, str]] = []
+
+    async for chunk in agent.astream(
+        astream_input,
+        {
+            "recursion_limit": max_tool_rounds * 2,
+            "configurable": configurable,
+        },
+        stream_mode=["messages", "updates"],
+        subgraphs=True,
+        version="v2",
+    ):
+        if not isinstance(chunk, dict):
+            continue
+        ctype = chunk.get("type")
+        if ctype == "messages":
+            for event in _iter_stream_events_from_mode_data(
+                chunk.get("data"),
+                emitted_tool_event_keys,
+            ):
+                if (
+                    isinstance(event, ToolEvent)
+                    and event.payload.stage == "start"
+                    and event.payload.id
+                ):
+                    normalized_args = _normalize_args_shape(event.payload.args)
+                    pending_tool_starts.append(
+                        (
+                            event.payload.id,
+                            event.payload.name,
+                            _canonicalize_args(normalized_args),
+                        )
+                    )
+                yield event
+            continue
+
+        if ctype == "updates":
+            data = chunk.get("data") or {}
+            if isinstance(data, dict) and "__interrupt__" in data:
+                try:
+                    interrupt_value = data["__interrupt__"][0].value
+                except Exception:
+                    interrupt_value = data.get("__interrupt__")
+                yield ToolEvent(
+                    payload=ToolPayload(
+                        stage="authorize",
+                        id=_match_tool_call_id_from_pending(
+                            pending_tool_starts,
+                            interrupt_value,
+                        ),
+                    )
+                )
+                return
+            continue
+
+    yield DoneEvent()
+
+
 async def stream_event_aiter_for_chat(
     llm: Any,
     *,
-    chat_messages: list[ChatMessageIn],
+    chat_messages: list[ChatMessageIn] | None = None,
+    decision: dict[str, Any] | None = None,
     max_tool_rounds: int = _MAX_TOOL_ROUNDS,
+    thread_id: str | None = None,
 ) -> AsyncIterable[StreamEventAny]:
-    lc_messages = _lc_messages_from_chat_messages(chat_messages)
+    use_resume = decision is not None
+    if use_resume:
+        tid = (thread_id or "").strip()
+        if not tid:
+            yield ErrorEvent(payload="thread_id 不能为空")
+            return
+    elif chat_messages is None:
+        yield ErrorEvent(payload="chat_messages 不能为空")
+        return
 
     try:
         agent = create_main_agent(model=llm)
@@ -172,25 +316,35 @@ async def stream_event_aiter_for_chat(
         yield ErrorEvent(payload=f"初始化失败：{e}")
         return
 
+    astream_input: Any
+    configurable = {"thread_id": thread_id} if thread_id else {}
+    if use_resume:
+        # HumanInTheLoopMiddleware expects resume payload shape:
+        # {"decisions": [{"type": "approve" | "reject" | ...}]}
+        resume_payload: dict[str, Any]
+        decision_data = decision or {}
+        raw_type = str(decision_data.get("type", "")).strip()
+        if isinstance(decision_data.get("decisions"), list):
+            resume_payload = {"decisions": decision_data["decisions"]}
+        elif raw_type:
+            resume_payload = {"decisions": [{"type": raw_type}]}
+        else:
+            yield ErrorEvent(payload="授权续跑失败：缺少有效 decision（期望 decisions 或 type）")
+            return
+
+        astream_input = Command(resume=resume_payload)
+        configurable = {"thread_id": tid}
+    else:
+        astream_input = {"messages": _lc_messages_from_chat_messages(chat_messages or [])}
+
     try:
-        emitted_tool_event_keys: set[tuple[str, str]] = set()
-        async for chunk in agent.astream(
-            {"messages": lc_messages},
-            {"recursion_limit": max_tool_rounds * 2},
-            stream_mode=["messages"],
-            subgraphs=True,
-            version="v2",
+        async for event in _stream_events_from_agent_astream(
+            agent,
+            astream_input=astream_input,
+            max_tool_rounds=max_tool_rounds,
+            configurable=configurable,
         ):
-            if not isinstance(chunk, dict):
-                continue
-            if chunk.get("type") != "messages":
-                continue
-            for event in _iter_stream_events_from_mode_data(
-                chunk.get("data"),
-                emitted_tool_event_keys,
-            ):
-                yield event
-        yield DoneEvent()
+            yield event
     except Exception as e:
         yield ErrorEvent(payload=f"LLM 调用失败：{e}")
         return

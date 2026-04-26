@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.chat import controller
 from app.chat.schemas import (
     ChatArchivedSummaryPublic,
+    ChatAuthorizationRequest,
     ChatCreateBody,
     ChatDetailPublic,
     ChatRenameBody,
@@ -44,6 +45,15 @@ def chat_stream(body: ChatRequest, request: Request) -> StreamingResponse:
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/authorize")
+def chat_authorize(body: ChatAuthorizationRequest) -> dict[str, str]:
+    """Submit authorization decision and return immediately."""
+    try:
+        return controller.submit_authorization(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.get("", response_model=list[ChatSummaryPublic])
