@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.tools import tool
-
 from app.tool.models import ToolAuthorization
 from app.tool.registry import ChatToolRegistry
+from app.tool.safe_tool import safe_tool
 
 from .controller import search_knowledge
 from .schemas import KnowledgeSearchHit
@@ -26,7 +25,7 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
     return "\n".join(lines).strip()
 
 
-@tool(
+@safe_tool(
     "知识库检索",
     description=(
         "检索与问题相关的知识库内容。\n"

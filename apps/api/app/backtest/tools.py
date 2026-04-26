@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.tools import tool
-
 from app.backtest.controller import (
     BacktestRunNotFoundError,
 )
@@ -23,9 +21,10 @@ from app.backtest.controller import (
     list_backtest_runs as list_backtest_runs_controller,
 )
 from app.backtest.schemas import RunBacktestRequest
+from app.tool.safe_tool import safe_tool
 
 
-@tool(
+@safe_tool(
     "运行回测",
     description="创建并提交一次回测任务。\n入参 body 为 RunBacktestRequest；用于异步调度回测并返回任务详情。",
 )
@@ -37,7 +36,7 @@ def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
     return run.model_dump(mode="json")
 
 
-@tool(
+@safe_tool(
     "获取回测任务列表",
     description="查询回测任务列表。\n可按 strategy_id/status 过滤，并可设置 limit 控制返回数量。",
 )
@@ -50,7 +49,9 @@ def get_backtest_runs(
     return [r.model_dump(mode="json") for r in runs]
 
 
-@tool("获取回测任务详情", description="查询回测任务详情。\n入参 run_id；不存在需返回明确错误。")
+@safe_tool(
+    "获取回测任务详情", description="查询回测任务详情。\n入参 run_id；不存在需返回明确错误。"
+)
 def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     try:
         run = get_backtest_run_controller(run_id)
@@ -59,7 +60,7 @@ def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     return run.model_dump(mode="json")
 
 
-@tool(
+@safe_tool(
     "删除回测任务",
     description="删除指定回测任务。\n入参 run_id；成功返回 {run_id, deleted:true}。",
 )
@@ -73,7 +74,7 @@ def delete_backtest_run(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "deleted": True}
 
 
-@tool(
+@safe_tool(
     "获取回测净值曲线",
     description="获取回测净值曲线。\n入参 run_id；返回 equity_curve 序列。",
 )
@@ -86,7 +87,7 @@ def get_backtest_equity(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "equity_curve": list(payload or [])}
 
 
-@tool("获取回测成交明细", description="获取回测成交明细。\n入参 run_id；返回 trades 序列。")
+@safe_tool("获取回测成交明细", description="获取回测成交明细。\n入参 run_id；返回 trades 序列。")
 def get_backtest_trades(run_id: str) -> dict[str, Any]:
     try:
         run = get_backtest_run_controller(run_id)
@@ -96,7 +97,7 @@ def get_backtest_trades(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "trades": list(payload or [])}
 
 
-@tool(
+@safe_tool(
     "获取回测节点输出",
     description="获取回测节点输出内容。\n入参 run_id 与 node_id；读取该节点在本次回测中的已保存输出文件。",
 )

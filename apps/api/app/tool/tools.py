@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.tools import tool
-
 from app.tool.controller import ToolController
+from app.tool.safe_tool import safe_tool
 
 
-@tool(
+@safe_tool(
     "列出可用工具",
     description=(
         "查询系统当前可用工具列表。\n"

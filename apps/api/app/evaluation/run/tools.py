@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.tools import tool
-
 from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
 from app.evaluation.run.controller import (
     EvaluationRunNotFoundError,
@@ -20,9 +18,10 @@ from app.evaluation.run.controller import (
 from app.evaluation.run.controller import (
     list_evaluation_runs as list_evaluation_runs_controller,
 )
+from app.tool.safe_tool import safe_tool
 
 
-@tool(
+@safe_tool(
     "运行评价任务",
     description="触发一次因子评价运行。\n入参 profile_id 与 factor_id；异步调度执行，行为与 POST /evaluation/run 一致。",
 )
@@ -36,7 +35,7 @@ def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
     return job.model_dump(mode="json")
 
 
-@tool(
+@safe_tool(
     "获取评价运行列表",
     description="查询评价运行记录列表。\n可按 factor_id 过滤并设置 limit；返回 run 时间、状态、错误信息与 results。",
 )
@@ -48,7 +47,7 @@ def list_evaluation_runs(
     return [row.model_dump(mode="json") for row in rows]
 
 
-@tool("获取评价运行详情", description="查询评价运行详情。\n入参 run_id；不存在需报错。")
+@safe_tool("获取评价运行详情", description="查询评价运行详情。\n入参 run_id；不存在需报错。")
 def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     try:
         row = get_evaluation_run_detail_controller(run_id)
@@ -57,7 +56,7 @@ def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     return row.model_dump(mode="json")
 
 
-@tool(
+@safe_tool(
     "删除评价运行记录",
     description="删除评价运行记录。\n入参 run_id；成功无返回，不存在需报错。",
 )

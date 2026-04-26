@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.tools import tool
-
 from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
     build_workflow_node_for_graph,
@@ -14,9 +12,10 @@ from app.nodes.controller import (
     update_node_record,
 )
 from app.nodes.schemas import WorkflowNodeCreate, WorkflowNodePatch
+from app.tool.safe_tool import safe_tool
 
 
-@tool(
+@safe_tool(
     "获取新工作流节点模板",
     description="获取工作流节点源码模板。\n返回 DEFAULT_NODE_SOURCE，建议先填充关键逻辑后再创建。",
 )
@@ -24,7 +23,7 @@ def get_new_workflow_node_template() -> str:
     return DEFAULT_NODE_SOURCE
 
 
-@tool(
+@safe_tool(
     "创建工作流节点",
     description="创建并保存工作流节点。\n入参 body 可传 source；未传时使用默认模板。创建后返回完整节点详情。",
 )
@@ -39,7 +38,7 @@ def create_workflow_node_tool(body: dict[str, Any]) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@tool(
+@safe_tool(
     "获取工作流节点详情",
     description="查询工作流节点详情。\n入参 node_id；返回包含完整 source 的详情。",
 )
@@ -50,7 +49,7 @@ def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@tool(
+@safe_tool(
     "获取工作流节点列表",
     description="查询工作流节点列表。\n返回节点列表用于图编辑器选择与预览。",
 )
@@ -58,7 +57,7 @@ def get_workflow_node_list() -> list[dict[str, Any]]:
     return [x.model_dump() for x in list_nodes()]
 
 
-@tool(
+@safe_tool(
     "获取格式化工作流节点",
     description="获取格式化工作流节点。\n入参 node_id，可选 instance_id/pos_x/pos_y；返回可直接写入 workflow.nodes 的结构。",
 )
@@ -78,7 +77,7 @@ def get_formatted_workflow_node(
     return node
 
 
-@tool(
+@safe_tool(
     "更新工作流节点",
     description="更新已有工作流节点。\n入参 node_id 与 WorkflowNodePatch；返回更新后的详情。",
 )
@@ -92,7 +91,7 @@ def update_workflow_node(node_id: str, body: WorkflowNodePatch) -> dict[str, Any
     return detail.model_dump()
 
 
-@tool("删除工作流节点", description="删除指定工作流节点。\n入参 node_id；返回删除记录。")
+@safe_tool("删除工作流节点", description="删除指定工作流节点。\n入参 node_id；返回删除记录。")
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
     deleted = delete_workflow_node(node_id)
     if deleted is None:
