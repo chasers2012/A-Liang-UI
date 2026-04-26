@@ -20,8 +20,7 @@ from app.factors.controller import (
 @tool(
     "获取新因子模板",
     description=(
-        "获取内置因子源码模板（NEW_FACTOR_TEMPLATE）。"
-        "通常先取模板并填充源码，再调用“创建因子”工具保存因子。"
+        "获取新因子源码模板。\n先基于模板补全 name/逻辑后再调用创建工具；避免直接提交空模板。"
     ),
 )
 def get_new_factor_template() -> str:
@@ -30,9 +29,7 @@ def get_new_factor_template() -> str:
 
 @tool(
     "获取因子基类源码",
-    description=(
-        "获取因子基类（Factor）完整源码。通常在编写新因子前先参考该源码中的接口约定和可覆写字段。"
-    ),
+    description=("获取因子基类源码。\n用于确认可覆写字段与接口契约，生成新因子时应遵循基类约束。"),
 )
 def get_factor_base_source() -> str:
     return inspect.getsource(Factor)
@@ -40,7 +37,9 @@ def get_factor_base_source() -> str:
 
 @tool(
     "创建因子",
-    description=("创建因子并持久化。返回创建后的因子详情。"),
+    description=(
+        "创建并保存新因子。\n入参 source 为完整源码；模型漏传时会使用默认模板。返回创建后的因子详情。"
+    ),
 )
 def create_factor_tool(source: str | None = None) -> dict[str, Any]:
     # Models sometimes omit `source` when tool-calling; use a safe default template.
@@ -53,7 +52,7 @@ def create_factor_tool(source: str | None = None) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool("获取因子详情", description="按 factor_id 查询因子详情；不存在时报错。")
+@tool("获取因子详情", description="查询单个因子详情。\n入参 factor_id；不存在需抛出明确错误。")
 def get_factor_detail(factor_id: str) -> dict[str, Any]:
     rec = get_factor_detail_by_id(factor_id)
     if rec is None:
@@ -61,12 +60,19 @@ def get_factor_detail(factor_id: str) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool("获取因子列表", description="获取因子列表。")
+@tool(
+    "获取因子列表", description="查询因子列表。\n返回全部因子摘要列表，用于选择后续编辑或运行目标。"
+)
 def get_factor_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_factors()]
 
 
-@tool("更新因子", description="更新因子并返回更新后的详情；不存在时报错。")
+@tool(
+    "编辑因子",
+    description=(
+        "更新已有因子源码。\n入参 factor_id 与 source；用于修改/编辑需求，更新前应确认目标因子存在。"
+    ),
+)
 def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
     rec = update_factor(factor_id, source)
     if rec is None:
@@ -74,7 +80,7 @@ def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
     return factor_detail(rec).model_dump()
 
 
-@tool("删除因子", description="删除因子并返回删除前记录；不存在时报错。")
+@tool("删除因子", description="删除指定因子。\n入参 factor_id；返回删除前快照，不存在需报错。")
 def delete_factor_tool(factor_id: str) -> dict[str, Any]:
     rec = delete_factor(factor_id)
     return rec.model_dump()

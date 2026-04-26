@@ -20,8 +20,27 @@ def _ensure_preprocessors_domain_node_visibility() -> None:
 
 @register_startup_job
 def register_data_set_chat_tools() -> None:
-    from app.data_set.tools import DATA_SET_CHAT_TOOLS
+    from app.data_set.tools import (
+        create_data_set,
+        delete_data_set,
+        get_data_set_detail,
+        get_data_set_list,
+        update_data_set,
+    )
+    from app.tool.models import ToolAuthorization
     from app.tool.registry import ChatToolRegistry
 
-    for tool in DATA_SET_CHAT_TOOLS:
-        ChatToolRegistry.instance().register_tool(tool, category="data_sets")
+    tool_defs = [
+        ("data_set.create_data_set", create_data_set, ToolAuthorization.allowed),
+        ("data_set.get_data_set_detail", get_data_set_detail, ToolAuthorization.allowed),
+        ("data_set.get_data_set_list", get_data_set_list, ToolAuthorization.allowed),
+        ("data_set.update_data_set", update_data_set, ToolAuthorization.need_authorize),
+        ("data_set.delete_data_set", delete_data_set, ToolAuthorization.disabled),
+    ]
+    for tool_id, tool, authorization in tool_defs:
+        ChatToolRegistry.instance().register_tool(
+            tool,
+            name=tool_id,
+            category="数据集",
+            authorization=authorization,
+        )

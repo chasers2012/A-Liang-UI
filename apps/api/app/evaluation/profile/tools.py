@@ -48,10 +48,7 @@ def _merge_evaluation_profile_patch(
 
 @tool(
     "获取评价方案工作流模板",
-    description=(
-        "获取空评价方案工作流 JSON 模板（含 nodes/links/workflow_inputs/workflow_outputs）。"
-        "通常先基于模板编辑图结构，再调用 create_evaluation_profile 保存。"
-    ),
+    description="获取评价方案工作流模板。\n返回空模板（含 nodes/links/workflow_inputs/workflow_outputs），用于创建前初始化。",
 )
 def get_evaluation_profile_workflow_template() -> str:
     return json.dumps(empty_workflow_template_dict(), ensure_ascii=False)
@@ -59,10 +56,7 @@ def get_evaluation_profile_workflow_template() -> str:
 
 @tool(
     "获取工作流节点类型源码",
-    description=(
-        "读取 workflow 包中 node_types 模块的完整源码（与当前运行环境一致）。"
-        "用于查看 Node/Socket/NodeParam 等类型定义，帮助正确编写评价工作流节点。"
-    ),
+    description="获取工作流节点类型源码。\n读取运行环境中的 node_types 源码，用于确认 Node/Socket/NodeParam 等结构定义。",
 )
 def get_workflow_node_types_source() -> str:
     path = Path(_workflow_node_types.__file__).resolve()
@@ -71,11 +65,7 @@ def get_workflow_node_types_source() -> str:
 
 @tool(
     "创建评价方案",
-    description=(
-        "创建评价方案并持久化。"
-        "入参 body 必须包含 name；workflow 为空时自动使用空模板。"
-        "返回创建后的评价方案详情（含 workflow 对象）。"
-    ),
+    description="创建并保存评价方案。\n入参 body 至少包含 name；workflow 为空时自动使用空模板并返回完整详情。",
 )
 def create_evaluation_profile(body: EvaluationProfileCreate) -> dict[str, Any]:
     row = body.to_row()
@@ -84,7 +74,8 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> dict[str, Any]:
 
 
 @tool(
-    "获取评价方案详情", description="按 profile_id 查询评价方案详情（含 workflow）；不存在时报错。"
+    "获取评价方案详情",
+    description="查询评价方案详情。\n入参 profile_id；返回包含 workflow 的完整详情。",
 )
 def get_evaluation_profile_detail(profile_id: str) -> dict[str, Any]:
     row = EvaluationProfilesRegistry.get_by_id(profile_id)
@@ -93,12 +84,18 @@ def get_evaluation_profile_detail(profile_id: str) -> dict[str, Any]:
     return _to_public(row).model_dump()
 
 
-@tool("获取评价方案列表", description="获取评价方案列表。")
+@tool(
+    "获取评价方案列表",
+    description="查询评价方案列表。\n返回所有方案摘要供运行与编辑流程选择。",
+)
 def get_evaluation_profile_list() -> list[dict[str, Any]]:
     return [_to_public(i).model_dump() for i in EvaluationProfilesRegistry.list_all()]
 
 
-@tool("更新评价方案", description="更新评价方案并返回更新后的详情（含 workflow）；不存在时报错。")
+@tool(
+    "更新评价方案",
+    description="更新评价方案配置。\n入参 profile_id 与 EvaluationProfilePatch；返回更新后的详情。",
+)
 def update_evaluation_profile(profile_id: str, body: EvaluationProfilePatch) -> dict[str, Any]:
     row = EvaluationProfilesRegistry.get_by_id(profile_id)
     if row is None:
@@ -109,7 +106,7 @@ def update_evaluation_profile(profile_id: str, body: EvaluationProfilePatch) -> 
     return _to_public(row).model_dump()
 
 
-@tool("删除评价方案", description="删除评价方案并返回删除前快照；不存在时报错。")
+@tool("删除评价方案", description="删除指定评价方案。\n入参 profile_id；返回删除前快照。")
 def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
     row = EvaluationProfilesRegistry.get_by_id(profile_id)
     if row is None:

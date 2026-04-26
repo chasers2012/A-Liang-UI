@@ -27,7 +27,7 @@ from app.backtest.schemas import RunBacktestRequest
 
 @tool(
     "运行回测",
-    description="创建并提交一次回测任务；入参 body（RunBacktestRequest），返回任务详情。",
+    description="创建并提交一次回测任务。\n入参 body 为 RunBacktestRequest；用于异步调度回测并返回任务详情。",
 )
 def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
     try:
@@ -39,7 +39,7 @@ def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
 
 @tool(
     "获取回测任务列表",
-    description="查询回测任务列表；可按 strategy_id/status 过滤，并可用 limit 限制数量。",
+    description="查询回测任务列表。\n可按 strategy_id/status 过滤，并可设置 limit 控制返回数量。",
 )
 def get_backtest_runs(
     strategy_id: str | None = None,
@@ -50,7 +50,7 @@ def get_backtest_runs(
     return [r.model_dump(mode="json") for r in runs]
 
 
-@tool("获取回测任务详情", description="按 run_id 查询回测任务详情；不存在时报错。")
+@tool("获取回测任务详情", description="查询回测任务详情。\n入参 run_id；不存在需返回明确错误。")
 def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     try:
         run = get_backtest_run_controller(run_id)
@@ -59,7 +59,10 @@ def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     return run.model_dump(mode="json")
 
 
-@tool("删除回测任务", description="删除回测任务；成功返回 {run_id, deleted:true}，不存在时报错。")
+@tool(
+    "删除回测任务",
+    description="删除指定回测任务。\n入参 run_id；成功返回 {run_id, deleted:true}。",
+)
 def delete_backtest_run(run_id: str) -> dict[str, Any]:
     try:
         # Keep a detail snapshot to return a useful response.
@@ -70,7 +73,10 @@ def delete_backtest_run(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "deleted": True}
 
 
-@tool("获取回测净值曲线", description="按 run_id 获取回测净值曲线（equity_curve）；不存在时报错。")
+@tool(
+    "获取回测净值曲线",
+    description="获取回测净值曲线。\n入参 run_id；返回 equity_curve 序列。",
+)
 def get_backtest_equity(run_id: str) -> dict[str, Any]:
     try:
         run = get_backtest_run_controller(run_id)
@@ -80,7 +86,7 @@ def get_backtest_equity(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "equity_curve": list(payload or [])}
 
 
-@tool("获取回测成交明细", description="按 run_id 获取回测成交明细（trades）；不存在时报错。")
+@tool("获取回测成交明细", description="获取回测成交明细。\n入参 run_id；返回 trades 序列。")
 def get_backtest_trades(run_id: str) -> dict[str, Any]:
     try:
         run = get_backtest_run_controller(run_id)
@@ -91,7 +97,8 @@ def get_backtest_trades(run_id: str) -> dict[str, Any]:
 
 
 @tool(
-    "获取回测节点输出", description="按 run_id + node_id 获取该节点在回测中的已保存输出文件内容。"
+    "获取回测节点输出",
+    description="获取回测节点输出内容。\n入参 run_id 与 node_id；读取该节点在本次回测中的已保存输出文件。",
 )
 def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, Any]:
     try:

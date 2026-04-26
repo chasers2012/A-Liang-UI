@@ -21,9 +21,7 @@ from app.datasource.verify import verify_datasource
 @tool(
     "创建数据源",
     description=(
-        "创建数据源并持久化。"
-        "入参 body：name、type（如 sql/csv）、config（插件定义的 JSON 配置）。"
-        "返回创建后的数据源详情（公开视图，敏感字段已脱敏）。"
+        "创建并保存数据源。\n入参 body 包含 name/type/config；config 需先按插件规则校验，返回脱敏后的公开视图。"
     ),
 )
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
@@ -35,7 +33,10 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     return row_to_public(created_row).model_dump()
 
 
-@tool("获取数据源详情", description="按 datasource_id 查询单个数据源详情；不存在时报错。")
+@tool(
+    "获取数据源详情",
+    description="查询单个数据源详情。\n入参 datasource_id；不存在需返回明确错误。",
+)
 def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.get_item(datasource_id)
     if row is None:
@@ -43,7 +44,10 @@ def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@tool("获取数据源列表", description="获取当前工作区的数据源列表（公开视图）。")
+@tool(
+    "获取数据源列表",
+    description="查询当前工作区数据源列表。\n返回公开视图，敏感字段保持脱敏。",
+)
 def get_datasource_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_datasources()]
 
@@ -51,9 +55,7 @@ def get_datasource_list() -> list[dict[str, Any]]:
 @tool(
     "更新数据源",
     description=(
-        "更新数据源。"
-        "入参 datasource_id 与 body（DataSourcePatch）；仅更新传入字段。"
-        "当提供 config 时按整体替换语义处理。返回更新后的数据源详情。"
+        "更新数据源配置。\n入参 datasource_id 与 DataSourcePatch；仅更新传入字段，config 采用整体替换并重新校验。"
     ),
 )
 def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, Any]:
@@ -73,7 +75,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
     return row_to_public(row).model_dump()
 
 
-@tool("删除数据源", description="删除数据源并返回删除前的公开信息；不存在时报错。")
+@tool("删除数据源", description="删除指定数据源。\n入参 datasource_id；返回删除前公开信息。")
 def delete_datasource(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.delete_item(datasource_id)
     if row is None:
@@ -81,7 +83,10 @@ def delete_datasource(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@tool("测试数据源连通性", description="测试数据源连通性（如读表/读 CSV）；返回 {ok, message}。")
+@tool(
+    "测试数据源连通性",
+    description="测试数据源连接是否可用。\n入参 datasource_id；返回 {ok, message} 用于诊断连接问题。",
+)
 def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.get_item(datasource_id)
     if row is None:

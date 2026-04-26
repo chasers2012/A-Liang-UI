@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { listTools, setToolDisabled, type ToolRecord } from '@/api/tools';
+import { listTools, setToolAuthorization, type ToolRecord } from '@/api/tools';
 import { Page } from '@/components/page';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type LoadState =
   | { kind: 'idle' }
@@ -20,6 +21,27 @@ function displayCategory(raw: string): string {
   const c = (raw || '').trim();
   if (!c) return 'Other';
   return c;
+}
+
+const AUTH_OPTIONS: Array<{ value: ToolRecord['authorization']; label: string }> = [
+  { value: 'disabled', label: '禁用' },
+  { value: 'need authorize', label: '需授权' },
+  { value: 'allowed', label: '允许' },
+];
+
+function authorizationLabel(value: ToolRecord['authorization']): string {
+  const found = AUTH_OPTIONS.find((opt) => opt.value === value);
+  return found?.label ?? value;
+}
+
+function authorizationDotClass(value: ToolRecord['authorization']): string {
+  if (value === 'disabled') return 'border-t-gray-500/80';
+  if (value === 'need authorize') return 'border-t-yellow-500/80';
+  return 'border-t-green-500/80';
+}
+
+function descriptionFirstLine(raw: string): string {
+  return (raw || '').split('\n')[0]?.trim() || '';
 }
 
 export default function ToolsPage() {
@@ -96,32 +118,50 @@ export default function ToolsPage() {
                     {grouped.map((t) => {
                       const isSaving = saving === t.id;
                       return (
-                        <li key={t.id} className="flex items-center gap-3 px-3 py-2">
+                        <li key={t.id} className="relative flex items-center gap-3 px-3 py-2 pl-4">
+                          <span
+                            className={`absolute left-0 top-0 h-0 w-0 border-r-10 border-t-10 border-r-transparent ${authorizationDotClass(
+                              t.authorization,
+                            )}`}
+                            aria-label={`权限状态：${authorizationLabel(t.authorization)}`}
+                            title={`权限状态：${authorizationLabel(t.authorization)}`}
+                          />
                           <div className="min-w-0 flex-1">
                             <div className="font-mono text-sm truncate">{t.name || t.id}</div>
-                            {t.description ? (
-                              <div className="text-xs text-muted-foreground line-clamp-2">{t.description}</div>
+                            {descriptionFirstLine(t.description) ? (
+                              <div className="text-xs text-muted-foreground line-clamp-2">
+                                {descriptionFirstLine(t.description)}
+                              </div>
                             ) : (
                               <div className="text-xs text-muted-foreground">{t.loaded ? '已加载' : '未加载'}</div>
                             )}
                           </div>
-                          <Button
-                            type="button"
-                            variant={t.disabled ? 'destructive' : 'outline'}
-                            size="sm"
-                            disabled={isSaving}
-                            onClick={async () => {
+                          <Select
+                            value={t.authorization}
+                            onValueChange={async (v) => {
+                              const next = v as ToolRecord['authorization'];
+                              if (next === t.authorization) return;
                               setSaving(t.id);
                               try {
-                                await setToolDisabled(t.id, !t.disabled);
+                                await setToolAuthorization(t.id, next);
                                 await refresh();
                               } finally {
                                 setSaving(null);
                               }
                             }}
+                            disabled={isSaving}
                           >
-                            {t.disabled ? '已禁用' : '禁用'}
-                          </Button>
+                            <SelectTrigger size="sm" className="w-22">
+                              <SelectValue placeholder="选择权限">{authorizationLabel(t.authorization)}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AUTH_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </li>
                       );
                     })}

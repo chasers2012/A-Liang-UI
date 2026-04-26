@@ -28,45 +28,54 @@ from app.strategy.controller import (
 from app.strategy.schemas import StrategyCreate, StrategyPatch
 
 
-@tool("获取策略工作流模板", description="获取策略工作流模板。")
+@tool(
+    "获取策略工作流模板",
+    description="获取策略工作流模板。\n用于初始化策略编辑结构，后续可基于模板填充节点与连线。",
+)
 def get_strategy_workflow_template() -> dict[str, Any]:
     return get_strategy_workflow_template_service()
 
 
 @tool(
     "创建策略",
-    description="创建策略并持久化；入参 body（name、description、workflow），返回创建后的策略详情。",
+    description="创建并保存策略。\n入参 body 包含 name/description/workflow；返回创建后的策略详情。",
 )
 def create_strategy(body: StrategyCreate) -> dict[str, Any]:
     return create_strategy_service(body)
 
 
-@tool("获取策略详情", description="按 strategy_id 查询策略详情；不存在时报错。")
+@tool("获取策略详情", description="查询单个策略详情。\n入参 strategy_id；不存在需报错。")
 def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
     return get_strategy_service(strategy_id)
 
 
-@tool("获取策略列表", description="获取当前工作区的策略列表。")
+@tool(
+    "获取策略列表",
+    description="查询当前工作区策略列表。\n返回策略列表用于选择运行或编辑目标。",
+)
 def get_strategy_list() -> list[dict[str, Any]]:
     return [i.model_dump() for i in list_strategies_service()]
 
 
 @tool(
     "更新策略",
-    description="更新策略并返回更新后的详情；仅更新传入字段，语义与 PATCH /strategies/{id} 一致。",
+    description="更新策略配置。\n入参 strategy_id 与 StrategyPatch；仅更新传入字段，语义与 PATCH 接口一致。",
 )
 def update_strategy(strategy_id: str, body: StrategyPatch) -> dict[str, Any]:
     return patch_strategy_service(strategy_id, body)
 
 
-@tool("删除策略", description="删除策略并返回删除前记录；不存在时报错。")
+@tool("删除策略", description="删除指定策略。\n入参 strategy_id；返回删除前记录。")
 def delete_strategy(strategy_id: str) -> dict[str, Any]:
     row = get_strategy_service(strategy_id)
     delete_strategy_service(strategy_id)
     return row
 
 
-@tool("校验策略", description="校验策略 workflow；入参 strategy_id，返回 {ok, errors}。")
+@tool(
+    "校验策略",
+    description="校验策略 workflow。\n入参 strategy_id；返回 {ok, errors} 供修正流程使用。",
+)
 def validate_strategy(strategy_id: str) -> dict[str, Any]:
     return validate_strategy_service(strategy_id).model_dump()
 

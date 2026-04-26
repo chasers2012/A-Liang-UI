@@ -4,6 +4,7 @@ from typing import Any
 
 from langchain_core.tools import tool
 
+from app.tool.models import ToolAuthorization
 from app.tool.registry import ChatToolRegistry
 
 from .controller import search_knowledge
@@ -27,7 +28,10 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
 
 @tool(
     "知识库检索",
-    description="在知识库中检索与用户问题最相关的文档片段，并返回命中的文档名称和内容。",
+    description=(
+        "检索与问题相关的知识库内容。\n"
+        "入参 query 为用户问题；优先基于命中内容回答，若证据不足需明确说明不确定性。"
+    ),
 )
 def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
     hits = search_knowledge(query)
@@ -35,4 +39,9 @@ def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
 
 
 def register_knowledge_tools() -> None:
-    ChatToolRegistry.instance().register_tool(knowledge_search_tool, category="knowledge")
+    ChatToolRegistry.instance().register_tool(
+        knowledge_search_tool,
+        name="knowledge.search",
+        category="知识库",
+        authorization=ToolAuthorization.allowed,
+    )

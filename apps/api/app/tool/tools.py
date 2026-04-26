@@ -9,7 +9,10 @@ from app.tool.controller import ToolController
 
 @tool(
     "列出可用工具",
-    description="查询系统当前可用的工具列表、名称和简要描述。该列表会返回系统中所有的工具，并不代表你能调用它们，仅将它作为系统能力的参考。",
+    description=(
+        "查询系统当前可用工具列表。\n"
+        "返回系统内全部工具作为能力参考，不代表当前会话一定允许调用；请结合授权状态判断。"
+    ),
 )
 def list_available_tools() -> list[dict[str, Any]]:
     ctrl = ToolController()

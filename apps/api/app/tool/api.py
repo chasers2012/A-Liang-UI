@@ -6,7 +6,7 @@ from sqlmodel import select
 
 from app.persistence.sqlite_db import get_session
 from app.tool.controller import ToolController
-from app.tool.models import ChatToolRow
+from app.tool.models import ChatToolRow, ToolAuthorization
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
@@ -36,10 +36,14 @@ def list_tools() -> list[dict]:
         out.append(
             {
                 "id": tid,
-                "name": tid,
+                "name": (rec.name if rec is not None and rec.name else tid),
                 "description": description,
                 "category": (rec.category if rec is not None else ""),
-                "disabled": bool(rec.disabled) if rec is not None else False,
+                "authorization": (
+                    rec.authorization.value
+                    if rec is not None
+                    else ToolAuthorization.need_authorize.value
+                ),
                 "updated_at": rec.updated_at if rec is not None else None,
                 "loaded": tid in available,
             }
@@ -48,7 +52,7 @@ def list_tools() -> list[dict]:
 
 
 class ToolUpdateBody(BaseModel):
-    disabled: bool
+    authorization: ToolAuthorization
 
 
 @router.patch("/{tool_id}")
@@ -60,9 +64,19 @@ def update_tool(tool_id: str, body: ToolUpdateBody) -> dict:
         rec = session.get(ChatToolRow, tid)
         if rec is None:
             # Allow creating a row for a tool name that exists in memory but not yet persisted.
-            rec = ChatToolRow(id=tid, category="", updated_at="", disabled=bool(body.disabled))
-        rec.disabled = bool(body.disabled)
+            rec = ChatToolRow(
+                id=tid,
+                name=tid,
+                category="",
+                updated_at="",
+                authorization=body.authorization,
+            )
+        rec.authorization = body.authorization
         session.merge(rec)
         session.commit()
         session.refresh(rec)
-        return {"id": rec.id, "disabled": bool(rec.disabled), "updated_at": rec.updated_at}
+        return {
+            "id": rec.id,
+            "authorization": rec.authorization.value,
+            "updated_at": rec.updated_at,
+        }
