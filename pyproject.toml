@@ -27,7 +27,6 @@ factor = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
 workflow = { workspace = true }
-agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
 members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_factors"]

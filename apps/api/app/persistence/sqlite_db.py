@@ -42,7 +42,6 @@ def get_engine():
 
 def create_db_and_tables() -> None:
     # Ensure all SQLModel table classes are imported and registered.
-    from app.agent_workflows import models as _agent_models  # noqa: F401
     from app.backtest import models as _backtest_models  # noqa: F401
     from app.chat import models as _chat_models  # noqa: F401
     from app.data_set import models as _dataset_models  # noqa: F401
