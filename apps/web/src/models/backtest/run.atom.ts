@@ -28,15 +28,15 @@ export const backtestRunFormAtom = atom<BacktestRunFormState>({
   error: null,
 });
 
-export const backtestRunStrategiesAtom = atom((get) => get(strategiesListAtoms.valueAtom) ?? []);
-export const backtestRunDataSetsAtom = atom((get) => get(dataSetAtoms.valueAtom) ?? []);
-
 export const loadBacktestRunCatalogAtom = atom(null, async (get, set) => {
   set(backtestRunFormAtom, (s) => ({ ...s, catalogLoading: true, error: null }));
   try {
     // Read catalog atoms directly so initial load happens once per mount flow.
     // Avoid forcing refresh here; otherwise it can trigger repeated fetch loops.
-    const [strategies, dataSets] = await Promise.all([get(backtestRunStrategiesAtom), get(backtestRunDataSetsAtom)]);
+    const [strategies, dataSets] = await Promise.all([
+      get(strategiesListAtoms.valueAtom) ?? [],
+      get(dataSetAtoms.valueAtom) ?? [],
+    ]);
     set(backtestRunFormAtom, (s) => ({
       ...s,
       catalogLoading: false,

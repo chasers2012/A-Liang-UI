@@ -7,38 +7,28 @@ import type { ChatArchivedSummaryPublic, ChatSummaryPublic } from '@/models/agen
 import { withAtomEffect } from 'jotai-effect';
 import { activeSessionIdAtom } from './active-session';
 
-const archivedSessionsAtoms = createRefreshableAsyncAtoms<ChatArchivedSummaryPublic[]>({
+export const archivedSessionsAtoms = createRefreshableAsyncAtoms<ChatArchivedSummaryPublic[]>({
   initialValue: [],
   fetcher: async () => {
     return await listArchivedAgentChats();
   },
 });
 
-export const archivedSessionsAtom = archivedSessionsAtoms.valueAtom;
-export const refreshArchivedSessionsAtom = archivedSessionsAtoms.refreshAtom;
-
-const chatSessionsAtoms = createRefreshableAsyncAtoms<ChatSummaryPublic[]>({
+export const chatSessionsAtoms = createRefreshableAsyncAtoms<ChatSummaryPublic[]>({
   initialValue: [],
   fetcher: async () => {
     return await listAgentChats();
   },
 });
-export const asyncChatSessionsAtom = chatSessionsAtoms.asyncAtom;
 export const chatSessionsAtom = withAtomEffect(chatSessionsAtoms.valueAtom, (get, set) => {
   const list = get(chatSessionsAtom);
   const activeId = get(activeSessionIdAtom);
 
-  if (list.length === 0) {
-    return;
-  }
+  if (list.length === 0) return;
   if (activeId && !list.some((s) => s.id === activeId)) {
-    const fallback = list[0]?.id ?? null;
-    set(activeSessionIdAtom, fallback);
+    set(activeSessionIdAtom, list[0]?.id ?? null);
   }
 });
-export const chatSessionsLoadingAtom = chatSessionsAtoms.loadingAtom;
-export const chatSessionsErrorAtom = chatSessionsAtoms.errorAtom;
-export const refreshChatSessionsAtom = chatSessionsAtoms.refreshAtom;
 
 export type ManagedSession = (ChatSummaryPublic | ChatArchivedSummaryPublic) & {
   is_archived: boolean;
@@ -46,7 +36,7 @@ export type ManagedSession = (ChatSummaryPublic | ChatArchivedSummaryPublic) & {
 };
 
 export const managedSessionsAsyncAtom = atom(async (get): Promise<ManagedSession[]> => {
-  const [active, archived] = await Promise.all([get(chatSessionsAtom), get(archivedSessionsAtom)]);
+  const [active, archived] = await Promise.all([get(chatSessionsAtom), get(archivedSessionsAtoms.valueAtom)]);
   const activeSessions: ManagedSession[] = active.map((session) => ({
     ...session,
     is_archived: false,
@@ -67,6 +57,6 @@ export const managedSessionsAsyncAtom = atom(async (get): Promise<ManagedSession
 export const managedSessionsAtom = toAsyncValueStateAtom(managedSessionsAsyncAtom);
 
 export const refreshManagedSessionsAtom = atom(null, (_get, set) => {
-  set(refreshChatSessionsAtom);
-  set(refreshArchivedSessionsAtom);
+  set(chatSessionsAtoms.refreshAtom);
+  set(archivedSessionsAtoms.refreshAtom);
 });

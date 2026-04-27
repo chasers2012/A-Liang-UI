@@ -23,7 +23,7 @@ export const confirmDeleteDatasourceAtom = atom(null, async (get, set) => {
   try {
     await deleteDatasource(target.id);
     set(datasourcesDeleteTargetAtom, null);
-    await set(datasourcesListAtoms.refreshAtom);
+    set(datasourcesListAtoms.refreshAtom);
   } catch (e) {
     set(datasourcesDeleteErrorAtom, e instanceof Error ? e.message : String(e));
   } finally {

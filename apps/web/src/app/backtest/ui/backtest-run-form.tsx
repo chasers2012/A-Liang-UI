@@ -11,9 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useEffect } from 'react';
 import {
-  backtestRunDataSetsAtom,
   backtestRunFormAtom,
-  backtestRunStrategiesAtom,
   loadBacktestRunCatalogAtom,
   setBacktestRunDataSetIdAtom,
   setBacktestRunFeesAtom,
@@ -22,6 +20,8 @@ import {
   setBacktestRunStrategyIdAtom,
   submitBacktestRunAtom,
 } from '@/models/backtest/run.atom';
+import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
+import { strategiesListAtoms } from '@/models/strategy/list-detail.atom';
 
 type NamedOption = { id: string; name: string };
 
@@ -66,8 +66,8 @@ function BacktestCatalogSelect(props: {
 export function BacktestRunForm() {
   const { strategyId, dataSetId, initialCash, fees, slippage, submitting, catalogLoading, error } =
     useAtomValue(backtestRunFormAtom);
-  const strategies = useAtomValue(backtestRunStrategiesAtom);
-  const dataSets = useAtomValue(backtestRunDataSetsAtom);
+  const strategies = useAtomValue(strategiesListAtoms.valueAtom) ?? [];
+  const dataSets = useAtomValue(dataSetAtoms.valueAtom) ?? [];
 
   const loadCatalog = useSetAtom(loadBacktestRunCatalogAtom);
   const setStrategyId = useSetAtom(setBacktestRunStrategyIdAtom);
