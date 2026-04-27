@@ -159,26 +159,60 @@ def _build_llm_from_workspace():
     return build_chat_model_from_workspace_settings(settings)
 
 
-def _append_delta_block(blocks: list[AssistantBlockPublic], delta: str) -> None:
+def _append_delta_block(
+    blocks: list[AssistantBlockPublic],
+    delta: str,
+    *,
+    agent_name: str | None,
+) -> None:
     if not blocks:
-        blocks.append(AssistantBlockPublic(kind="text", content=delta))
+        blocks.append(
+            AssistantBlockPublic(
+                kind="text",
+                content=delta,
+                agent_name=agent_name,
+            )
+        )
         return
     last = blocks[-1]
-    if last.kind == "text":
+    if last.kind == "text" and last.agent_name == agent_name:
         last.content = (last.content or "") + delta
     else:
-        blocks.append(AssistantBlockPublic(kind="text", content=delta))
+        blocks.append(
+            AssistantBlockPublic(
+                kind="text",
+                content=delta,
+                agent_name=agent_name,
+            )
+        )
 
 
-def _append_reasoning_block(blocks: list[AssistantBlockPublic], delta: str) -> None:
+def _append_reasoning_block(
+    blocks: list[AssistantBlockPublic],
+    delta: str,
+    *,
+    agent_name: str | None,
+) -> None:
     if not blocks:
-        blocks.append(AssistantBlockPublic(kind="reasoning", content=delta))
+        blocks.append(
+            AssistantBlockPublic(
+                kind="reasoning",
+                content=delta,
+                agent_name=agent_name,
+            )
+        )
         return
     last = blocks[-1]
-    if last.kind == "reasoning":
+    if last.kind == "reasoning" and last.agent_name == agent_name:
         last.content = (last.content or "") + delta
     else:
-        blocks.append(AssistantBlockPublic(kind="reasoning", content=delta))
+        blocks.append(
+            AssistantBlockPublic(
+                kind="reasoning",
+                content=delta,
+                agent_name=agent_name,
+            )
+        )
 
 
 def _patch_tool_block(
@@ -210,9 +244,11 @@ def _append_tool_start_block(
     blocks.append(
         AssistantBlockPublic(
             kind="tool",
+            agent_name=tool_payload.agent_name,
             call=ChatToolCallPublic(
                 id=tool_payload.id,
                 name=tool_payload.name,
+                agent_name=tool_payload.agent_name,
                 args=tool_payload.args,
                 status="running",
             ),
@@ -272,11 +308,19 @@ def _apply_stream_event_to_blocks(
     if isinstance(event, (ErrorEvent, MessageIdsEvent, DoneEvent)):
         return
     if isinstance(event, DeltaEvent):
-        _append_delta_block(blocks, event.payload)
+        _append_delta_block(
+            blocks,
+            event.payload.text,
+            agent_name=event.payload.agent_name,
+        )
         return
 
     if isinstance(event, ReasoningEvent):
-        _append_reasoning_block(blocks, event.payload)
+        _append_reasoning_block(
+            blocks,
+            event.payload.text,
+            agent_name=event.payload.agent_name,
+        )
         return
 
     if isinstance(event, ToolEvent):

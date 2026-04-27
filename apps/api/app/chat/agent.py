@@ -13,6 +13,7 @@ from app.chat.events import (
     ErrorEvent,
     ReasoningEvent,
     StreamEventAny,
+    TextPayload,
     ToolEvent,
     ToolPayload,
 )
@@ -170,6 +171,11 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
 ) -> Iterable[StreamEventAny]:
 
     token, metadata = chunk_data
+    agent_name = None
+    if isinstance(metadata, dict):
+        raw_agent_name = metadata.get("lc_agent_name")
+        if isinstance(raw_agent_name, str):
+            agent_name = raw_agent_name.strip() or None
     # DeepAgents may emit internal summarization tokens during context compaction.
     # Keep this process transparent to users by not forwarding those chunks.
     if isinstance(metadata, dict) and metadata.get("lc_source") == "summarization":
@@ -178,7 +184,12 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     if isinstance(token, AIMessageChunk):
         reasoning = _ai_message_reasoning_content(token)
         if reasoning:
-            yield ReasoningEvent(payload=reasoning)
+            yield ReasoningEvent(
+                payload=TextPayload(
+                    text=reasoning,
+                    agent_name=agent_name,
+                )
+            )
 
         if token.tool_call_chunks:
             # Per Deep Agents streaming docs, tool calls surface as tool_call_chunks.
@@ -192,6 +203,7 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
                 yield ToolEvent(
                     payload=ToolPayload(
                         stage="start",
+                        agent_name=agent_name,
                         name=name,
                         id=tc_id,
                         args=tc.get("args"),
@@ -200,7 +212,12 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
 
         text = _chunk_text(token.content)
         if text:
-            yield DeltaEvent(payload=text)
+            yield DeltaEvent(
+                payload=TextPayload(
+                    text=text,
+                    agent_name=agent_name,
+                )
+            )
         return
 
     if not isinstance(token, ToolMessage):
@@ -215,6 +232,7 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
         yield ToolEvent(
             payload=ToolPayload(
                 stage="error",
+                agent_name=agent_name,
                 id=tc_id,
                 error=str(token.content),
             )
@@ -229,6 +247,7 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     yield ToolEvent(
         payload=ToolPayload(
             stage="result",
+            agent_name=agent_name,
             id=tc_id,
             result=result,
         )

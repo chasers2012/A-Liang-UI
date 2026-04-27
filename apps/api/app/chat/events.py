@@ -11,8 +11,14 @@ StreamEventPayloadT = TypeVar("StreamEventPayloadT")
 EventType = Literal["message_ids", "delta", "reasoning", "tool", "done", "error"]
 
 
+class TextPayload(BaseModel):
+    text: str
+    agent_name: str | None = None
+
+
 class ToolPayload(BaseModel):
     stage: Literal["start", "result", "error", "authorize"]
+    agent_name: str | None = None
     # Only required for stage="start". For terminal events ("result"/"error"),
     # the client can reconcile by tool call id.
     name: str | None = None
@@ -38,11 +44,11 @@ class MessageIdsEvent(StreamEvent[MessageIdsPayload]):
     type: Literal["message_ids"] = "message_ids"
 
 
-class DeltaEvent(StreamEvent[str]):
+class DeltaEvent(StreamEvent[TextPayload]):
     type: Literal["delta"] = "delta"
 
 
-class ReasoningEvent(StreamEvent[str]):
+class ReasoningEvent(StreamEvent[TextPayload]):
     type: Literal["reasoning"] = "reasoning"
 
 

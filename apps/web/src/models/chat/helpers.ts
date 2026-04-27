@@ -9,53 +9,58 @@ import type { AssistantBlock } from '@/models/chat/types';
 
 export function appendAssistantDelta(
   prev: ChatMessagePublic | undefined,
-  delta: string,
+  payload: { text: string; agent_name?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
+  const { text: delta, agent_name: agentName } = payload;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
-  if (last?.kind === 'text') {
+  if (last?.kind === 'text' && last.agent_name === agentName) {
     blocks[blocks.length - 1] = {
       kind: 'text',
       content: last.content + delta,
+      agent_name: agentName,
     };
   } else {
-    blocks.push({ kind: 'text', content: delta });
+    blocks.push({ kind: 'text', content: delta, agent_name: agentName });
   }
   return { ...prev, blocks };
 }
 
 export function appendAssistantReasoning(
   prev: ChatMessagePublic | undefined,
-  delta: string,
+  payload: { text: string; agent_name?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
+  const { text: delta, agent_name: agentName } = payload;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
-  if (last?.kind === 'reasoning') {
+  if (last?.kind === 'reasoning' && last.agent_name === agentName) {
     blocks[blocks.length - 1] = {
       kind: 'reasoning',
       content: last.content + delta,
+      agent_name: agentName,
     };
   } else {
-    blocks.push({ kind: 'reasoning', content: delta });
+    blocks.push({ kind: 'reasoning', content: delta, agent_name: agentName });
   }
   return { ...prev, blocks };
 }
 
 export function applyToolStart(
   prev: ChatMessagePublic | undefined,
-  payload: { name: string; id: string; args?: unknown },
+  payload: { name: string; id: string; args?: unknown; agent_name?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
   const call: ChatToolCallPublic = {
     id: payload.id,
     name: payload.name,
+    agent_name: payload.agent_name,
     args: payload.args,
     status: 'running',
     authorization_status: 'none',
   };
-  const blocks: AssistantBlock[] = [...(prev.blocks ?? []), { kind: 'tool', call }];
+  const blocks: AssistantBlock[] = [...(prev.blocks ?? []), { kind: 'tool', agent_name: payload.agent_name, call }];
   return { ...prev, blocks };
 }
 
@@ -67,7 +72,7 @@ export function patchToolInBlocks(
   if (!prev) return prev;
   const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== 'tool' || b.call.id !== id) return b;
-    return { kind: 'tool', call: { ...b.call, ...patch } };
+    return { kind: 'tool', agent_name: b.agent_name, call: { ...b.call, ...patch } };
   });
   return { ...prev, blocks };
 }

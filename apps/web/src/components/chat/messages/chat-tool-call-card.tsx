@@ -30,15 +30,18 @@ const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDi
 
 const ToolCallHeader = memo(function ToolCallHeader({
   name,
+  agentName,
   status,
 }: {
   name: ChatToolCallDisplay['name'];
+  agentName?: ChatToolCallDisplay['agent_name'];
   status: ChatToolCallDisplay['status'];
 }) {
   return (
     <>
       <Wrench className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       <span className="font-mono text-foreground">{name || '(工具)'}</span>
+      {agentName ? <span className="text-[10px] text-muted-foreground/80">{agentName}</span> : null}
       <span className="sr-only">工具调用状态：</span>
       <StatusIcon status={status} />
     </>
@@ -147,7 +150,7 @@ export function ChatToolCallCard({
   sessionId: string;
   assistantMessageId: string;
 }) {
-  const { name, status, args, result, error } = call;
+  const { name, agent_name: agentName, status, args, result, error } = call;
   const authorization = getPersistedAuthorization(call);
   const initRef = useRef(false);
   const [open, setOpen] = useState(false);
@@ -175,7 +178,7 @@ export function ChatToolCallCard({
           )}
           aria-hidden
         />
-        <ToolCallHeader name={name} status={status} />
+        <ToolCallHeader name={name} agentName={agentName} status={status} />
       </div>
       {open && (
         <div className="border-border/40 border-t px-3 py-2">

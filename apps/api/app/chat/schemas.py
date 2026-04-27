@@ -18,6 +18,7 @@ class ChatToolCallPublic(BaseModel):
 
     id: str
     name: str
+    agent_name: str | None = None
     args: Any | None = None
     status: ToolCallStatus = "ok"
     authorization_status: ToolCallAuthorizationStatus = "none"
@@ -27,6 +28,7 @@ class ChatToolCallPublic(BaseModel):
 
 class AssistantBlockPublic(BaseModel):
     kind: Literal["text", "reasoning", "tool"]
+    agent_name: str | None = None
     content: str | None = None
     call: ChatToolCallPublic | None = None
 
@@ -39,6 +41,10 @@ class AssistantBlockPublic(BaseModel):
         else:
             if self.call is None:
                 raise ValueError("tool 块需要 call")
+            if not self.agent_name:
+                self.agent_name = self.call.agent_name
+            if self.call.agent_name != self.agent_name:
+                self.call.agent_name = self.agent_name
             self.content = None
         return self
 

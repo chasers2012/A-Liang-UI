@@ -2,6 +2,7 @@
 export type TextBlockPublic = {
   kind: 'text';
   content: string;
+  agent_name?: string;
   completed?: boolean;
 };
 
@@ -9,6 +10,7 @@ export type TextBlockPublic = {
 export type ChatToolCallDisplay = {
   id: string;
   name: string;
+  agent_name?: string;
   args?: unknown;
   status: 'running' | 'ok' | 'error';
   authorization_status?: 'none' | 'pending' | 'approved' | 'rejected';
@@ -19,5 +21,5 @@ export type ChatToolCallDisplay = {
 /** 前端聊天 UI 消息块（与 ``AssistantBlockPublic`` 对齐）。 */
 export type AssistantBlock =
   | TextBlockPublic
-  | { kind: 'reasoning'; content: string }
-  | { kind: 'tool'; call: ChatToolCallDisplay };
+  | { kind: 'reasoning'; content: string; agent_name?: string }
+  | { kind: 'tool'; agent_name?: string; call: ChatToolCallDisplay };

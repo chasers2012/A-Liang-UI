@@ -14,10 +14,15 @@ import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './cli
 
 /** Mirrors ``app.chat.events.ToolPayload``. */
 type ChatSseToolPayload =
-  | { stage: 'start'; id: string; name: string; args?: unknown }
-  | { stage: 'result'; id: string; result?: unknown }
-  | { stage: 'error'; id: string; error?: string | null }
-  | { stage: 'authorize'; id: string };
+  | { stage: 'start'; id: string; name: string; args?: unknown; agent_name?: string }
+  | { stage: 'result'; id: string; result?: unknown; agent_name?: string }
+  | { stage: 'error'; id: string; error?: string | null; agent_name?: string }
+  | { stage: 'authorize'; id: string; agent_name?: string };
+
+type ChatSseTextPayload = {
+  text: string;
+  agent_name?: string;
+};
 
 /** Mirrors ``app.chat.events.MessageIdsPayload``. */
 type ChatSseMessageIdsPayload = {
@@ -31,8 +36,8 @@ type ChatSseMessageIdsPayload = {
  */
 type ChatSseStreamEvent =
   | { type: 'message_ids'; payload: ChatSseMessageIdsPayload }
-  | { type: 'delta'; payload: string }
-  | { type: 'reasoning'; payload: string }
+  | { type: 'delta'; payload: ChatSseTextPayload }
+  | { type: 'reasoning'; payload: ChatSseTextPayload }
   | { type: 'tool'; payload: ChatSseToolPayload }
   | { type: 'done'; payload?: null | undefined }
   | { type: 'error'; payload: string };
@@ -44,22 +49,39 @@ function sseStringField(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
+function sseOptionalStringField(v: unknown): string | undefined {
+  const text = sseStringField(v).trim();
+  return text || undefined;
+}
+
+function parseTextPayload(payload: unknown): ChatSseTextPayload | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const p = payload as Record<string, unknown>;
+  const text = sseStringField(p.text);
+  if (!text) return undefined;
+  return {
+    text,
+    agent_name: sseOptionalStringField(p.agent_name),
+  };
+}
+
 function parseToolPayload(payload: unknown): ChatSseParsedEvent {
   if (!payload || typeof payload !== 'object') return undefined;
   const p = payload as Record<string, unknown>;
   const stage = sseStringField(p.stage);
+  const agentName = sseOptionalStringField(p.agent_name);
   if (stage === 'start') {
     const name = sseStringField(p.name);
     const id = sseStringField(p.id);
     if (!name || !id) return undefined;
-    return { type: 'tool', payload: { stage: 'start', name, id, args: p.args } };
+    return { type: 'tool', payload: { stage: 'start', name, id, args: p.args, agent_name: agentName } };
   }
   if (stage === 'result') {
     const id = sseStringField(p.id);
     if (!id) return undefined;
     return {
       type: 'tool',
-      payload: { stage: 'result', id, result: p.result },
+      payload: { stage: 'result', id, result: p.result, agent_name: agentName },
     };
   }
   if (stage === 'error') {
@@ -71,6 +93,7 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
         stage: 'error',
         id,
         error: typeof p.error === 'string' ? p.error : String(p.error ?? ''),
+        agent_name: agentName,
       },
     };
   }
@@ -82,6 +105,7 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
       payload: {
         stage: 'authorize',
         id,
+        agent_name: agentName,
       },
     };
   }
@@ -90,9 +114,14 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
 
 /** Maps SSE ``event:`` name to normalized stream events. */
 const CHAT_SSE_TYPED_EVENT_PARSERS = {
-  delta: (payload) => (typeof payload === 'string' && payload.length > 0 ? { type: 'delta', payload } : undefined),
-  reasoning: (payload) =>
-    typeof payload === 'string' && payload.length > 0 ? { type: 'reasoning', payload } : undefined,
+  delta: (payload) => {
+    const parsed = parseTextPayload(payload);
+    return parsed ? { type: 'delta', payload: parsed } : undefined;
+  },
+  reasoning: (payload) => {
+    const parsed = parseTextPayload(payload);
+    return parsed ? { type: 'reasoning', payload: parsed } : undefined;
+  },
   done: () => ({ type: 'done' }),
   error: (payload) => ({
     type: 'error',
@@ -142,9 +171,9 @@ function parseAgentChatSseBlock(block: string): ChatSseParsedEvent {
 export type AgentChatStreamOptions = {
   /** 首包：本轮 user / assistant 消息在服务端持久化所用的 id（用于替换乐观 key）。 */
   onMessageIds?: (payload: { user: string; assistant: string }) => void;
-  onDelta: (text: string) => void;
-  onReasoning?: (text: string) => void;
-  onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
+  onDelta: (payload: { text: string; agent_name?: string }) => void;
+  onReasoning?: (payload: { text: string; agent_name?: string }) => void;
+  onToolStart?: (payload: { name: string; id: string; args?: unknown; agent_name?: string }) => void;
   onToolResult?: (payload: { id: string; result: unknown }) => void;
   onToolError?: (payload: { id: string; error: string }) => void;
   onToolAuthorize?: (payload: { id: string }) => void;
@@ -176,6 +205,7 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
       name: ev.payload.name,
       id: ev.payload.id,
       args: ev.payload.args,
+      agent_name: ev.payload.agent_name,
     });
     return true;
   }
