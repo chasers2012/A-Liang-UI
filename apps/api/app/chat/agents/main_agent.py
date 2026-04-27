@@ -7,6 +7,7 @@ from app.chat.agents.store import get_agent_store
 from app.tool.controller import ToolController
 from deepagents import create_deep_agent
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
+from deepagents.middleware.summarization import create_summarization_tool_middleware
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
@@ -28,19 +29,24 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
         if tool_id not in need_authorize:
             continue
         interrupt_on[runtime_tool_name] = True
+    backend = CompositeBackend(
+        default=StateBackend(),
+        routes={
+            "/memories/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
+            "/skills/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
+        },
+    )
+
     return create_deep_agent(
         model=model,
         tools=enabled_tools,
         memory=["/memories/"],
         skills=["/skills/"],
         system_prompt="你是一个量化研究执行助手，请优先基于可用能力完成用户请求。",
-        backend=CompositeBackend(
-            default=StateBackend(),
-            routes={
-                "/memories/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
-                "/skills/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
-            },
-        ),
+        backend=backend,
+        middleware=[
+            create_summarization_tool_middleware(model, backend),
+        ],
         interrupt_on=interrupt_on or None,
         checkpointer=get_hitl_checkpointer() if interrupt_on else None,
         store=await get_agent_store(),

@@ -169,7 +169,11 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     emitted_tool_event_keys: set[tuple[str, str]],
 ) -> Iterable[StreamEventAny]:
 
-    token, _metadata = chunk_data
+    token, metadata = chunk_data
+    # DeepAgents may emit internal summarization tokens during context compaction.
+    # Keep this process transparent to users by not forwarding those chunks.
+    if isinstance(metadata, dict) and metadata.get("lc_source") == "summarization":
+        return
 
     if isinstance(token, AIMessageChunk):
         reasoning = _ai_message_reasoning_content(token)
