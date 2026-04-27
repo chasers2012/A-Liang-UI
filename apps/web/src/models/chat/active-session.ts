@@ -1,22 +1,26 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { sessionUserMessageIdsAtomFamily } from './session-detail';
+import { sessionDetailAtomFamily } from './session-detail';
 import { withAtomEffect } from 'jotai-effect';
 import { atomFamily } from 'jotai-family';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
-import { chatSessionsAtom } from './session-list';
 import { LAST_ACTIVE_KEY } from './constants';
+import { startTransition } from 'react';
+import { chatSessionsAtom } from './base.atom';
 
-export const activeUserMessageIdsAtom = atom<string[]>([]);
+export const activeUserMessageIdsAtom = atom<string[]>((get) => {
+  const sessionId = get(activeSessionIdAtom);
+  const detail = get(sessionDetailAtomFamily(sessionId));
+  if (!detail) return [];
+  return detail.messages.filter((m) => m.role === 'user').map((m) => m.id);
+});
 
 export const activeSessionIdAtom = withAtomEffect(atomWithStorage<string | null>(LAST_ACTIVE_KEY, null), (get, set) => {
   const next = get(activeSessionIdAtom);
-  const ids = get(sessionUserMessageIdsAtomFamily(next));
-  setTimeout(() => {
-    set(activeUserMessageIdsAtom, () => {
-      return ids;
-    });
-  }, 0);
+
+  startTransition(() => {
+    set(sessionDetailAtomFamily(next));
+  });
 });
 
 /**

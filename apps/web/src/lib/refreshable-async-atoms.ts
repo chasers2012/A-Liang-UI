@@ -40,6 +40,7 @@ export function createRefreshableAsyncAtoms<T>(config: { initialValue: T; fetche
   });
 
   return {
+    asyncAtom,
     valueAtom,
     loadingAtom,
     errorAtom,

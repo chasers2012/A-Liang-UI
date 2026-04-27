@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
-import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from '@/models/chat';
+import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom } from '@/models/chat';
 
 import { ChatTabItem } from './chat-session-tab-item';
 
@@ -82,7 +82,7 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
 
 export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
   const sessions = useAtomValue(chatSessionsAtom);
-  const selectSession = useSetAtom(selectChatAtom);
+  const selectSession = useSetAtom(activeSessionIdAtom);
   const isBusy = useAtomValue(chatIsSendingAtom);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);

@@ -39,7 +39,6 @@ import {
   userMessageTextAtomFamily,
 } from './session-detail';
 import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily } from './segment-open';
-import { chatSessionsAtom, refetchChatsListAtom, selectChatAtom } from './session-list';
 import { ApiError } from '@/api/client';
 import {
   chatAbortControllerAtom,
@@ -50,6 +49,7 @@ import {
   chatIsSendingAtom,
   chatStreamingReplyIdAtom,
 } from './chat.atom';
+import { chatSessionsAtom } from './base.atom';
 
 export {
   activeUserMessageIdsAtom,
@@ -74,8 +74,6 @@ export {
   isActiveChatAtomFamily,
   chatSessionSummaryAtomFamily,
   hasValidActiveChatAtom,
-  refetchChatsListAtom,
-  selectChatAtom,
 };
 
 const remapPendingChatMessageIdsAtom = atom(
