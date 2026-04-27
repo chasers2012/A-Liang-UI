@@ -9,7 +9,7 @@ import {
   nodeTemplateAsyncStateAtom,
 } from './template.atom';
 import type { NodeTypeSocketPublic } from '@/models/evaluation-profile/dto';
-import { refreshNodesListAtom } from './list-detail.atom';
+import { nodesListAtoms } from './list-detail.atom';
 import { deleteNode } from '@/api/nodes';
 
 export type NodesEditState = {
@@ -220,7 +220,7 @@ export const handleDeleteNodeAtom = atom(null, async (get, set) => {
   set(nodesDeletingAtom, true);
   try {
     await deleteNode(detail.id);
-    await set(refreshNodesListAtom);
+    await set(nodesListAtoms.refreshAtom);
     set(nodesSelectedIdAtom, null);
   } finally {
     set(nodesDeletingAtom, false);

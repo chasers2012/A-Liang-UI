@@ -10,7 +10,7 @@ import {
   factorsCanEditAtom,
   factorsEditingAtom,
   factorsIsPluginFactorAtom,
-  factorsListAtom,
+  factorsListAtoms,
   factorsSavingAtom,
   factorsSelectedIdAtom,
   handleDeleteFactorAtom,
@@ -22,7 +22,7 @@ export function FactorDetailToolbarButton() {
   const saveForm = useSetAtom(handleSaveFactorDetailAtom);
   const setEditing = useSetAtom(factorsEditingAtom);
   const deleteSelected = useSetAtom(handleDeleteFactorAtom);
-  const listItems = useAtomValue(factorsListAtom);
+  const listItems = useAtomValue(factorsListAtoms.valueAtom);
   const selectedId = useAtomValue(factorsSelectedIdAtom);
   const editing = useAtomValue(factorsEditingAtom);
   const canEdit = useAtomValue(factorsCanEditAtom);

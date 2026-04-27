@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
 import { createNode, getNode, patchNode } from '@/api/nodes';
-import { refreshNodesListAtom } from '@/models/nodes/list-detail.atom';
+import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
 import type { NodeDetailPublic } from '@/models/nodes/dto';
 import { toAsyncValueStateAtom } from '@/lib/loadable';
 import { nodesSelectedIdAtom } from './selection.atom';
@@ -61,7 +61,7 @@ export const saveNodesDetailAtomFamily = atomFamily((nodeId: string | null) =>
           : await patchNode(input.existingId ?? nodeId ?? '', {
               source: trimmedSource,
             });
-        await set(refreshNodesListAtom);
+        set(nodesListAtoms.refreshAtom);
         if (input.existingId) set(nodesDetailRevisionAtomFamily(input.existingId), (v) => v + 1);
         return nextDetail;
       } catch {

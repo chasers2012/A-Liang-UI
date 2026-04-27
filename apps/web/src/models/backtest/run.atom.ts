@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 
 import { runBacktest } from '@/api/backtests';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
-import { strategiesListAtom } from '@/models/strategy/list-detail.atom';
+import { strategiesListAtoms } from '@/models/strategy/list-detail.atom';
 
 import { backtestsListAtoms } from './list.atom';
 
@@ -28,7 +28,7 @@ export const backtestRunFormAtom = atom<BacktestRunFormState>({
   error: null,
 });
 
-export const backtestRunStrategiesAtom = atom(async (get) => (await get(strategiesListAtom)).items ?? []);
+export const backtestRunStrategiesAtom = atom((get) => get(strategiesListAtoms.valueAtom) ?? []);
 export const backtestRunDataSetsAtom = atom((get) => get(dataSetAtoms.valueAtom) ?? []);
 
 export const loadBacktestRunCatalogAtom = atom(null, async (get, set) => {

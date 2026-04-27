@@ -20,9 +20,9 @@ import {
   parseUserFactorMetadataFromSource,
 } from './factor-metadata-sync';
 import { defaultNewFactorName, validateFormForSubmit } from './form-model';
-import { refreshFactorsListAtom } from './list-detail.atom';
+import { factorsListAtoms } from './list-detail.atom';
 import { factorsSelectedIdAtom } from './selection.atom';
-import { factorTemplateAsyncAtom, factorTemplateAtom } from './template.atom';
+import { factorTemplateAtoms } from './template.atom';
 import { getPythonParser } from './web-tree-sitter-loader';
 
 export const factorsSavingAtom = atom(false);
@@ -150,7 +150,7 @@ export const factorsEditingAtom = atom(
     if (next) {
       await getPythonParser();
       const detail = get(factorsDetailAtom);
-      const baseForm = detail ?? (await resolveCreateFormForEditing(await get(factorTemplateAsyncAtom)));
+      const baseForm = detail ?? (await resolveCreateFormForEditing((await get(factorTemplateAtoms.asyncAtom)) ?? ''));
       if (baseForm) {
         set(factorsSourceDraftAtom, baseForm.source);
       }
@@ -236,7 +236,7 @@ export const factorsVisibleDetailAtom = atom<FactorDetailPublic | null>((get) =>
     param_specs: get(factorsEditParamSpecsAtom),
   };
   if (!detail && !createMode) return null;
-  const baseForm = detail ?? resolveCreateForm(get(factorTemplateAtom));
+  const baseForm = detail ?? resolveCreateForm(get(factorTemplateAtoms.valueAtom));
   const editActive = get(factorsEditingAtom);
   if (!editActive) return baseForm;
   return {
@@ -263,7 +263,7 @@ export const handleSaveFactorDetailAtom = atom(null, async (get, set) => {
     const selectedId = get(factorsSelectedIdAtom);
     const source = get(factorsSourceDraftAtom) ?? form.source;
     const saved = selectedId == null ? await createFactor(source) : await patchFactor(selectedId, source);
-    await set(refreshFactorsListAtom);
+    await set(factorsListAtoms.refreshAtom);
     if (selectedId != null) {
       await set(refreshFactorsDetailAtomFamily(selectedId));
     }
@@ -284,7 +284,7 @@ export const handleDeleteFactorAtom = atom(null, async (get, set) => {
   const selectedId = get(factorsSelectedIdAtom);
   if (!selectedId) return false;
   await deleteFactor(selectedId);
-  await set(refreshFactorsListAtom);
+  await set(factorsListAtoms.refreshAtom);
   set(factorsEditingAtom, false);
   set(factorsSelectedIdAtom, null);
   return true;

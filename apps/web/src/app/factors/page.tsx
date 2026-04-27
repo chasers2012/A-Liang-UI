@@ -10,9 +10,8 @@ import { cn } from '@/lib/utils';
 import {
   creatingAtom,
   factorsBrowseStateAtom,
-  factorsListAtom,
+  factorsListAtoms,
   factorsEditingAtom,
-  factorsListErrorAtom,
   factorsSelectedIdAtom,
   filteredFactorsAtom,
   setFactorsSearchQueryAtom,
@@ -25,8 +24,8 @@ function FactorsListPane() {
   const setEditing = useSetAtom(factorsEditingAtom);
   const [selectedId, setSelectedId] = useAtom(factorsSelectedIdAtom);
   const [editing] = useAtom(factorsEditingAtom);
-  const listItems = useAtomValue(factorsListAtom);
-  const listError = useAtomValue(factorsListErrorAtom);
+  const listItems = useAtomValue(factorsListAtoms.valueAtom);
+  const listError = useAtomValue(factorsListAtoms.errorAtom);
   const filteredItems = useAtomValue(filteredFactorsAtom);
   const browseState = useAtomValue(factorsBrowseStateAtom);
 

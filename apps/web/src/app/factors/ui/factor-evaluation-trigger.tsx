@@ -2,18 +2,19 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
-import { evaluationProfilesListItemsAtom } from '@/models/evaluation-profile/list-detail.atom';
+import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-detail.atom';
 import { runEvaluationActionAtom } from '@/models/evaluation-run';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useMemo, useState } from 'react';
 
 const EMPTY_DATA_SETS: { id: string; name: string }[] = [];
+const EMPTY_EVALUATION_PROFILES: { id: string; name: string }[] = [];
 
 export function FactorEvaluationTrigger(props: { factorId: string }) {
   const { factorId } = props;
 
   const dataSets = useAtomValue(dataSetAtoms.valueAtom) ?? EMPTY_DATA_SETS;
-  const evaluationProfiles = useAtomValue(evaluationProfilesListItemsAtom);
+  const evaluationProfiles = useAtomValue(evaluationProfilesListAtoms.valueAtom) ?? EMPTY_EVALUATION_PROFILES;
   const runEvaluation = useSetAtom(runEvaluationActionAtom);
 
   const [runProfileId, setRunProfileId] = useState<string>('');

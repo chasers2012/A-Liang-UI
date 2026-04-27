@@ -13,12 +13,12 @@ import { cn } from '@/lib/utils';
 import { filteredNodesAtom, nodesBrowseStateAtom, setNodesSearchQueryAtom } from '@/models/nodes/browse.atom';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
 import { nodesCreateModeAtom } from '@/models/nodes/edit.atom';
-import { nodesListAtom } from '@/models/nodes/list-detail.atom';
+import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
 import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
 export default function NodesPage() {
-  const items = useAtomValue(nodesListAtom);
+  const items = useAtomValue(nodesListAtoms.valueAtom);
   const { searchQuery } = useAtomValue(nodesBrowseStateAtom);
   const filteredItems = useAtomValue(filteredNodesAtom);
   const setIsCreate = useSetAtom(nodesCreateModeAtom);

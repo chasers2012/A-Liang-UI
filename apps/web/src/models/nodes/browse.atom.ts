@@ -2,7 +2,7 @@ import { atom } from 'jotai';
 
 import { listNodeVisibilityConfigs } from '@/api/nodes';
 import { toAsyncValueStateAtom } from '@/lib/loadable';
-import { nodesListAtom } from '@/models/nodes/list-detail.atom';
+import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
 import type { NodeSummaryPublic } from '@/models/nodes/dto';
 
 /** 与后端 ``PLUGIN_NODE_SOURCE_SENTINEL`` 一致 */
@@ -103,7 +103,7 @@ export const resetNodesBrowseFiltersAtom = atom(null, (_get, set) => {
 export const nodesIncludedCategoriesSetAtom = atom((get) => new Set(get(nodesBrowseStateAtom).includedCategories));
 
 export const nodesCategoryOptionKeysAtom = atom((get) => {
-  const items = get(nodesListAtom);
+  const items = get(nodesListAtoms.valueAtom);
   if (!items?.length) return [];
   const keys = new Set<string>();
   for (const m of items) {
@@ -113,7 +113,7 @@ export const nodesCategoryOptionKeysAtom = atom((get) => {
 });
 
 export const filteredNodesAtom = atom((get) => {
-  const items = get(nodesListAtom);
+  const items = get(nodesListAtoms.valueAtom);
   const { searchQuery, sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
   const selectedDomains = get(nodesSelectedDomainsAtom);
   const domainConfigs = get(nodesDomainConfigsAtom);

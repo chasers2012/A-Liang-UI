@@ -11,7 +11,7 @@ import {
   refreshToolsAtom,
   toolSavingAtomFamily,
   toolsCategoryGroupsAtom,
-  toolsListStateAtom,
+  toolsListAtoms,
   updateToolAuthorizationAtom,
 } from '@/models/tools';
 import { SectionHeader } from '@/components/section-header';
@@ -99,7 +99,8 @@ function ToolCategoryCard({ group }: { group: { category: string; items: ToolRec
 }
 
 export default function ToolsPage() {
-  const listState = useAtomValue(toolsListStateAtom);
+  const loading = useAtomValue(toolsListAtoms.loadingAtom);
+  const error = useAtomValue(toolsListAtoms.errorAtom);
   const categoryGroups = useAtomValue(toolsCategoryGroupsAtom);
   const refresh = useSetAtom(refreshToolsAtom);
 
@@ -111,15 +112,15 @@ export default function ToolsPage() {
     <Page title="Tools" description="查看和管理工具权限。">
       <div className="min-w-0">
         <section className="space-y-4">
-          {listState.loading ? (
+          {loading ? (
             <Alert>
               <AlertTitle>加载中</AlertTitle>
               <AlertDescription>正在加载工具列表…</AlertDescription>
             </Alert>
-          ) : listState.error ? (
+          ) : error ? (
             <Alert variant="destructive">
               <AlertTitle>加载失败</AlertTitle>
-              <AlertDescription>{listState.error}</AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : categoryGroups.length ? (
             <div className="space-y-4">

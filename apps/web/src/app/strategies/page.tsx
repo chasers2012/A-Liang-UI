@@ -10,10 +10,11 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Page } from '@/components/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { strategiesListAtom } from '@/models/strategy/list-detail.atom';
+import { strategiesListAtoms } from '@/models/strategy/list-detail.atom';
 
 export default function StrategiesPage() {
-  const { items, error } = useAtomValue(strategiesListAtom);
+  const items = useAtomValue(strategiesListAtoms.valueAtom);
+  const error = useAtomValue(strategiesListAtoms.errorAtom);
 
   return (
     <Page title="策略" description="策略定义与维护。">

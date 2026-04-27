@@ -11,14 +11,11 @@ import { Page } from '@/components/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getQuantAgentApiBase } from '@/api/client';
 import { cn } from '@/lib/utils';
-import {
-  evaluationProfilesListErrorAtom,
-  evaluationProfilesListItemsAtom,
-} from '@/models/evaluation-profile/list-detail.atom';
+import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-detail.atom';
 
 export default function EvaluationProfilesPage() {
-  const items = useAtomValue(evaluationProfilesListItemsAtom);
-  const error = useAtomValue(evaluationProfilesListErrorAtom);
+  const items = useAtomValue(evaluationProfilesListAtoms.valueAtom);
+  const error = useAtomValue(evaluationProfilesListAtoms.errorAtom);
 
   return (
     <Page

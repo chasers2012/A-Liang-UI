@@ -3,31 +3,13 @@ import { atomFamily } from 'jotai-family';
 
 import { deleteStrategy, getStrategy, listStrategies } from '@/api/strategies';
 import { listNodes } from '@/api/nodes';
+import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
 import type { StrategyListPublic, StrategyPublic } from './dto';
 import { NodeSummaryPublic } from '../nodes/dto';
 
-export type StrategiesListState = {
-  items: StrategyListPublic[] | null;
-  error: string | null;
-};
-
-const strategiesListRevisionAtom = atom(0);
-
-export const strategiesListAtom = atom(async (get) => {
-  get(strategiesListRevisionAtom);
-  try {
-    const items = await listStrategies();
-    return { items, error: null as string | null };
-  } catch (e) {
-    return {
-      items: null as StrategyListPublic[] | null,
-      error: e instanceof Error ? e.message : String(e),
-    };
-  }
-});
-
-export const refreshStrategiesListAtom = atom(null, async (_get, set) => {
-  set(strategiesListRevisionAtom, (n) => n + 1);
+export const strategiesListAtoms = createRefreshableAsyncAtoms<StrategyListPublic[] | null>({
+  initialValue: null,
+  fetcher: listStrategies,
 });
 
 export type StrategyDetailState = {
@@ -62,7 +44,7 @@ export const deleteStrategyAtomFamily = atomFamily((id: string) =>
     await deleteStrategy(id);
     // Best-effort refresh list + clear detail state.
     set(strategyDetailAtomFamily(id), { row: null, error: null });
-    await set(refreshStrategiesListAtom);
+    await set(strategiesListAtoms.refreshAtom);
   }),
 );
 

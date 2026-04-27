@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 
-import { factorsListAtom } from './list-detail.atom';
+import { factorsListAtoms } from './list-detail.atom';
 
 export type FactorsBrowseState = {
   searchQuery: string;
@@ -15,7 +15,7 @@ export const setFactorsSearchQueryAtom = atom(null, (_get, set, searchQuery: str
 });
 
 export const filteredFactorsAtom = atom((get) => {
-  const items = get(factorsListAtom);
+  const items = get(factorsListAtoms.valueAtom);
   if (!items) return null;
   const q = get(factorsBrowseStateAtom).searchQuery.trim().toLowerCase();
   if (!q) return items;
