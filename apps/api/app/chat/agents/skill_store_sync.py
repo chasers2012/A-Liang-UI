@@ -19,11 +19,11 @@ _SKILL_ROOT = "/skills"
 class SkillSource:
     module: str
     skill_name: str
-    file_path: Path
+    skill_dir: Path
 
     @property
     def store_path(self) -> str:
-        return f"/{self.skill_name}/SKILL.md"
+        return f"/{self.skill_name}"
 
 
 _SKILL_SOURCES: dict[tuple[str, str], SkillSource] = {}
@@ -42,15 +42,15 @@ def _normalize_name(value: str, *, field: str) -> str:
     return normalized
 
 
-def register_skill_source(module: str, skill_name: str, file_path: Path) -> None:
+def register_skill_source(module: str, skill_name: str, skill_dir: Path) -> None:
     normalized_module = _normalize_name(module, field="module")
     normalized_skill_name = _normalize_name(skill_name, field="skill_name")
-    resolved_path = Path(file_path).resolve()
+    resolved_path = Path(skill_dir).resolve()
     key = (normalized_module, normalized_skill_name)
     _SKILL_SOURCES[key] = SkillSource(
         module=normalized_module,
         skill_name=normalized_skill_name,
-        file_path=resolved_path,
+        skill_dir=resolved_path,
     )
 
 
@@ -61,6 +61,21 @@ def _to_store_value(content: str) -> dict[str, object]:
         "created_at": now,
         "modified_at": now,
     }
+
+
+def _iter_skill_files(skill_dir: Path) -> list[tuple[Path, str]]:
+    if not skill_dir.is_dir():
+        raise NotADirectoryError(f"skill directory not found: {skill_dir}")
+
+    files: list[tuple[Path, str]] = []
+    for file_path in sorted(skill_dir.rglob("*")):
+        if not file_path.is_file():
+            continue
+        relative_path = file_path.relative_to(skill_dir).as_posix()
+        if any(part.startswith(".") or part.startswith("__") for part in relative_path.split("/")):
+            continue
+        files.append((file_path, relative_path))
+    return files
 
 
 @register_startup_job
@@ -75,28 +90,50 @@ async def sync_registered_skills_to_store() -> None:
 
     for source in sorted(_SKILL_SOURCES.values(), key=lambda item: item.store_path):
         try:
-            if not source.file_path.is_file():
-                raise FileNotFoundError(f"skill file not found: {source.file_path}")
+            skill_files = _iter_skill_files(source.skill_dir)
+            if not skill_files:
+                raise FileNotFoundError(f"skill directory has no files: {source.skill_dir}")
 
-            key = source.store_path
-            existing = await store.aget(_SKILL_NAMESPACE, key)
-            if existing is not None and not overwrite:
-                skipped += 1
-                continue
+            changed_in_source = False
+            for file_path, relative_path in skill_files:
+                key = f"{source.store_path}/{relative_path}"
+                existing = await store.aget(_SKILL_NAMESPACE, key)
+                if existing is not None and not overwrite:
+                    skipped += 1
+                    continue
 
-            content = source.file_path.read_text(encoding="utf-8")
-            await store.aput(_SKILL_NAMESPACE, key, _to_store_value(content))
-            if existing is None:
-                created += 1
-            else:
-                overwritten += 1
+                try:
+                    content = file_path.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    skipped += 1
+                    logger.warning(
+                        "Skip non-utf8 skill file: module=%s skill=%s file=%s",
+                        source.module,
+                        source.skill_name,
+                        file_path,
+                    )
+                    continue
+                await store.aput(_SKILL_NAMESPACE, key, _to_store_value(content))
+                changed_in_source = True
+                if existing is None:
+                    created += 1
+                else:
+                    overwritten += 1
+
+            if not changed_in_source and not overwrite:
+                logger.debug(
+                    "Skill source skipped because all files already exist: module=%s skill=%s dir=%s",
+                    source.module,
+                    source.skill_name,
+                    source.skill_dir,
+                )
         except Exception:
             failed += 1
             logger.exception(
-                "Failed to sync skill to store: module=%s skill=%s path=%s",
+                "Failed to sync skill to store: module=%s skill=%s dir=%s",
                 source.module,
                 source.skill_name,
-                source.file_path,
+                source.skill_dir,
             )
 
     logger.info(
