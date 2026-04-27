@@ -1,7 +1,5 @@
 import { atom } from 'jotai';
-import { atomWithStorage } from 'jotai/utils';
 import { sessionUserMessageIdsAtomFamily } from './session-detail';
-import { LAST_ACTIVE_KEY } from './constants';
 import { withAtomEffect } from 'jotai-effect';
 import { atomFamily } from 'jotai-family';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
@@ -9,7 +7,7 @@ import { chatSessionsAtom } from './session-list';
 
 export const activeUserMessageIdsAtom = atom<string[]>([]);
 
-export const activeSessionIdAtom = withAtomEffect(atomWithStorage<string | null>(LAST_ACTIVE_KEY, null), (get, set) => {
+export const activeSessionIdAtom = withAtomEffect(atom<string | null>(null), (get, set) => {
   const next = get(activeSessionIdAtom);
   const ids = get(sessionUserMessageIdsAtomFamily(next));
   setTimeout(() => {

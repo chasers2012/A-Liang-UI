@@ -75,3 +75,25 @@ export type ChatCreateBody = {
 export type ChatRenameBody = {
   title: string;
 };
+
+export type ChatBatchUpdateActionPublic = 'archive' | 'restore';
+
+export type ChatBatchUpdateBody = {
+  action: ChatBatchUpdateActionPublic;
+  session_ids: string[];
+};
+
+export type ChatBatchUpdateResult = {
+  action: ChatBatchUpdateActionPublic;
+  success_ids: string[];
+  failed_ids: string[];
+};
+
+export type ChatBatchDeleteBody = {
+  session_ids: string[];
+};
+
+export type ChatBatchDeleteResult = {
+  success_ids: string[];
+  failed_ids: string[];
+};

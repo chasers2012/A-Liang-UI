@@ -6,6 +6,10 @@ from app.chat import controller
 from app.chat.schemas import (
     ChatArchivedSummaryPublic,
     ChatAuthorizationRequest,
+    ChatBatchDeleteBody,
+    ChatBatchDeleteResult,
+    ChatBatchUpdateBody,
+    ChatBatchUpdateResult,
     ChatCreateBody,
     ChatDetailPublic,
     ChatRenameBody,
@@ -127,3 +131,19 @@ def restore_chat(session_id: str) -> ChatDetailPublic:
 def purge_archived_chat(session_id: str) -> None:
     if not controller.purge_archived_chat(session_id):
         raise HTTPException(status_code=404, detail="会话不存在或未被归档")
+
+
+@router.post(
+    "/batch/update",
+    response_model=ChatBatchUpdateResult,
+)
+def batch_update_chats(body: ChatBatchUpdateBody) -> ChatBatchUpdateResult:
+    return controller.batch_update_chats(body)
+
+
+@router.post(
+    "/batch/delete",
+    response_model=ChatBatchDeleteResult,
+)
+def batch_delete_chats(body: ChatBatchDeleteBody) -> ChatBatchDeleteResult:
+    return controller.batch_delete_chats(body)

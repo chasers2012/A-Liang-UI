@@ -2,8 +2,6 @@ import { atom } from 'jotai';
 
 import type { ChatArchivedSummaryPublic } from '@/models/agent-llm/dto';
 
-export const archivedSessionsAtom = atom<ChatArchivedSummaryPublic[] | null>(null);
-
 export const archiveErrorAtom = atom<string | null>(null);
 
 export const archiveRestoringIdAtom = atom<string | null>(null);

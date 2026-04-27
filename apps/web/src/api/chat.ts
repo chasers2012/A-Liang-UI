@@ -1,4 +1,8 @@
 import type {
+  ChatBatchDeleteBody,
+  ChatBatchDeleteResult,
+  ChatBatchUpdateBody,
+  ChatBatchUpdateResult,
   ChatArchivedSummaryPublic,
   ChatCreateBody,
   ChatDetailPublic,
@@ -307,5 +311,19 @@ export function renameAgentChat(id: string, body: ChatRenameBody): Promise<ChatD
 export function archiveAgentChat(id: string): Promise<void> {
   return apiFetchJson<void>(`/chat/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+  });
+}
+
+export function batchUpdateAgentChats(body: ChatBatchUpdateBody): Promise<ChatBatchUpdateResult> {
+  return apiFetchJson<ChatBatchUpdateResult>('/chat/batch/update', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function batchDeleteAgentChats(body: ChatBatchDeleteBody): Promise<ChatBatchDeleteResult> {
+  return apiFetchJson<ChatBatchDeleteResult>('/chat/batch/delete', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }

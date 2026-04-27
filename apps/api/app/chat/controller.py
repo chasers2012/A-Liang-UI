@@ -33,6 +33,10 @@ from app.chat.schemas import (
     AssistantBlockPublic,
     ChatArchivedSummaryPublic,
     ChatAuthorizationRequest,
+    ChatBatchDeleteBody,
+    ChatBatchDeleteResult,
+    ChatBatchUpdateBody,
+    ChatBatchUpdateResult,
     ChatCreateBody,
     ChatDetailPublic,
     ChatMessageIn,
@@ -595,6 +599,46 @@ def purge_archived_chat(session_id: str) -> bool:
         return False
     rec = ChatRegistry.delete_item(session_id)
     return rec is not None
+
+
+def batch_update_chats(body: ChatBatchUpdateBody) -> ChatBatchUpdateResult:
+    success_ids: list[str] = []
+    failed_ids: list[str] = []
+    for session_id in body.session_ids:
+        ok = False
+        if body.action == "archive":
+            ok = delete_chat(session_id)
+        else:
+            ok = restore_chat(session_id) is not None
+        if ok:
+            success_ids.append(session_id)
+        else:
+            failed_ids.append(session_id)
+    return ChatBatchUpdateResult(
+        action=body.action,
+        success_ids=success_ids,
+        failed_ids=failed_ids,
+    )
+
+
+def batch_delete_chats(body: ChatBatchDeleteBody) -> ChatBatchDeleteResult:
+    success_ids: list[str] = []
+    failed_ids: list[str] = []
+    for session_id in body.session_ids:
+        rec = ChatRegistry.get_item(session_id)
+        if rec is None:
+            failed_ids.append(session_id)
+            continue
+        ok = False
+        if rec.archived_at is None:
+            ok = delete_chat(session_id) and purge_archived_chat(session_id)
+        else:
+            ok = purge_archived_chat(session_id)
+        if ok:
+            success_ids.append(session_id)
+        else:
+            failed_ids.append(session_id)
+    return ChatBatchDeleteResult(success_ids=success_ids, failed_ids=failed_ids)
 
 
 def get_active_chat(session_id: str) -> ChatRecord | None:

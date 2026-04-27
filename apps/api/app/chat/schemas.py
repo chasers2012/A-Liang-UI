@@ -174,6 +174,50 @@ class ChatRenameBody(BaseModel):
         return s
 
 
+ChatBatchUpdateAction = Literal["archive", "restore"]
+
+
+class ChatBatchUpdateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: ChatBatchUpdateAction
+    session_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("session_ids")
+    @classmethod
+    def normalize_session_ids(cls, values: list[str]) -> list[str]:
+        ids = [str(v).strip() for v in values if str(v).strip()]
+        if not ids:
+            raise ValueError("session_ids 不能为空")
+        # Keep stable order while removing duplicates.
+        return list(dict.fromkeys(ids))
+
+
+class ChatBatchUpdateResult(BaseModel):
+    action: ChatBatchUpdateAction
+    success_ids: list[str] = Field(default_factory=list)
+    failed_ids: list[str] = Field(default_factory=list)
+
+
+class ChatBatchDeleteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("session_ids")
+    @classmethod
+    def normalize_session_ids(cls, values: list[str]) -> list[str]:
+        ids = [str(v).strip() for v in values if str(v).strip()]
+        if not ids:
+            raise ValueError("session_ids 不能为空")
+        return list(dict.fromkeys(ids))
+
+
+class ChatBatchDeleteResult(BaseModel):
+    success_ids: list[str] = Field(default_factory=list)
+    failed_ids: list[str] = Field(default_factory=list)
+
+
 class LlmSettings(BaseModel):
     provider: LlmProvider = "ollama"
     max_tool_rounds: int = Field(default=100, ge=1)

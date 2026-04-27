@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useAtomValue, useSetAtom } from 'jotai';
-import { chatErrorAtom, chatHydratedAtom, hydrateChatStateAtom } from '@/models/chat/session';
+import { useAtomValue } from 'jotai';
+import { chatErrorAtom } from '@/models/chat/session';
 import { AiChatComposer } from '@/components/chat/chat-composer';
 import { AiChatMessages } from '@/components/chat/messages';
 import { ChatTabs } from './tabs';
@@ -20,20 +19,9 @@ function ChatError() {
   );
 }
 
-function HydrateChatState() {
-  const hydrated = useAtomValue(chatHydratedAtom);
-  const hydrate = useSetAtom(hydrateChatStateAtom);
-  useEffect(() => {
-    if (hydrated) return;
-    void hydrate();
-  }, [hydrate, hydrated]);
-  return null;
-}
-
 export function HomeAiChat() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden w-full h-full">
-      <HydrateChatState />
       <ChatTabs />
       <div className="flex flex-1 flex-col gap-3 overflow-hidden">
         <div className="overflow-x-hidden overflow-y-auto w-full relative flex-1">

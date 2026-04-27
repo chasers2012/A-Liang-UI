@@ -1,21 +1,21 @@
-import { listAgentChats } from '@/api/chat';
-import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
 import { atom } from 'jotai';
 import { ApiError } from '@/api/client';
 import { startTransition } from 'react';
+import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
 import { upsertSummary } from './helpers';
 import { sessionDetailAtomFamily } from './session-detail';
 import { activeSessionIdAtom } from './active-session';
 import { chatErrorAtom } from './atoms.base';
+import { chatSessionsAtom, refreshChatSessionsAtom } from '@/models/chat/base.atom';
 
-export const chatSessionsAtom = atom<ChatSummaryPublic[]>([]);
+export { chatSessionsAtom } from '@/models/chat/base.atom';
 
 /** 从服务端重新拉取当前会话列表（例如归档恢复后同步首页侧栏）。 */
 export const refetchChatsListAtom = atom(null, async (get, set) => {
   set(chatErrorAtom, null);
   try {
-    const list = await listAgentChats();
-    set(chatSessionsAtom, list);
+    set(refreshChatSessionsAtom);
+    const list = get(chatSessionsAtom);
 
     const activeId = get(activeSessionIdAtom);
     if (activeId && !list.some((s) => s.id === activeId)) {
@@ -34,7 +34,7 @@ export const selectChatAtom = atom(null, async (get, set, sessionId: string) => 
     await set(sessionDetailAtomFamily(sessionId));
     const detail = get(sessionDetailAtomFamily(sessionId));
     if (detail) {
-      set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+      set(chatSessionsAtom, (prev: ChatSummaryPublic[]) => upsertSummary(prev, detail));
     }
   });
 });

@@ -1,16 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { useAtomValue, useSetAtom } from 'jotai';
 
-import {
-  archiveAgentChat,
-  listAgentChats,
-  listArchivedAgentChats,
-  purgeArchivedAgentChat,
-  restoreAgentChat,
-} from '@/api/chat';
+import { batchDeleteAgentChats, batchUpdateAgentChats } from '@/api/chat';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -19,8 +14,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { ChatArchivedSummaryPublic, ChatSummaryPublic } from '@/models/agent-llm/dto';
-import { ApiError } from '@/api/client';
+import { managedSessionsAtom, refreshManagedSessionsAtom } from '@/models/chat/base.atom';
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -28,39 +22,24 @@ function formatWhen(iso: string): string {
   return d.toLocaleString();
 }
 
-type ManagedSession = (ChatSummaryPublic | ChatArchivedSummaryPublic) & {
-  is_archived: boolean;
-  archived_at: string | null;
+const EMPTY_TEXT_BY_TAB: Record<'active' | 'archived', string> = {
+  active: '暂无未归档会话。',
+  archived: '暂无已归档会话。',
 };
 
-function toManagedSessions(active: ChatSummaryPublic[], archived: ChatArchivedSummaryPublic[]): ManagedSession[] {
-  const activeSessions: ManagedSession[] = active.map((session) => ({
-    ...session,
-    is_archived: false,
-    archived_at: null,
-  }));
-  const archivedSessions: ManagedSession[] = archived.map((session) => ({
-    ...session,
-    is_archived: true,
-    archived_at: session.archived_at,
-  }));
-  return [...activeSessions, ...archivedSessions].sort((a, b) => {
-    const aTs = new Date(a.archived_at ?? a.updated_at).getTime();
-    const bTs = new Date(b.archived_at ?? b.updated_at).getTime();
-    return bTs - aTs;
-  });
-}
-
 export default function ArchivedChatsPage() {
-  const [items, setItems] = useState<ManagedSession[] | null>(null);
   const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<'archive' | 'restore' | 'delete' | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const asyncState = useAtomValue(managedSessionsAtom);
+  const items = useMemo(() => asyncState.value ?? [], [asyncState.value]);
+  const refreshManagedSessions = useSetAtom(refreshManagedSessionsAtom);
+  const alertError = error || asyncState.error;
 
   const visibleItems = useMemo(
-    () => (items ?? []).filter((session) => (activeTab === 'active' ? !session.is_archived : session.is_archived)),
+    () => items.filter((session) => (activeTab === 'active' ? !session.is_archived : session.is_archived)),
     [activeTab, items],
   );
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -73,25 +52,9 @@ export default function ArchivedChatsPage() {
   const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
   const isBusy = pendingAction !== null;
 
-  const loadSessions = useCallback(async () => {
-    setError(null);
-    try {
-      const [active, archived] = await Promise.all([listAgentChats(), listArchivedAgentChats()]);
-      const merged = toManagedSessions(active, archived);
-      setItems(merged);
-      setSelectedIds((prev) => prev.filter((id) => merged.some((session) => session.id === id)));
-    } catch (e) {
-      setItems([]);
-      setError(e instanceof ApiError ? e.message : '加载会话失败，请检查网络与 API。');
-    }
-  }, []);
-
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadSessions();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [loadSessions]);
+    void refreshManagedSessions();
+  }, [refreshManagedSessions]);
 
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -112,35 +75,22 @@ export default function ArchivedChatsPage() {
     if (selectedItems.length === 0) return;
     setPendingAction(action);
     setError(null);
-
-    const failures: string[] = [];
-    for (const session of selectedItems) {
-      try {
-        if (action === 'archive') {
-          if (session.is_archived) continue;
-          await archiveAgentChat(session.id);
-          continue;
-        }
-        if (action === 'restore') {
-          if (!session.is_archived) continue;
-          await restoreAgentChat(session.id);
-          continue;
-        }
-        if (!session.is_archived) {
-          await archiveAgentChat(session.id);
-        }
-        await purgeArchivedAgentChat(session.id);
-      } catch {
-        failures.push(session.title || session.id);
+    try {
+      const sessionIds = selectedItems.map((session) => session.id);
+      const result =
+        action === 'delete'
+          ? await batchDeleteAgentChats({ session_ids: sessionIds })
+          : await batchUpdateAgentChats({ action, session_ids: sessionIds });
+      if (result.failed_ids.length > 0) {
+        const failedNames = selectedItems
+          .filter((session) => result.failed_ids.includes(session.id))
+          .map((session) => session.title || session.id);
+        setError(`部分会话操作失败：${failedNames.slice(0, 5).join('、')}${failedNames.length > 5 ? ' 等' : ''}`);
       }
+      await refreshManagedSessions();
+    } finally {
+      setPendingAction(null);
     }
-
-    if (failures.length > 0) {
-      setError(`部分会话操作失败：${failures.slice(0, 5).join('、')}${failures.length > 5 ? ' 等' : ''}`);
-    }
-
-    await loadSessions();
-    setPendingAction(null);
   };
 
   const archiveSelected = () => void runBatchAction('archive');
@@ -166,10 +116,10 @@ export default function ArchivedChatsPage() {
         </p>
       }
     >
-      {error && (
+      {alertError && (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{alertError}</AlertDescription>
         </Alert>
       )}
 
@@ -237,56 +187,15 @@ export default function ArchivedChatsPage() {
             </div>
           </div>
 
-          {items === null ? (
-            <p className="py-6 text-sm text-muted-foreground">加载中…</p>
-          ) : visibleItems.length === 0 ? (
-            <p className="py-6 text-sm text-muted-foreground">
-              {activeTab === 'active' ? '暂无未归档会话。' : '暂无已归档会话。'}
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox
-                      checked={allSelected}
-                      onCheckedChange={(checked) => toggleSelectAll(Boolean(checked))}
-                      aria-label="全选会话"
-                    />
-                  </TableHead>
-                  <TableHead>标题</TableHead>
-                  <TableHead className="w-24">状态</TableHead>
-                  <TableHead className="hidden w-20 sm:table-cell">消息数</TableHead>
-                  <TableHead className="hidden w-44 lg:table-cell">更新时间</TableHead>
-                  <TableHead className="hidden w-44 lg:table-cell">归档时间</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleItems.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedSet.has(session.id)}
-                        onCheckedChange={(checked) => toggleSelectOne(session.id, Boolean(checked))}
-                        aria-label={`选择会话 ${session.title}`}
-                      />
-                    </TableCell>
-                    <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
-                    <TableCell className="w-24">{session.is_archived ? '已归档' : '进行中'}</TableCell>
-                    <TableCell className="hidden w-20 text-muted-foreground sm:table-cell">
-                      {session.message_count}
-                    </TableCell>
-                    <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
-                      {formatWhen(session.updated_at)}
-                    </TableCell>
-                    <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
-                      {session.archived_at ? formatWhen(session.archived_at) : '-'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          <SessionsTable
+            loading={asyncState.loading}
+            emptyText={EMPTY_TEXT_BY_TAB[activeTab]}
+            items={visibleItems}
+            allSelected={allSelected}
+            selectedSet={selectedSet}
+            onToggleSelectAll={toggleSelectAll}
+            onToggleSelectOne={toggleSelectOne}
+          />
         </CardContent>
       </Card>
 
@@ -304,5 +213,71 @@ export default function ArchivedChatsPage() {
         onConfirm={deleteSelected}
       />
     </Page>
+  );
+}
+
+function SessionsTable(props: {
+  loading: boolean;
+  emptyText: string;
+  items: Array<{
+    id: string;
+    title: string;
+    message_count: number;
+    updated_at: string;
+    archived_at: string | null;
+    is_archived: boolean;
+  }>;
+  allSelected: boolean;
+  selectedSet: Set<string>;
+  onToggleSelectAll: (checked: boolean) => void;
+  onToggleSelectOne: (id: string, checked: boolean) => void;
+}) {
+  if (props.loading) {
+    return <p className="py-6 text-sm text-muted-foreground">加载中…</p>;
+  }
+  if (props.items.length === 0) {
+    return <p className="py-6 text-sm text-muted-foreground">{props.emptyText}</p>;
+  }
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-10">
+            <Checkbox
+              checked={props.allSelected}
+              onCheckedChange={(checked) => props.onToggleSelectAll(Boolean(checked))}
+              aria-label="全选会话"
+            />
+          </TableHead>
+          <TableHead>标题</TableHead>
+          <TableHead className="w-24">状态</TableHead>
+          <TableHead className="hidden w-20 sm:table-cell">消息数</TableHead>
+          <TableHead className="hidden w-44 lg:table-cell">更新时间</TableHead>
+          <TableHead className="hidden w-44 lg:table-cell">归档时间</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {props.items.map((session) => (
+          <TableRow key={session.id}>
+            <TableCell>
+              <Checkbox
+                checked={props.selectedSet.has(session.id)}
+                onCheckedChange={(checked) => props.onToggleSelectOne(session.id, Boolean(checked))}
+                aria-label={`选择会话 ${session.title}`}
+              />
+            </TableCell>
+            <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
+            <TableCell className="w-24">{session.is_archived ? '已归档' : '进行中'}</TableCell>
+            <TableCell className="hidden w-20 text-muted-foreground sm:table-cell">{session.message_count}</TableCell>
+            <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+              {formatWhen(session.updated_at)}
+            </TableCell>
+            <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+              {session.archived_at ? formatWhen(session.archived_at) : '-'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

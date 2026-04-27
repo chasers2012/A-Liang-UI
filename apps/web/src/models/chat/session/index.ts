@@ -3,18 +3,16 @@ import { atom, type Setter } from 'jotai';
 import {
   archiveAgentChat,
   createAgentChat,
-  listAgentChats,
   postAgentChatAuthorize,
   postAgentChatStream,
   renameAgentChat,
 } from '@/api/chat';
-import type { ChatMessagePublic } from '@/models/agent-llm/dto';
+import type { ChatMessagePublic, ChatSummaryPublic } from '@/models/agent-llm/dto';
 import {
   chatAbortControllerAtom,
   chatAuthorizationAtom,
   chatAuthorizationDecisionAtom,
   chatErrorAtom,
-  chatHydratedAtom,
   chatInputAtom,
   chatIsSendingAtom,
   chatStreamingReplyIdAtom,
@@ -59,7 +57,6 @@ export {
   chatAuthorizationAtom,
   chatAuthorizationDecisionAtom,
   chatErrorAtom,
-  chatHydratedAtom,
   chatInputAtom,
   chatIsSendingAtom,
   chatStreamingReplyIdAtom,
@@ -142,37 +139,9 @@ function handleSendChatMessageError(
   set(chatInputAtom, trimmedInput);
 }
 
-export const hydrateChatStateAtom = atom(null, async (get, set) => {
-  if (get(chatHydratedAtom)) return;
-  set(chatErrorAtom, null);
-  const list = await listAgentChats();
-  let activeId = get(activeSessionIdAtom);
-  let nextList = list;
-
-  if (list.length === 0) {
-    const created = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
-    nextList = [
-      {
-        id: created.id,
-        title: created.title,
-        created_at: created.created_at,
-        updated_at: created.updated_at,
-        message_count: created.messages.length,
-      },
-    ];
-    activeId = created.id;
-  } else if (!activeId || !list.some((i) => i.id === activeId)) {
-    activeId = list[0].id;
-  }
-  set(chatSessionsAtom, nextList);
-  set(activeSessionIdAtom, activeId);
-  if (activeId) await set(sessionDetailAtomFamily(activeId));
-  set(chatHydratedAtom, true);
-});
-
 export const createChatAtom = atom(null, async (get, set) => {
   const detail = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
-  set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+  set(chatSessionsAtom, (prev: ChatSummaryPublic[]) => upsertSummary(prev, detail));
   await set(sessionDetailAtomFamily(detail.id));
   set(activeSessionIdAtom, detail.id);
 });
@@ -181,7 +150,7 @@ export const renameChatAtom = atom(null, async (get, set, payload: { sessionId: 
   const detail = await renameAgentChat(payload.sessionId, {
     title: payload.title,
   });
-  set(chatSessionsAtom, (prev) => upsertSummary(prev, detail));
+  set(chatSessionsAtom, (prev: ChatSummaryPublic[]) => upsertSummary(prev, detail));
   const activeId = get(activeSessionIdAtom);
   if (activeId === payload.sessionId) {
     set(activeSessionIdAtom, detail.id);
@@ -216,7 +185,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   let targetSessionId = get(activeSessionIdAtom);
   if (!targetSessionId) {
     const created = await createAgentChat({ title: CHAT_DEFAULT_TITLE });
-    set(chatSessionsAtom, (prev) => upsertSummary(prev, created));
+    set(chatSessionsAtom, (prev: ChatSummaryPublic[]) => upsertSummary(prev, created));
     get(sessionDetailAtomFamily(created.id));
     set(activeSessionIdAtom, created.id);
     targetSessionId = created.id;

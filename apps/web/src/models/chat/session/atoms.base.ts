@@ -21,4 +21,3 @@ export type ChatAuthorizationDecisionState = null | {
 export const chatAuthorizationDecisionAtom = atom<ChatAuthorizationDecisionState>(null);
 export const chatAbortControllerAtom = atom<AbortController | null>(null);
 export const chatErrorAtom = atom<string | null>(null);
-export const chatHydratedAtom = atom(false);
