@@ -88,7 +88,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
   const { label, description, options, readOnly, value, onChange } = props;
   const current = value === null || value === undefined ? '' : String(value);
 
-  const optionsItems = options.map((o) => {
+  const optionsItems = (options ?? []).map((o) => {
     if (typeof o === 'object' && o.label && o.value) {
       return o;
     }
