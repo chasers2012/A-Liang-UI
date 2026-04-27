@@ -250,10 +250,10 @@ def _mark_tool_authorization_pending(
 
 def _apply_authorization_decisions_to_blocks(
     blocks: list[AssistantBlockPublic],
-    tool_call_ids: list[str],
     decisions: list[dict[str, Any]],
 ) -> None:
-    for tc_id, decision in zip(tool_call_ids, decisions, strict=False):
+    for decision in decisions:
+        tc_id = str(decision.get("tool_call_id", "")).strip()
         if not tc_id:
             continue
         decision_type = str(decision.get("type", "")).strip().lower()
@@ -446,7 +446,6 @@ async def stream_async(  # noqa: C901
                     stream_kwargs["decision"] = pending_decision
 
                 interrupted = False
-                authorize_tool_call_ids: list[str] = []
                 async for event in stream_event_aiter_for_chat(
                     llm,
                     **stream_kwargs,
@@ -466,8 +465,6 @@ async def stream_async(  # noqa: C901
                             session_id=session_id,
                             assistant_message_id=assistant_message_id,
                         )
-                    if is_authorize_event and event.payload.id:
-                        authorize_tool_call_ids.append(event.payload.id)
                     if await is_disconnected():
                         return
                     await out.put(_sse_wire_frame(event))
@@ -484,7 +481,6 @@ async def stream_async(  # noqa: C901
                         return
                     _apply_authorization_decisions_to_blocks(
                         blocks,
-                        authorize_tool_call_ids,
                         pending_decision.get("decisions", []),
                     )
                     continue

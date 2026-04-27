@@ -7,14 +7,14 @@ export const chatStreamingReplyIdAtom = atom<string | null>(null);
 export type ChatAuthorizationState = null | {
   sessionId: string;
   assistantMessageId: string;
-  toolCallId?: string;
+  toolCallId: string;
   request: unknown;
 };
 
 export const chatAuthorizationAtom = atom<ChatAuthorizationState>(null);
 export type ChatAuthorizationDecisionState = null | {
   assistantMessageId: string;
-  toolCallId?: string;
+  toolCallId: string;
   decision: 'approve' | 'reject';
   request: unknown;
 };

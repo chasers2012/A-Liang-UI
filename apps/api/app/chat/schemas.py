@@ -104,6 +104,7 @@ class ChatAuthorizationDecision(BaseModel):
     """Decision payload for DeepAgents HITL resume."""
 
     type: Literal["approve", "reject"] = "approve"
+    tool_call_id: str = Field(..., min_length=1)
 
 
 class ChatAuthorizationRequest(BaseModel):

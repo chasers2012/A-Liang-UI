@@ -270,17 +270,15 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           );
         },
         onToolAuthorize: (payload) => {
-          if (payload.id) {
-            set(messagesAtomFamily(streamAssistantId), (prev) =>
-              patchToolInBlocks(prev, payload.id!, { authorization_status: 'pending' }),
-            );
-          }
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, payload.id, { authorization_status: 'pending' }),
+          );
           set(chatAuthorizationDecisionAtom, null);
           set(chatAuthorizationAtom, {
             sessionId,
             assistantMessageId: streamAssistantId,
             toolCallId: payload.id,
-            request: payload.id ? { tool_call_id: payload.id } : {},
+            request: { tool_call_id: payload.id },
           });
         },
       },
@@ -331,18 +329,16 @@ export const authorizeToolCallAtom = atom(
     });
     set(chatAuthorizationAtom, null);
     set(chatErrorAtom, null);
-    if (toolCallId) {
-      set(messagesAtomFamily(assistantMessageId), (prev) =>
-        patchToolInBlocks(prev, toolCallId, {
-          authorization_status: payload.decision === 'approve' ? 'approved' : 'rejected',
-        }),
-      );
-    }
+    set(messagesAtomFamily(assistantMessageId), (prev) =>
+      patchToolInBlocks(prev, toolCallId, {
+        authorization_status: payload.decision === 'approve' ? 'approved' : 'rejected',
+      }),
+    );
     try {
       await postAgentChatAuthorize({
         session_id: sessionId,
         assistant_message_id: assistantMessageId,
-        decisions: [{ type: payload.decision }],
+        decisions: [{ type: payload.decision, tool_call_id: toolCallId }],
       });
     } catch (e) {
       if (!isAbortError(e)) {

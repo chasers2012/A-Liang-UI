@@ -26,10 +26,14 @@ def test_chat_authorization_request_accepts_batch_decisions() -> None:
         {
             "session_id": "s1",
             "assistant_message_id": "a1",
-            "decisions": [{"type": "approve"}, {"type": "reject"}],
+            "decisions": [
+                {"type": "approve", "tool_call_id": "call_1"},
+                {"type": "reject", "tool_call_id": "call_2"},
+            ],
         }
     )
     assert [d.type for d in req.decisions] == ["approve", "reject"]
+    assert [d.tool_call_id for d in req.decisions] == ["call_1", "call_2"]
 
 
 def test_chat_authorization_request_requires_decision_payload() -> None:
@@ -105,8 +109,10 @@ def test_apply_authorization_decisions_to_blocks_persists_decisions() -> None:
     ]
     _apply_authorization_decisions_to_blocks(
         blocks,
-        ["call_1", "call_2"],
-        [{"type": "approve"}, {"type": "reject"}],
+        [
+            {"type": "approve", "tool_call_id": "call_1"},
+            {"type": "reject", "tool_call_id": "call_2"},
+        ],
     )
     assert blocks[0].call is not None
     assert blocks[1].call is not None

@@ -147,7 +147,7 @@ export type AgentChatStreamOptions = {
   onToolStart?: (payload: { name: string; id: string; args?: unknown }) => void;
   onToolResult?: (payload: { id: string; result: unknown }) => void;
   onToolError?: (payload: { id: string; error: string }) => void;
-  onToolAuthorize?: (payload: { id?: string }) => void;
+  onToolAuthorize?: (payload: { id: string }) => void;
   signal?: AbortSignal;
 };
 
@@ -188,7 +188,7 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
   }
   if (stage === 'authorize') {
     options.onToolAuthorize?.({
-      id: ev.payload.id || undefined,
+      id: ev.payload.id,
     });
     return true;
   }
@@ -256,7 +256,7 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
 export async function postAgentChatAuthorize(body: {
   session_id: string;
   assistant_message_id: string;
-  decisions: Array<{ type: 'approve' | 'reject' }>;
+  decisions: Array<{ type: 'approve' | 'reject'; tool_call_id: string }>;
 }): Promise<void> {
   const url = `${getQuantAgentApiBase()}/chat/authorize`;
   const res = await fetch(url, {

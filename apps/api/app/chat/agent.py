@@ -310,7 +310,7 @@ async def _stream_events_from_agent_astream(  # noqa: C901
     yield DoneEvent()
 
 
-async def stream_event_aiter_for_chat(  # noqa: C901
+async def stream_event_aiter_for_chat(
     llm: Any,
     *,
     chat_messages: list[ChatMessageIn] | None = None,
@@ -344,18 +344,12 @@ async def stream_event_aiter_for_chat(  # noqa: C901
     if use_resume:
         # HumanInTheLoopMiddleware expects resume payload shape:
         # {"decisions": [{"type": "approve" | "reject" | ...}]}
-        resume_payload: dict[str, Any]
         decision_data = decision or {}
-        raw_type = str(decision_data.get("type", "")).strip()
         if isinstance(decision_data.get("decisions"), list):
-            resume_payload = {"decisions": decision_data["decisions"]}
-        elif raw_type:
-            resume_payload = {"decisions": [{"type": raw_type}]}
+            astream_input = Command(resume={"decisions": decision_data["decisions"]})
         else:
-            yield ErrorEvent(payload="授权续跑失败：缺少有效 decision（期望 decisions 或 type）")
+            yield ErrorEvent(payload="授权续跑失败：缺少有效 decisions")
             return
-
-        astream_input = Command(resume=resume_payload)
         configurable = {"thread_id": tid}
     else:
         astream_input = {"messages": _lc_messages_from_chat_messages(chat_messages or [])}
