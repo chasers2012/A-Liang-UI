@@ -69,18 +69,89 @@ type ToolAuthorizationUi =
   | { stage: 'decided'; decision: 'approve' | 'reject'; request: unknown }
   | null;
 
+function getPersistedAuthorization(call: ChatToolCallDisplay): ToolAuthorizationUi {
+  if (call.authorization_status === 'pending') {
+    return { stage: 'pending', request: { tool_call_id: call.id } };
+  }
+  if (call.authorization_status === 'approved' || call.authorization_status === 'rejected') {
+    return {
+      stage: 'decided',
+      decision: call.authorization_status === 'approved' ? 'approve' : 'reject',
+      request: { tool_call_id: call.id },
+    };
+  }
+  return null;
+}
+
+const AuthorizationPanel = memo(function AuthorizationPanel({
+  authorization,
+  sessionId,
+  assistantMessageId,
+  toolCallId,
+}: {
+  authorization: Exclude<ToolAuthorizationUi, null>;
+  sessionId: string;
+  assistantMessageId: string;
+  toolCallId: string;
+}) {
+  const authorize = useSetAtom(authorizeToolCallAtom);
+  const [authorizing, setAuthorizing] = useState(false);
+
+  const submitAuthorization = (decision: 'approve' | 'reject') => {
+    if (authorizing) return;
+    setAuthorizing(true);
+    void authorize({
+      sessionId,
+      decision,
+      assistantMessageId,
+      toolCallId,
+    }).finally(() => setAuthorizing(false));
+  };
+
+  return (
+    <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/5 p-2">
+      <div className="mb-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">授权确认</div>
+      {authorization.stage === 'decided' ? (
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          已{authorization.decision === 'approve' ? '允许' : '拒绝'}本次工具调用。
+        </p>
+      ) : (
+        <>
+          <p className="mb-2 text-[11px] text-muted-foreground">请确认是否允许本次工具调用继续执行。</p>
+          <div className="mb-2 flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={authorizing}
+              onClick={() => submitAuthorization('reject')}
+            >
+              拒绝
+            </Button>
+            <Button type="button" size="sm" disabled={authorizing} onClick={() => submitAuthorization('approve')}>
+              {authorizing ? '提交中…' : '允许'}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+});
+
 export function ChatToolCallCard({
   call,
-  authorization,
+  sessionId,
+  assistantMessageId,
 }: {
   call: ChatToolCallDisplay;
-  authorization?: ToolAuthorizationUi;
+  sessionId: string;
+  assistantMessageId: string;
 }) {
   const { name, status, args, result, error } = call;
-  const authorize = useSetAtom(authorizeToolCallAtom);
+  const authorization = getPersistedAuthorization(call);
   const initRef = useRef(false);
   const [open, setOpen] = useState(false);
-  const [authorizing, setAuthorizing] = useState(false);
+
   useEffect(() => {
     if (initRef.current) {
       return;
@@ -122,45 +193,12 @@ export function ChatToolCallCard({
           ) : null}
           {status === 'error' && error ? <p className="text-[11px] leading-relaxed text-destructive">{error}</p> : null}
           {authorization ? (
-            <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/5 p-2">
-              <div className="mb-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">授权确认</div>
-              {authorization.stage === 'decided' ? (
-                <p className="mb-2 text-[11px] text-muted-foreground">
-                  已{authorization.decision === 'approve' ? '允许' : '拒绝'}本次工具调用。
-                </p>
-              ) : (
-                <>
-                  <p className="mb-2 text-[11px] text-muted-foreground">请确认是否允许本次工具调用继续执行。</p>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={authorizing}
-                      onClick={() => {
-                        if (authorizing) return;
-                        setAuthorizing(true);
-                        void authorize({ decision: 'reject' }).finally(() => setAuthorizing(false));
-                      }}
-                    >
-                      拒绝
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={authorizing}
-                      onClick={() => {
-                        if (authorizing) return;
-                        setAuthorizing(true);
-                        void authorize({ decision: 'approve' }).finally(() => setAuthorizing(false));
-                      }}
-                    >
-                      {authorizing ? '提交中…' : '允许'}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
+            <AuthorizationPanel
+              authorization={authorization}
+              sessionId={sessionId}
+              assistantMessageId={assistantMessageId}
+              toolCallId={call.id}
+            />
           ) : null}
         </div>
       )}

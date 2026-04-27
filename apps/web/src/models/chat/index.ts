@@ -42,8 +42,6 @@ import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily } from './segment-op
 import { ApiError } from '@/api/client';
 import {
   chatAbortControllerAtom,
-  chatAuthorizationAtom,
-  chatAuthorizationDecisionAtom,
   chatErrorAtom,
   chatInputAtom,
   chatIsSendingAtom,
@@ -54,8 +52,6 @@ import { chatSessionsAtom } from './base.atom';
 export {
   activeUserMessageIdsAtom,
   chatAbortControllerAtom,
-  chatAuthorizationAtom,
-  chatAuthorizationDecisionAtom,
   chatErrorAtom,
   chatInputAtom,
   chatIsSendingAtom,
@@ -273,13 +269,6 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
           set(messagesAtomFamily(streamAssistantId), (prev) =>
             patchToolInBlocks(prev, payload.id, { authorization_status: 'pending' }),
           );
-          set(chatAuthorizationDecisionAtom, null);
-          set(chatAuthorizationAtom, {
-            sessionId,
-            assistantMessageId: streamAssistantId,
-            toolCallId: payload.id,
-            request: { tool_call_id: payload.id },
-          });
         },
       },
     );
@@ -315,19 +304,13 @@ export const authorizeToolCallAtom = atom(
     get,
     set,
     payload: {
+      sessionId: string;
       decision: 'approve' | 'reject';
+      assistantMessageId: string;
+      toolCallId: string;
     },
   ) => {
-    const auth = get(chatAuthorizationAtom);
-    if (!auth) return;
-    const { sessionId, assistantMessageId, toolCallId, request } = auth;
-    set(chatAuthorizationDecisionAtom, {
-      assistantMessageId,
-      toolCallId,
-      decision: payload.decision,
-      request,
-    });
-    set(chatAuthorizationAtom, null);
+    const { sessionId, assistantMessageId, toolCallId } = payload;
     set(chatErrorAtom, null);
     set(messagesAtomFamily(assistantMessageId), (prev) =>
       patchToolInBlocks(prev, toolCallId, {
