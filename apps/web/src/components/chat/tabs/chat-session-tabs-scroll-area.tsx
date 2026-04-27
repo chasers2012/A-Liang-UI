@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
-import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom } from '@/models/chat';
+import { activeSessionIdAtom, chatSessionsAtom } from '@/models/chat';
 
 import { ChatTabItem } from './chat-session-tab-item';
 
@@ -40,18 +40,16 @@ const TabScrollChevronButton = memo(function TabScrollChevronButton({
 
 const ChatTabsTabList = memo(function ChatTabsTabList({
   sessions,
-  disabled,
   onSelectSession,
 }: {
   sessions: ChatSummaryPublic[];
-  disabled: boolean;
   onSelectSession: (id: string) => void;
 }) {
   const store = useStore();
 
   const onTabListKeyDown = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
-      if (disabled || sessions.length === 0) return;
+      if (sessions.length === 0) return;
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       e.preventDefault();
       const activeId = store.get(activeSessionIdAtom);
@@ -61,20 +59,13 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
       const next = sessions[(i + delta + sessions.length) % sessions.length];
       if (next) onSelectSession(next.id);
     },
-    [disabled, onSelectSession, sessions, store],
+    [onSelectSession, sessions, store],
   );
 
   return (
     <div role="tablist" className="flex min-w-max items-end gap-1 pr-1 h-full" onKeyDown={onTabListKeyDown}>
       {sessions.map((s) => (
-        <ChatTabItem
-          key={s.id}
-          id={s.id}
-          title={s.title}
-          messageCount={s.message_count}
-          disabled={disabled}
-          onSelect={onSelectSession}
-        />
+        <ChatTabItem key={s.id} id={s.id} title={s.title} messageCount={s.message_count} onSelect={onSelectSession} />
       ))}
     </div>
   );
@@ -83,7 +74,6 @@ const ChatTabsTabList = memo(function ChatTabsTabList({
 export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
   const sessions = useAtomValue(chatSessionsAtom);
   const selectSession = useSetAtom(activeSessionIdAtom);
-  const isBusy = useAtomValue(chatIsSendingAtom);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -144,7 +134,7 @@ export const ChatTabsScrollArea = memo(function ChatTabsScrollArea() {
           'items-end justify-end',
         )}
       >
-        <ChatTabsTabList sessions={sessions} disabled={isBusy} onSelectSession={selectSession} />
+        <ChatTabsTabList sessions={sessions} onSelectSession={selectSession} />
       </div>
 
       <TabScrollChevronButton

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom, useStore } from 'jotai';
 
 import { batchDeleteAgentChats, batchUpdateAgentChats } from '@/api/chat';
 import { Page } from '@/components/page';
@@ -14,6 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { managedSessionsAtom, refreshManagedSessionsAtom } from '@/models/chat/base.atom';
+import { isSessionGeneratingAtomFamily } from '@/models/chat';
 
 function formatWhen(iso: string): string {
   const d = new Date(iso);
@@ -33,6 +34,7 @@ export default function ArchivedChatsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const asyncState = useAtomValue(managedSessionsAtom);
+  const store = useStore();
   const items = useMemo(() => asyncState.value ?? [], [asyncState.value]);
   const refreshManagedSessions = useSetAtom(refreshManagedSessionsAtom);
   const alertError = error || asyncState.error;
@@ -46,14 +48,28 @@ export default function ArchivedChatsPage() {
     () => visibleItems.filter((session) => selectedSet.has(session.id)),
     [visibleItems, selectedSet],
   );
+  const selectedOperableItems = useMemo(
+    () => selectedItems.filter((session) => !store.get(isSessionGeneratingAtomFamily(session.id))),
+    [selectedItems, store],
+  );
 
-  const allIds = useMemo(() => visibleItems.map((session) => session.id), [visibleItems]);
+  const allIds = useMemo(
+    () =>
+      visibleItems
+        .filter((session) => !store.get(isSessionGeneratingAtomFamily(session.id)))
+        .map((session) => session.id),
+    [visibleItems, store],
+  );
   const allSelected = allIds.length > 0 && selectedIds.length === allIds.length;
   const isBusy = pendingAction !== null;
 
   useEffect(() => {
     void refreshManagedSessions();
   }, [refreshManagedSessions]);
+
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => !store.get(isSessionGeneratingAtomFamily(id))));
+  }, [items, store]);
 
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -64,6 +80,7 @@ export default function ArchivedChatsPage() {
   };
 
   const toggleSelectOne = (id: string, checked: boolean) => {
+    if (store.get(isSessionGeneratingAtomFamily(id))) return;
     setSelectedIds((prev) => {
       if (checked) return prev.includes(id) ? prev : [...prev, id];
       return prev.filter((x) => x !== id);
@@ -71,17 +88,17 @@ export default function ArchivedChatsPage() {
   };
 
   const runBatchAction = async (action: 'archive' | 'restore' | 'delete') => {
-    if (selectedItems.length === 0) return;
+    if (selectedOperableItems.length === 0) return;
     setPendingAction(action);
     setError(null);
     try {
-      const sessionIds = selectedItems.map((session) => session.id);
+      const sessionIds = selectedOperableItems.map((session) => session.id);
       const result =
         action === 'delete'
           ? await batchDeleteAgentChats({ session_ids: sessionIds })
           : await batchUpdateAgentChats({ action, session_ids: sessionIds });
       if (result.failed_ids.length > 0) {
-        const failedNames = selectedItems
+        const failedNames = selectedOperableItems
           .filter((session) => result.failed_ids.includes(session.id))
           .map((session) => session.title || session.id);
         setError(`部分会话操作失败：${failedNames.slice(0, 5).join('、')}${failedNames.length > 5 ? ' 等' : ''}`);
@@ -99,8 +116,8 @@ export default function ArchivedChatsPage() {
     void runBatchAction('delete');
   };
 
-  const archiveTargetCount = selectedItems.filter((session) => !session.is_archived).length;
-  const restoreTargetCount = selectedItems.filter((session) => session.is_archived).length;
+  const archiveTargetCount = selectedOperableItems.filter((session) => !session.is_archived).length;
+  const restoreTargetCount = selectedOperableItems.filter((session) => session.is_archived).length;
 
   return (
     <Page title="会话管理">
@@ -160,11 +177,11 @@ export default function ArchivedChatsPage() {
                     variant="destructive"
                     size="sm"
                     className="gap-1.5"
-                    disabled={isBusy || selectedItems.length === 0}
+                    disabled={isBusy || selectedOperableItems.length === 0}
                     onClick={() => setIsDeleteDialogOpen(true)}
                   >
                     <Trash2 className="size-3.5" aria-hidden />
-                    {pendingAction === 'delete' ? '删除中…' : `删除 (${selectedItems.length})`}
+                    {pendingAction === 'delete' ? '删除中…' : `删除 (${selectedOperableItems.length})`}
                   </Button>
                 </>
               )}
@@ -189,7 +206,7 @@ export default function ArchivedChatsPage() {
         title="删除会话"
         description={
           <div className="space-y-2">
-            <p className="text-sm text-foreground">确认永久删除所选 {selectedItems.length} 个会话？</p>
+            <p className="text-sm text-foreground">确认永久删除所选 {selectedOperableItems.length} 个会话？</p>
             <p className="text-sm text-muted-foreground">删除后将无法恢复，历史消息会一并移除。</p>
           </div>
         }
@@ -242,26 +259,52 @@ function SessionsTable(props: {
       </TableHeader>
       <TableBody>
         {props.items.map((session) => (
-          <TableRow key={session.id}>
-            <TableCell>
-              <Checkbox
-                checked={props.selectedSet.has(session.id)}
-                onCheckedChange={(checked) => props.onToggleSelectOne(session.id, Boolean(checked))}
-                aria-label={`选择会话 ${session.title}`}
-              />
-            </TableCell>
-            <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{session.title}</TableCell>
-            <TableCell className="w-24">{session.is_archived ? '已归档' : '进行中'}</TableCell>
-            <TableCell className="hidden w-20 text-muted-foreground sm:table-cell">{session.message_count}</TableCell>
-            <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
-              {formatWhen(session.updated_at)}
-            </TableCell>
-            <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
-              {session.archived_at ? formatWhen(session.archived_at) : '-'}
-            </TableCell>
-          </TableRow>
+          <SessionTableRow
+            key={session.id}
+            session={session}
+            selected={props.selectedSet.has(session.id)}
+            onToggleSelectOne={props.onToggleSelectOne}
+          />
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+function SessionTableRow(props: {
+  session: {
+    id: string;
+    title: string;
+    message_count: number;
+    updated_at: string;
+    archived_at: string | null;
+    is_archived: boolean;
+  };
+  selected: boolean;
+  onToggleSelectOne: (id: string, checked: boolean) => void;
+}) {
+  const isGenerating = useAtomValue(isSessionGeneratingAtomFamily(props.session.id));
+  return (
+    <TableRow key={props.session.id}>
+      <TableCell>
+        <Checkbox
+          checked={props.selected}
+          onCheckedChange={(checked) => props.onToggleSelectOne(props.session.id, Boolean(checked))}
+          aria-label={`选择会话 ${props.session.title}`}
+          disabled={isGenerating}
+        />
+      </TableCell>
+      <TableCell className="max-w-[min(28rem,50vw)] truncate font-medium">{props.session.title}</TableCell>
+      <TableCell className="w-24">
+        {isGenerating ? '生成中' : props.session.is_archived ? '已归档' : '进行中'}
+      </TableCell>
+      <TableCell className="hidden w-20 text-muted-foreground sm:table-cell">{props.session.message_count}</TableCell>
+      <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+        {formatWhen(props.session.updated_at)}
+      </TableCell>
+      <TableCell className="hidden w-44 text-muted-foreground lg:table-cell">
+        {props.session.archived_at ? formatWhen(props.session.archived_at) : '-'}
+      </TableCell>
+    </TableRow>
   );
 }

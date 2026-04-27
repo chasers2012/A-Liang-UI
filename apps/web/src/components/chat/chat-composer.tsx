@@ -5,7 +5,14 @@ import { ArrowUp, LoaderCircle, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom, stopChatMessageAtom } from '@/models/chat';
+import {
+  activeSessionIdAtom,
+  chatInputAtom,
+  chatIsSendingAtom,
+  isSessionGeneratingAtomFamily,
+  sendChatMessageAtom,
+  stopChatMessageAtom,
+} from '@/models/chat';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 const STOP_LOCK_MS = 300;
@@ -14,10 +21,13 @@ export const AiChatComposer = memo(function AiChatComposer() {
   const formId = useId();
   const [input, setInput] = useAtom(chatInputAtom);
   const isSending = useAtomValue(chatIsSendingAtom);
+  const activeSessionId = useAtomValue(activeSessionIdAtom);
+  const isGeneratingInActiveSession = useAtomValue(isSessionGeneratingAtomFamily(activeSessionId ?? '__none__'));
   const send = useSetAtom(sendChatMessageAtom);
   const stop = useSetAtom(stopChatMessageAtom);
   const [stopLocked, setStopLocked] = useState(false);
   const stopUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isBlockedByOtherSession = isSending && !isGeneratingInActiveSession;
 
   useEffect(() => {
     return () => {
@@ -28,7 +38,8 @@ export const AiChatComposer = memo(function AiChatComposer() {
   }, []);
 
   const handleComposerButtonClick = useCallback(() => {
-    if (isSending) {
+    if (isBlockedByOtherSession) return;
+    if (isGeneratingInActiveSession) {
       stop();
       return;
     }
@@ -41,7 +52,7 @@ export const AiChatComposer = memo(function AiChatComposer() {
       stopUnlockTimerRef.current = null;
     }, STOP_LOCK_MS);
     void send();
-  }, [isSending, send, stop]);
+  }, [isBlockedByOtherSession, isGeneratingInActiveSession, send, stop]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -52,11 +63,15 @@ export const AiChatComposer = memo(function AiChatComposer() {
         <Button
           type="button"
           size="icon"
-          aria-label={isSending ? '停止生成' : '发送'}
+          aria-label={isGeneratingInActiveSession ? '停止生成' : '发送'}
           onClick={handleComposerButtonClick}
-          disabled={(!isSending && !input.trim()) || (isSending && stopLocked)}
+          disabled={
+            isBlockedByOtherSession ||
+            (!isGeneratingInActiveSession && !input.trim()) ||
+            (isGeneratingInActiveSession && stopLocked)
+          }
         >
-          {isSending ? (
+          {isGeneratingInActiveSession ? (
             stopLocked ? (
               <LoaderCircle className="size-4 animate-spin" aria-hidden />
             ) : (

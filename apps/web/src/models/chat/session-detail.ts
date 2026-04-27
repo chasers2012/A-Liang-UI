@@ -2,7 +2,7 @@ import { getAgentChat } from '@/api/chat';
 import type { ChatDetailPublic, ChatMessagePublic, TextBlockPublic } from '@/models/agent-llm/dto';
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
-import { chatIsSendingAtom, chatStreamingReplyIdAtom } from './chat.atom';
+import { chatIsSendingAtom, chatStreamingReplyIdAtom, isSessionGeneratingAtomFamily } from './chat.atom';
 
 /**
  * message id → message(ChatMessagePublic)
@@ -63,8 +63,9 @@ export const sessionDetailAtomFamily = atomFamily((sessionId: string | undefined
     (get) => {
       return get(base);
     },
-    async (_get, set) => {
+    async (get, set) => {
       if (!sessionId) return;
+      if (get(isSessionGeneratingAtomFamily(sessionId))) return;
       const detail = await getAgentChat(sessionId);
       set(base, detail);
       set(

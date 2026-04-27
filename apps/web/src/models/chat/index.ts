@@ -45,6 +45,7 @@ import {
   chatErrorAtom,
   chatInputAtom,
   chatIsSendingAtom,
+  isSessionGeneratingAtomFamily,
   chatStreamingReplyIdAtom,
 } from './chat.atom';
 import { chatSessionsAtom } from './base.atom';
@@ -53,6 +54,7 @@ export {
   activeUserMessageIdsAtom,
   chatAbortControllerAtom,
   chatErrorAtom,
+  isSessionGeneratingAtomFamily,
   chatInputAtom,
   chatIsSendingAtom,
   chatStreamingReplyIdAtom,
@@ -208,6 +210,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   set(chatErrorAtom, null);
   set(chatInputAtom, '');
   set(chatIsSendingAtom, true);
+  set(isSessionGeneratingAtomFamily(sessionId), true);
   set(chatAbortControllerAtom, abortController);
   set(chatStreamingReplyIdAtom, provisionalAssistantId);
   set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
@@ -294,6 +297,7 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
   } finally {
     set(chatAbortControllerAtom, null);
     set(chatIsSendingAtom, false);
+    set(isSessionGeneratingAtomFamily(sessionId), false);
     set(chatStreamingReplyIdAtom, null);
   }
 });
