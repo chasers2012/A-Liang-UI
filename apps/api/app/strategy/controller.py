@@ -55,7 +55,7 @@ def merge_strategy_patch(row: StrategyRow, body: StrategyPatch) -> StrategyRow:
     if "description" in data:
         row.description = (body.description or "").strip()
     if "workflow" in data and body.workflow is not None:
-        row.workflow = json.dumps(body.workflow, ensure_ascii=False)
+        row.workflow = json.dumps(body.workflow.model_dump(by_alias=True), ensure_ascii=False)
     row.updated_at = utc_now_iso()
     return row
 
