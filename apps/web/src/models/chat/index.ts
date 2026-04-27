@@ -8,15 +8,6 @@ import {
   renameAgentChat,
 } from '@/api/chat';
 import type { ChatMessagePublic, ChatSummaryPublic } from '@/models/agent-llm/dto';
-import {
-  chatAbortControllerAtom,
-  chatAuthorizationAtom,
-  chatAuthorizationDecisionAtom,
-  chatErrorAtom,
-  chatInputAtom,
-  chatIsSendingAtom,
-  chatStreamingReplyIdAtom,
-} from './atoms.base';
 
 import { CHAT_DEFAULT_TITLE } from './constants';
 import {
@@ -50,6 +41,15 @@ import {
 import { segmentOpenAtomFamily, toggleSegmentOpenAtomFamily } from './segment-open';
 import { chatSessionsAtom, refetchChatsListAtom, selectChatAtom } from './session-list';
 import { ApiError } from '@/api/client';
+import {
+  chatAbortControllerAtom,
+  chatAuthorizationAtom,
+  chatAuthorizationDecisionAtom,
+  chatErrorAtom,
+  chatInputAtom,
+  chatIsSendingAtom,
+  chatStreamingReplyIdAtom,
+} from './chat.atom';
 
 export {
   activeUserMessageIdsAtom,

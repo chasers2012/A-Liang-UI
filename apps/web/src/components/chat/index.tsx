@@ -1,7 +1,7 @@
 'use client';
 
 import { useAtomValue } from 'jotai';
-import { chatErrorAtom } from '@/models/chat/session';
+import { chatErrorAtom } from '@/models/chat';
 import { AiChatComposer } from '@/components/chat/chat-composer';
 import { AiChatMessages } from '@/components/chat/messages';
 import { ChatTabs } from './tabs';

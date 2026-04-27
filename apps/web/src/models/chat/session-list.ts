@@ -5,7 +5,7 @@ import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
 import { upsertSummary } from './helpers';
 import { sessionDetailAtomFamily } from './session-detail';
 import { activeSessionIdAtom } from './active-session';
-import { chatErrorAtom } from './atoms.base';
+import { chatErrorAtom } from './chat.atom';
 import { chatSessionsAtom, refreshChatSessionsAtom } from '@/models/chat/base.atom';
 
 export { chatSessionsAtom } from '@/models/chat/base.atom';

@@ -7,7 +7,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { chatSessionSummaryAtomFamily, renameChatAtom } from '@/models/chat/session';
+import { chatSessionSummaryAtomFamily, renameChatAtom } from '@/models/chat';
 
 import { ActiveSessionSnapshotTrigger } from './active-session-snapshot-trigger';
 

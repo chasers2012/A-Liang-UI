@@ -5,7 +5,7 @@ import { ArrowUp, LoaderCircle, Square } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom, stopChatMessageAtom } from '@/models/chat/session';
+import { chatInputAtom, chatIsSendingAtom, sendChatMessageAtom, stopChatMessageAtom } from '@/models/chat';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 const STOP_LOCK_MS = 300;

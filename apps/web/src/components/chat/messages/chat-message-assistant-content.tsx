@@ -9,7 +9,7 @@ import {
   chatAuthorizationDecisionAtom,
   isReplyStreamingOfMessageAtomFamily,
   replyOfMessageAtomFamily,
-} from '@/models/chat/session';
+} from '@/models/chat';
 import type { AssistantBlock } from '@/models/chat/types';
 import { ChatReasoningCard } from './chat-reasoning-card';
 import { ChatToolCallCard } from './chat-tool-call-card';

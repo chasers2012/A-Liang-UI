@@ -5,7 +5,7 @@ import { useSetAtom } from 'jotai';
 import { Archive } from 'lucide-react';
 
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { archiveChatAtom } from '@/models/chat/session';
+import { archiveChatAtom } from '@/models/chat';
 
 import { ActiveSessionSnapshotTrigger } from './active-session-snapshot-trigger';
 

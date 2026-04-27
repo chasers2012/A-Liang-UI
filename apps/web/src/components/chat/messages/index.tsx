@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { useAtomValue } from 'jotai';
 
-import { activeUserMessageIdsAtom } from '@/models/chat/session';
+import { activeUserMessageIdsAtom } from '@/models/chat';
 
 import { ChatMessageCollapsible } from './chat-message-collapsible';
 

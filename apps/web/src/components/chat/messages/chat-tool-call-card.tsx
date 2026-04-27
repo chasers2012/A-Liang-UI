@@ -5,7 +5,7 @@ import { useSetAtom } from 'jotai';
 import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { authorizeToolCallAtom } from '@/models/chat/session';
+import { authorizeToolCallAtom } from '@/models/chat';
 import type { ChatToolCallDisplay } from '@/models/chat/types';
 import { cn } from '@/lib/utils';
 

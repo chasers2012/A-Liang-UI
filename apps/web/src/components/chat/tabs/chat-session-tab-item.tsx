@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { useAtomValue } from 'jotai';
 
 import { cn } from '@/lib/utils';
-import { isActiveChatAtomFamily } from '@/models/chat/session';
+import { isActiveChatAtomFamily } from '@/models/chat';
 
 export const ChatTabItem = memo(function ChatTabItem({
   id,

@@ -5,7 +5,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { chatIsSendingAtom, createChatAtom } from '@/models/chat/session';
+import { chatIsSendingAtom, createChatAtom } from '@/models/chat';
 
 import { ArchiveButton } from './archive-session';
 import { RenameButton } from './rename-session';

@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
-import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from '@/models/chat/session';
+import { activeSessionIdAtom, chatIsSendingAtom, chatSessionsAtom, selectChatAtom } from '@/models/chat';
 
 import { ChatTabItem } from './chat-session-tab-item';
 
