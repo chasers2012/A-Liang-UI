@@ -10,7 +10,7 @@ from app.tool.safe_tool import safe_tool
     "列出可用工具",
     description=(
         "查询系统当前可用工具列表。\n"
-        "返回系统内全部工具作为能力参考，不代表当前会话一定允许调用；请结合授权状态判断。"
+        "返回系统内全部工具作为能力参考，不代表当前会话一定允许调用；请结合授权状态判断。工具实际装载在子代理中，通过它们进行操作"
     ),
 )
 def list_available_tools() -> list[dict[str, Any]]:

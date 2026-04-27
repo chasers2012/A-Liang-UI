@@ -2,9 +2,22 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from uuid import uuid4
+
+from workflow.schemas import (
+    WorkflowGraphEndpointInput,
+    WorkflowGraphEndpointNode,
+    WorkflowGraphEndpointOutput,
+    WorkflowGraphLink,
+    WorkflowGraphNode,
+    WorkflowGraphPersisted,
+)
 
 from app.datasource.schemas import utc_now_iso
-from app.strategy.constants import strategy_workflow_template_dict
+from app.nodes.controller import build_workflow_node_for_graph
+from app.nodes.controller import list_nodes as list_workflow_nodes
+from app.nodes.schemas import WorkflowNodeSummaryPublic
+from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN, strategy_workflow_template_dict
 from app.strategy.models import StrategyRow
 from app.strategy.registry import StrategyRegistry
 from app.strategy.schemas import (
@@ -98,3 +111,187 @@ def validate_strategy(strategy_id: str) -> StrategyValidateResponse | None:
 
 def to_strategy_public_dict(row: StrategyRow) -> dict[str, Any]:
     return to_strategy_public(row).model_dump()
+
+
+def list_strategy_nodes() -> list[WorkflowNodeSummaryPublic]:
+    return list_workflow_nodes(domain=WORKFLOW_STRATEGY_DOMAIN)
+
+
+def _validate_workflow(workflow: WorkflowGraphPersisted) -> WorkflowGraphPersisted:
+    return WorkflowGraphPersisted.model_validate(workflow.model_dump(by_alias=True))
+
+
+def _find_node_or_raise(workflow: WorkflowGraphPersisted, node_id: str) -> WorkflowGraphNode:
+    node = next((item for item in workflow.nodes if item.id == node_id), None)
+    if node is None:
+        raise ValueError(f"节点不存在: {node_id}")
+    return node
+
+
+def add_node(
+    workflow: WorkflowGraphPersisted, node_type_id: str, **metadata: Any
+) -> tuple[WorkflowGraphPersisted, str]:
+    allowed_node_ids = {node.id for node in list_strategy_nodes()}
+    if node_type_id not in allowed_node_ids:
+        raise ValueError(f"节点类型不可用: {node_type_id}")
+
+    node_id = str(metadata.pop("id", "")).strip() or str(uuid4())
+    node_payload = build_workflow_node_for_graph(node_type_id, instance_id=node_id)
+    if node_payload is None:
+        raise ValueError(f"节点类型不存在: {node_type_id}")
+
+    # only fields declared in WorkflowGraphNode are accepted as metadata overrides
+    valid_fields = set(WorkflowGraphNode.model_fields.keys())
+    for key, value in metadata.items():
+        if key in valid_fields:
+            node_payload[key] = value
+
+    node = WorkflowGraphNode.model_validate(node_payload)
+    new_workflow = workflow.model_copy(deep=True)
+    new_workflow.nodes.append(node)
+    return new_workflow, node.id
+
+
+def remove_node(workflow: WorkflowGraphPersisted, node_id: str) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    _find_node_or_raise(new_workflow, node_id)
+    new_workflow.nodes = [node for node in new_workflow.nodes if node.id != node_id]
+    new_workflow.links = [
+        link
+        for link in new_workflow.links
+        if not (
+            (link.from_.kind == "node" and link.from_.node_id == node_id)
+            or (link.to.kind == "node" and link.to.node_id == node_id)
+        )
+    ]
+    return _validate_workflow(new_workflow)
+
+
+def update_node_metadata(
+    workflow: WorkflowGraphPersisted, node_id: str, **metadata: Any
+) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    node = _find_node_or_raise(new_workflow, node_id)
+    mutable_fields = {"label", "description", "category", "pos", "inputs", "outputs", "params"}
+    patch = {k: v for k, v in metadata.items() if k in mutable_fields}
+    updated = WorkflowGraphNode.model_validate({**node.model_dump(), **patch})
+    idx = next(i for i, item in enumerate(new_workflow.nodes) if item.id == node_id)
+    new_workflow.nodes[idx] = updated
+    return _validate_workflow(new_workflow)
+
+
+def move_node(
+    workflow: WorkflowGraphPersisted, node_id: str, pos: tuple[float, float] | list[float]
+) -> WorkflowGraphPersisted:
+    return update_node_metadata(workflow=workflow, node_id=node_id, pos=pos)
+
+
+def set_node_param(
+    workflow: WorkflowGraphPersisted, node_id: str, key: str, value: Any
+) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    node = _find_node_or_raise(new_workflow, node_id)
+    params = dict(node.params or {})
+    params[key] = value
+    return update_node_metadata(new_workflow, node_id=node_id, params=params)
+
+
+def unset_node_param(
+    workflow: WorkflowGraphPersisted, node_id: str, key: str
+) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    node = _find_node_or_raise(new_workflow, node_id)
+    params = dict(node.params or {})
+    params.pop(key, None)
+    return update_node_metadata(new_workflow, node_id=node_id, params=params)
+
+
+def connect_nodes(
+    workflow: WorkflowGraphPersisted,
+    from_node_id: str,
+    from_socket: str,
+    to_node_id: str,
+    to_socket: str,
+    link_id: str | None = None,
+) -> tuple[WorkflowGraphPersisted, str]:
+    new_workflow = workflow.model_copy(deep=True)
+    _find_node_or_raise(new_workflow, from_node_id)
+    _find_node_or_raise(new_workflow, to_node_id)
+    link = WorkflowGraphLink(
+        id=(link_id or "").strip() or str(uuid4()),
+        from_=WorkflowGraphEndpointNode(kind="node", node_id=from_node_id, socket=from_socket),
+        to=WorkflowGraphEndpointNode(kind="node", node_id=to_node_id, socket=to_socket),
+    )
+    new_workflow.links.append(link)
+    new_workflow = _validate_workflow(new_workflow)
+    return new_workflow, str(link.id or "")
+
+
+def connect_workflow_input(
+    workflow: WorkflowGraphPersisted,
+    input_socket: str,
+    to_node_id: str,
+    to_socket: str,
+    link_id: str | None = None,
+) -> tuple[WorkflowGraphPersisted, str]:
+    new_workflow = workflow.model_copy(deep=True)
+    _find_node_or_raise(new_workflow, to_node_id)
+    link = WorkflowGraphLink(
+        id=(link_id or "").strip() or str(uuid4()),
+        from_=WorkflowGraphEndpointInput(kind="workflow_input", socket=input_socket),
+        to=WorkflowGraphEndpointNode(kind="node", node_id=to_node_id, socket=to_socket),
+    )
+    new_workflow.links.append(link)
+    new_workflow = _validate_workflow(new_workflow)
+    return new_workflow, str(link.id or "")
+
+
+def connect_to_workflow_output(
+    workflow: WorkflowGraphPersisted,
+    from_node_id: str,
+    from_socket: str,
+    output_socket: str,
+    link_id: str | None = None,
+) -> tuple[WorkflowGraphPersisted, str]:
+    new_workflow = workflow.model_copy(deep=True)
+    _find_node_or_raise(new_workflow, from_node_id)
+    link = WorkflowGraphLink(
+        id=(link_id or "").strip() or str(uuid4()),
+        from_=WorkflowGraphEndpointNode(kind="node", node_id=from_node_id, socket=from_socket),
+        to=WorkflowGraphEndpointOutput(kind="workflow_output", socket=output_socket),
+    )
+    new_workflow.links.append(link)
+    new_workflow = _validate_workflow(new_workflow)
+    return new_workflow, str(link.id or "")
+
+
+def disconnect_link(workflow: WorkflowGraphPersisted, link_id: str) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    filtered = [link for link in new_workflow.links if (link.id or "") != link_id]
+    if len(filtered) == len(new_workflow.links):
+        raise ValueError(f"连线不存在: {link_id}")
+    new_workflow.links = filtered
+    return _validate_workflow(new_workflow)
+
+
+def disconnect_between(
+    workflow: WorkflowGraphPersisted,
+    from_node_id: str,
+    from_socket: str,
+    to_node_id: str,
+    to_socket: str,
+) -> WorkflowGraphPersisted:
+    new_workflow = workflow.model_copy(deep=True)
+    new_workflow.links = [
+        link
+        for link in new_workflow.links
+        if not (
+            link.from_.kind == "node"
+            and link.from_.node_id == from_node_id
+            and link.from_.socket == from_socket
+            and link.to.kind == "node"
+            and link.to.node_id == to_node_id
+            and link.to.socket == to_socket
+        )
+    ]
+    return _validate_workflow(new_workflow)

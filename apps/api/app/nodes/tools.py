@@ -40,7 +40,7 @@ def create_workflow_node_tool(body: dict[str, Any]) -> dict[str, Any]:
 
 @safe_tool(
     "获取工作流节点详情",
-    description="查询工作流节点详情。\n入参 node_id；返回包含完整 source 的详情。",
+    description="查询工作流节点详情。\n入参 node_id是节点类型的id,不是节点实例的id；返回包含完整 source 的详情。",
 )
 def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     detail = load_node_detail(node_id)

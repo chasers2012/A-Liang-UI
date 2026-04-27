@@ -54,31 +54,33 @@ class StrategyCreate(BaseModel):
 
 
 class StrategyPatch(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    workflow: WorkflowGraphPersisted | None = None
+    name: str | None = Field(default=None, description="策略名称（可选更新）")
+    description: str | None = Field(default=None, description="策略描述（可选更新）")
+    workflow: WorkflowGraphPersisted | None = Field(
+        default=None, description="策略工作流图（可选更新）"
+    )
 
 
 class StrategyPublic(BaseModel):
-    id: str
-    name: str
-    description: str
-    workflow: WorkflowGraphPersisted
-    created_at: str
-    updated_at: str
+    id: str = Field(description="策略唯一 ID")
+    name: str = Field(description="策略名称")
+    description: str = Field(description="策略描述")
+    workflow: WorkflowGraphPersisted = Field(description="策略工作流图")
+    created_at: str = Field(description="创建时间（ISO 8601）")
+    updated_at: str = Field(description="更新时间（ISO 8601）")
 
 
 class StrategyListPublic(BaseModel):
-    id: str
-    name: str
-    description: str
-    created_at: str
-    updated_at: str
+    id: str = Field(description="策略唯一 ID")
+    name: str = Field(description="策略名称")
+    description: str = Field(description="策略描述")
+    created_at: str = Field(description="创建时间（ISO 8601）")
+    updated_at: str = Field(description="更新时间（ISO 8601）")
 
 
 class WorkflowIOSpecPublic(BaseModel):
-    workflow_inputs: list[dict]
-    workflow_outputs: list[dict]
+    workflow_inputs: list[dict] = Field(description="工作流输入参数定义列表")
+    workflow_outputs: list[dict] = Field(description="工作流输出参数定义列表")
 
 
 class StrategyValidateResponse(BaseModel):

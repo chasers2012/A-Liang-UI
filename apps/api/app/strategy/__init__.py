@@ -55,35 +55,6 @@ def ensure_example_strategy() -> None:
 
 @register_startup_job
 def register_strategy_chat_tools() -> None:
-    from app.strategy.tools import (
-        create_strategy,
-        delete_strategy,
-        get_strategy_detail,
-        get_strategy_list,
-        get_strategy_workflow_template,
-        update_strategy,
-        validate_strategy,
-    )
-    from app.tool.models import ToolAuthorization
-    from app.tool.registry import ChatToolRegistry
+    from app.strategy.tools import register_strategy_chat_tools as register_tools
 
-    tool_defs = [
-        (
-            "strategy.get_strategy_workflow_template",
-            get_strategy_workflow_template,
-            ToolAuthorization.allowed,
-        ),
-        ("strategy.create_strategy", create_strategy, ToolAuthorization.allowed),
-        ("strategy.get_strategy_detail", get_strategy_detail, ToolAuthorization.allowed),
-        ("strategy.get_strategy_list", get_strategy_list, ToolAuthorization.allowed),
-        ("strategy.update_strategy", update_strategy, ToolAuthorization.need_authorize),
-        ("strategy.delete_strategy", delete_strategy, ToolAuthorization.disabled),
-        ("strategy.validate_strategy", validate_strategy, ToolAuthorization.allowed),
-    ]
-    for tool_id, tool, authorization in tool_defs:
-        ChatToolRegistry.instance().register_tool(
-            tool,
-            name=tool_id,
-            category="策略",
-            authorization=authorization,
-        )
+    register_tools()
