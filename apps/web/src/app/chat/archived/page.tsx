@@ -104,18 +104,7 @@ export default function ArchivedChatsPage() {
   const restoreTargetCount = selectedItems.filter((session) => session.is_archived).length;
 
   return (
-    <Page
-      title="会话管理"
-      description={
-        <p className="text-sm text-muted-foreground">
-          统一管理全部会话，支持批量归档、恢复与删除。恢复后的会话会重新出现在{' '}
-          <Link href="/" className="font-medium text-primary underline-offset-4 hover:underline">
-            对话
-          </Link>{' '}
-          页签中。
-        </p>
-      }
-    >
+    <Page title="会话管理">
       {alertError && (
         <Alert variant="destructive">
           <AlertTitle>操作失败</AlertTitle>
@@ -124,10 +113,6 @@ export default function ArchivedChatsPage() {
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>会话列表</CardTitle>
-          <CardDescription>按标签页查看会话，可多选后执行批量操作。</CardDescription>
-        </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Tabs

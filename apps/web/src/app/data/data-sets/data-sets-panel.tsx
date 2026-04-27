@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,33 +12,29 @@ import { Page } from '@/components/page';
 import { getQuantAgentApiBase } from '@/api/client';
 import { deleteDataSet } from '@/api/data-sets';
 import { cn } from '@/lib/utils';
-import {
-  dataSetsDeleteTargetAtom,
-  dataSetsDeletingAtom,
-  dataSetsItemsAtom,
-  dataSetsLoadErrorAtom,
-  refreshDataSetsAtom,
-} from '@/models/data-set/panel-detail.atom';
+import { dataSetAtoms, dataSetsDeleteTargetAtom, dataSetsDeletingAtom } from '@/models/data-set/panel-detail.atom';
 
 import { DeleteDataSetDialog } from './ui/delete-data-set-dialog';
 import { DataSetTable } from './ui/data-set-table';
 
 export function DataSetsPanel() {
-  const [items] = useAtom(dataSetsItemsAtom);
-  const [loadError, setLoadError] = useAtom(dataSetsLoadErrorAtom);
+  const [items] = useAtom(dataSetAtoms.valueAtom);
+  const loadError = useAtomValue(dataSetAtoms.errorAtom);
   const [deleteTarget, setDeleteTarget] = useAtom(dataSetsDeleteTargetAtom);
   const [deleting, setDeleting] = useAtom(dataSetsDeletingAtom);
-  const refresh = useSetAtom(refreshDataSetsAtom);
+  const refresh = useSetAtom(dataSetAtoms.refreshAtom);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    setDeleteError(null);
     setDeleting(true);
     try {
       await deleteDataSet(deleteTarget.id);
       setDeleteTarget(null);
       await refresh();
     } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
+      setDeleteError(e instanceof Error ? e.message : String(e));
     } finally {
       setDeleting(false);
     }
@@ -56,10 +53,10 @@ export function DataSetsPanel() {
         </>
       }
     >
-      {loadError && (
+      {(loadError || deleteError) && (
         <Alert variant="destructive">
-          <AlertTitle>无法加载列表</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+          <AlertTitle>{loadError ? '无法加载列表' : '删除数据集失败'}</AlertTitle>
+          <AlertDescription>{loadError ?? deleteError}</AlertDescription>
         </Alert>
       )}
 

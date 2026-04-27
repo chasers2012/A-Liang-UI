@@ -1,10 +1,10 @@
 import { atom } from 'jotai';
 
 import { runBacktest } from '@/api/backtests';
-import { dataSetsItemsAtom } from '@/models/data-set/panel-detail.atom';
+import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
 import { strategiesListAtom } from '@/models/strategy/list-detail.atom';
 
-import { refreshBacktestsListAtom } from './list.atom';
+import { backtestsListAtoms } from './list.atom';
 
 export type BacktestRunFormState = {
   strategyId: string;
@@ -29,7 +29,7 @@ export const backtestRunFormAtom = atom<BacktestRunFormState>({
 });
 
 export const backtestRunStrategiesAtom = atom(async (get) => (await get(strategiesListAtom)).items ?? []);
-export const backtestRunDataSetsAtom = atom(async (get) => (await get(dataSetsItemsAtom)) ?? []);
+export const backtestRunDataSetsAtom = atom((get) => get(dataSetAtoms.valueAtom) ?? []);
 
 export const loadBacktestRunCatalogAtom = atom(null, async (get, set) => {
   set(backtestRunFormAtom, (s) => ({ ...s, catalogLoading: true, error: null }));
@@ -106,7 +106,7 @@ export const submitBacktestRunAtom = atom(null, async (get, set) => {
       slippage: slippageNum,
     });
     set(backtestRunFormAtom, (s) => ({ ...s, submitting: false }));
-    await set(refreshBacktestsListAtom);
+    await set(backtestsListAtoms.refreshAtom);
   } catch (e) {
     set(backtestRunFormAtom, (s) => ({
       ...s,

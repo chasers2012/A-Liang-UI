@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { dataSetsItemsAtom } from '@/models/data-set/panel-detail.atom';
+import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
 import { evaluationProfilesListItemsAtom } from '@/models/evaluation-profile/list-detail.atom';
 import { runEvaluationActionAtom } from '@/models/evaluation-run';
 import { useAtomValue, useSetAtom } from 'jotai';
@@ -12,7 +12,7 @@ const EMPTY_DATA_SETS: { id: string; name: string }[] = [];
 export function FactorEvaluationTrigger(props: { factorId: string }) {
   const { factorId } = props;
 
-  const dataSets = useAtomValue(dataSetsItemsAtom) ?? EMPTY_DATA_SETS;
+  const dataSets = useAtomValue(dataSetAtoms.valueAtom) ?? EMPTY_DATA_SETS;
   const evaluationProfiles = useAtomValue(evaluationProfilesListItemsAtom);
   const runEvaluation = useSetAtom(runEvaluationActionAtom);
 

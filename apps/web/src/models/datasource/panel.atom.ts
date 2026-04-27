@@ -1,41 +1,32 @@
 import { atom } from 'jotai';
 
-import { listDatasources } from '@/api/datasources';
+import { deleteDatasource, listDatasources } from '@/api/datasources';
+import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
 import type { DataSourcePublic } from './dto';
 
-const datasourcesListRevisionAtom = atom(0);
-const datasourcesLoadErrorOverrideAtom = atom<string | null>(null);
-
-const datasourcesListAtom = atom(async (get) => {
-  get(datasourcesListRevisionAtom);
-  try {
-    const items = await listDatasources();
-    return { items, error: null as string | null };
-  } catch (e) {
-    return {
-      items: null as DataSourcePublic[] | null,
-      error: e instanceof Error ? e.message : String(e),
-    };
-  }
+export const datasourcesListAtoms = createRefreshableAsyncAtoms<DataSourcePublic[] | null>({
+  initialValue: null,
+  fetcher: listDatasources,
 });
 
-export const datasourcesItemsAtom = atom(async (get) => (await get(datasourcesListAtom)).items);
-export const datasourcesLoadErrorAtom = atom(
-  async (get) => {
-    const override = get(datasourcesLoadErrorOverrideAtom);
-    if (override) return override;
-    return (await get(datasourcesListAtom)).error;
-  },
-  (_get, set, next: string | null) => {
-    set(datasourcesLoadErrorOverrideAtom, next);
-  },
-);
 export const datasourcesBusyIdAtom = atom<string | null>(null);
 export const datasourcesTestHintAtom = atom<{ id: string; ok: boolean; message: string } | null>(null);
 export const datasourcesDeleteTargetAtom = atom<DataSourcePublic | null>(null);
 export const datasourcesDeletingAtom = atom<boolean>(false);
+export const datasourcesDeleteErrorAtom = atom<string | null>(null);
 
-export const refreshDatasourcesPanelAtom = atom(null, async (_get, set) => {
-  set(datasourcesLoadErrorOverrideAtom, null);
-  set(datasourcesListRevisionAtom, (n) => n + 1);
+export const confirmDeleteDatasourceAtom = atom(null, async (get, set) => {
+  const target = get(datasourcesDeleteTargetAtom);
+  if (!target) return;
+  set(datasourcesDeletingAtom, true);
+  set(datasourcesDeleteErrorAtom, null);
+  try {
+    await deleteDatasource(target.id);
+    set(datasourcesDeleteTargetAtom, null);
+    await set(datasourcesListAtoms.refreshAtom);
+  } catch (e) {
+    set(datasourcesDeleteErrorAtom, e instanceof Error ? e.message : String(e));
+  } finally {
+    set(datasourcesDeletingAtom, false);
+  }
 });

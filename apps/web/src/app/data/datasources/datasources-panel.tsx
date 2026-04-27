@@ -9,17 +9,17 @@ import { buttonVariants } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Page } from '@/components/page';
 import { ApiError, getQuantAgentApiBase } from '@/api/client';
-import { deleteDatasource, testDatasource } from '@/api/datasources';
+import { testDatasource } from '@/api/datasources';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import { cn } from '@/lib/utils';
 import {
+  confirmDeleteDatasourceAtom,
   datasourcesBusyIdAtom,
+  datasourcesDeleteErrorAtom,
   datasourcesDeleteTargetAtom,
   datasourcesDeletingAtom,
-  datasourcesItemsAtom,
-  datasourcesLoadErrorAtom,
+  datasourcesListAtoms,
   datasourcesTestHintAtom,
-  refreshDatasourcesPanelAtom,
 } from '@/models/datasource/panel.atom';
 
 import { DatasourceTable } from './ui/datasource-table';
@@ -29,10 +29,11 @@ export function DatasourcesPanel() {
   const [busyId, setBusyId] = useAtom(datasourcesBusyIdAtom);
   const [testHint, setTestHint] = useAtom(datasourcesTestHintAtom);
   const [deleteTarget, setDeleteTarget] = useAtom(datasourcesDeleteTargetAtom);
-  const [deleting, setDeleting] = useAtom(datasourcesDeletingAtom);
-  const [loadError, setLoadError] = useAtom(datasourcesLoadErrorAtom);
-  const items = useAtomValue(datasourcesItemsAtom);
-  const refresh = useSetAtom(refreshDatasourcesPanelAtom);
+  const deleting = useAtomValue(datasourcesDeletingAtom);
+  const items = useAtomValue(datasourcesListAtoms.valueAtom);
+  const loadError = useAtomValue(datasourcesListAtoms.errorAtom);
+  const deleteError = useAtomValue(datasourcesDeleteErrorAtom);
+  const confirmDelete = useSetAtom(confirmDeleteDatasourceAtom);
 
   const runTest = async (ds: DataSourcePublic) => {
     setBusyId(ds.id);
@@ -45,20 +46,6 @@ export function DatasourcesPanel() {
       setTestHint({ id: ds.id, ok: false, message: msg });
     } finally {
       setBusyId(null);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await deleteDatasource(deleteTarget.id);
-      setDeleteTarget(null);
-      await refresh();
-    } catch (e) {
-      setLoadError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -81,6 +68,13 @@ export function DatasourcesPanel() {
         <Alert variant="destructive">
           <AlertTitle>无法加载列表</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      )}
+
+      {deleteError && (
+        <Alert variant="destructive">
+          <AlertTitle>删除失败</AlertTitle>
+          <AlertDescription>{deleteError}</AlertDescription>
         </Alert>
       )}
 

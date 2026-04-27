@@ -4,7 +4,7 @@ import { atomFamily } from 'jotai-family';
 import { deleteBacktest, getBacktest } from '@/api/backtests';
 
 import type { BacktestRunDetail } from './dto';
-import { refreshBacktestsListAtom } from './list.atom';
+import { backtestsListAtoms } from './list.atom';
 
 export type BacktestDetailState = {
   run: BacktestRunDetail | null;
@@ -40,6 +40,6 @@ export const deleteBacktestAtomFamily = atomFamily((runId: string) =>
     if (!runId) return;
     await deleteBacktest(runId);
     set(backtestDetailAtomFamily(runId), { run: null, error: null });
-    await set(refreshBacktestsListAtom);
+    await set(backtestsListAtoms.refreshAtom);
   }),
 );
