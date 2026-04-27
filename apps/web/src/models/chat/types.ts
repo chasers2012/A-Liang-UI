@@ -11,6 +11,7 @@ export type ChatToolCallDisplay = {
   name: string;
   args?: unknown;
   status: 'running' | 'ok' | 'error';
+  authorization_status?: 'none' | 'pending' | 'approved' | 'rejected';
   result?: unknown;
   error?: string;
 };

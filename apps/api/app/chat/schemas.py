@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 LlmProvider = Literal["ollama", "openai"]
 ChatRole = Literal["user", "assistant", "system"]
 ToolCallStatus = Literal["running", "ok", "error"]
+ToolCallAuthorizationStatus = Literal["none", "pending", "approved", "rejected"]
 
 
 class ChatToolCallPublic(BaseModel):
@@ -19,6 +20,7 @@ class ChatToolCallPublic(BaseModel):
     name: str
     args: Any | None = None
     status: ToolCallStatus = "ok"
+    authorization_status: ToolCallAuthorizationStatus = "none"
     result: Any | None = None
     error: str | None = None
 
@@ -109,7 +111,7 @@ class ChatAuthorizationRequest(BaseModel):
 
     session_id: str = Field(..., min_length=1)
     assistant_message_id: str = Field(..., min_length=1)
-    decision: ChatAuthorizationDecision
+    decisions: list[ChatAuthorizationDecision] = Field(..., min_length=1)
 
 
 class ChatRecord(BaseModel):

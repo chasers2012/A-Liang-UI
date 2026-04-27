@@ -256,7 +256,7 @@ export async function postAgentChatStream(body: ChatRequestPublic, options: Agen
 export async function postAgentChatAuthorize(body: {
   session_id: string;
   assistant_message_id: string;
-  decision: { type: 'approve' | 'reject' };
+  decisions: Array<{ type: 'approve' | 'reject' }>;
 }): Promise<void> {
   const url = `${getQuantAgentApiBase()}/chat/authorize`;
   const res = await fetch(url, {

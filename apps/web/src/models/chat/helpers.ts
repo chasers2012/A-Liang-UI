@@ -53,6 +53,7 @@ export function applyToolStart(
     name: payload.name,
     args: payload.args,
     status: 'running',
+    authorization_status: 'none',
   };
   const blocks: AssistantBlock[] = [...(prev.blocks ?? []), { kind: 'tool', call }];
   return { ...prev, blocks };

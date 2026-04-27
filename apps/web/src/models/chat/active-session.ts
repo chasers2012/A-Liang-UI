@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
-import { sessionDetailAtomFamily } from './session-detail';
+import { sessionDetailAtomFamily, sessionUserMessageIdsAtomFamily } from './session-detail';
 import { withAtomEffect } from 'jotai-effect';
 import { atomFamily } from 'jotai-family';
 import type { ChatSummaryPublic } from '@/models/agent-llm/dto';
@@ -10,9 +10,9 @@ import { chatSessionsAtom } from './base.atom';
 
 export const activeUserMessageIdsAtom = atom<string[]>((get) => {
   const sessionId = get(activeSessionIdAtom);
-  const detail = get(sessionDetailAtomFamily(sessionId));
-  if (!detail) return [];
-  return detail.messages.filter((m) => m.role === 'user').map((m) => m.id);
+  if (!sessionId) return [];
+  // Use normalized session message ids so optimistic user turns render immediately.
+  return get(sessionUserMessageIdsAtomFamily(sessionId)) ?? [];
 });
 
 export const activeSessionIdAtom = withAtomEffect(atomWithStorage<string | null>(LAST_ACTIVE_KEY, null), (get, set) => {

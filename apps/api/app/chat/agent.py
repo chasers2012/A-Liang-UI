@@ -63,36 +63,44 @@ def _normalize_args_shape(value: Any) -> Any:
     return value
 
 
-def _extract_interrupt_action_request(interrupt_data: Any) -> tuple[str | None, str]:
-    """Return (tool_name, canonical_args) from interrupt payload action request."""
+def _extract_interrupt_action_requests(interrupt_data: Any) -> list[tuple[str, str]]:
+    """Return [(tool_name, canonical_args), ...] from interrupt payload action_requests."""
     if not isinstance(interrupt_data, dict):
-        return None, ""
+        return []
     action_requests = interrupt_data.get("action_requests")
     if not isinstance(action_requests, list) or not action_requests:
-        return None, ""
-    first = action_requests[0]
-    if not isinstance(first, dict):
-        return None, ""
-    name = first.get("name")
-    tool_name = name.strip() if isinstance(name, str) and name.strip() else None
-    args = _normalize_args_shape(first.get("args"))
-    return tool_name, _canonicalize_args(args)
+        return []
+    requests: list[tuple[str, str]] = []
+    for req in action_requests:
+        if not isinstance(req, dict):
+            continue
+        name = req.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        args = _normalize_args_shape(req.get("args"))
+        requests.append((name.strip(), _canonicalize_args(args)))
+    return requests
 
 
-def _match_tool_call_id_from_pending(
+def _match_tool_call_ids_from_pending(
     pending_starts: list[tuple[str, str | None, str]],
     interrupt_data: Any,
-) -> str:
-    """Match tool call id using interrupt action_requests name+args."""
-    req_name, req_args = _extract_interrupt_action_request(interrupt_data)
-    if req_name is None:
-        return ""
+) -> list[str]:
+    """Match tool call ids using interrupt action_requests name+args."""
+    req_pairs = _extract_interrupt_action_requests(interrupt_data)
+    if not req_pairs:
+        return []
 
-    for idx in range(len(pending_starts) - 1, -1, -1):
-        tc_id, tc_name, tc_args = pending_starts[idx]
-        if tc_name == req_name and tc_args == req_args:
-            return tc_id
-    return ""
+    remaining = pending_starts.copy()
+    matched_ids: list[str] = []
+    for req_name, req_args in req_pairs:
+        for idx in range(len(remaining) - 1, -1, -1):
+            tc_id, tc_name, tc_args = remaining[idx]
+            if tc_name == req_name and tc_args == req_args:
+                matched_ids.append(tc_id)
+                remaining.pop(idx)
+                break
+    return matched_ids
 
 
 def _chunk_text(content: Any) -> str:
@@ -224,7 +232,7 @@ def _iter_stream_events_from_mode_data(  # noqa: C901
     return
 
 
-async def _stream_events_from_agent_astream(
+async def _stream_events_from_agent_astream(  # noqa: C901
     agent: Any,
     *,
     astream_input: Any,
@@ -275,15 +283,23 @@ async def _stream_events_from_agent_astream(
                     interrupt_value = data["__interrupt__"][0].value
                 except Exception:
                     interrupt_value = data.get("__interrupt__")
-                yield ToolEvent(
-                    payload=ToolPayload(
-                        stage="authorize",
-                        id=_match_tool_call_id_from_pending(
-                            pending_tool_starts,
-                            interrupt_value,
-                        ),
-                    )
+                matched_ids = _match_tool_call_ids_from_pending(
+                    pending_tool_starts,
+                    interrupt_value,
                 )
+                if not matched_ids:
+                    return
+                for tc_id in matched_ids:
+                    event_key = ("authorize", tc_id)
+                    if event_key in emitted_tool_event_keys:
+                        continue
+                    emitted_tool_event_keys.add(event_key)
+                    yield ToolEvent(
+                        payload=ToolPayload(
+                            stage="authorize",
+                            id=tc_id,
+                        )
+                    )
                 return
             continue
 

@@ -5088,7 +5088,6 @@ name = "quant-agent-api"
 version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
-    { name = "agent-workflow-nodes" },
     { name = "chromadb" },
     { name = "croniter" },
     { name = "custom-code" },
@@ -5124,7 +5123,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-workflow-nodes", editable = "lib/agent_workflow_nodes" },
     { name = "chromadb", specifier = ">=0.5.0" },
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "custom-code", editable = "lib/custom_code" },

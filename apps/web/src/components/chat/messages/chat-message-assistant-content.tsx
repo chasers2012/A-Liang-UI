@@ -14,6 +14,21 @@ import type { AssistantBlock } from '@/models/chat/types';
 import { ChatReasoningCard } from './chat-reasoning-card';
 import { ChatToolCallCard } from './chat-tool-call-card';
 
+function getPersistedAuthorization(block: AssistantBlock) {
+  if (block.kind !== 'tool') return null;
+  if (block.call.authorization_status === 'pending') {
+    return { stage: 'pending' as const, request: { tool_call_id: block.call.id } as const };
+  }
+  if (block.call.authorization_status === 'approved' || block.call.authorization_status === 'rejected') {
+    return {
+      stage: 'decided' as const,
+      decision: block.call.authorization_status === 'approved' ? ('approve' as const) : ('reject' as const),
+      request: { tool_call_id: block.call.id } as const,
+    };
+  }
+  return null;
+}
+
 export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({ mid }: { mid: string }) {
   const isSending = useAtomValue(isReplyStreamingOfMessageAtomFamily(mid));
   const message = useAtomValue(replyOfMessageAtomFamily(mid));
@@ -44,6 +59,7 @@ export const ChatMessageAssistantContent = memo(function ChatMessageAssistantCon
             decidedAuth && b.call.id === targetToolCallId
               ? { decision: decidedAuth.decision, request: decidedAuth.request }
               : null;
+          const persistedAuthorization = getPersistedAuthorization(b);
           return (
             <ChatToolCallCard
               key={b.call.id}
@@ -53,7 +69,7 @@ export const ChatMessageAssistantContent = memo(function ChatMessageAssistantCon
                   ? { stage: 'pending', request: pendingInCard.request }
                   : decidedInCard
                     ? { stage: 'decided', decision: decidedInCard.decision, request: decidedInCard.request }
-                    : null
+                    : persistedAuthorization
               }
             />
           );

@@ -235,6 +235,36 @@ def _patch_tool_terminal_event(
     )
 
 
+def _mark_tool_authorization_pending(
+    blocks: list[AssistantBlockPublic],
+    tc_id: str,
+) -> None:
+    if not tc_id:
+        return
+    for b in reversed(blocks):
+        if b.kind != "tool" or b.call is None or b.call.id != tc_id:
+            continue
+        b.call.authorization_status = "pending"
+        return
+
+
+def _apply_authorization_decisions_to_blocks(
+    blocks: list[AssistantBlockPublic],
+    tool_call_ids: list[str],
+    decisions: list[dict[str, Any]],
+) -> None:
+    for tc_id, decision in zip(tool_call_ids, decisions, strict=False):
+        if not tc_id:
+            continue
+        decision_type = str(decision.get("type", "")).strip().lower()
+        auth_status = "approved" if decision_type == "approve" else "rejected"
+        for b in reversed(blocks):
+            if b.kind != "tool" or b.call is None or b.call.id != tc_id:
+                continue
+            b.call.authorization_status = auth_status
+            break
+
+
 def _apply_stream_event_to_blocks(
     blocks: list[AssistantBlockPublic],
     event: StreamEventAny,
@@ -258,6 +288,7 @@ def _apply_stream_event_to_blocks(
         elif tool.stage == "error":
             _patch_tool_terminal_event(blocks, tool, ok=False)
         elif tool.stage == "authorize":
+            _mark_tool_authorization_pending(blocks, tool.id)
             return
 
 
@@ -415,6 +446,7 @@ async def stream_async(  # noqa: C901
                     stream_kwargs["decision"] = pending_decision
 
                 interrupted = False
+                authorize_tool_call_ids: list[str] = []
                 async for event in stream_event_aiter_for_chat(
                     llm,
                     **stream_kwargs,
@@ -425,32 +457,38 @@ async def stream_async(  # noqa: C901
                     is_authorize_event = (
                         isinstance(event, ToolEvent) and event.payload.stage == "authorize"
                     )
-                    if is_authorize_event:
+                    if is_authorize_event and not interrupted:
                         interrupted = True
-                        # Register pending authorization before emitting SSE authorize event,
+                        # Register pending authorization before emitting first SSE authorize event,
                         # so fast clients cannot race /chat/authorize ahead of this context.
                         _register_pending_auth(
                             thread_id=thread_id,
                             session_id=session_id,
                             assistant_message_id=assistant_message_id,
                         )
+                    if is_authorize_event and event.payload.id:
+                        authorize_tool_call_ids.append(event.payload.id)
                     if await is_disconnected():
                         return
                     await out.put(_sse_wire_frame(event))
-                    if is_authorize_event:
-                        try:
-                            pending_decision = await _wait_for_authorization_decision(
-                                thread_id=thread_id,
-                                is_disconnected=is_disconnected,
-                            )
-                        finally:
-                            _clear_pending_auth(thread_id)
-                        if pending_decision is None:
-                            return
-                        break
 
-                if not interrupted:
-                    return
+                if interrupted:
+                    try:
+                        pending_decision = await _wait_for_authorization_decision(
+                            thread_id=thread_id,
+                            is_disconnected=is_disconnected,
+                        )
+                    finally:
+                        _clear_pending_auth(thread_id)
+                    if pending_decision is None:
+                        return
+                    _apply_authorization_decisions_to_blocks(
+                        blocks,
+                        authorize_tool_call_ids,
+                        pending_decision.get("decisions", []),
+                    )
+                    continue
+                return
         except ValueError as e:
             if not await is_disconnected():
                 err_event = ErrorEvent(payload=f"{e}")
@@ -511,7 +549,9 @@ def submit_authorization(
 
     _AUTH_CACHE.set(
         _auth_decision_key(thread_id),
-        body.decision.model_dump(mode="json"),
+        {
+            "decisions": [d.model_dump(mode="json") for d in body.decisions],
+        },
         expire=_AUTH_PENDING_TTL_SECONDS,
     )
     return {"status": "accepted"}
