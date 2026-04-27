@@ -1,5 +1,5 @@
 ---
-name: 创建因子
+name: factors-create-factor
 description: 创建一个新的量化因子。当用户提到“新增因子”“创建因子”“实现 factor”时使用。
 ---
 

@@ -23,7 +23,7 @@ class SkillSource:
 
     @property
     def store_path(self) -> str:
-        return f"/{self.module}_{self.skill_name}/SKILL.md"
+        return f"/{self.skill_name}/SKILL.md"
 
 
 _SKILL_SOURCES: dict[tuple[str, str], SkillSource] = {}
