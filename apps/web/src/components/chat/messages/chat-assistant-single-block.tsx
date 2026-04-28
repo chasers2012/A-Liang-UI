@@ -5,7 +5,6 @@ import { memo } from 'react';
 import { MarkdownContent } from '@/components/markdown/markdown-content';
 import type { AssistantBlock } from '@/models/chat/types';
 
-import { formatSegmentLabel } from './chat-subagent-task-blocks';
 import { ChatReasoningCard } from './chat-reasoning-card';
 import { ChatToolCallCard } from './chat-tool-call-card';
 
@@ -26,7 +25,7 @@ export const ChatAssistantSingleBlock = memo(function ChatAssistantSingleBlock({
     return <MarkdownContent content={block.content} isFinished={!isSending || !!block.completed} />;
   }
   if (block.kind === 'reasoning') {
-    return <ChatReasoningCard content={block.content} segmentLabel={formatSegmentLabel(block.run_segment_id)} />;
+    return <ChatReasoningCard content={block.content} />;
   }
   if (block.kind === 'tool') {
     return <ChatToolCallCard call={block.call} sessionId={sessionId} assistantMessageId={assistantMessageId} />;

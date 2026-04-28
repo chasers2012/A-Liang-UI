@@ -6,13 +6,7 @@ import { Brain, ChevronRight } from 'lucide-react';
 import { MarkdownContent } from '@/components/markdown/markdown-content';
 import { cn } from '@/lib/utils';
 
-export const ChatReasoningCard = memo(function ChatReasoningCard({
-  content,
-  segmentLabel,
-}: {
-  content: string;
-  segmentLabel?: string | null;
-}) {
+export const ChatReasoningCard = memo(function ChatReasoningCard({ content }: { content: string }) {
   const [open, setOpen] = useState(false);
   if (!content.trim()) return null;
 
@@ -32,7 +26,6 @@ export const ChatReasoningCard = memo(function ChatReasoningCard({
         />
         <Brain className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
         <span className="text-muted-foreground">思考过程</span>
-        {segmentLabel ? <span className="ml-auto text-[10px] text-muted-foreground/80">{segmentLabel}</span> : null}
       </button>
       {open ? (
         <div className="border-border/40 border-t px-3 py-2">
