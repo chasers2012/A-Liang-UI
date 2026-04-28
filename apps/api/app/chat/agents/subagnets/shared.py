@@ -68,8 +68,9 @@ def append_tool_boundary_to_description(
     *,
     tool_ids: set[str],
 ) -> str:
-    return (
-        f"{base_description}\n"
-        "这个子代理可以调用这些工具：\n"
-        f"{format_tool_boundary_section(all_tools_by_id, tool_ids=tool_ids)}"
-    )
+    return base_description
+    # return (
+    #     f"{base_description}\n"
+    #     "这个子代理可以调用这些工具：\n"
+    #     f"{format_tool_boundary_section(all_tools_by_id, tool_ids=tool_ids)}"
+    # )

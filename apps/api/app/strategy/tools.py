@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from threading import RLock
+import asyncio
+from collections.abc import Callable
 from typing import Any
 
 from langchain.tools import ToolRuntime
@@ -31,15 +32,27 @@ from app.tool.models import ToolAuthorization
 from app.tool.registry import ChatToolRegistry
 from app.tool.safe_tool import safe_tool
 
-_WORKFLOW_DRAFT_STORE_LOCK = RLock()
+_WORKFLOW_DRAFT_STORE_LOCK = asyncio.Lock()
 
 
-def _require_workflow_draft(runtime: ToolRuntime) -> WorkflowGraphPersisted:
+def _get_runtime_thread_id(runtime: ToolRuntime) -> str:
+    cfg = runtime.config if isinstance(runtime.config, dict) else {}
+    configurable = cfg.get("configurable", {}) if isinstance(cfg, dict) else {}
+    thread_id: Any = None
+    if isinstance(configurable, dict):
+        thread_id = configurable.get("thread_id")
+    if not thread_id and isinstance(cfg, dict):
+        thread_id = cfg.get("thread_id")
+    if not thread_id:
+        raise ValueError("缺少 thread_id，无法定位 workflowDraft 存储命名空间")
+    return str(thread_id)
+
+
+async def _load_workflow_draft_from_store(runtime: ToolRuntime) -> WorkflowGraphPersisted:
     store = runtime.store
     if store is None:
         raise ValueError("当前运行时未配置 store，无法读取 workflowDraft")
-    with _WORKFLOW_DRAFT_STORE_LOCK:
-        item = store.get(_workflow_draft_namespace(runtime), "workflowDraft")
+    item = await store.aget(_workflow_draft_namespace(runtime), "workflowDraft")
     raw = (item.value or {}).get("workflow") if item else None
     if raw is None:
         raise ValueError("缺少 workflowDraft，请先在会话上下文中初始化策略工作流草稿")
@@ -48,38 +61,51 @@ def _require_workflow_draft(runtime: ToolRuntime) -> WorkflowGraphPersisted:
     return WorkflowGraphPersisted.model_validate(raw)
 
 
-def _set_workflow_draft(runtime: ToolRuntime, workflow: WorkflowGraphPersisted) -> None:
+async def _save_workflow_draft_to_store(
+    runtime: ToolRuntime, workflow: WorkflowGraphPersisted
+) -> None:
     store = runtime.store
     if store is None:
         raise ValueError("当前运行时未配置 store，无法写入 workflowDraft")
-    with _WORKFLOW_DRAFT_STORE_LOCK:
-        store.put(
-            _workflow_draft_namespace(runtime),
-            "workflowDraft",
-            {"workflow": workflow.model_dump(by_alias=True)},
-        )
+    await store.aput(
+        _workflow_draft_namespace(runtime),
+        "workflowDraft",
+        {"workflow": workflow.model_dump(by_alias=True)},
+    )
+
+
+async def _mutate_workflow_draft(
+    runtime: ToolRuntime,
+    mutator: Callable[[WorkflowGraphPersisted], tuple[WorkflowGraphPersisted, dict[str, Any]]],
+) -> dict[str, Any]:
+    async with _WORKFLOW_DRAFT_STORE_LOCK:
+        workflow = await _load_workflow_draft_from_store(runtime)
+        out_workflow, result = mutator(workflow)
+        await _save_workflow_draft_to_store(runtime, out_workflow)
+    return result
+
+
+async def _require_workflow_draft(runtime: ToolRuntime) -> WorkflowGraphPersisted:
+    async with _WORKFLOW_DRAFT_STORE_LOCK:
+        return await _load_workflow_draft_from_store(runtime)
+
+
+async def _set_workflow_draft(runtime: ToolRuntime, workflow: WorkflowGraphPersisted) -> None:
+    async with _WORKFLOW_DRAFT_STORE_LOCK:
+        await _save_workflow_draft_to_store(runtime, workflow)
 
 
 def _workflow_draft_namespace(runtime: ToolRuntime) -> tuple[str, ...]:
-    cfg = runtime.config if isinstance(runtime.config, dict) else {}
-    configurable = cfg.get("configurable", {}) if isinstance(cfg, dict) else {}
-    thread_id = None
-    if isinstance(configurable, dict):
-        thread_id = configurable.get("thread_id")
-    if not thread_id and isinstance(cfg, dict):
-        thread_id = cfg.get("thread_id")
-    if not thread_id:
-        raise ValueError("缺少 thread_id，无法定位 workflowDraft 存储命名空间")
-    return ("strategy", "workflowDraft", str(thread_id))
+    return ("strategy", "workflowDraft", _get_runtime_thread_id(runtime))
 
 
 @safe_tool(
     "加载策略工作流模板",
-    description="加载策略工作流模板。\n将工作流模板加载到store, 用于初始化策略编辑结构，后续可基于模板填充节点与连线。",
+    description="加载策略工作流模板。\n将工作流模板加载到store, 用于初始化策略编辑结构，这会覆盖现在的store中的workflowDraft，后续可基于模板填充节点与连线。",
 )
-def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str, Any]:
+async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str, Any]:
     template = get_strategy_workflow_template()
-    _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(template))
+    await _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(template))
     return template
 
 
@@ -95,8 +121,8 @@ def get_strategy_node_catalog() -> list[dict[str, Any]]:
     "查看工作流草稿",
     description="读取当前编辑中的工作流草稿。\n返回 store 中的workflowDraft 保存的策略工作流草稿内容。",
 )
-def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+async def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
+    workflow = await _require_workflow_draft(runtime)
     return workflow.model_dump(by_alias=True)
 
 
@@ -104,8 +130,8 @@ def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     "创建策略",
     description="创建并保存策略。\n入参 name、description；使用store中的workflowDraft创建策略并返回创建后的策略详情。",
 )
-def create_strategy_tool(name: str, description: str, runtime: ToolRuntime) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime) -> dict[str, Any]:
+    workflow = await _require_workflow_draft(runtime)
 
     return create_strategy(StrategyCreate(name=name, description=description, workflow=workflow))
 
@@ -120,9 +146,9 @@ def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
 
 @safe_tool(
     "加载策略",
-    description="加载策略以便编辑。\n将已存在的策略的工作流加载到store中的workflowDraft以便用于修改，这回覆盖现在的store中的workflowDraft，入参 strategy_id；不存在时报错。",
+    description="加载策略以便编辑。\n将已存在的策略的工作流加载到store中的workflowDraft以便用于修改，这会覆盖现在的store中的workflowDraft，入参 strategy_id；不存在时报错。",
 )
-def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[str, Any]:
+async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[str, Any]:
     strategy = get_strategy(strategy_id)
     if strategy is None:
         raise ValueError(f"策略不存在: {strategy_id}")
@@ -134,7 +160,7 @@ def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[str, An
     if workflow_raw is None:
         raise ValueError(f"策略缺少 workflow: {strategy_id}")
 
-    _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(workflow_raw))
+    await _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(workflow_raw))
     return strategy
 
 
@@ -150,10 +176,10 @@ def get_strategy_list() -> list[dict[str, Any]]:
     "更新策略",
     description="更新策略配置。\n入参 strategy_id、name、description；使用store中的workflowDraft更新策略并返回更新后的策略详情。",
 )
-def update_strategy(
+async def update_strategy(
     strategy_id: str, name: str, description: str, runtime: ToolRuntime
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     return patch_strategy(
         strategy_id,
         StrategyPatch(name=name, description=description, workflow=workflow),
@@ -175,25 +201,30 @@ def delete_strategy_tool(strategy_id: str) -> dict[str, Any]:
         "基于 ToolContext.workflowDraft 更新草稿并返回新节点 node_id。"
     ),
 )
-def strategy_workflow_add_node(
+async def strategy_workflow_add_node(
     node_type_id: str,
     runtime: ToolRuntime,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
-    out_workflow, node_id = add_node(workflow, node_type_id, **(metadata or {}))
-    _set_workflow_draft(runtime, out_workflow)
-    return {"node_id": node_id}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            lambda out_workflow, node_id: (
+                out_workflow,
+                {"node_id": node_id},
+            )
+        )(*add_node(workflow, node_type_id, **(metadata or {}))),
+    )
 
 
 @safe_tool(
     "策略工作流-删除节点",
     description="删除指定节点并自动清理关联连线。\n入参 node_id；基于 ToolContext.workflowDraft 更新草稿。",
 )
-def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+async def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> dict[str, Any]:
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = remove_node(workflow, node_id)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 
@@ -205,14 +236,14 @@ def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> dict[st
         "基于 ToolContext.workflowDraft 更新草稿。"
     ),
 )
-def strategy_workflow_update_node_metadata(
+async def strategy_workflow_update_node_metadata(
     node_id: str,
     metadata: dict[str, Any],
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = update_node_metadata(workflow, node_id, **metadata)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 
@@ -220,14 +251,14 @@ def strategy_workflow_update_node_metadata(
     "策略工作流-移动节点",
     description="设置节点画布坐标。\n入参 node_id、pos([x, y])；基于 ToolContext.workflowDraft 更新草稿。",
 )
-def strategy_workflow_move_node(
+async def strategy_workflow_move_node(
     node_id: str,
     pos: list[float] | tuple[float, float],
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = move_node(workflow, node_id, pos)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 
@@ -235,30 +266,33 @@ def strategy_workflow_move_node(
     "策略工作流-设置节点参数",
     description="设置节点单个参数。\n入参 node_id、key、value；基于 ToolContext.workflowDraft 更新草稿。",
 )
-def strategy_workflow_set_node_param(
+async def strategy_workflow_set_node_param(
     node_id: str,
     key: str,
     value: Any,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
-    out_workflow = set_node_param(workflow, node_id, key, value)
-    _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            set_node_param(workflow, node_id, key, value),
+            {"ok": True},
+        ),
+    )
 
 
 @safe_tool(
     "策略工作流-移除节点参数",
     description="移除节点参数键。\n入参 node_id、key；基于 ToolContext.workflowDraft 更新草稿。",
 )
-def strategy_workflow_unset_node_param(
+async def strategy_workflow_unset_node_param(
     node_id: str,
     key: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = unset_node_param(workflow, node_id, key)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 
@@ -271,19 +305,18 @@ def strategy_workflow_unset_node_param(
         "注意只有value_type相同的socket才能连接"
     ),
 )
-def strategy_workflow_connect_nodes(
+async def strategy_workflow_connect_nodes(
     from_node_id: str,
     from_socket: str,
     to_node_id: str,
     to_socket: str,
     runtime: ToolRuntime,
-    link_id: str | None = None,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow, created_link_id = connect_nodes(
-        workflow, from_node_id, from_socket, to_node_id, to_socket, link_id
+        workflow, from_node_id, from_socket, to_node_id, to_socket
     )
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"link_id": created_link_id}
 
 
@@ -296,18 +329,17 @@ def strategy_workflow_connect_nodes(
         "注意只有value_type相同的socket才能连接"
     ),
 )
-def strategy_workflow_connect_input(
+async def strategy_workflow_connect_input(
     input_socket: str,
     to_node_id: str,
     to_socket: str,
     runtime: ToolRuntime,
-    link_id: str | None = None,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow, created_link_id = connect_workflow_input(
-        workflow, input_socket, to_node_id, to_socket, link_id
+        workflow, input_socket, to_node_id, to_socket
     )
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"link_id": created_link_id}
 
 
@@ -320,18 +352,17 @@ def strategy_workflow_connect_input(
         "注意只有value_type相同的socket才能连接"
     ),
 )
-def strategy_workflow_connect_output(
+async def strategy_workflow_connect_output(
     from_node_id: str,
     from_socket: str,
     output_socket: str,
     runtime: ToolRuntime,
-    link_id: str | None = None,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow, created_link_id = connect_to_workflow_output(
-        workflow, from_node_id, from_socket, output_socket, link_id
+        workflow, from_node_id, from_socket, output_socket
     )
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"link_id": created_link_id}
 
 
@@ -339,13 +370,13 @@ def strategy_workflow_connect_output(
     "策略工作流-按连线ID断开",
     description="按 link_id 删除连线。\n入参 link_id；基于 ToolContext.workflowDraft 更新草稿。",
 )
-def strategy_workflow_disconnect_link(
+async def strategy_workflow_disconnect_link(
     link_id: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = disconnect_link(workflow, link_id)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 
@@ -356,16 +387,16 @@ def strategy_workflow_disconnect_link(
         "入参 from_node_id、from_socket、to_node_id、to_socket；基于 ToolContext.workflowDraft 更新草稿。"
     ),
 )
-def strategy_workflow_disconnect_between(
+async def strategy_workflow_disconnect_between(
     from_node_id: str,
     from_socket: str,
     to_node_id: str,
     to_socket: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = _require_workflow_draft(runtime)
+    workflow = await _require_workflow_draft(runtime)
     out_workflow = disconnect_between(workflow, from_node_id, from_socket, to_node_id, to_socket)
-    _set_workflow_draft(runtime, out_workflow)
+    await _set_workflow_draft(runtime, out_workflow)
     return {"ok": True}
 
 

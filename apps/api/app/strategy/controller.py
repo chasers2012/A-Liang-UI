@@ -11,6 +11,7 @@ from workflow.schemas import (
     WorkflowGraphLink,
     WorkflowGraphNode,
     WorkflowGraphPersisted,
+    WorkflowSocketDefinition,
 )
 
 from app.datasource.schemas import utc_now_iso
@@ -128,6 +129,15 @@ def _find_node_or_raise(workflow: WorkflowGraphPersisted, node_id: str) -> Workf
     return node
 
 
+def _find_socket_or_raise(
+    sockets: list[WorkflowSocketDefinition], socket_name: str, *, label: str
+) -> WorkflowSocketDefinition:
+    socket = next((item for item in sockets if item.name == socket_name), None)
+    if socket is None:
+        raise ValueError(f"{label}不存在: {socket_name}")
+    return socket
+
+
 def add_node(
     workflow: WorkflowGraphPersisted, node_type_id: str, **metadata: Any
 ) -> tuple[WorkflowGraphPersisted, str]:
@@ -212,13 +222,20 @@ def connect_nodes(
     from_socket: str,
     to_node_id: str,
     to_socket: str,
-    link_id: str | None = None,
 ) -> tuple[WorkflowGraphPersisted, str]:
     new_workflow = workflow.model_copy(deep=True)
-    _find_node_or_raise(new_workflow, from_node_id)
-    _find_node_or_raise(new_workflow, to_node_id)
+    from_node = _find_node_or_raise(new_workflow, from_node_id)
+    to_node = _find_node_or_raise(new_workflow, to_node_id)
+    from_socket_def = _find_socket_or_raise(from_node.outputs, from_socket, label="输出 socket")
+    to_socket_def = _find_socket_or_raise(to_node.inputs, to_socket, label="输入 socket")
+    if from_socket_def.value_type != to_socket_def.value_type:
+        raise ValueError(
+            "socket value_type 不匹配: "
+            f"{from_node_id}.{from_socket}={from_socket_def.value_type}, "
+            f"{to_node_id}.{to_socket}={to_socket_def.value_type}"
+        )
     link = WorkflowGraphLink(
-        id=(link_id or "").strip() or str(uuid4()),
+        id=str(uuid4()),
         from_=WorkflowGraphEndpointNode(kind="node", node_id=from_node_id, socket=from_socket),
         to=WorkflowGraphEndpointNode(kind="node", node_id=to_node_id, socket=to_socket),
     )
@@ -232,12 +249,21 @@ def connect_workflow_input(
     input_socket: str,
     to_node_id: str,
     to_socket: str,
-    link_id: str | None = None,
 ) -> tuple[WorkflowGraphPersisted, str]:
     new_workflow = workflow.model_copy(deep=True)
-    _find_node_or_raise(new_workflow, to_node_id)
+    workflow_input_def = _find_socket_or_raise(
+        new_workflow.workflow_inputs, input_socket, label="工作流输入 socket"
+    )
+    to_node = _find_node_or_raise(new_workflow, to_node_id)
+    to_socket_def = _find_socket_or_raise(to_node.inputs, to_socket, label="输入 socket")
+    if workflow_input_def.value_type != to_socket_def.value_type:
+        raise ValueError(
+            "socket value_type 不匹配: "
+            f"workflow_input.{input_socket}={workflow_input_def.value_type}, "
+            f"{to_node_id}.{to_socket}={to_socket_def.value_type}"
+        )
     link = WorkflowGraphLink(
-        id=(link_id or "").strip() or str(uuid4()),
+        id=str(uuid4()),
         from_=WorkflowGraphEndpointInput(kind="workflow_input", socket=input_socket),
         to=WorkflowGraphEndpointNode(kind="node", node_id=to_node_id, socket=to_socket),
     )
@@ -251,12 +277,21 @@ def connect_to_workflow_output(
     from_node_id: str,
     from_socket: str,
     output_socket: str,
-    link_id: str | None = None,
 ) -> tuple[WorkflowGraphPersisted, str]:
     new_workflow = workflow.model_copy(deep=True)
-    _find_node_or_raise(new_workflow, from_node_id)
+    from_node = _find_node_or_raise(new_workflow, from_node_id)
+    from_socket_def = _find_socket_or_raise(from_node.outputs, from_socket, label="输出 socket")
+    workflow_output_def = _find_socket_or_raise(
+        new_workflow.workflow_outputs, output_socket, label="工作流输出 socket"
+    )
+    if from_socket_def.value_type != workflow_output_def.value_type:
+        raise ValueError(
+            "socket value_type 不匹配: "
+            f"{from_node_id}.{from_socket}={from_socket_def.value_type}, "
+            f"workflow_output.{output_socket}={workflow_output_def.value_type}"
+        )
     link = WorkflowGraphLink(
-        id=(link_id or "").strip() or str(uuid4()),
+        id=str(uuid4()),
         from_=WorkflowGraphEndpointNode(kind="node", node_id=from_node_id, socket=from_socket),
         to=WorkflowGraphEndpointOutput(kind="workflow_output", socket=output_socket),
     )

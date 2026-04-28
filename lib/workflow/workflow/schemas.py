@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkflowSocketDefinition(BaseModel):
@@ -62,6 +62,8 @@ class WorkflowGraphEndpointOutput(BaseModel):
 
 
 class WorkflowGraphLink(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str | None = Field(default=None, description="连线 ID（可选）")
     from_: WorkflowGraphEndpointNode | WorkflowGraphEndpointInput = Field(
         alias="from",
