@@ -12,8 +12,10 @@ TOOL_IDS = {
     "node.get_formatted_workflow_node",
     "strategy.get_strategy_workflow_template",
     "strategy.get_strategy_node_catalog",
+    "strategy.get_strategy_workflow_draft",
     "strategy.create_strategy",
     "strategy.get_strategy_detail",
+    "strategy.load_strategy_detail",
     "strategy.get_strategy_list",
     "strategy.update_strategy",
     "strategy.workflow.add_node",
@@ -49,14 +51,16 @@ def build_subagent(
     return {
         "name": "strategy_builder",
         "description": append_tool_boundary_to_description(
-            "用于实现策略查询和编排。以及通过回测评估策略的效果"
+            "用于创建策略、查询策略、修改策略。以及通过回测评估策略的效果。"
             "在本系统中，策略是以工作流形式配置的，每个策略由若干工作流节点构成。策略优先复用通用的工作流节点来实现功能，当现有的节点不能满足要求时，才考虑创建新的节点。"
             "同时该子代理负责策略回测任务的触发与结果查询。",
             all_tools_by_id,
             tool_ids=TOOL_IDS,
         ),
         "system_prompt": (
-            "你是 strategy_builder 子代理，专注策略实现与回测执行，仅返回所要求的信息。策略优先复用通用的工作流节点来实现功能，当现有的节点不能满足要求时，需要整理出你要的需求并返回。"
+            "你是 strategy_builder 子代理，专注策略实现与回测执行，仅返回所要求的信息。"
+            "你必须使用策略工作流相关工具而不是文件读写来创建策略。"
+            "策略优先复用通用的工作流节点来实现功能，当现有的节点不能满足要求时，需要整理出你要的需求并返回。"
         ),
         "tools": tools,
         "interrupt_on": build_subagent_interrupt_on(

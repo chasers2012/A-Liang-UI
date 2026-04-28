@@ -11,6 +11,7 @@ from app.chat.agents.subagnets.shared import (
 TOOL_IDS = {
     "strategy.get_strategy_list",
     "strategy.get_strategy_detail",
+    "strategy.load_strategy_detail",
     "datasource.get_datasource_list",
     "datasource.get_datasource_detail",
     "data_set.get_data_set_list",
