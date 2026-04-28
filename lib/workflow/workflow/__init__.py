@@ -22,6 +22,7 @@ from .node_types import (
     WorkflowLink,
     WorkflowViewport,
 )
+from .validation import validate_required_workflow_fields
 
 __all__ = [
     "AppendableSocket",
@@ -42,6 +43,7 @@ __all__ = [
     "collect_node_classes",
     "gather_node_inputs",
     "topological_order",
+    "validate_required_workflow_fields",
     "workflow_node",
     "workflow_node_type_key",
 ]

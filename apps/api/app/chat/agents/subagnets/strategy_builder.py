@@ -52,7 +52,8 @@ def build_subagent(
     return {
         "name": "strategy-manager",
         "description": append_tool_boundary_to_description(
-            "用于创建策略、查询策略、修改策略。以及通过回测评估策略的效果。你必须将任何与策略和回测有关的任务委派给此子代理。"
+            "用于创建策略、查询策略、修改策略。以及通过回测评估策略的效果。"
+            "你必须将任何与策略或回测有关的任务委派给此子代理。你必须通过此子代理了解任何与策略或回测有关的细节。"
             "在本系统中，策略是以工作流形式配置的，每个策略由若干工作流节点构成。策略优先复用通用的工作流节点来实现功能，当现有的节点不能满足要求时，才考虑创建新的节点。"
             "同时该子代理负责策略回测任务的触发与结果查询。",
             all_tools_by_id,
@@ -60,13 +61,12 @@ def build_subagent(
         ),
         "system_prompt": (
             "你是 strategy-manager 子代理，专注策略实现与回测执行，仅返回所要求的信息。"
-            "你必须使用策略工作流相关工具而不是文件读写来创建策略。"
             "策略优先复用通用的工作流节点来实现功能，当现有的节点不能满足要求时，需要整理出你要的需求并返回。"
         ),
         "tools": tools,
         "permissions": [
             FilesystemPermission(
-                operations=["write"],
+                operations=["write", "read"],
                 paths=["/**"],
                 mode="deny",
             ),

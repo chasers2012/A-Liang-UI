@@ -8,7 +8,6 @@ from . import (
 )
 
 SUBAGENT_BUILDERS = [
-    # advisor.build_subagent,
     research.build_subagent,
     factor_manager.build_subagent,
     node_manager.build_subagent,

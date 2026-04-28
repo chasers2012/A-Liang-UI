@@ -13,6 +13,7 @@ from workflow.schemas import (
     WorkflowGraphPersisted,
     WorkflowSocketDefinition,
 )
+from workflow.validation import validate_required_workflow_fields
 
 from app.datasource.schemas import utc_now_iso
 from app.nodes.controller import build_workflow_node_for_graph
@@ -86,6 +87,7 @@ def get_strategy(strategy_id: str) -> StrategyPublic | None:
 
 
 def create_strategy(body: StrategyCreate) -> StrategyPublic:
+    validate_required_workflow_fields(body.workflow)
     row = body.to_row()
     StrategyRegistry.save(row)
     return to_strategy_public(row)
@@ -95,6 +97,7 @@ def patch_strategy(strategy_id: str, body: StrategyPatch) -> StrategyPublic | No
     row = StrategyRegistry.get_by_id(strategy_id)
     if row is None:
         return None
+    validate_required_workflow_fields(body.workflow)
     StrategyRegistry.save(merge_strategy_patch(row, body))
     return to_strategy_public(row)
 

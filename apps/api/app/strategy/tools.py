@@ -48,21 +48,32 @@ def _get_runtime_thread_id(runtime: ToolRuntime) -> str:
     return str(thread_id)
 
 
-async def _load_workflow_draft_from_store(runtime: ToolRuntime) -> WorkflowGraphPersisted:
+async def _load_workflow_draft_record_from_store(runtime: ToolRuntime) -> dict[str, Any]:
     store = runtime.store
     if store is None:
         raise ValueError("当前运行时未配置 store，无法读取 workflowDraft")
     item = await store.aget(_workflow_draft_namespace(runtime), "workflowDraft")
-    raw = (item.value or {}).get("workflow") if item else None
+    record = item.value if item and isinstance(item.value, dict) else {}
+    raw = record.get("workflow")
     if raw is None:
         raise ValueError("缺少 workflowDraft，请先在会话上下文中初始化策略工作流草稿")
+    return record
+
+
+async def _load_workflow_draft_from_store(runtime: ToolRuntime) -> WorkflowGraphPersisted:
+    record = await _load_workflow_draft_record_from_store(runtime)
+    raw = record.get("workflow")
     if isinstance(raw, WorkflowGraphPersisted):
         return raw
     return WorkflowGraphPersisted.model_validate(raw)
 
 
 async def _save_workflow_draft_to_store(
-    runtime: ToolRuntime, workflow: WorkflowGraphPersisted
+    runtime: ToolRuntime,
+    workflow: WorkflowGraphPersisted,
+    *,
+    strategy_id: str | None = None,
+    is_dirty: bool = False,
 ) -> None:
     store = runtime.store
     if store is None:
@@ -70,8 +81,26 @@ async def _save_workflow_draft_to_store(
     await store.aput(
         _workflow_draft_namespace(runtime),
         "workflowDraft",
-        {"workflow": workflow.model_dump(by_alias=True)},
+        {
+            "workflow": workflow.model_dump(by_alias=True),
+            "strategy_id": strategy_id,
+            "is_dirty": is_dirty,
+        },
     )
+
+
+async def _require_workflow_draft_record(runtime: ToolRuntime) -> dict[str, Any]:
+    async with _WORKFLOW_DRAFT_STORE_LOCK:
+        return await _load_workflow_draft_record_from_store(runtime)
+
+
+def _draft_strategy_id(record: dict[str, Any]) -> str | None:
+    raw = record.get("strategy_id")
+    return str(raw) if raw else None
+
+
+def _draft_is_dirty(record: dict[str, Any]) -> bool:
+    return bool(record.get("is_dirty", False))
 
 
 async def _mutate_workflow_draft(
@@ -79,9 +108,20 @@ async def _mutate_workflow_draft(
     mutator: Callable[[WorkflowGraphPersisted], tuple[WorkflowGraphPersisted, dict[str, Any]]],
 ) -> dict[str, Any]:
     async with _WORKFLOW_DRAFT_STORE_LOCK:
-        workflow = await _load_workflow_draft_from_store(runtime)
+        record = await _load_workflow_draft_record_from_store(runtime)
+        workflow_raw = record.get("workflow")
+        workflow = (
+            workflow_raw
+            if isinstance(workflow_raw, WorkflowGraphPersisted)
+            else WorkflowGraphPersisted.model_validate(workflow_raw)
+        )
         out_workflow, result = mutator(workflow)
-        await _save_workflow_draft_to_store(runtime, out_workflow)
+        await _save_workflow_draft_to_store(
+            runtime,
+            out_workflow,
+            strategy_id=_draft_strategy_id(record),
+            is_dirty=True,
+        )
     return result
 
 
@@ -105,7 +145,12 @@ def _workflow_draft_namespace(runtime: ToolRuntime) -> tuple[str, ...]:
 )
 async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str, Any]:
     template = get_strategy_workflow_template()
-    await _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(template))
+    await _save_workflow_draft_to_store(
+        runtime,
+        WorkflowGraphPersisted.model_validate(template),
+        strategy_id=None,
+        is_dirty=False,
+    )
     return template
 
 
@@ -119,21 +164,41 @@ def get_strategy_node_catalog() -> list[dict[str, Any]]:
 
 @safe_tool(
     "查看工作流草稿",
-    description="读取当前编辑中的工作流草稿。\n返回 store 中的workflowDraft 保存的策略工作流草稿内容。",
+    description="读取当前编辑中的工作流草稿。\n返回 store 中的workflowDraft 暂存的策略工作流草稿内容。草稿中的值是一个临时值，必须调用创建策略工具或更新策略工具后才会生效。",
 )
 async def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
+    record = await _require_workflow_draft_record(runtime)
     workflow = await _require_workflow_draft(runtime)
-    return workflow.model_dump(by_alias=True)
+    return {
+        "workflow": workflow.model_dump(by_alias=True),
+        "strategy_id": _draft_strategy_id(record),
+        "is_dirty": _draft_is_dirty(record),
+    }
 
 
 @safe_tool(
     "创建策略",
-    description="创建并保存策略。\n入参 name、description；使用store中的workflowDraft创建策略并返回创建后的策略详情。",
+    description="创建并保存策略。\n入参 name、description；使用store中的workflowDraft创建策略并返回创建后的策略详情。任何创建的新策略都要调用此工具才会生效。",
 )
 async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
+    record = await _require_workflow_draft_record(runtime)
+    if _draft_strategy_id(record):
+        raise ValueError("当前草稿已绑定现有策略，请使用更新策略工具保存修改")
 
-    return create_strategy(StrategyCreate(name=name, description=description, workflow=workflow))
+    workflow = await _require_workflow_draft(runtime)
+    strategy = create_strategy(
+        StrategyCreate(name=name, description=description, workflow=workflow)
+    )
+    strategy_id = (
+        strategy.get("id") if isinstance(strategy, dict) else getattr(strategy, "id", None)
+    )
+    await _save_workflow_draft_to_store(
+        runtime,
+        workflow,
+        strategy_id=str(strategy_id) if strategy_id else None,
+        is_dirty=False,
+    )
+    return strategy
 
 
 @safe_tool(
@@ -160,7 +225,12 @@ async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[s
     if workflow_raw is None:
         raise ValueError(f"策略缺少 workflow: {strategy_id}")
 
-    await _set_workflow_draft(runtime, WorkflowGraphPersisted.model_validate(workflow_raw))
+    await _save_workflow_draft_to_store(
+        runtime,
+        WorkflowGraphPersisted.model_validate(workflow_raw),
+        strategy_id=strategy_id,
+        is_dirty=False,
+    )
     return strategy
 
 
@@ -174,16 +244,32 @@ def get_strategy_list() -> list[dict[str, Any]]:
 
 @safe_tool(
     "更新策略",
-    description="更新策略配置。\n入参 strategy_id、name、description；使用store中的workflowDraft更新策略并返回更新后的策略详情。",
+    description="更新策略配置。\n入参 strategy_id、name、description；使用store中的workflowDraft更新策略并返回更新后的策略详情。任何对现有策略的修改都要调用此工具才会生效。",
 )
 async def update_strategy(
     strategy_id: str, name: str, description: str, runtime: ToolRuntime
 ) -> dict[str, Any]:
+    record = await _require_workflow_draft_record(runtime)
+    draft_strategy_id = _draft_strategy_id(record)
+    if not draft_strategy_id:
+        raise ValueError("当前草稿尚未绑定策略，请先创建策略")
+    if draft_strategy_id != strategy_id:
+        raise ValueError(
+            f"当前草稿绑定的策略ID为 {draft_strategy_id}，不能更新其他策略 {strategy_id}"
+        )
+
     workflow = await _require_workflow_draft(runtime)
-    return patch_strategy(
+    strategy = patch_strategy(
         strategy_id,
         StrategyPatch(name=name, description=description, workflow=workflow),
     )
+    await _save_workflow_draft_to_store(
+        runtime,
+        workflow,
+        strategy_id=strategy_id,
+        is_dirty=False,
+    )
+    return strategy
 
 
 @safe_tool("删除策略", description="删除指定策略。\n入参 strategy_id；返回删除前记录。")
@@ -222,10 +308,10 @@ async def strategy_workflow_add_node(
     description="删除指定节点并自动清理关联连线。\n入参 node_id；基于 ToolContext.workflowDraft 更新草稿。",
 )
 async def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = remove_node(workflow, node_id)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (remove_node(workflow, node_id), {"ok": True}),
+    )
 
 
 @safe_tool(
@@ -241,10 +327,10 @@ async def strategy_workflow_update_node_metadata(
     metadata: dict[str, Any],
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = update_node_metadata(workflow, node_id, **metadata)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (update_node_metadata(workflow, node_id, **metadata), {"ok": True}),
+    )
 
 
 @safe_tool(
@@ -256,10 +342,10 @@ async def strategy_workflow_move_node(
     pos: list[float] | tuple[float, float],
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = move_node(workflow, node_id, pos)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (move_node(workflow, node_id, pos), {"ok": True}),
+    )
 
 
 @safe_tool(
@@ -290,10 +376,10 @@ async def strategy_workflow_unset_node_param(
     key: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = unset_node_param(workflow, node_id, key)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (unset_node_param(workflow, node_id, key), {"ok": True}),
+    )
 
 
 @safe_tool(
@@ -312,12 +398,15 @@ async def strategy_workflow_connect_nodes(
     to_socket: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow, created_link_id = connect_nodes(
-        workflow, from_node_id, from_socket, to_node_id, to_socket
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            lambda out_workflow, created_link_id: (
+                out_workflow,
+                {"link_id": created_link_id},
+            )
+        )(*connect_nodes(workflow, from_node_id, from_socket, to_node_id, to_socket)),
     )
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"link_id": created_link_id}
 
 
 @safe_tool(
@@ -335,12 +424,15 @@ async def strategy_workflow_connect_input(
     to_socket: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow, created_link_id = connect_workflow_input(
-        workflow, input_socket, to_node_id, to_socket
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            lambda out_workflow, created_link_id: (
+                out_workflow,
+                {"link_id": created_link_id},
+            )
+        )(*connect_workflow_input(workflow, input_socket, to_node_id, to_socket)),
     )
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"link_id": created_link_id}
 
 
 @safe_tool(
@@ -358,12 +450,15 @@ async def strategy_workflow_connect_output(
     output_socket: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow, created_link_id = connect_to_workflow_output(
-        workflow, from_node_id, from_socket, output_socket
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            lambda out_workflow, created_link_id: (
+                out_workflow,
+                {"link_id": created_link_id},
+            )
+        )(*connect_to_workflow_output(workflow, from_node_id, from_socket, output_socket)),
     )
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"link_id": created_link_id}
 
 
 @safe_tool(
@@ -374,10 +469,10 @@ async def strategy_workflow_disconnect_link(
     link_id: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = disconnect_link(workflow, link_id)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (disconnect_link(workflow, link_id), {"ok": True}),
+    )
 
 
 @safe_tool(
@@ -394,10 +489,13 @@ async def strategy_workflow_disconnect_between(
     to_socket: str,
     runtime: ToolRuntime,
 ) -> dict[str, Any]:
-    workflow = await _require_workflow_draft(runtime)
-    out_workflow = disconnect_between(workflow, from_node_id, from_socket, to_node_id, to_socket)
-    await _set_workflow_draft(runtime, out_workflow)
-    return {"ok": True}
+    return await _mutate_workflow_draft(
+        runtime,
+        lambda workflow: (
+            disconnect_between(workflow, from_node_id, from_socket, to_node_id, to_socket),
+            {"ok": True},
+        ),
+    )
 
 
 def register_strategy_chat_tools() -> None:
