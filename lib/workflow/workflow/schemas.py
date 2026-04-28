@@ -11,7 +11,6 @@ class WorkflowSocketDefinition(BaseModel):
     value_type: str = Field(description="值类型标识，如 string、number、dataframe")
     render_type: str | None = Field(default=None, description="前端渲染类型，如 socket、appendable")
     label: str | None = Field(default=None, description="展示名称")
-    description: str | None = Field(default=None, description="字段说明")
 
 
 class WorkflowNodeInputSpec(WorkflowSocketDefinition):
@@ -36,7 +35,6 @@ class WorkflowGraphNode(BaseModel):
     type: str = Field(description="节点类型（后端 type_key）")
     pos: tuple[float, float] = Field(description="节点画布坐标 [x, y]")
     label: str = Field(description="节点展示名称")
-    description: str | None = Field(default=None, description="节点说明")
     category: str | None = Field(default=None, description="节点分类")
     inputs: list[WorkflowNodeInputSpec] = Field(default_factory=list, description="节点输入定义")
     outputs: list[WorkflowSocketDefinition] = Field(

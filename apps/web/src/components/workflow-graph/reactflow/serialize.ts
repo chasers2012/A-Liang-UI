@@ -44,12 +44,49 @@ function mergeInputsWithDynamicOptions(
 
   const catalogByName = new Map(catalogInputs.map((s) => [s.name, s] as const));
   return persistedInputs.map((input) => {
-    if (input.render_type !== 'select') return input;
     const latest = catalogByName.get(input.name);
-    if (!latest || latest.render_type !== 'select') return input;
-    return {
+    if (!latest) return input;
+    const merged: WorkflowNodeInputSpec = {
       ...input,
-      options: Array.isArray(latest.options) ? latest.options : [],
+      label: latest.label ?? input.label,
+      description: latest.description ?? input.description,
+      required: latest.required ?? input.required,
+      value_type: latest.value_type || input.value_type,
+      render_type: latest.render_type ?? input.render_type,
+      minimum: latest.minimum ?? input.minimum,
+      maximum: latest.maximum ?? input.maximum,
+      rows: latest.rows ?? input.rows,
+      json_schema: latest.json_schema ?? input.json_schema,
+      ui_schema: latest.ui_schema ?? input.ui_schema,
+      default: latest.default ?? input.default,
+    };
+    if (latest.render_type === 'select') {
+      merged.options = Array.isArray(latest.options) ? latest.options : [];
+    } else {
+      merged.options = input.options;
+    }
+    return merged;
+  });
+}
+
+function mergeOutputsWithCatalog(
+  persistedOutputs: WorkflowSocketDefinition[],
+  catalogOutputs: WorkflowSocketDefinition[],
+): WorkflowSocketDefinition[] {
+  if (persistedOutputs.length === 0) return catalogOutputs;
+  if (catalogOutputs.length === 0) return persistedOutputs;
+
+  const catalogByName = new Map(catalogOutputs.map((s) => [s.name, s] as const));
+  return persistedOutputs.map((output) => {
+    const latest = catalogByName.get(output.name);
+    if (!latest) return output;
+    return {
+      ...output,
+      label: latest.label ?? output.label,
+      description: latest.description ?? output.description,
+      required: latest.required ?? output.required,
+      value_type: latest.value_type || output.value_type,
+      render_type: latest.render_type ?? output.render_type,
     };
   });
 }
@@ -160,7 +197,6 @@ function parsePersistedNode(n: unknown): WorkflowGraphPersisted['nodes'][number]
     type,
     label: str(n.label) ?? type,
     category: str(n.category),
-    description: str(n.description),
     inputs: arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs),
     outputs: arrayOrEmpty<WorkflowSocketDefinition>(n.outputs),
     pos: [px, py],
@@ -244,6 +280,7 @@ export function toReactFlowNodes(
     const persistedInputs = arrayOrEmpty<WorkflowNodeInputSpec>(n.inputs);
     const persistedOutputs = arrayOrEmpty<WorkflowSocketDefinition>(n.outputs);
     const catalogInputs = def?.inputs ?? [];
+    const catalogOutputs = def?.outputs ?? [];
     return {
       id: n.id,
       type: 'workflowStep',
@@ -252,12 +289,13 @@ export function toReactFlowNodes(
       data: {
         backendType: n.type,
         label: def?.label ?? n.label ?? n.type,
-        description: def?.description ?? n.description,
+        description: def?.description,
         // Prefer persisted sockets when available, so dynamic node sockets
         // (e.g. DataSetFramesInput per-datasource outputs) are preserved.
         inputs:
           persistedInputs.length > 0 ? mergeInputsWithDynamicOptions(persistedInputs, catalogInputs) : catalogInputs,
-        outputs: persistedOutputs.length > 0 ? persistedOutputs : (def?.outputs ?? []),
+        outputs:
+          persistedOutputs.length > 0 ? mergeOutputsWithCatalog(persistedOutputs, catalogOutputs) : catalogOutputs,
         params: { ...(n.params ?? {}) },
       },
     } satisfies Node;
@@ -445,9 +483,14 @@ function persistedNodesWithAppendableParams(
         type: backendType,
         label: str(data.label) ?? backendType,
         category: str(data.category),
-        description: str(data.description),
-        inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs),
-        outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs),
+        inputs: arrayOrEmpty<WorkflowNodeInputSpec>(data.inputs).map((input) => ({
+          ...input,
+          description: undefined,
+        })),
+        outputs: arrayOrEmpty<WorkflowSocketDefinition>(data.outputs).map((output) => ({
+          ...output,
+          description: undefined,
+        })),
         pos: [n.position.x, n.position.y],
         params: rawParams,
       };
@@ -467,10 +510,10 @@ export function toPersistedWorkflowGraph(nodes: Node[], edges: Edge[]): Workflow
     links: outLinks,
     workflow_inputs: arrayOrEmpty<WorkflowSocketDefinition>(
       ((nodes.find((n) => n.id === WORKFLOW_INPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>).outputs,
-    ),
+    ).map((socket) => ({ ...socket })),
     workflow_outputs: arrayOrEmpty<WorkflowSocketDefinition>(
       ((nodes.find((n) => n.id === WORKFLOW_OUTPUT_NODE_ID)?.data ?? {}) as Record<string, unknown>).inputs,
-    ),
+    ).map((socket) => ({ ...socket })),
     workflow_boundary_positions: {
       input: [num(inputBoundaryNode?.position?.x, -220), num(inputBoundaryNode?.position?.y, 0)],
       output: [num(outputBoundaryNode?.position?.x, 1100), num(outputBoundaryNode?.position?.y, 0)],

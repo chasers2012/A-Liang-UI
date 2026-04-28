@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
+from workflow.schemas import WorkflowGraphPersisted
 
 from app.common.id import create_id_generator
 from app.data_set.constants import (
@@ -17,6 +18,10 @@ from app.datasource.schemas import utc_now_iso
 generate_id = create_id_generator("data_sets")
 
 _EMPTY_WORKFLOW: dict[str, Any] = PREPROCESSING_EMPTY_WORKFLOW
+
+
+def _normalize_preprocessing_workflow_dict(workflow: dict[str, Any]) -> dict[str, Any]:
+    return WorkflowGraphPersisted.model_validate(workflow).model_dump(by_alias=True)
 
 
 def _validate_preprocessing_workflow_dict(workflow: dict[str, Any]) -> None:
@@ -39,7 +44,7 @@ def _stored_workflow_str(v: object) -> str:
     """Normalize workflow for storage rows."""
     if isinstance(v, dict):
         _validate_preprocessing_workflow_dict(v)
-        return json.dumps(dict(v), ensure_ascii=False)
+        return json.dumps(_normalize_preprocessing_workflow_dict(dict(v)), ensure_ascii=False)
     if isinstance(v, str):
         s = v.strip()
         if not s:
@@ -48,7 +53,7 @@ def _stored_workflow_str(v: object) -> str:
         if not isinstance(loaded, dict):
             raise TypeError("workflow 必须是 JSON 字符串（对象）")
         _validate_preprocessing_workflow_dict(loaded)
-        return json.dumps(dict(loaded), ensure_ascii=False)
+        return json.dumps(_normalize_preprocessing_workflow_dict(dict(loaded)), ensure_ascii=False)
     raise TypeError("workflow 必须是 JSON 对象或 JSON 字符串（对象）")
 
 
@@ -60,7 +65,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("workflow 须为 JSON 对象")
-    return data
+    return _normalize_preprocessing_workflow_dict(data)
 
 
 class DataSetDatasourceBindingStored(SQLModel):
@@ -145,7 +150,7 @@ class DataSetCreate(SQLModel):
         if not isinstance(v, dict):
             raise TypeError("preprocessing_workflow 必须是 JSON 对象")
         _validate_preprocessing_workflow_dict(v)
-        return v
+        return _normalize_preprocessing_workflow_dict(v)
 
     def to_row(self) -> DataSetRow:
         now = utc_now_iso()
@@ -158,7 +163,8 @@ class DataSetCreate(SQLModel):
             description=(self.description or "").strip(),
             datasource_bindings=bindings,
             preprocessing_workflow=json.dumps(
-                dict(self.preprocessing_workflow), ensure_ascii=False
+                _normalize_preprocessing_workflow_dict(dict(self.preprocessing_workflow)),
+                ensure_ascii=False,
             ),
             preprocessors=[],
             start=self.start.strip(),

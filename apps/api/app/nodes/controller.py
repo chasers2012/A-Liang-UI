@@ -89,10 +89,11 @@ def build_workflow_node_for_graph(
         "id": node_instance_id,
         "type": rec.id,
         "label": rec.name,
-        "description": rec.description,
         "category": getattr(node_cls, "category", ""),
-        "inputs": [Parser.serialize_socket(s) for s in node_cls.inputs],
-        "outputs": [Parser.serialize_socket(s) for s in node_cls.outputs],
+        "inputs": [Parser.serialize_socket(s, include_description=False) for s in node_cls.inputs],
+        "outputs": [
+            Parser.serialize_socket(s, include_description=False) for s in node_cls.outputs
+        ],
         "pos": node_pos,
         "params": _default_workflow_node_params(node_cls),
     }

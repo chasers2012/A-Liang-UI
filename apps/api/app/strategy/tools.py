@@ -25,7 +25,6 @@ from app.strategy.controller import (
     remove_node,
     set_node_param,
     unset_node_param,
-    update_node_metadata,
 )
 from app.strategy.schemas import StrategyCreate, StrategyPatch
 from app.tool.models import ToolAuthorization
@@ -283,14 +282,12 @@ def delete_strategy_tool(strategy_id: str) -> dict[str, Any]:
     "策略工作流-添加节点",
     description=(
         "向工作流追加指定类型节点。\n"
-        "入参 node_type_id 以及可选 metadata（WorkflowGraphNode 字段，如 pos/label/params）；"
-        "基于 ToolContext.workflowDraft 更新草稿并返回新节点 node_id。"
+        "向 ToolContext.workflowDraft 草稿中添加指定类型的节点并返回新节点 node_id。"
     ),
 )
 async def strategy_workflow_add_node(
     node_type_id: str,
     runtime: ToolRuntime,
-    metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return await _mutate_workflow_draft(
         runtime,
@@ -299,7 +296,7 @@ async def strategy_workflow_add_node(
                 out_workflow,
                 {"node_id": node_id},
             )
-        )(*add_node(workflow, node_type_id, **(metadata or {}))),
+        )(*add_node(workflow, node_type_id)),
     )
 
 
@@ -311,25 +308,6 @@ async def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> d
     return await _mutate_workflow_draft(
         runtime,
         lambda workflow: (remove_node(workflow, node_id), {"ok": True}),
-    )
-
-
-@safe_tool(
-    "策略工作流-更新节点元数据",
-    description=(
-        "更新节点元信息。\n"
-        "入参 node_id、metadata（支持 label/description/category/pos/inputs/outputs/params）；"
-        "基于 ToolContext.workflowDraft 更新草稿。"
-    ),
-)
-async def strategy_workflow_update_node_metadata(
-    node_id: str,
-    metadata: dict[str, Any],
-    runtime: ToolRuntime,
-) -> dict[str, Any]:
-    return await _mutate_workflow_draft(
-        runtime,
-        lambda workflow: (update_node_metadata(workflow, node_id, **metadata), {"ok": True}),
     )
 
 
@@ -523,11 +501,6 @@ def register_strategy_chat_tools() -> None:
         ("strategy.delete_strategy", delete_strategy_tool, ToolAuthorization.disabled),
         ("strategy.workflow.add_node", strategy_workflow_add_node, ToolAuthorization.allowed),
         ("strategy.workflow.remove_node", strategy_workflow_remove_node, ToolAuthorization.allowed),
-        (
-            "strategy.workflow.update_node_metadata",
-            strategy_workflow_update_node_metadata,
-            ToolAuthorization.allowed,
-        ),
         ("strategy.workflow.move_node", strategy_workflow_move_node, ToolAuthorization.allowed),
         (
             "strategy.workflow.set_node_param",

@@ -185,7 +185,7 @@ def update_node_metadata(
 ) -> WorkflowGraphPersisted:
     new_workflow = workflow.model_copy(deep=True)
     node = _find_node_or_raise(new_workflow, node_id)
-    mutable_fields = {"label", "description", "category", "pos", "inputs", "outputs", "params"}
+    mutable_fields = {"label", "category", "pos", "inputs", "outputs", "params"}
     patch = {k: v for k, v in metadata.items() if k in mutable_fields}
     updated = WorkflowGraphNode.model_validate({**node.model_dump(), **patch})
     idx = next(i for i, item in enumerate(new_workflow.nodes) if item.id == node_id)

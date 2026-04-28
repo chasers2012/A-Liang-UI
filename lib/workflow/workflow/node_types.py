@@ -478,7 +478,13 @@ class WorkflowGraph:
 
         nodes_payload: list[dict[str, Any]] = []
         for node in self.nodes:
-            nodes_payload.append(Parser.serialize_node(node))
+            nodes_payload.append(
+                Parser.serialize_node(
+                    node,
+                    include_description=False,
+                    include_socket_description=False,
+                )
+            )
         return {
             "nodes": nodes_payload,
             "links": [link.serialize() for link in self.links],

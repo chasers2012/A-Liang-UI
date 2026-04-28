@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from multiprocessing.process import parent_process
 
+from workflow.schemas import WorkflowGraphPersisted
+
 from app.common.datetime_utils import utc_now_iso
 from app.startup_jobs import register_startup_job
 from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN
@@ -44,7 +46,10 @@ def ensure_example_strategy() -> None:
         id=EXAMPLE_STRATEGY_ID,
         name="示例：TopK 等权轮动",
         description="内置示例策略：按因子截面 TopK 选股，等权分配，按周调仓，信号滞后 1 bar。",
-        workflow=json.dumps(wf, ensure_ascii=False),
+        workflow=json.dumps(
+            WorkflowGraphPersisted.model_validate(wf).model_dump(by_alias=True),
+            ensure_ascii=False,
+        ),
         created_at=now,
         updated_at=now,
     )

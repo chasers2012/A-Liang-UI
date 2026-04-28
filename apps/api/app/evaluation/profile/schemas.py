@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, field_validator
 from workflow import WorkflowGraph
+from workflow.schemas import WorkflowGraphPersisted
 
 from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.constants import (
@@ -17,6 +18,10 @@ from app.evaluation.profile.models import EvaluationProfileRow
 EvaluationWorkflow = WorkflowGraph
 
 _EMPTY_WORKFLOW: dict[str, Any] = EVALUATION_EMPTY_WORKFLOW_TEMPLATE
+
+
+def _normalize_evaluation_workflow_dict(workflow: dict[str, Any]) -> dict[str, Any]:
+    return WorkflowGraphPersisted.model_validate(workflow).model_dump(by_alias=True)
 
 
 def _validate_evaluation_workflow_dict(workflow: dict[str, Any]) -> None:
@@ -43,7 +48,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("workflow 须为 JSON 对象")
-    return data
+    return _normalize_evaluation_workflow_dict(data)
 
 
 def _stored_workflow_str(v: object) -> str:
@@ -56,7 +61,7 @@ def _stored_workflow_str(v: object) -> str:
         if not isinstance(loaded, dict):
             raise TypeError("workflow 须为 JSON 字符串（对象）")
         _validate_evaluation_workflow_dict(loaded)
-        return json.dumps(loaded, ensure_ascii=False)
+        return json.dumps(_normalize_evaluation_workflow_dict(loaded), ensure_ascii=False)
     raise TypeError("workflow 须为 JSON 字符串（对象）")
 
 
@@ -65,7 +70,7 @@ def _coerce_workflow_dict(v: object, *, allow_none: bool) -> dict[str, Any] | No
         return None if allow_none else empty_workflow_template_dict()
     if isinstance(v, dict):
         _validate_evaluation_workflow_dict(v)
-        return v
+        return _normalize_evaluation_workflow_dict(v)
     raise TypeError("workflow 须为 JSON 对象")
 
 
@@ -90,7 +95,11 @@ class EvaluationProfileCreate(BaseModel):
     def to_row(self) -> EvaluationProfileRow:
         now = utc_now_iso()
         rid = str(uuid4())
-        wf = self.workflow if self.workflow is not None else empty_workflow_template_dict()
+        wf = (
+            _normalize_evaluation_workflow_dict(self.workflow)
+            if self.workflow is not None
+            else empty_workflow_template_dict()
+        )
         return EvaluationProfileRow(
             id=rid,
             name=self.name.strip(),

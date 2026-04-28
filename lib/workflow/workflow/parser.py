@@ -18,7 +18,11 @@ class Parser:
     """Parse workflow payload dictionaries into runtime workflow objects."""
 
     @staticmethod
-    def serialize_socket(socket: Socket) -> dict[str, Any]:
+    def serialize_socket(
+        socket: Socket,
+        *,
+        include_description: bool = True,
+    ) -> dict[str, Any]:
         """JSON-friendly socket / param specification used by API responses."""
         from .node_types import (
             NodeParam,
@@ -30,62 +34,89 @@ class Parser:
 
         if isinstance(socket, NumberNodeParam):
             return {
-                **Parser._serialize_node_param(socket),
+                **Parser._serialize_node_param(socket, include_description=include_description),
                 "minimum": socket.minimum,
                 "maximum": socket.maximum,
             }
         if isinstance(socket, TextareaNodeParam):
-            return {**Parser._serialize_node_param(socket), "rows": socket.rows}
+            return {
+                **Parser._serialize_node_param(socket, include_description=include_description),
+                "rows": socket.rows,
+            }
         if isinstance(socket, OptionsNodeParam):
             opts = socket.options
             options = list(opts()) if callable(opts) else list(opts or [])
-            return {**Parser._serialize_node_param(socket), "options": options}
+            return {
+                **Parser._serialize_node_param(socket, include_description=include_description),
+                "options": options,
+            }
         if isinstance(socket, RJSFNodeParam):
             schema = socket.resolve_json_schema()
             ui = socket.resolve_ui_schema()
             default = socket.default if socket.default is not None else schema.get("default")
             return {
-                **Parser._serialize_node_param(socket),
+                **Parser._serialize_node_param(socket, include_description=include_description),
                 "default": default,
                 "json_schema": schema,
                 "ui_schema": ui,
             }
         if isinstance(socket, NodeParam):
-            return Parser._serialize_node_param(socket)
-        return {
+            return Parser._serialize_node_param(socket, include_description=include_description)
+        payload = {
             "name": socket.name,
             "required": socket.required,
             "label": socket.label,
-            "description": socket.description,
             "value_type": socket.value_type,
             "render_type": socket.render_type,
         }
+        if include_description:
+            payload["description"] = socket.description
+        return payload
 
     @staticmethod
-    def _serialize_node_param(param: NodeParam) -> dict[str, Any]:
-        return {
+    def _serialize_node_param(
+        param: NodeParam,
+        *,
+        include_description: bool = True,
+    ) -> dict[str, Any]:
+        payload = {
             "name": param.name,
             "required": param.required,
             "label": param.label,
-            "description": param.description,
             "value_type": param.value_type,
             "render_type": param.render_type,
             "default": param.default,
             "visible_domains": list(getattr(param, "visible_domains", None) or ()),
         }
+        if include_description:
+            payload["description"] = param.description
+        return payload
 
     @staticmethod
-    def serialize_node(node: Node) -> dict[str, Any]:
+    def serialize_node(
+        node: Node,
+        *,
+        include_description: bool = True,
+        include_socket_description: bool = True,
+    ) -> dict[str, Any]:
         """JSON-friendly node definition payload."""
-        return {
+        payload = {
             "type": node.type,
             "label": node.label,
-            "description": node.description,
             "category": node.category,
-            "inputs": [Parser.serialize_socket(s) for s in node.inputs],
-            "outputs": [Parser.serialize_socket(s) for s in node.outputs],
+            "inputs": [
+                Parser.serialize_socket(s, include_description=include_socket_description)
+                for s in node.inputs
+            ],
+            "outputs": [
+                Parser.serialize_socket(s, include_description=include_socket_description)
+                for s in node.outputs
+            ],
             "params": node.params,
         }
+        if include_description:
+            payload["description"] = node.description
+        return payload
 
     @staticmethod
     def parse_workflow_link(config_dict: dict[str, Any]) -> WorkflowLink:

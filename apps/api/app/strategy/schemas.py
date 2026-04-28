@@ -19,7 +19,7 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
     data = json.loads(raw)
     if not isinstance(data, dict):
         raise ValueError("workflow 须为 JSON 对象")
-    return data
+    return WorkflowGraphPersisted.model_validate(data).model_dump(by_alias=True)
 
 
 class StrategyCreate(BaseModel):
