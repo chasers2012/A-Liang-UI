@@ -4,6 +4,8 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useSetAtom } from 'jotai';
 import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from 'lucide-react';
 
+import { unescapeUnicode } from 'unescape-unicode';
+
 import { Button } from '@/components/ui/button';
 import { authorizeToolCallAtom } from '@/models/chat';
 import type { ChatToolCallDisplay } from '@/models/chat/types';
@@ -12,9 +14,17 @@ import { cn } from '@/lib/utils';
 function formatJson(v: unknown): string {
   if (v === undefined) return '';
   try {
-    return JSON.stringify(v, null, 2);
+    let str = '';
+    if (typeof v === 'string') {
+      str = JSON.stringify(JSON.parse(v), null, 2);
+    } else if (typeof v === 'number') {
+      str = String(v);
+    } else {
+      str = JSON.stringify(v, null, 2);
+    }
+    return unescapeUnicode(str);
   } catch {
-    return String(v);
+    return unescapeUnicode(String(v));
   }
 }
 
@@ -30,18 +40,15 @@ const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDi
 
 const ToolCallHeader = memo(function ToolCallHeader({
   name,
-  agentName,
   status,
 }: {
   name: ChatToolCallDisplay['name'];
-  agentName?: ChatToolCallDisplay['agent_name'];
   status: ChatToolCallDisplay['status'];
 }) {
   return (
     <>
       <Wrench className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       <span className="font-mono text-foreground">{name || '(工具)'}</span>
-      {agentName ? <span className="text-[10px] text-muted-foreground/80">{agentName}</span> : null}
       <span className="sr-only">工具调用状态：</span>
       <StatusIcon status={status} />
     </>
@@ -67,12 +74,12 @@ const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknow
   );
 });
 
-type ToolAuthorizationUi =
+export type ToolAuthorizationUi =
   | { stage: 'pending'; request: unknown }
   | { stage: 'decided'; decision: 'approve' | 'reject'; request: unknown }
   | null;
 
-function getPersistedAuthorization(call: ChatToolCallDisplay): ToolAuthorizationUi {
+export function getPersistedAuthorization(call: ChatToolCallDisplay): ToolAuthorizationUi {
   if (call.authorization_status === 'pending') {
     return { stage: 'pending', request: { tool_call_id: call.id } };
   }
@@ -86,7 +93,7 @@ function getPersistedAuthorization(call: ChatToolCallDisplay): ToolAuthorization
   return null;
 }
 
-const AuthorizationPanel = memo(function AuthorizationPanel({
+export const AuthorizationPanel = memo(function AuthorizationPanel({
   authorization,
   sessionId,
   assistantMessageId,
@@ -150,7 +157,7 @@ export function ChatToolCallCard({
   sessionId: string;
   assistantMessageId: string;
 }) {
-  const { name, agent_name: agentName, status, args, result, error } = call;
+  const { name, status, args, result, error } = call;
   const authorization = getPersistedAuthorization(call);
   const initRef = useRef(false);
   const [open, setOpen] = useState(false);
@@ -178,7 +185,7 @@ export function ChatToolCallCard({
           )}
           aria-hidden
         />
-        <ToolCallHeader name={name} agentName={agentName} status={status} />
+        <ToolCallHeader name={name} status={status} />
       </div>
       {open && (
         <div className="border-border/40 border-t px-3 py-2">

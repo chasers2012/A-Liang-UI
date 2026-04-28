@@ -9,58 +9,65 @@ import type { AssistantBlock } from '@/models/chat/types';
 
 export function appendAssistantDelta(
   prev: ChatMessagePublic | undefined,
-  payload: { text: string; agent_name?: string },
+  payload: { text: string; run_segment_id?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
-  const { text: delta, agent_name: agentName } = payload;
+  const { text: delta, run_segment_id: runSegmentId } = payload;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
-  if (last?.kind === 'text' && last.agent_name === agentName) {
+  if (last?.kind === 'text' && (last.run_segment_id ?? '') === (runSegmentId ?? '')) {
     blocks[blocks.length - 1] = {
       kind: 'text',
       content: last.content + delta,
-      agent_name: agentName,
+      run_segment_id: runSegmentId,
+      completed: last.completed,
     };
   } else {
-    blocks.push({ kind: 'text', content: delta, agent_name: agentName });
+    blocks.push({ kind: 'text', content: delta, run_segment_id: runSegmentId });
   }
   return { ...prev, blocks };
 }
 
 export function appendAssistantReasoning(
   prev: ChatMessagePublic | undefined,
-  payload: { text: string; agent_name?: string },
+  payload: { text: string; run_segment_id?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
-  const { text: delta, agent_name: agentName } = payload;
+  const { text: delta, run_segment_id: runSegmentId } = payload;
   const blocks = [...(prev.blocks ?? [])];
   const last = blocks[blocks.length - 1];
-  if (last?.kind === 'reasoning' && last.agent_name === agentName) {
+  if (last?.kind === 'reasoning' && (last.run_segment_id ?? '') === (runSegmentId ?? '')) {
     blocks[blocks.length - 1] = {
       kind: 'reasoning',
       content: last.content + delta,
-      agent_name: agentName,
+      run_segment_id: runSegmentId,
     };
   } else {
-    blocks.push({ kind: 'reasoning', content: delta, agent_name: agentName });
+    blocks.push({ kind: 'reasoning', content: delta, run_segment_id: runSegmentId });
   }
   return { ...prev, blocks };
 }
 
 export function applyToolStart(
   prev: ChatMessagePublic | undefined,
-  payload: { name: string; id: string; args?: unknown; agent_name?: string },
+  payload: { name: string; id: string; args?: unknown; run_segment_id?: string },
 ): ChatMessagePublic | undefined {
   if (!prev) return prev;
   const call: ChatToolCallPublic = {
     id: payload.id,
     name: payload.name,
-    agent_name: payload.agent_name,
     args: payload.args,
     status: 'running',
     authorization_status: 'none',
   };
-  const blocks: AssistantBlock[] = [...(prev.blocks ?? []), { kind: 'tool', agent_name: payload.agent_name, call }];
+  const blocks: AssistantBlock[] = [
+    ...(prev.blocks ?? []),
+    {
+      kind: 'tool',
+      run_segment_id: payload.run_segment_id,
+      call,
+    },
+  ];
   return { ...prev, blocks };
 }
 
@@ -72,7 +79,11 @@ export function patchToolInBlocks(
   if (!prev) return prev;
   const blocks = (prev.blocks ?? []).map((b): AssistantBlock => {
     if (b.kind !== 'tool' || b.call.id !== id) return b;
-    return { kind: 'tool', agent_name: b.agent_name, call: { ...b.call, ...patch } };
+    return {
+      kind: 'tool',
+      run_segment_id: b.run_segment_id,
+      call: { ...b.call, ...patch },
+    };
   });
   return { ...prev, blocks };
 }

@@ -1,30 +1,34 @@
 'use client';
 
-import { memo } from 'react';
+import { Fragment, memo, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 
-import { MarkdownContent } from '@/components/markdown/markdown-content';
-import { activeSessionIdAtom, isReplyStreamingOfMessageAtomFamily, replyOfMessageAtomFamily } from '@/models/chat';
+import { activeSessionIdAtom, isSessionGeneratingAtomFamily, replyOfMessageAtomFamily } from '@/models/chat';
 import type { AssistantBlock } from '@/models/chat/types';
-import { ChatReasoningCard } from './chat-reasoning-card';
-import { ChatToolCallCard } from './chat-tool-call-card';
+import { ChatAssistantSingleBlock } from './chat-assistant-single-block';
+import { ChatSubagentTaskCard } from './chat-subagent-task-card';
+import { blockStreamPartitionKey, formatSegmentLabel, partitionAssistantRuns } from './chat-subagent-task-blocks';
 
 type AssistantBlockGroup = {
-  agentName: string | null;
+  partitionKey: string;
+  /** 取自 ``run_segment_id`` 路径末段（无则不成组边框） */
+  segmentLabel: string | null;
   blocks: AssistantBlock[];
 };
 
-function groupAssistantBlocksByAgent(blocks: AssistantBlock[]): AssistantBlockGroup[] {
+function groupAssistantBlocksByStream(blocks: AssistantBlock[]): AssistantBlockGroup[] {
   const groups: AssistantBlockGroup[] = [];
   for (const block of blocks) {
-    const agentName = (block.agent_name || '').trim() || null;
+    const partitionKey = blockStreamPartitionKey(block);
+    const segmentLabel = formatSegmentLabel(block.run_segment_id);
     const last = groups[groups.length - 1];
-    if (last && last.agentName === agentName) {
+    if (last && last.partitionKey === partitionKey) {
       last.blocks.push(block);
       continue;
     }
     groups.push({
-      agentName,
+      partitionKey,
+      segmentLabel,
       blocks: [block],
     });
   }
@@ -32,56 +36,70 @@ function groupAssistantBlocksByAgent(blocks: AssistantBlock[]): AssistantBlockGr
 }
 
 export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({ mid }: { mid: string }) {
-  const isSending = useAtomValue(isReplyStreamingOfMessageAtomFamily(mid));
+  const isSending = useAtomValue(isSessionGeneratingAtomFamily(mid));
   const message = useAtomValue(replyOfMessageAtomFamily(mid));
   const sessionId = useAtomValue(activeSessionIdAtom);
 
-  if (!message || !sessionId) return null;
+  const renderRuns = useMemo(() => {
+    const blocks = (message?.blocks ?? []) as AssistantBlock[];
+    return partitionAssistantRuns(blocks);
+  }, [message]);
 
-  const blocks = (message.blocks ?? []) as AssistantBlock[];
-  const groups = groupAssistantBlocksByAgent(blocks);
+  if (!message || !sessionId) return null;
 
   return (
     <div className="flex flex-col gap-1" id={`reply-${mid}`}>
       <span className="sr-only">助手：</span>
-      {groups.map((group, groupIndex) => {
-        const content = group.blocks.map((b, i) => {
-          if (b.kind === 'text') {
-            if (!b.content.trim()) return null;
-            return (
-              <MarkdownContent
-                key={`t-${groupIndex}-${i}`}
-                content={b.content}
-                isFinished={!isSending || !!b.completed}
-              />
-            );
-          }
-          if (b.kind === 'reasoning') {
-            return <ChatReasoningCard key={`r-${groupIndex}-${i}`} content={b.content} agentName={b.agent_name} />;
-          }
-          if (b.kind === 'tool') {
-            return (
-              <ChatToolCallCard key={b.call.id} call={b.call} sessionId={sessionId} assistantMessageId={message.id} />
-            );
-          }
-          return null;
-        });
-
-        if (!group.agentName) {
+      {renderRuns.map((run, runIndex) => {
+        if (run.kind === 'shell') {
+          const tb = run.shell.taskBlock;
           return (
-            <div key={`g-${groupIndex}`} className="space-y-1">
-              {content}
-            </div>
+            <ChatSubagentTaskCard
+              key={tb.call.id}
+              call={tb.call}
+              nestedBlocks={run.shell.nested}
+              sessionId={sessionId}
+              assistantMessageId={message.id}
+              isSending={isSending}
+            />
           );
         }
 
+        const groups = groupAssistantBlocksByStream(run.blocks);
         return (
-          <div key={`g-${groupIndex}`} className="mb-2 rounded-md border border-border/60 bg-muted/20 p-3">
-            <div className="mb-2 text-[10px] font-medium tracking-wide text-muted-foreground/90 uppercase">
-              {group.agentName}
-            </div>
-            <div className="space-y-1">{content}</div>
-          </div>
+          <Fragment key={`plain-${runIndex}`}>
+            {groups.map((group, groupIndex) => {
+              const content = group.blocks.map((b, i) => (
+                <ChatAssistantSingleBlock
+                  key={b.kind === 'tool' ? b.call.id : `g-${runIndex}-${groupIndex}-${i}-${b.kind}`}
+                  block={b}
+                  isSending={isSending}
+                  sessionId={sessionId}
+                  assistantMessageId={message.id}
+                />
+              ));
+
+              if (!group.segmentLabel) {
+                return (
+                  <div key={`g-${runIndex}-${groupIndex}`} className="space-y-1">
+                    {content}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={`g-${runIndex}-${groupIndex}`}
+                  className="mb-2 rounded-md border border-border/60 bg-muted/20 p-3"
+                >
+                  <div className="mb-2 text-[10px] font-medium tracking-wide text-muted-foreground/90 uppercase">
+                    {group.segmentLabel}
+                  </div>
+                  <div className="space-y-1">{content}</div>
+                </div>
+              );
+            })}
+          </Fragment>
         );
       })}
       <div id={`reply-${mid}-end`} className="h-0 w-0" />

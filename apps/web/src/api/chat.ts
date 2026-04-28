@@ -14,14 +14,14 @@ import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './cli
 
 /** Mirrors ``app.chat.events.ToolPayload``. */
 type ChatSseToolPayload =
-  | { stage: 'start'; id: string; name: string; args?: unknown; agent_name?: string }
-  | { stage: 'result'; id: string; result?: unknown; agent_name?: string }
-  | { stage: 'error'; id: string; error?: string | null; agent_name?: string }
-  | { stage: 'authorize'; id: string; agent_name?: string };
+  | { stage: 'start'; id: string; name: string; args?: unknown; run_segment_id?: string }
+  | { stage: 'result'; id: string; result?: unknown; run_segment_id?: string }
+  | { stage: 'error'; id: string; error?: string | null; run_segment_id?: string }
+  | { stage: 'authorize'; id: string };
 
 type ChatSseTextPayload = {
   text: string;
-  agent_name?: string;
+  run_segment_id?: string;
 };
 
 /** Mirrors ``app.chat.events.MessageIdsPayload``. */
@@ -61,7 +61,7 @@ function parseTextPayload(payload: unknown): ChatSseTextPayload | undefined {
   if (!text) return undefined;
   return {
     text,
-    agent_name: sseOptionalStringField(p.agent_name),
+    run_segment_id: sseOptionalStringField(p.run_segment_id),
   };
 }
 
@@ -69,19 +69,32 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
   if (!payload || typeof payload !== 'object') return undefined;
   const p = payload as Record<string, unknown>;
   const stage = sseStringField(p.stage);
-  const agentName = sseOptionalStringField(p.agent_name);
   if (stage === 'start') {
     const name = sseStringField(p.name);
     const id = sseStringField(p.id);
     if (!name || !id) return undefined;
-    return { type: 'tool', payload: { stage: 'start', name, id, args: p.args, agent_name: agentName } };
+    return {
+      type: 'tool',
+      payload: {
+        stage: 'start',
+        name,
+        id,
+        args: p.args,
+        run_segment_id: sseOptionalStringField(p.run_segment_id),
+      },
+    };
   }
   if (stage === 'result') {
     const id = sseStringField(p.id);
     if (!id) return undefined;
     return {
       type: 'tool',
-      payload: { stage: 'result', id, result: p.result, agent_name: agentName },
+      payload: {
+        stage: 'result',
+        id,
+        result: p.result,
+        run_segment_id: sseOptionalStringField(p.run_segment_id),
+      },
     };
   }
   if (stage === 'error') {
@@ -93,7 +106,7 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
         stage: 'error',
         id,
         error: typeof p.error === 'string' ? p.error : String(p.error ?? ''),
-        agent_name: agentName,
+        run_segment_id: sseOptionalStringField(p.run_segment_id),
       },
     };
   }
@@ -105,7 +118,6 @@ function parseToolPayload(payload: unknown): ChatSseParsedEvent {
       payload: {
         stage: 'authorize',
         id,
-        agent_name: agentName,
       },
     };
   }
@@ -171,9 +183,9 @@ function parseAgentChatSseBlock(block: string): ChatSseParsedEvent {
 export type AgentChatStreamOptions = {
   /** 首包：本轮 user / assistant 消息在服务端持久化所用的 id（用于替换乐观 key）。 */
   onMessageIds?: (payload: { user: string; assistant: string }) => void;
-  onDelta: (payload: { text: string; agent_name?: string }) => void;
-  onReasoning?: (payload: { text: string; agent_name?: string }) => void;
-  onToolStart?: (payload: { name: string; id: string; args?: unknown; agent_name?: string }) => void;
+  onDelta: (payload: { text: string; run_segment_id?: string }) => void;
+  onReasoning?: (payload: { text: string; run_segment_id?: string }) => void;
+  onToolStart?: (payload: { name: string; id: string; args?: unknown; run_segment_id?: string }) => void;
   onToolResult?: (payload: { id: string; result: unknown }) => void;
   onToolError?: (payload: { id: string; error: string }) => void;
   onToolAuthorize?: (payload: { id: string }) => void;
@@ -205,7 +217,7 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
       name: ev.payload.name,
       id: ev.payload.id,
       args: ev.payload.args,
-      agent_name: ev.payload.agent_name,
+      run_segment_id: ev.payload.run_segment_id,
     });
     return true;
   }

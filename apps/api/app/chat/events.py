@@ -13,12 +13,12 @@ EventType = Literal["message_ids", "delta", "reasoning", "tool", "done", "error"
 
 class TextPayload(BaseModel):
     text: str
-    agent_name: str | None = None
+    #: LangGraph v2 stream ``ns``（子图 / 并行分支路径），用于区分并行流。
+    run_segment_id: str | None = None
 
 
 class ToolPayload(BaseModel):
     stage: Literal["start", "result", "error", "authorize"]
-    agent_name: str | None = None
     # Only required for stage="start". For terminal events ("result"/"error"),
     # the client can reconcile by tool call id.
     name: str | None = None
@@ -26,6 +26,7 @@ class ToolPayload(BaseModel):
     args: Any | None = None
     result: Any | None = None
     error: str | None = None
+    run_segment_id: str | None = None
 
 
 class MessageIdsPayload(BaseModel):

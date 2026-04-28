@@ -163,26 +163,26 @@ def _append_delta_block(
     blocks: list[AssistantBlockPublic],
     delta: str,
     *,
-    agent_name: str | None,
+    run_segment_id: str | None = None,
 ) -> None:
     if not blocks:
         blocks.append(
             AssistantBlockPublic(
                 kind="text",
                 content=delta,
-                agent_name=agent_name,
+                run_segment_id=run_segment_id,
             )
         )
         return
     last = blocks[-1]
-    if last.kind == "text" and last.agent_name == agent_name:
+    if last.kind == "text" and last.run_segment_id == run_segment_id:
         last.content = (last.content or "") + delta
     else:
         blocks.append(
             AssistantBlockPublic(
                 kind="text",
                 content=delta,
-                agent_name=agent_name,
+                run_segment_id=run_segment_id,
             )
         )
 
@@ -191,26 +191,26 @@ def _append_reasoning_block(
     blocks: list[AssistantBlockPublic],
     delta: str,
     *,
-    agent_name: str | None,
+    run_segment_id: str | None = None,
 ) -> None:
     if not blocks:
         blocks.append(
             AssistantBlockPublic(
                 kind="reasoning",
                 content=delta,
-                agent_name=agent_name,
+                run_segment_id=run_segment_id,
             )
         )
         return
     last = blocks[-1]
-    if last.kind == "reasoning" and last.agent_name == agent_name:
+    if last.kind == "reasoning" and last.run_segment_id == run_segment_id:
         last.content = (last.content or "") + delta
     else:
         blocks.append(
             AssistantBlockPublic(
                 kind="reasoning",
                 content=delta,
-                agent_name=agent_name,
+                run_segment_id=run_segment_id,
             )
         )
 
@@ -244,11 +244,10 @@ def _append_tool_start_block(
     blocks.append(
         AssistantBlockPublic(
             kind="tool",
-            agent_name=tool_payload.agent_name,
+            run_segment_id=tool_payload.run_segment_id,
             call=ChatToolCallPublic(
                 id=tool_payload.id,
                 name=tool_payload.name,
-                agent_name=tool_payload.agent_name,
                 args=tool_payload.args,
                 status="running",
             ),
@@ -311,7 +310,7 @@ def _apply_stream_event_to_blocks(
         _append_delta_block(
             blocks,
             event.payload.text,
-            agent_name=event.payload.agent_name,
+            run_segment_id=event.payload.run_segment_id,
         )
         return
 
@@ -319,7 +318,7 @@ def _apply_stream_event_to_blocks(
         _append_reasoning_block(
             blocks,
             event.payload.text,
-            agent_name=event.payload.agent_name,
+            run_segment_id=event.payload.run_segment_id,
         )
         return
 
