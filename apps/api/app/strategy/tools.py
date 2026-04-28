@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Callable
 from typing import Any
 
 from langchain.tools import ToolRuntime
+from langchain_core.messages import HumanMessage, SystemMessage
 from workflow.schemas import WorkflowGraphPersisted
 
 from app.strategy.controller import (
@@ -138,6 +140,75 @@ def _workflow_draft_namespace(runtime: ToolRuntime) -> tuple[str, ...]:
     return ("strategy", "workflowDraft", _get_runtime_thread_id(runtime))
 
 
+def _extract_json_block(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        parts = stripped.split("```")
+        for part in parts:
+            candidate = part.strip()
+            if candidate.startswith("json"):
+                payload = candidate[4:].strip()
+                if payload:
+                    return payload
+    return stripped
+
+
+def _review_strategy_workflow_with_llm(
+    *,
+    name: str,
+    description: str,
+    workflow: WorkflowGraphPersisted,
+    strategy_id: str | None = None,
+) -> dict[str, Any]:
+    # Lazy import avoids introducing module import cycles.
+    from app.chat.controller import build_chat_model_from_workspace_settings, get_llm_settings
+
+    llm = build_chat_model_from_workspace_settings(get_llm_settings())
+    workflow_payload = workflow.model_dump(by_alias=True)
+    prompt = (
+        "请审查下面的策略工作流是否可用，重点检查："
+        "结构完整性（节点/连线是否明显异常）、参数合理性、潜在运行风险、工作流出入口是否完整连接、是否存在闭环、中断、"
+        "以及名称描述与工作流意图是否一致。"
+        "请仅输出 JSON，格式为："
+        '{"approved": boolean, "summary": string, "issues": [string], "suggestions": [string]}'
+        "。如果没有问题，issues 传空数组。"
+    )
+    context = {
+        "strategy_id": strategy_id,
+        "name": name,
+        "description": description,
+        "workflow": workflow_payload,
+    }
+    resp = llm.invoke(
+        [
+            SystemMessage(content="你是严格的策略工作流审查助手，只返回 JSON。"),
+            HumanMessage(
+                content=f"{prompt}\n\n审查对象如下：\n```json\n{json.dumps(context, ensure_ascii=False)}\n```"
+            ),
+        ],
+        config={"metadata": {"silent_stream": True}},
+    )
+
+    content = resp.content if isinstance(resp.content, str) else str(resp.content)
+    raw = _extract_json_block(content)
+    try:
+        review = json.loads(raw)
+    except Exception as exc:
+        raise ValueError(f"LLM 审查结果不可解析：{exc}") from exc
+
+    approved = bool(review.get("approved", False))
+    issues = review.get("issues") or []
+    if not approved:
+        issue_text = "；".join(str(x) for x in issues if str(x).strip()) or "未通过 LLM 审查"
+        raise ValueError(f"策略工作流审查未通过：{issue_text}")
+    return {
+        "approved": True,
+        "summary": str(review.get("summary", "")).strip(),
+        "issues": [str(x) for x in issues if str(x).strip()],
+        "suggestions": [str(x) for x in (review.get("suggestions") or []) if str(x).strip()],
+    }
+
+
 @safe_tool(
     "加载策略工作流模板",
     description="加载策略工作流模板。\n将工作流模板加载到store, 用于初始化策略编辑结构，这会覆盖现在的store中的workflowDraft，后续可基于模板填充节点与连线。",
@@ -185,6 +256,11 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
         raise ValueError("当前草稿已绑定现有策略，请使用更新策略工具保存修改")
 
     workflow = await _require_workflow_draft(runtime)
+    review = _review_strategy_workflow_with_llm(
+        name=name,
+        description=description,
+        workflow=workflow,
+    )
     strategy = create_strategy(
         StrategyCreate(name=name, description=description, workflow=workflow)
     )
@@ -197,7 +273,9 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
         strategy_id=str(strategy_id) if strategy_id else None,
         is_dirty=False,
     )
-    return strategy
+    out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
+    out["review"] = review
+    return out
 
 
 @safe_tool(
@@ -258,6 +336,12 @@ async def update_strategy(
         )
 
     workflow = await _require_workflow_draft(runtime)
+    review = _review_strategy_workflow_with_llm(
+        strategy_id=strategy_id,
+        name=name,
+        description=description,
+        workflow=workflow,
+    )
     strategy = patch_strategy(
         strategy_id,
         StrategyPatch(name=name, description=description, workflow=workflow),
@@ -268,7 +352,9 @@ async def update_strategy(
         strategy_id=strategy_id,
         is_dirty=False,
     )
-    return strategy
+    out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
+    out["review"] = review
+    return out
 
 
 @safe_tool("删除策略", description="删除指定策略。\n入参 strategy_id；返回删除前记录。")

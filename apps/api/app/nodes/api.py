@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+from workflow import workflow_node_type_key
+from workflow.node_loader import WorkflowNodeLoader
 
 from app.nodes.constants import DEFAULT_NODE_SOURCE
 from app.nodes.controller import (
@@ -56,7 +58,14 @@ def get_node(node_id: str) -> WorkflowNodeDetailPublic:
 @router.patch("/{node_id}", response_model=WorkflowNodeDetailPublic)
 def patch_node(node_id: str, body: WorkflowNodePatch) -> WorkflowNodeDetailPublic:
     try:
-        rec = update_node_record(node_id, body)
+        source = (body.source or "").strip()
+        if not source:
+            raise ValueError("source 不能为空")
+        node_cls = WorkflowNodeLoader.load_workflow_node_class_from_source(source)
+        parsed_node_id = workflow_node_type_key(node_cls).strip()
+        if parsed_node_id != node_id:
+            raise ValueError("路径 node_id 与源码解析出的 node_id 不一致")
+        rec = update_node_record(source)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

@@ -163,6 +163,14 @@ def _extract_tools_namespace_key(ns: Any) -> str | None:
     return None
 
 
+def _should_skip_stream_chunk(metadata: Any) -> bool:
+    if not isinstance(metadata, dict):
+        return False
+    if metadata.get("lc_source") == "summarization":
+        return True
+    return bool(metadata.get("silent_stream"))
+
+
 def _collect_run_segment_mapping_from_task(
     chunk: dict[str, Any],
     run_segment_id_map: dict[str, str],
@@ -215,8 +223,8 @@ def parse_messages(  # noqa: C901
         return
     token, metadata = chunk_data
     # DeepAgents may emit internal summarization tokens during context compaction.
-    # Keep this process transparent to users by not forwarding those chunks.
-    if isinstance(metadata, dict) and metadata.get("lc_source") == "summarization":
+    # Also suppress internal tool-side model calls (e.g. code-review prechecks).
+    if _should_skip_stream_chunk(metadata):
         return
 
     if isinstance(token, AIMessageChunk):
@@ -234,6 +242,10 @@ def parse_messages(  # noqa: C901
             for tc in token.tool_call_chunks:
                 name = tc.get("name")
                 tc_id = tc.get("id")
+                if not isinstance(tc_id, str) or not tc_id:
+                    # Some early chunks may not carry a stable tool_call id yet.
+                    # Skip until id is available to avoid invalid ToolPayload.
+                    continue
                 event_key = ("start", tc_id)
                 if event_key in emitted_tool_event_keys:
                     continue
@@ -270,6 +282,8 @@ def parse_messages(  # noqa: C901
 
     if isinstance(token, ToolMessage):
         tc_id = token.tool_call_id
+        if not isinstance(tc_id, str) or not tc_id:
+            return
         if token.status == "error":
             event_key = ("error", tc_id)
             if event_key in emitted_tool_event_keys:

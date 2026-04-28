@@ -10,7 +10,6 @@ def register_workflow_node_chat_tools() -> None:
     from app.nodes.tools import (
         create_workflow_node_tool,
         delete_workflow_node_tool,
-        get_formatted_workflow_node,
         get_new_workflow_node_template,
         get_workflow_node_detail,
         get_workflow_node_list,
@@ -28,11 +27,6 @@ def register_workflow_node_chat_tools() -> None:
         ("node.create_workflow_node", create_workflow_node_tool, ToolAuthorization.allowed),
         ("node.get_workflow_node_detail", get_workflow_node_detail, ToolAuthorization.allowed),
         ("node.get_workflow_node_list", get_workflow_node_list, ToolAuthorization.allowed),
-        (
-            "node.get_formatted_workflow_node",
-            get_formatted_workflow_node,
-            ToolAuthorization.allowed,
-        ),
         ("node.update_workflow_node", update_workflow_node, ToolAuthorization.need_authorize),
         ("node.delete_workflow_node", delete_workflow_node_tool, ToolAuthorization.disabled),
     ]
