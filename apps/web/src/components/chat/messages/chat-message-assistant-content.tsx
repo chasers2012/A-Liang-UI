@@ -3,14 +3,14 @@
 import { memo, useMemo } from 'react';
 import { useAtomValue } from 'jotai';
 
-import { activeSessionIdAtom, isSessionGeneratingAtomFamily, replyOfMessageAtomFamily } from '@/models/chat';
+import { activeSessionIdAtom, isReplyStreamingOfMessageAtomFamily, replyOfMessageAtomFamily } from '@/models/chat';
 import type { AssistantBlock } from '@/models/chat/types';
 import { ChatAssistantSingleBlock } from './chat-assistant-single-block';
 import { ChatSubagentTaskCard } from './chat-subagent-task-card';
 import { partitionAssistantRuns } from './chat-subagent-task-blocks';
 
 export const ChatMessageAssistantContent = memo(function ChatMessageAssistantContent({ mid }: { mid: string }) {
-  const isSending = useAtomValue(isSessionGeneratingAtomFamily(mid));
+  const isSending = useAtomValue(isReplyStreamingOfMessageAtomFamily(mid));
   const message = useAtomValue(replyOfMessageAtomFamily(mid));
   const sessionId = useAtomValue(activeSessionIdAtom);
 
