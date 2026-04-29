@@ -73,6 +73,7 @@ def gather_node_inputs(
 
 def gather_workflow_outputs(
     graph: WorkflowGraph,
+    workflow_inputs: dict[str, Any],
     outputs: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     ret: dict[str, Any] = {}
@@ -90,21 +91,24 @@ def gather_workflow_outputs(
         if len(matched) == 1:
             link = matched[0]
             if link.from_.kind == "workflow_input":
-                # For symmetry; rarely used.
-                ret[name] = None
+                ret[name] = workflow_inputs.get(link.from_.socket)
             else:
                 from_id = link.from_.node_id or ""
                 bucket = outputs.get(from_id, {})
                 if link.from_.socket in bucket:
                     ret[name] = bucket[link.from_.socket]
             continue
-        ret[name] = {
-            f"{(link.from_.node_id or '')}:{link.from_.socket}": outputs.get(
-                link.from_.node_id or "", {}
-            ).get(link.from_.socket)
-            for link in matched
-            if link.from_.kind == "node"
-        }
+        ret[name] = {}
+        for link in matched:
+            if link.from_.kind == "workflow_input":
+                ret[name][f"workflow_input:{link.from_.socket}"] = workflow_inputs.get(
+                    link.from_.socket
+                )
+                continue
+            from_id = link.from_.node_id or ""
+            ret[name][f"{from_id}:{link.from_.socket}"] = outputs.get(from_id, {}).get(
+                link.from_.socket
+            )
     return ret
 
 
@@ -143,24 +147,19 @@ class WorkflowExecutor:
 
         graph = Parser.parse_workflow_graph(payload)
         workflow_inputs_dict = dict(workflow_inputs or {})
-        if not graph.nodes:
-            workflow_inputs = {
-                socket.name: workflow_inputs_dict.get(socket.name)
-                for socket in graph.workflow_inputs
-                if getattr(socket, "name", "")
-            }
-            return {
-                "nodes": {},
-                "workflow_inputs": workflow_inputs,
-                "workflow_outputs": {},
-            }
-
-        ctx = dict(context or {})
         workflow_inputs = {
             socket.name: workflow_inputs_dict.get(socket.name)
             for socket in graph.workflow_inputs
             if getattr(socket, "name", "")
         }
+        if not graph.nodes:
+            return {
+                "nodes": {},
+                "workflow_inputs": workflow_inputs,
+                "workflow_outputs": gather_workflow_outputs(graph, workflow_inputs, {}),
+            }
+
+        ctx = dict(context or {})
         node_outputs: dict[str, dict[str, Any]] = {}
         order = topological_order(graph.nodes, graph.links)
         by_id = {n.id: n for n in graph.nodes}
@@ -185,7 +184,7 @@ class WorkflowExecutor:
                 node, node_out if isinstance(node_out, tuple) else (node_out,)
             )
 
-        workflow_outputs = gather_workflow_outputs(graph, node_outputs)
+        workflow_outputs = gather_workflow_outputs(graph, workflow_inputs, node_outputs)
         return {
             "nodes": node_outputs,
             "workflow_inputs": workflow_inputs,

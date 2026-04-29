@@ -18,9 +18,6 @@ class DependencyResolver:
     def data_set(self) -> DataSet:
         return self._data_set
 
-    def list_registered_fields(self) -> list[str]:
-        return self._data_set.list_registered_fields()
-
     def get_panel(
         self,
         *,

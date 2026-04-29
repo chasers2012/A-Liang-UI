@@ -29,6 +29,7 @@ import { Page } from '@/components/page';
 import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
+import { Stepper, StepperItem } from '@/components/reui/stepper';
 import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
 import { ApiError } from '@/api/client';
@@ -271,13 +272,11 @@ function DataSetBindingRowBlock({
       </div>
 
       <div className="space-y-2">
-        <Label>索引列（date / asset）</Label>
-        <p className="text-xs text-muted-foreground">
-          这两列用于把数据标准化为 (date, asset) 面板索引；与依赖字段映射独立。
-        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">date_column</Label>
+            <Label>
+              日期列<span className="text-xs text-muted-foreground">将被重命名为date</span>
+            </Label>
             {useColumnSelects ? (
               <Select
                 modal={false}
@@ -305,7 +304,10 @@ function DataSetBindingRowBlock({
             )}
           </div>
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">asset_column</Label>
+            <Label>
+              资产列<span className="text-xs text-muted-foreground">将被重命名为asset</span>
+            </Label>
+
             {useColumnSelects ? (
               <Select
                 modal={false}
@@ -336,7 +338,9 @@ function DataSetBindingRowBlock({
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">columns（物理列；空=加载全部）</Label>
+        <Label>
+          筛选数据列<span className="text-xs text-muted-foreground">留空启用全部</span>
+        </Label>
         {useColumnSelects ? (
           <Combobox
             items={loadColumnOptions}
@@ -400,6 +404,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
   const [loading, setLoading] = useState(mode === 'edit');
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
   /** 数据源可用字段（用于勾选），按数据源 id 缓存 */
@@ -640,6 +645,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
 
   return (
     <Page
+      className={cn(activeStep === 1 ? 'h-full overflow-hidden' : undefined)}
       gap="none"
       title={
         <EditablePageTitle
@@ -668,7 +674,11 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         />
       }
     >
-      <form id={DATA_SET_MAIN_FORM_ID} onSubmit={(e) => void onSubmit(e)} className="space-y-8">
+      <form
+        id={DATA_SET_MAIN_FORM_ID}
+        onSubmit={(e) => void onSubmit(e)}
+        className={cn(activeStep === 1 ? 'flex min-h-0 flex-1 flex-col gap-4 overflow-hidden' : 'space-y-8')}
+      >
         {bindingDatasources.length === 0 ? (
           <Alert variant="destructive">
             <AlertTitle>无可用数据源</AlertTitle>
@@ -683,93 +693,112 @@ export function DataSetForm({ mode, dataSetId }: Props) {
           </Alert>
         ) : null}
 
-        <p className="text-sm text-muted-foreground">
-          可配置多条数据源绑定；当某条绑定的 columns 为空时，将加载该数据源的全部物理列，并由预处理生成因子所需逻辑列。
-        </p>
+        <Stepper className={cn(activeStep === 1 ? 'shrink-0' : undefined)}>
+          <StepperItem
+            index={0}
+            title="数据源与参数"
+            description="绑定数据源，配置评价区间与标的参数"
+            active={activeStep === 0}
+            completed={activeStep > 0}
+            onClick={() => setActiveStep(0)}
+          />
+          <StepperItem
+            index={1}
+            title="预处理工作流编辑"
+            description="编辑预处理工作流节点与连线"
+            active={activeStep === 1}
+            onClick={() => setActiveStep(1)}
+          />
+        </Stepper>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <CardTitle>数据源绑定</CardTitle>
-                <CardDescription>
-                  每条绑定对应一个数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
-                </CardDescription>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={addBinding}>
-                <Plus className="size-4" />
-                添加数据源
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {form.bindings.map((row, index) => (
-              <DataSetBindingRowBlock
-                key={index}
-                index={index}
-                row={row}
-                bindingsLength={form.bindings.length}
-                dependencyFieldsByDsId={dependencyFieldsByDsId}
-                dsItems={dsItems}
-                bindingDatasources={(() => {
-                  const currentId = row.datasource_id.trim();
-                  const takenIds = new Set(
-                    form.bindings.map((b, i) => (i === index ? '' : b.datasource_id.trim())).filter(Boolean),
-                  );
-                  return bindingDatasources.filter((d) => d.id === currentId || !takenIds.has(d.id));
-                })()}
-                updateBinding={updateBinding}
-                removeBinding={removeBinding}
-              />
-            ))}
-          </CardContent>
-        </Card>
-        <PreprocessingWorkflowEditorBlock
-          className="h-[80vh]"
-          workflow={form.preprocessing_workflow}
-          canvasKey={canvasKey}
-          canvasRef={canvasRef}
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle>评价区间与参数</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="ts-start">开始日期</Label>
-                <DatePicker
-                  id="ts-start"
-                  value={form.start}
-                  onChange={(v) => set({ start: v })}
-                  placeholder="选择开始日期"
-                  required
-                />
+        <div className={cn('space-y-8', activeStep === 0 ? 'block' : 'hidden')}>
+          <Card>
+            <CardHeader>
+              <CardTitle>参数</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="ts-start">开始日期</Label>
+                  <DatePicker
+                    id="ts-start"
+                    value={form.start}
+                    onChange={(v) => set({ start: v })}
+                    placeholder="选择开始日期"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ts-end">结束日期</Label>
+                  <DatePicker
+                    id="ts-end"
+                    value={form.end}
+                    onChange={(v) => set({ end: v })}
+                    placeholder="选择结束日期"
+                    required
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ts-end">结束日期</Label>
-                <DatePicker
-                  id="ts-end"
-                  value={form.end}
-                  onChange={(v) => set({ end: v })}
-                  placeholder="选择结束日期"
-                  required
+                <Label htmlFor="ts-instruments">标的代码（可选）</Label>
+                <Textarea
+                  id="ts-instruments"
+                  value={form.instrument_codes_text}
+                  onChange={(e) => set({ instrument_codes_text: e.target.value })}
+                  placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
+                  rows={4}
+                  className="min-h-0 resize-y font-mono text-xs"
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ts-instruments">标的代码（可选）</Label>
-              <Textarea
-                id="ts-instruments"
-                value={form.instrument_codes_text}
-                onChange={(e) => set({ instrument_codes_text: e.target.value })}
-                placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
-                rows={4}
-                className="min-h-0 resize-y font-mono text-xs"
-              />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <CardTitle>数据源绑定</CardTitle>
+                  <CardDescription>
+                    每条绑定对应一个数据源及其提供的因子依赖列；多源时须为每条绑定勾选或填写依赖。
+                  </CardDescription>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addBinding}>
+                  <Plus className="size-4" />
+                  添加数据源
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {form.bindings.map((row, index) => (
+                <DataSetBindingRowBlock
+                  key={index}
+                  index={index}
+                  row={row}
+                  bindingsLength={form.bindings.length}
+                  dependencyFieldsByDsId={dependencyFieldsByDsId}
+                  dsItems={dsItems}
+                  bindingDatasources={(() => {
+                    const currentId = row.datasource_id.trim();
+                    const takenIds = new Set(
+                      form.bindings.map((b, i) => (i === index ? '' : b.datasource_id.trim())).filter(Boolean),
+                    );
+                    return bindingDatasources.filter((d) => d.id === currentId || !takenIds.has(d.id));
+                  })()}
+                  updateBinding={updateBinding}
+                  removeBinding={removeBinding}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className={cn('flex min-h-0 flex-1 flex-col gap-4 overflow-hidden', activeStep === 1 ? 'flex' : 'hidden')}>
+          <PreprocessingWorkflowEditorBlock
+            className="min-h-0 flex-1"
+            workflow={form.preprocessing_workflow}
+            canvasKey={canvasKey}
+            canvasRef={canvasRef}
+          />
+        </div>
       </form>
     </Page>
   );

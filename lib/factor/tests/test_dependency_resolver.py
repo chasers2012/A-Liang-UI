@@ -152,21 +152,6 @@ def test_dependency_columns_multiple_fields() -> None:
     assert float(out.iloc[0]["open"]) == 2.0
 
 
-def test_list_registered_fields() -> None:
-    ds = DataSet(
-        [
-            DataSourceBinding(
-                _FixedSource(_panel([], [])), ["a", "b"], date_column="date", asset_column="asset"
-            ),
-            DataSourceBinding(
-                _FixedSource(_panel([], [])), ["b", "c"], date_column="date", asset_column="asset"
-            ),
-        ]
-    )
-    r = DependencyResolver(ds)
-    assert r.list_registered_fields() == ["a", "b", "c"]
-
-
 def test_unknown_field_raises() -> None:
     ds = DataSet(
         [

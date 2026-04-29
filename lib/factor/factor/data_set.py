@@ -86,18 +86,46 @@ class DataSet:
 
         return DependencyResolver(self)
 
-    def list_registered_fields(self) -> list[str]:
+    def list_preprocessed_fields(
+        self,
+        *,
+        window: int,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        instrument_codes: list[str] | None = None,
+    ) -> list[str]:
+        if not self.data_source_bindings:
+            raise ValueError("No DataSourceBinding configured in DataSet")
+
+        eff_start = _merge_date(start_date, self.start_date)
+        eff_end = _merge_date(end_date, self.end_date)
+        if not eff_end:
+            raise ValueError(
+                "end_date is required (pass to list_preprocessed_fields or set end_date on DataSet)"
+            )
+        eff_codes = _merge_instrument_codes(instrument_codes, self.instrument_codes)
+        load_start = panel_load_start_date(eff_start, eff_end, window)
+
+        raw_frames, _binding_meta = self._load_raw_frames_for_panel(
+            load_start=load_start,
+            end_date=eff_end,
+            instrument_codes=eff_codes,
+        )
+        if not raw_frames:
+            return []
+
+        preprocessed = self._apply_preprocessor(raw_frames=raw_frames)
+        if preprocessed.empty:
+            return []
+
+        if isinstance(preprocessed.index, pd.MultiIndex):
+            return [str(c) for c in preprocessed.columns]
+
         out: list[str] = []
-        for b in self.data_source_bindings:
-            if b.columns:
-                for c in b.columns:
-                    if c not in out:
-                        out.append(c)
-            else:
-                for c in b.datasource.list_columns():
-                    if c not in out:
-                        out.append(c)
-        return sorted(out)
+        for c in preprocessed.columns:
+            if c not in {"date", "asset"}:
+                out.append(str(c))
+        return out
 
     def _physical_plan_for_binding(self, binding: DataSourceBinding) -> list[str]:
         # must include index date column for standardization
@@ -130,6 +158,20 @@ class DataSet:
         empty_idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
         return pd.DataFrame(columns=columns, index=empty_idx)
 
+    def _standardize_binding_index_columns(
+        self, *, binding: DataSourceBinding, frame: pd.DataFrame
+    ) -> pd.DataFrame:
+        renamed = frame
+        if binding.date_column in renamed.columns and "date" not in renamed.columns:
+            renamed = renamed.rename(columns={binding.date_column: "date"})
+        if (
+            binding.asset_column is not None
+            and binding.asset_column in renamed.columns
+            and "asset" not in renamed.columns
+        ):
+            renamed = renamed.rename(columns={binding.asset_column: "asset"})
+        return renamed
+
     def _load_binding_panel(
         self,
         binding: DataSourceBinding,
@@ -148,11 +190,7 @@ class DataSet:
             return self._empty_panel(columns=[])
 
         # preprocessor 可能会把 date/asset 先标准化成 "date"/"asset"
-        renamed = raw
-        if binding.date_column in raw.columns and "date" not in raw.columns:
-            renamed = renamed.rename(columns={binding.date_column: "date"})
-        if binding.asset_column in renamed.columns and "asset" not in renamed.columns:
-            renamed = renamed.rename(columns={binding.asset_column: "asset"})
+        renamed = self._standardize_binding_index_columns(binding=binding, frame=raw)
 
         missing_index = sorted({"date", "asset"} - set(renamed.columns))
         if missing_index:
@@ -197,7 +235,8 @@ class DataSet:
             )
             key = getattr(b.datasource, "id", None)
             ds_key = str(key) if key is not None else str(id(b.datasource))
-            raw_frames[ds_key] = b.datasource.load_frame(columns=cols, filters=filters)
+            raw = b.datasource.load_frame(columns=cols, filters=filters)
+            raw_frames[ds_key] = self._standardize_binding_index_columns(binding=b, frame=raw)
             binding_meta[ds_key] = (b, cols, filters)
 
         return raw_frames, binding_meta

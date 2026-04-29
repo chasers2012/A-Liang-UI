@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Callable
 
 import pandas as pd
@@ -40,11 +39,6 @@ def _build_preprocessor_from_workflow(
 
     workflow = (workflow_json or "").strip()
     if not workflow:
-        return None
-
-    payload = json.loads(workflow)
-    nodes = payload.get("nodes", []) if isinstance(payload, dict) else []
-    if not isinstance(nodes, list) or len(nodes) == 0:
         return None
 
     executor = WorkflowExecutor()
@@ -336,14 +330,10 @@ def get_data_set_panel_preview(
     """
     ds = get_data_set(data_set_id)
     if ds is None:
-        raise HTTPException(status_code=404, detail="数据集不存在")
+        raise LookupError("数据集不存在")
 
     if not ds.start_date or not ds.end_date:
-        raise HTTPException(status_code=400, detail="数据集 start/end 未配置")
-
-    fields = ds.list_registered_fields()
-    if not fields:
-        raise HTTPException(status_code=400, detail="无法预览：数据集中没有可用字段")
+        raise ValueError("数据集 start/end 未配置")
 
     safe_limit = max(int(limit), 1)
     safe_sample_bdays = max(int(sample_bdays), 1)
@@ -360,16 +350,20 @@ def get_data_set_panel_preview(
 
     sample_start = start_ts.strftime("%Y-%m-%d")
     sample_end = sample_end_ts.strftime("%Y-%m-%d")
+    fields = ds.list_preprocessed_fields(
+        window=safe_window,
+        start_date=sample_start,
+        end_date=sample_end,
+    )
+    if not fields:
+        raise ValueError("无法预览：预处理结果没有可用字段")
 
-    try:
-        panel = ds.get_panel(
-            fields=fields,
-            window=safe_window,
-            start_date=sample_start,
-            end_date=sample_end,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+    panel = ds.get_panel(
+        fields=fields,
+        window=safe_window,
+        start_date=sample_start,
+        end_date=sample_end,
+    )
 
     panel = panel.sort_index()
     if panel.shape[0] > safe_limit:

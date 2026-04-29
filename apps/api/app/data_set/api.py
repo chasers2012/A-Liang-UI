@@ -67,9 +67,16 @@ def preview_data_set_panel(
     sample_bdays: int = 5,
     window: int = 0,
 ) -> DataSetPanelPreviewCsvResponse:
-    return controller.get_data_set_panel_preview(
-        data_set_id,
-        limit=limit,
-        sample_bdays=sample_bdays,
-        window=window,
-    )
+    try:
+        return controller.get_data_set_panel_preview(
+            data_set_id,
+            limit=limit,
+            sample_bdays=sample_bdays,
+            window=window,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e

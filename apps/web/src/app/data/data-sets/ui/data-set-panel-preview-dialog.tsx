@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { previewDataSetPanel, type DataSetPanelPreviewCsvResponse } from '@/api/data-sets';
 
 type CsvTable = {
@@ -159,7 +158,7 @@ export function DataSetPanelPreviewDialog({
         <DialogHeader>
           <DialogTitle>数据集预览</DialogTitle>
         </DialogHeader>
-        <DialogBody variant="inset" className="space-y-4">
+        <DialogBody variant="inset" className="space-y-4 overflow-y-hidden">
           {previewLoading ? (
             <p className="text-sm text-muted-foreground">加载预处理后的数据中…</p>
           ) : previewError ? (
@@ -168,29 +167,37 @@ export function DataSetPanelPreviewDialog({
               <AlertDescription>{previewError}</AlertDescription>
             </Alert>
           ) : table && table.headers.length > 0 ? (
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {table.headers.map((h) => (
-                      <TableHead key={h} className="min-w-24 max-w-56 truncate font-mono text-xs">
-                        {h}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {table.rows.map((r, idx) => (
-                    <TableRow key={idx}>
-                      {r.map((v, cellIdx) => (
-                        <TableCell key={`${idx}:${cellIdx}`} className="max-w-56 truncate font-mono text-xs">
-                          {v}
-                        </TableCell>
+            <div className="overflow-x-auto rounded-md border border-border/60">
+              <div className="max-h-[min(60vh,560px)] overflow-y-auto">
+                <table className="w-max min-w-full caption-bottom border-collapse text-sm text-card-foreground">
+                  <thead className="[&_tr]:border-b [&_tr]:border-border/80 [&_tr]:bg-muted/40 [&_tr]:transition-colors [&_tr:hover]:bg-muted/50">
+                    <tr className="border-b border-border/60 transition-colors">
+                      {table.headers.map((h) => (
+                        <th
+                          key={h}
+                          className="sticky top-0 z-10 h-10 min-w-24 max-w-56 truncate bg-muted/95 px-3 text-left align-middle font-mono text-xs font-medium whitespace-nowrap text-muted-foreground backdrop-blur-sm"
+                        >
+                          {h}
+                        </th>
                       ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr:last-child]:border-0">
+                    {table.rows.map((r, idx) => (
+                      <tr key={idx} className="border-b border-border/60 transition-colors hover:bg-muted/30">
+                        {r.map((v, cellIdx) => (
+                          <td
+                            key={`${idx}:${cellIdx}`}
+                            className="max-w-56 truncate px-3 py-2 font-mono text-xs align-middle whitespace-nowrap"
+                          >
+                            {v}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">暂无预览数据。</p>
