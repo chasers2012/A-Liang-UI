@@ -4,8 +4,9 @@ from collections.abc import Callable
 
 from sqlmodel import col, delete, select
 
-from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow
 from app.persistence.sqlite_db import get_session
+
+from .models import KnowledgeChunkRow, KnowledgeDocumentRow
 
 
 class KnowledgeStore:

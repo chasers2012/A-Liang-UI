@@ -4,7 +4,6 @@ import type {
   KnowledgeDocumentPublic,
   KnowledgeReindexResponse,
   KnowledgeSearchResponse,
-  KnowledgeSettings,
 } from '@/models/knowledge/dto';
 
 export function listKnowledgeDocuments(): Promise<KnowledgeDocumentPublic[]> {
@@ -49,15 +48,4 @@ export function reindexKnowledgeDocument(documentId: string): Promise<KnowledgeR
 
 export function searchKnowledge(query: string): Promise<KnowledgeSearchResponse> {
   return apiFetchJson<KnowledgeSearchResponse>(`/knowledge/search?query=${encodeURIComponent(query)}`);
-}
-
-export function getKnowledgeSettings(): Promise<KnowledgeSettings> {
-  return apiFetchJson<KnowledgeSettings>('/knowledge/settings');
-}
-
-export function putKnowledgeSettings(body: KnowledgeSettings): Promise<KnowledgeSettings> {
-  return apiFetchJson<KnowledgeSettings>('/knowledge/settings', {
-    method: 'PUT',
-    body: JSON.stringify(body),
-  });
 }

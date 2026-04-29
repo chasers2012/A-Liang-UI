@@ -4,12 +4,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.http_errors import http_bad_request
-from app.knowledge import controller
-from app.knowledge.schemas import (
+
+from . import controller
+from .schemas import (
     KnowledgeDocumentCreateRequest,
     KnowledgeDocumentPublic,
     KnowledgeSearchHit,
-    KnowledgeSettings,
 )
 
 router = APIRouter(prefix="/knowledge", tags=["knowledge"])
@@ -67,16 +67,3 @@ def reindex_knowledge_document(document_id: str) -> KnowledgeReindexResponse:
 def search_knowledge(query: str) -> KnowledgeSearchResponse:
     hits = controller.search_knowledge(query)
     return KnowledgeSearchResponse(hits=hits)
-
-
-@router.get("/settings", response_model=KnowledgeSettings)
-def get_knowledge_settings() -> KnowledgeSettings:
-    return controller.get_settings()
-
-
-@router.put("/settings", response_model=KnowledgeSettings)
-def put_knowledge_settings(body: KnowledgeSettings) -> KnowledgeSettings:
-    try:
-        return controller.put_settings(body)
-    except ValueError as exc:
-        http_bad_request(exc)

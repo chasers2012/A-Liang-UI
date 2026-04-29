@@ -1,30 +1,29 @@
 from __future__ import annotations
 
-from contextlib import suppress
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
 from workspace import workspace_path
 
-from app.config import controller as config_controller
-from app.config import register_config_spec
-from app.config.schema import ConfigModuleSpec
-from app.knowledge.models import KnowledgeChunkRow, KnowledgeDocumentRow
-from app.knowledge.parser import extract_text_from_path
-from app.knowledge.rag import RetrievalResult, VectorStoreAdapter
-from app.knowledge.schemas import (
-    KnowledgeDocumentCreateRequest,
-    KnowledgeDocumentPublic,
-    KnowledgeSearchHit,
-    KnowledgeSettings,
-)
-from app.knowledge.store import KnowledgeStore
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
 from app.scheduler.schemas import SchedulerJobPublic
 
-_KNOWLEDGE_CONFIG_MODULE = "knowledge_rag"
+from .config import (
+    KnowledgeSettings,
+    get_knowledge_settings,
+)
+from .models import KnowledgeChunkRow, KnowledgeDocumentRow
+from .parser import extract_text_from_path
+from .rag import RetrievalResult, VectorStoreAdapter
+from .schemas import (
+    KnowledgeDocumentCreateRequest,
+    KnowledgeDocumentPublic,
+    KnowledgeSearchHit,
+)
+from .store import KnowledgeStore
+
 _KNOWLEDGE_INDEX_TASK_TYPE = "knowledge.index"
 
 
@@ -32,37 +31,12 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _register_settings_module() -> None:
-    defaults = KnowledgeSettings().model_dump(mode="json")
-    rjsf_schema, rjsf_ui_schema = KnowledgeSettings.rjsf_schema_and_ui_schema()
-    spec = ConfigModuleSpec(
-        key=_KNOWLEDGE_CONFIG_MODULE,
-        title="知识库检索",
-        description="配置 Chat RAG 检索参数。",
-        filename="agent/knowledge.json",
-        default_values=defaults,
-        json_schema=rjsf_schema,
-        ui_schema=rjsf_ui_schema,
-    )
-    with suppress(ValueError):
-        register_config_spec(spec)
-
-
 def get_settings() -> KnowledgeSettings:
-    values = config_controller.get_module_config(_KNOWLEDGE_CONFIG_MODULE)
-    return KnowledgeSettings.model_validate(values)
-
-
-def put_settings(body: KnowledgeSettings) -> KnowledgeSettings:
-    values = config_controller.put_module_config(
-        _KNOWLEDGE_CONFIG_MODULE,
-        body.model_dump(mode="json", exclude_none=False),
-    )
-    return KnowledgeSettings.model_validate(values)
+    return get_knowledge_settings()
 
 
 def _adapter() -> VectorStoreAdapter:
-    return VectorStoreAdapter(get_settings())
+    return VectorStoreAdapter(get_knowledge_settings())
 
 
 def _to_public(row: KnowledgeDocumentRow) -> KnowledgeDocumentPublic:
@@ -194,8 +168,8 @@ def search_knowledge(query: str) -> list[KnowledgeSearchHit]:
     rows = {row.id: row for row in KnowledgeStore.list_documents()}
     retrievals = _adapter().retrieve(
         query=query,
-        top_k=settings.top_k,
-        threshold=settings.threshold,
+        top_k=int(settings.get("top_k", 4)),
+        threshold=float(settings.get("threshold", 0.2)),
         document_ids=None,
     )
     return [_retrieval_to_hit(item, rows) for item in retrievals]
@@ -213,7 +187,7 @@ def _retrieval_to_hit(
 
 
 def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
-    from app.knowledge.controller import index_document
+    from .controller import index_document
 
     document_id = str(payload.get("document_id", "")).strip()
     if not document_id:
@@ -227,6 +201,3 @@ def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
 
 
 register_task_handler(_KNOWLEDGE_INDEX_TASK_TYPE, _knowledge_index_handler)
-
-
-_register_settings_module()

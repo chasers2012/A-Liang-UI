@@ -13,7 +13,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from workspace import workspace_path
 
-from app.knowledge.schemas import KnowledgeSettings
+from .config import KnowledgeSettings
 
 
 class LocalEmbeddings(Embeddings):
@@ -21,16 +21,16 @@ class LocalEmbeddings(Embeddings):
 
     def __init__(self, settings: KnowledgeSettings) -> None:
         self._settings = settings
-        provider = settings.embedding_provider.lower()
-        model = settings.embedding_model
-        kwargs = dict(settings.embedding_kwargs or {})
+        provider = str(settings.get("embedding_provider", "huggingface")).lower()
+        model = str(settings.get("embedding_model", "BAAI/bge-small-zh-v1.5"))
+        kwargs = dict(settings.get("embedding_kwargs") or {})
         if provider == "huggingface":
             self._embedding_fn = HuggingFaceEmbeddings(
                 model_name=model,
                 encode_kwargs=kwargs,
             )
             return
-        raise ValueError(f"不支持的 embedding_provider: {settings.embedding_provider}")
+        raise ValueError(f"不支持的 embedding_provider: {provider}")
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return [list(map(float, vector)) for vector in self._embedding_fn.embed_documents(texts)]
@@ -67,7 +67,7 @@ class VectorStoreAdapter:
         persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
         self._store = Chroma(
-            collection_name=self._settings.collection_name,
+            collection_name=str(self._settings.get("collection_name", "knowledge")),
             embedding_function=self._embedding,
             persist_directory=persist_dir.as_posix(),
         )
@@ -77,16 +77,21 @@ class VectorStoreAdapter:
     def splitter(self) -> RecursiveCharacterTextSplitter:
         if self._splitter is None:
             self._splitter = RecursiveCharacterTextSplitter(
-                chunk_size=self._settings.chunk_size,
-                chunk_overlap=self._settings.chunk_overlap,
+                chunk_size=int(self._settings.get("chunk_size", 800)),
+                chunk_overlap=int(self._settings.get("chunk_overlap", 120)),
             )
         return self._splitter
 
     @property
     def reranker(self) -> CrossEncoderReranker:
         if self._reranker is None:
-            model = HuggingFaceCrossEncoder(model_name=self._settings.rerank_model)
-            self._reranker = CrossEncoderReranker(model=model, top_n=self._settings.rerank_top_n)
+            model = HuggingFaceCrossEncoder(
+                model_name=str(self._settings.get("rerank_model", "BAAI/bge-reranker-base"))
+            )
+            self._reranker = CrossEncoderReranker(
+                model=model,
+                top_n=int(self._settings.get("rerank_top_n", 4)),
+            )
         return self._reranker
 
     def split_text(self, text: str) -> list[str]:
@@ -140,7 +145,7 @@ class VectorStoreAdapter:
 
     def _build_bm25_retriever(self, documents: list[Document]) -> BM25Retriever:
         retriever = BM25Retriever.from_documents(documents)
-        retriever.k = self._settings.top_k
+        retriever.k = int(self._settings.get("top_k", 4))
         return retriever
 
     def _load_documents(self, document_ids: set[str] | None = None) -> list[Document]:
@@ -184,7 +189,8 @@ class VectorStoreAdapter:
                 )
             )
         results.sort(key=lambda item: item.score, reverse=True)
-        return results[: min(self._settings.rerank_top_n, len(results))]
+        rerank_top_n = int(self._settings.get("rerank_top_n", 4))
+        return results[: min(rerank_top_n, len(results))]
 
     def retrieve(
         self,
