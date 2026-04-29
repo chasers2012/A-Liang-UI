@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
+
 from app.chat import controller
 from app.chat.schemas import (
     ChatArchivedSummaryPublic,
@@ -15,22 +18,9 @@ from app.chat.schemas import (
     ChatRenameBody,
     ChatRequest,
     ChatSummaryPublic,
-    LlmSettings,
 )
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/chat", tags=["chat"])
-
-
-@router.get("/llm-settings", response_model=LlmSettings)
-def get_llm_settings() -> LlmSettings:
-    return controller.get_llm_settings()
-
-
-@router.put("/llm-settings", response_model=LlmSettings)
-def put_llm_settings(body: LlmSettings) -> LlmSettings:
-    return controller.put_llm_settings(body)
 
 
 @router.post("/message")

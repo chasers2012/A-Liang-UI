@@ -9,9 +9,15 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import suppress
 from typing import Any
 
+from diskcache import Cache
+from langchain.chat_models import init_chat_model
+from langchain_core.language_models.chat_models import BaseChatModel
+from workspace import workspace_path
+
 from app.chat.agent import (
     stream_event_aiter_for_chat,
 )
+from app.chat.config import get_llm_settings
 from app.chat.events import (
     DeltaEvent,
     DoneEvent,
@@ -50,15 +56,7 @@ from app.chat.schemas import (
 )
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
-from app.config import controller as config_controller
-from app.config import register_config_spec
-from app.config.schema import ConfigModuleSpec
-from diskcache import Cache
-from langchain.chat_models import init_chat_model
-from langchain_core.language_models.chat_models import BaseChatModel
-from workspace import workspace_path
 
-_LLM_CONFIG_MODULE = "agent_llm"
 MAX_SESSION_MESSAGES = 200
 _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
 _AUTH_PENDING_TTL_SECONDS = 10 * 60
@@ -96,67 +94,11 @@ def _clear_pending_auth(thread_id: str) -> None:
     _AUTH_CACHE.delete(_auth_decision_key(thread_id))
 
 
-def build_chat_model_from_workspace_settings(
+def build_chat_model(
     settings: LlmSettings,
 ) -> BaseChatModel:
-    temperature = settings.temperature
-    provider = settings.provider if settings.provider in ("ollama", "openai") else "ollama"
-    model = settings.model.strip() if settings.model else "qwen3.5:9b"
-
-    if provider == "openai":
-        api_key = (settings.api_key or "").strip() or None
-        if not api_key:
-            raise ValueError(
-                "OpenAI 提供方需要 API 密钥：在 Web Agent 页面保存 api_key"
-                "（写入 config/agent/llm.json）。"
-            )
-        openai_kwargs: dict[str, Any] = {
-            "temperature": temperature,
-            "api_key": api_key,
-        }
-        ob = (settings.openai_base_url or "").strip()
-        if ob:
-            openai_kwargs["base_url"] = ob.rstrip("/")
-        return init_chat_model(f"openai:{model}", **openai_kwargs)
-
-    timeout = settings.ollama_timeout
-    num_predict = settings.ollama_num_predict
-    base_url = (settings.ollama_base_url or "").strip()
-    reasoning = settings.ollama_reasoning
-
-    client_kwargs: dict[str, Any] = {"timeout": timeout}
-    kwargs: dict[str, Any] = {
-        "temperature": temperature,
-        "base_url": base_url.rstrip("/"),
-        "num_predict": num_predict,
-        "client_kwargs": client_kwargs,
-    }
-    if reasoning is not None:
-        kwargs["reasoning"] = reasoning
-
-    return init_chat_model(f"ollama:{model}", **kwargs)
-
-
-def _register_llm_settings_module() -> None:
-    defaults = LlmSettings().model_dump(mode="json")
-    rjsf_schema, rjsf_ui_schema = LlmSettings.rjsf_schema_and_ui_schema()
-    spec = ConfigModuleSpec(
-        key=_LLM_CONFIG_MODULE,
-        title="模型与密钥",
-        description="配置因子挖掘智能体使用的 LLM。",
-        filename="chat/llm.json",
-        default_values=defaults,
-        json_schema=rjsf_schema,
-        ui_schema=rjsf_ui_schema,
-    )
-    # Module reload may execute this file repeatedly in dev mode.
-    with suppress(ValueError):
-        register_config_spec(spec)
-
-
-def _build_llm_from_workspace():
-    settings = get_llm_settings()
-    return build_chat_model_from_workspace_settings(settings)
+    model, kwargs = get_llm_settings()
+    return init_chat_model(model, **kwargs)
 
 
 def _append_delta_block(
@@ -386,22 +328,6 @@ def _persist_user_messages_on_receive(session_id: str, message: ChatMessageIn) -
         return
 
 
-def get_llm_settings() -> LlmSettings:
-    values = config_controller.get_module_config(_LLM_CONFIG_MODULE)
-    return LlmSettings.model_validate(values)
-
-
-def put_llm_settings(body: LlmSettings) -> LlmSettings:
-    values = config_controller.put_module_config(
-        _LLM_CONFIG_MODULE,
-        body.model_dump(mode="json", exclude_none=False),
-    )
-    return LlmSettings.model_validate(values)
-
-
-_register_llm_settings_module()
-
-
 def _build_chat_context_messages(
     session_id: str,
     incoming_user: ChatMessageIn,
@@ -477,7 +403,7 @@ async def stream_async(  # noqa: C901
             if await is_disconnected():
                 return
             await out.put(_sse_wire_frame(message_ids_event))
-            llm = _build_llm_from_workspace()
+            llm = build_chat_model()
             pending_decision: dict[str, Any] | None = None
             while True:
                 stream_kwargs: dict[str, Any] = {

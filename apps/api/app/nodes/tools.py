@@ -74,9 +74,9 @@ def _extract_json_block(text: str) -> str:
 
 def _review_node_source_with_llm(source: str) -> dict[str, Any]:
     # Lazy import to avoid module import cycles with chat agent bootstrap path.
-    from app.chat.controller import build_chat_model_from_workspace_settings, get_llm_settings
+    from app.chat.controller import build_chat_model
 
-    llm = build_chat_model_from_workspace_settings(get_llm_settings())
+    llm = build_chat_model()
     prompt = (
         "请审查下面的 Python 工作流节点源码是否适合上线使用，重点检查：语法正确性、"
         "明显运行时风险、危险操作（系统命令/文件破坏）、以及实现与注释是否一致。"

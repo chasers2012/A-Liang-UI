@@ -2,21 +2,6 @@ import type { AssistantBlock, ChatToolCallDisplay } from '../chat/types';
 
 export type { TextBlockPublic } from '../chat/types';
 
-export type LlmProvider = 'ollama' | 'openai';
-
-/** 与 FastAPI ``AgentLlmSettings`` 一致。 */
-export type LlmSettingsPublic = {
-  provider: LlmProvider;
-  model: string;
-  ollama_base_url: string;
-  openai_base_url: string | null;
-  api_key: string | null;
-  temperature: number;
-  ollama_timeout: number;
-  ollama_num_predict: number;
-  ollama_reasoning: boolean | null;
-};
-
 export type ChatRolePublic = 'user' | 'assistant' | 'system';
 
 /** 与后端 ``ChatToolCallPublic`` 一致（同 {@link ChatToolCallDisplay}）。 */

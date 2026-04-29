@@ -161,9 +161,9 @@ def _review_strategy_workflow_with_llm(
     strategy_id: str | None = None,
 ) -> dict[str, Any]:
     # Lazy import avoids introducing module import cycles.
-    from app.chat.controller import build_chat_model_from_workspace_settings, get_llm_settings
+    from app.chat.controller import build_chat_model
 
-    llm = build_chat_model_from_workspace_settings(get_llm_settings())
+    llm = build_chat_model()
     workflow_payload = workflow.model_dump(by_alias=True)
     prompt = (
         "请审查下面的策略工作流是否可用，重点检查："
