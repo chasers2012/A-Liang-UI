@@ -12,6 +12,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DatePicker } from '@/components/ui/date-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '@/components/ui/combobox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Page } from '@/components/page';
@@ -20,7 +31,6 @@ import { EditablePageDescription } from '@/components/editable-page-description'
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
-import { AliasMapEditor, depsFromAliasRows, mapFromAliasRows, type AliasMapRow } from './alias-map-editor';
 import { ApiError } from '@/api/client';
 import { createDataSet, getDataSet, getDataSetWorkflowTemplate, patchDataSet } from '@/api/data-sets';
 import { getDatasourceDependencyFields, listDatasources } from '@/api/datasources';
@@ -34,9 +44,9 @@ import { PreprocessingWorkflowEditorBlock } from './preprocessing-workflow-edito
 
 export type DataSetBindingFormRow = {
   datasource_id: string;
-  alias_rows: AliasMapRow[];
   date_column: string;
   asset_column: string;
+  columns: string[];
 };
 
 export type DataSetFormState = {
@@ -58,9 +68,9 @@ export function emptyDataSetForm(template?: WorkflowGraphPersisted): DataSetForm
     bindings: [
       {
         datasource_id: '',
-        alias_rows: [{ factor: '', column: '', enabled: true }],
         date_column: '',
         asset_column: '',
+        columns: [],
       },
     ],
     preprocessing_workflow: preprocessingWorkflow,
@@ -87,37 +97,14 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
           datasource_id: b.datasource_id,
           date_column: b.date_column ?? '',
           asset_column: b.asset_column ?? '',
-          alias_rows: (() => {
-            const alias = b.alias ?? {};
-            const deps = b.dependencies ?? [];
-            const rows: AliasMapRow[] = [];
-            const seen = new Set<string>();
-            for (const dep of deps) {
-              const logical = String(dep).trim();
-              if (!logical || seen.has(logical)) continue;
-              seen.add(logical);
-              rows.push({
-                factor: logical,
-                column: alias[logical] ?? logical,
-                enabled: true,
-              });
-            }
-            for (const [logicalRaw, physicalRaw] of Object.entries(alias)) {
-              const logical = String(logicalRaw).trim();
-              const physical = String(physicalRaw).trim();
-              if (!logical || !physical || seen.has(logical)) continue;
-              seen.add(logical);
-              rows.push({ factor: logical, column: physical, enabled: true });
-            }
-            return rows.length ? rows : [{ factor: '', column: '', enabled: true }];
-          })(),
+          columns: b.columns ?? [],
         }))
       : [
           {
             datasource_id: '',
-            alias_rows: [{ factor: '', column: '', enabled: true }],
             date_column: '',
             asset_column: '',
+            columns: [],
           },
         ];
   return {
@@ -156,17 +143,11 @@ function safeParseJsonObject(text: string): Record<string, unknown> {
 
 function validateDataSetBindings(bindings: DataSetBindingFormRow[]): string | null {
   if (!bindings.length) return '至少保留一条数据源绑定';
+  if (bindings.length > 1) return '不支持多数据源绑定（请仅配置一条绑定）';
   for (const b of bindings) {
     if (!b.datasource_id.trim()) return '每条绑定须选择数据源';
     if (!b.date_column.trim() || !b.asset_column.trim()) {
       return '每条绑定须选择 date 列与 asset 列';
-    }
-  }
-  if (bindings.length > 1) {
-    for (const b of bindings) {
-      if (depsFromAliasRows(b.alias_rows).length === 0) {
-        return '多个数据源时，每条绑定须至少勾选一个依赖字段';
-      }
     }
   }
   return null;
@@ -190,36 +171,12 @@ function validatePreprocessingWorkflow(workflow: WorkflowGraphPersisted): string
 
 const DATA_SET_MAIN_FORM_ID = 'data-set-main-form';
 
-type BindingDependencyMessagesProps = {
-  loading: boolean;
-  noDataColumns: boolean;
-  extras: string[];
-};
-
-function BindingDependencyMessages({ loading, noDataColumns, extras }: BindingDependencyMessagesProps) {
-  return (
-    <>
-      {loading ? <p className="text-xs text-muted-foreground">正在加载该数据源可用字段…</p> : null}
-      {noDataColumns ? (
-        <p className="text-xs text-amber-600 dark:text-amber-500">
-          未能读取到该数据源可用字段列表。请检查数据源配置与可连接性/可读性。
-        </p>
-      ) : null}
-      {extras.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          已保存且不在当前列表中的依赖： <span className="font-mono">{extras.join(', ')}</span>
-          （仍会提交；若需调整请修改数据源或取消勾选后保存）
-        </p>
-      ) : null}
-    </>
-  );
-}
+// BindingDependencyMessages removed: dependency mapping UI no longer exists.
 
 type DataSetBindingRowBlockProps = {
   index: number;
   row: DataSetBindingFormRow;
   bindingsLength: number;
-  datasources: DataSourcePublic[];
   dependencyFieldsByDsId: Record<string, string[]>;
   dsItems: Record<string, string>;
   bindingDatasources: DataSourcePublic[];
@@ -231,16 +188,13 @@ function DataSetBindingRowBlock({
   index,
   row,
   bindingsLength,
-  datasources,
   dependencyFieldsByDsId,
   dsItems,
   bindingDatasources,
   updateBinding,
   removeBinding,
 }: DataSetBindingRowBlockProps) {
-  const ds = datasources.find((d) => d.id === row.datasource_id.trim());
   const trimmedId = row.datasource_id.trim();
-  const loading = !!ds && !!trimmedId && !Object.prototype.hasOwnProperty.call(dependencyFieldsByDsId, trimmedId);
   const physicalColumns = dependencyFieldsByDsId[trimmedId] ?? [];
   const columnOptions = (() => {
     const set = new Set<string>();
@@ -255,9 +209,19 @@ function DataSetBindingRowBlock({
     return [...set].sort((x, y) => x.localeCompare(y));
   })();
   const useColumnSelects = columnOptions.length > 0;
-  const deps = depsFromAliasRows(row.alias_rows);
-  const extras = deps.filter((d) => !physicalColumns.includes(d));
-  const noDataColumns = !loading && Boolean(trimmedId) && physicalColumns.length === 0;
+  const columnsAnchor = useComboboxAnchor();
+  const dateCol = row.date_column.trim();
+  const assetCol = row.asset_column.trim();
+  const loadColumnOptions = (() => {
+    const set = new Set<string>();
+    for (const c of physicalColumns) {
+      const t = String(c).trim();
+      if (!t) continue;
+      if (t === dateCol || t === assetCol) continue;
+      set.add(t);
+    }
+    return [...set].sort((x, y) => x.localeCompare(y));
+  })();
 
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4">
@@ -288,6 +252,7 @@ function DataSetBindingRowBlock({
               datasource_id: v,
               date_column: '',
               asset_column: '',
+              columns: [],
             })
           }
           disabled={bindingDatasources.length === 0}
@@ -370,34 +335,48 @@ function DataSetBindingRowBlock({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="space-y-2">
-          <Label>依赖字段与映射</Label>
-          <p className="text-xs text-muted-foreground">
-            在数据集里配置逻辑字段名（因子
-            dependencies）到数据源真实列名的映射。单数据源时可一个都不启用，表示运行时使用因子全部 dependencies；
-            多数据源时须至少启用一项来区分字段归属。
-          </p>
-          <BindingDependencyMessages loading={loading} noDataColumns={noDataColumns} extras={extras} />
-          <AliasMapEditor
-            physicalColumns={physicalColumns}
-            rows={row.alias_rows}
-            onChangeRows={(rows) => updateBinding(index, { alias_rows: rows })}
-            onAddRow={() =>
-              updateBinding(index, {
-                alias_rows: [
-                  ...(row.alias_rows.length ? row.alias_rows : [{ factor: '', column: '', enabled: true }]),
-                  { factor: '', column: '', enabled: true },
-                ],
-              })
-            }
-            onRemoveRow={(removeIndex) =>
-              updateBinding(index, {
-                alias_rows: row.alias_rows.filter((_, i) => i !== removeIndex),
-              })
-            }
-          />
-        </div>
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">columns（物理列；空=加载全部）</Label>
+        {useColumnSelects ? (
+          <Combobox
+            items={loadColumnOptions}
+            multiple
+            value={row.columns}
+            onValueChange={(v) => updateBinding(index, { columns: v ?? [] })}
+            openOnInputClick
+          >
+            <ComboboxChips ref={columnsAnchor} className="w-full min-w-0">
+              <ComboboxValue>
+                {(value: string[]) => (
+                  <>
+                    {value.map((c) => (
+                      <ComboboxChip key={c} className="font-mono text-xs" aria-label={`移除 ${c}`}>
+                        {c}
+                      </ComboboxChip>
+                    ))}
+                  </>
+                )}
+              </ComboboxValue>
+            </ComboboxChips>
+            <ComboboxContent
+              anchor={columnsAnchor}
+              sideOffset={4}
+              align="start"
+              className="w-max max-w-[min(28rem,var(--available-width))]"
+            >
+              <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配列</ComboboxEmpty>
+              <ComboboxList className="outline-none">
+                {(item: string) => (
+                  <ComboboxItem key={item} value={item} className="items-start text-sm">
+                    <span className="min-w-0 flex-1 whitespace-normal wrap-break-word font-mono text-xs">{item}</span>
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        ) : (
+          <p className="text-xs text-muted-foreground">先选择数据源并等待列名加载</p>
+        )}
       </div>
     </div>
   );
@@ -445,9 +424,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         ...f.bindings,
         {
           datasource_id: '',
-          alias_rows: [{ factor: '', column: '', enabled: true }],
           date_column: '',
           asset_column: '',
+          columns: [],
         },
       ],
     }));
@@ -495,9 +474,9 @@ export function DataSetForm({ mode, dataSetId }: Props) {
               bindings: [
                 {
                   datasource_id: ds[0].id,
-                  alias_rows: [{ factor: '', column: '', enabled: true }],
                   date_column: '',
                   asset_column: '',
+                  columns: [],
                 },
               ],
             }));
@@ -580,6 +559,15 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       setFormError(bindingsError);
       return;
     }
+
+    for (const b of form.bindings) {
+      const dsId = b.datasource_id.trim();
+      if (!dsId) {
+        setFormError('请先选择数据源');
+        return;
+      }
+    }
+
     const rawWorkflow = canvasRef.current?.getGraph() ?? form.preprocessing_workflow;
     const wf = rawWorkflow;
     const wfError = validatePreprocessingWorkflow(wf);
@@ -589,14 +577,17 @@ export function DataSetForm({ mode, dataSetId }: Props) {
     }
     const instrument_codes = parseInstrumentCodesFromText(form.instrument_codes_text);
     const datasource_bindings = form.bindings.map((b) => {
-      const alias = mapFromAliasRows(b.alias_rows);
-      const dependencies = depsFromAliasRows(b.alias_rows);
+      const dateCol = b.date_column.trim();
+      const assetCol = b.asset_column.trim();
+      const columns = (b.columns ?? [])
+        .map((c) => c.trim())
+        .filter(Boolean)
+        .filter((c) => c !== dateCol && c !== assetCol);
       return {
         datasource_id: b.datasource_id.trim(),
-        dependencies,
+        columns,
         date_column: b.date_column.trim(),
         asset_column: b.asset_column.trim(),
-        ...(Object.keys(alias).length ? { alias } : {}),
       };
     });
     const payload = {
@@ -693,7 +684,7 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         ) : null}
 
         <p className="text-sm text-muted-foreground">
-          可配置多条数据源绑定；仅一条且未选依赖字段时，运行评价将使用因子的全部 dependencies。
+          可配置多条数据源绑定；当某条绑定的 columns 为空时，将加载该数据源的全部物理列，并由预处理生成因子所需逻辑列。
         </p>
 
         <Card>
@@ -718,7 +709,6 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 index={index}
                 row={row}
                 bindingsLength={form.bindings.length}
-                datasources={datasources}
                 dependencyFieldsByDsId={dependencyFieldsByDsId}
                 dsItems={dsItems}
                 bindingDatasources={bindingDatasources}

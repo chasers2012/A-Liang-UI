@@ -102,14 +102,13 @@ def test_dependency_columns_read_as_strings_are_coerced_to_numeric() -> None:
 
 
 def test_register_datasource_alias_maps_physical_columns() -> None:
-    """Logical dependency names differ from column names on the underlying source."""
-    df = _panel([(pd.Timestamp("2024-01-02"), "A", 99.0)], ["raw_close"])
+    """DatasourceBinding.alias is not applied for renaming in DataSet."""
+    df = _panel([(pd.Timestamp("2024-01-02"), "A", 99.0)], ["close"])
     ds = DataSet(
         [
             DataSourceBinding(
                 _FixedSource(df),
                 ["close"],
-                alias={"close": "raw_close"},
                 date_column="date",
                 asset_column="asset",
             )
@@ -127,28 +126,30 @@ def test_register_datasource_alias_maps_physical_columns() -> None:
     assert float(out.iloc[0]["close"]) == 99.0
 
 
-def test_alias_conflict_same_physical_two_logical_raises() -> None:
-    df = _panel([(pd.Timestamp("2024-01-02"), "A", 1.0, 2.0)], ["x", "y"])
+def test_dependency_columns_multiple_fields() -> None:
+    df = _panel([(pd.Timestamp("2024-01-02"), "A", 1.0, 2.0)], ["close", "open"])
     ds = DataSet(
         [
             DataSourceBinding(
                 _FixedSource(df),
                 ["close", "open"],
-                alias={"close": "x", "open": "x"},
                 date_column="date",
                 asset_column="asset",
             )
         ]
     )
     r = DependencyResolver(ds)
-    with pytest.raises(ValueError, match="same datasource column"):
-        r.get_panel(
-            fields=["close", "open"],
-            start_date=None,
-            end_date="2024-01-31",
-            instrument_codes=None,
-            window=0,
-        )
+    out = r.get_panel(
+        fields=["close", "open"],
+        start_date=None,
+        end_date="2024-01-31",
+        instrument_codes=None,
+        window=0,
+    )
+    assert list(out.columns) == ["close", "open"]
+    assert len(out) == 1
+    assert float(out.iloc[0]["close"]) == 1.0
+    assert float(out.iloc[0]["open"]) == 2.0
 
 
 def test_list_registered_fields() -> None:
@@ -175,7 +176,7 @@ def test_unknown_field_raises() -> None:
         ]
     )
     r = DependencyResolver(ds)
-    with pytest.raises(ValueError, match="Unknown dependency field"):
+    with pytest.raises(ValueError, match="preprocessor output does not contain requested fields"):
         r.get_panel(
             fields=["nope"],
             start_date=None,

@@ -19,7 +19,7 @@ export function getDatasource(id: string): Promise<DataSourcePublic> {
   return apiFetchJson<DataSourcePublic>(`/datasources/${encodeURIComponent(id)}`);
 }
 
-/** 数据源物理列名列表（供数据集配置 alias/date/asset 等映射使用）。 */
+/** 数据源物理列名列表。 */
 export function getDatasourceDependencyFields(id: string): Promise<{ fields: string[] }> {
   return apiFetchJson<{ fields: string[] }>(`/datasources/${encodeURIComponent(id)}/dependency-fields`);
 }

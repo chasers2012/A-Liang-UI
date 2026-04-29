@@ -16,7 +16,7 @@ def test_csv_data_source_wrong_column_names(tmp_path: Path):
         [
             DataSourceBinding(
                 ds,
-                dependencies=["close"],
+                columns=["close"],
                 date_column="d",
                 asset_column="sym",
             )
@@ -41,7 +41,7 @@ def test_csv_data_source_panel(tmp_path: Path):
 
     ds = CsvDataSource(p)
     dataset = DataSet(
-        [DataSourceBinding(ds, dependencies=["close"], date_column="d", asset_column="sym")]
+        [DataSourceBinding(ds, columns=["close"], date_column="d", asset_column="sym")]
     )
     df = dataset.get_panel(
         fields=["close"],
@@ -64,7 +64,7 @@ def test_csv_data_source_instrument_codes_filter(tmp_path: Path):
     )
     ds = CsvDataSource(p)
     dataset = DataSet(
-        [DataSourceBinding(ds, dependencies=["close"], date_column="date", asset_column="asset")]
+        [DataSourceBinding(ds, columns=["close"], date_column="date", asset_column="asset")]
     )
     df = dataset.get_panel(
         fields=["close"],

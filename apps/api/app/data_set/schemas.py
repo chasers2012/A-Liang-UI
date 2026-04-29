@@ -69,46 +69,28 @@ def workflow_public_dict(workflow_json: str) -> dict[str, Any]:
 
 
 class DataSetDatasourceBindingStored(SQLModel):
-    """Maps one datasource to the logical dependency fields it provides."""
+    """Maps one datasource to the physical columns it should load."""
 
     datasource_id: str
-    dependencies: list[str] = Field(default_factory=list)
-    alias: dict[str, str] | None = None
+    columns: list[str] = Field(default_factory=list)
     date_column: str = ""
     asset_column: str = ""
 
 
 class DataSetDatasourceBindingInput(SQLModel):
     datasource_id: str
-    dependencies: list[str] = Field(default_factory=list)
-    alias: dict[str, str] | None = None
+    columns: list[str] = Field(default_factory=list)
     date_column: str = ""
     asset_column: str = ""
 
-    @field_validator("dependencies", mode="before")
+    @field_validator("columns", mode="before")
     @classmethod
-    def _strip_deps(cls, v: object) -> list[str]:
+    def _strip_columns(cls, v: object) -> list[str]:
         if v is None:
             return []
         if not isinstance(v, list):
-            raise TypeError("dependencies must be a list")
+            raise TypeError("columns must be a list")
         return [str(x).strip() for x in v if str(x).strip()]
-
-    @field_validator("alias", mode="before")
-    @classmethod
-    def _normalize_alias(cls, v: object) -> dict[str, str] | None:
-        if v is None:
-            return None
-        if not isinstance(v, dict):
-            raise TypeError("alias must be a dict")
-        out: dict[str, str] = {}
-        for k, val in v.items():
-            kk = str(k).strip()
-            vv = str(val).strip()
-            if not kk or not vv:
-                continue
-            out[kk] = vv
-        return out or None
 
     @field_validator("date_column", "asset_column", mode="before")
     @classmethod
@@ -166,7 +148,6 @@ class DataSetCreate(SQLModel):
                 _normalize_preprocessing_workflow_dict(dict(self.preprocessing_workflow)),
                 ensure_ascii=False,
             ),
-            preprocessors=[],
             start=self.start.strip(),
             end=self.end.strip(),
             instrument_codes=[c.strip() for c in self.instrument_codes if str(c).strip()],
@@ -180,8 +161,7 @@ def _binding_to_stored_dict(
 ) -> dict[str, Any]:
     return {
         "datasource_id": binding.datasource_id.strip(),
-        "dependencies": [x.strip() for x in binding.dependencies if str(x).strip()],
-        "alias": (dict(binding.alias) if binding.alias else None),
+        "columns": [x.strip() for x in binding.columns if str(x).strip()],
         "date_column": binding.date_column.strip(),
         "asset_column": binding.asset_column.strip(),
     }
@@ -203,8 +183,7 @@ class DataSetDatasourceBindingPublic(SQLModel):
     datasource_id: str
     datasource_name: str
     datasource_type: str
-    dependencies: list[str]
-    alias: dict[str, str] | None = None
+    columns: list[str]
     date_column: str
     asset_column: str
 
@@ -215,9 +194,18 @@ class DataSetPublic(SQLModel):
     description: str
     datasource_bindings: list[DataSetDatasourceBindingPublic]
     preprocessing_workflow: dict[str, Any]
-    preprocessors: list[str]
     start: str
     end: str
     instrument_codes: list[str]
     created_at: str
     updated_at: str
+
+
+class DataSetPanelPreviewCsvResponse(SQLModel):
+    """
+    Raw CSV preview payload.
+
+    Backend returns ``panel.to_csv()`` directly; the frontend parses and renders it.
+    """
+
+    csv: str

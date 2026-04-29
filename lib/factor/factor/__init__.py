@@ -15,11 +15,9 @@ from factor.loader import (
     parse_factor_meta_from_source,
 )
 from factor.panel import panel_load_start_date
-from factor.preprocess import DataPreprocessorBase
 
 __all__ = [
     "FACTOR_GLOBALS",
-    "DataPreprocessorBase",
     "DataSet",
     "DataSourceBinding",
     "DependencyResolver",

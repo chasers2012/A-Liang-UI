@@ -20,24 +20,23 @@ def test_sql_data_source_sqlite_panel():
         [
             DataSourceBinding(
                 ds,
-                dependencies=["close"],
-                alias={"close": "c"},
+                columns=["c"],
                 date_column="d",
                 asset_column="sym",
             )
         ]
     )
     df = dataset.get_panel(
-        fields=["close"],
+        fields=["c"],
         start_date="2025-01-02",
         end_date="2025-01-03",
         instrument_codes=None,
         window=0,
     )
     assert df.index.names == ("date", "asset")
-    assert list(df.columns) == ["close"]
+    assert list(df.columns) == ["c"]
     assert len(df) == 2
-    assert float(df.loc[("2025-01-03", "AAA"), "close"]) == 11.0
+    assert float(df.loc[("2025-01-03", "AAA"), "c"]) == 11.0
 
 
 def test_sql_data_source_list_columns():

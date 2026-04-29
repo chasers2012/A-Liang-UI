@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.data_set.schemas import DataSetCreate, DataSetPatch, DataSetPublic
+from app.data_set.schemas import (
+    DataSetCreate,
+    DataSetPanelPreviewCsvResponse,
+    DataSetPatch,
+    DataSetPublic,
+)
 
 from . import controller
 
@@ -50,3 +55,21 @@ def patch_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic:
 def delete_data_set(data_set_id: str) -> None:
     if not controller.delete_data_set(data_set_id):
         raise HTTPException(status_code=404, detail="数据集不存在")
+
+
+@router.get(
+    "/{data_set_id}/panel-preview",
+    response_model=DataSetPanelPreviewCsvResponse,
+)
+def preview_data_set_panel(
+    data_set_id: str,
+    limit: int = 200,
+    sample_bdays: int = 5,
+    window: int = 0,
+) -> DataSetPanelPreviewCsvResponse:
+    return controller.get_data_set_panel_preview(
+        data_set_id,
+        limit=limit,
+        sample_bdays=sample_bdays,
+        window=window,
+    )

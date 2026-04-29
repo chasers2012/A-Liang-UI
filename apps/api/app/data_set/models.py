@@ -18,7 +18,6 @@ class DataSetRow(SQLModel, table=True):
         sa_column=Column(JsonText),
     )
     preprocessing_workflow: str = ""
-    preprocessors: list[str] = Field(default_factory=list, sa_column=Column(JsonText))
     start: str
     end: str
     instrument_codes: list[str] = Field(default_factory=list, sa_column=Column(JsonText))

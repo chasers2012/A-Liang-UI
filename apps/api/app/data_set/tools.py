@@ -19,7 +19,7 @@ def _http_error_detail(exc: HTTPException) -> str:
 @safe_tool(
     "创建数据集",
     description=(
-        "创建并保存数据集。\n入参 body 包含日期区间、标的与数据源绑定；至少一条绑定，多数据源时 dependencies 名称不得重复。"
+        "创建并保存数据集。\n入参 body 包含日期区间、标的与数据源绑定；至少一条绑定，columns 名称不得重复。"
     ),
 )
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:

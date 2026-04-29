@@ -63,18 +63,31 @@ def main() -> None:
     )
     args = p.parse_args()
 
-    close_alias = {"close": args.close_column} if args.close_column != "close" else None
     ds = CsvDataSource(args.input)
+
+    # alias 语义移除后，logical->physical 映射放到预处理里完成
+    def _preprocessor(frames):
+        out = {}
+        for k, df in frames.items():
+            if (
+                args.close_column
+                and args.close_column != "close"
+                and args.close_column in df.columns
+            ):
+                df = df.rename(columns={args.close_column: "close"})
+            out[k] = df
+        return out
+
     dataset = DataSet(
         [
             DataSourceBinding(
                 ds,
-                dependencies=["close"],
-                alias=close_alias,
+                columns=[args.close_column] if args.close_column else ["close"],
                 date_column=args.date_column,
                 asset_column=args.asset_column,
             )
-        ]
+        ],
+        preprocessor=_preprocessor,
     )
     resolver = DependencyResolver(dataset)
 

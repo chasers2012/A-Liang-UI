@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAtom, useSetAtom } from 'jotai';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { dataSetDetailAtomFamily, loadDataSetDetailAtomFamily } from '@/models/data-set/panel-detail.atom';
 
 import { DeleteDataSetDialog } from '../ui/delete-data-set-dialog';
+import { DataSetPanelPreviewDialog } from '../ui/data-set-panel-preview-dialog';
 
 function formatIso(iso: string): string {
   return iso.replace('T', ' ').replace('+00:00', ' UTC');
@@ -34,6 +36,8 @@ export default function DataSetDetailPage() {
   }, [id, load]);
 
   const { row, error, loading, deleteOpen, deleting } = state;
+
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const confirmDelete = async () => {
     if (!row) return;
@@ -99,6 +103,17 @@ export default function DataSetDetailPage() {
           </Link>
           <Button
             type="button"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => {
+              setPreviewOpen(true);
+            }}
+          >
+            <Eye className="size-4" />
+            预览
+          </Button>
+          <Button
+            type="button"
             variant="destructive"
             className="gap-1.5"
             onClick={() => setState((s) => ({ ...s, deleteOpen: true }))}
@@ -135,7 +150,7 @@ export default function DataSetDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle>数据源绑定</CardTitle>
-          <CardDescription>datasource_id、datasource_name、datasource_type、dependencies</CardDescription>
+          <CardDescription>datasource_id、datasource_name、datasource_type、columns</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {row.datasource_bindings.length === 0 ? (
@@ -161,20 +176,8 @@ export default function DataSetDetailPage() {
                     <dd className="font-mono text-xs">{b.datasource_type || '—'}</dd>
                   </div>
                   <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                    <dt className="text-muted-foreground">dependencies</dt>
-                    <dd className="font-mono text-xs">
-                      {b.dependencies.length ? b.dependencies.join(', ') : '（空：单源时使用因子全部依赖）'}
-                    </dd>
-                  </div>
-                  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                    <dt className="text-muted-foreground">alias</dt>
-                    <dd className="font-mono text-xs break-all">
-                      {b.alias && Object.keys(b.alias).length
-                        ? Object.entries(b.alias)
-                            .map(([k, v]) => `${k}=${v}`)
-                            .join(', ')
-                        : '—'}
-                    </dd>
+                    <dt className="text-muted-foreground">columns</dt>
+                    <dd className="font-mono text-xs">{b.columns.length ? b.columns.join(', ') : '—'}</dd>
                   </div>
                 </dl>
                 <Link
@@ -219,6 +222,8 @@ export default function DataSetDetailPage() {
         onDismiss={() => setState((s) => ({ ...s, deleteOpen: false }))}
         onConfirm={confirmDelete}
       />
+
+      <DataSetPanelPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} dataSetId={row.id} />
     </Page>
   );
 }

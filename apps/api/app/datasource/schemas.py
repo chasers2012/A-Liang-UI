@@ -108,7 +108,7 @@ class InspectColumnsResponse(BaseModel):
 
 
 class DatasourceDependencyFieldsResponse(BaseModel):
-    """数据源物理列名列表（供数据集配置 alias/date/asset 等映射使用）。"""
+    """数据源物理列名列表。"""
 
     fields: list[str]
 
