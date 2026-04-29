@@ -9,10 +9,11 @@ from sqlalchemy import and_, or_
 from sqlmodel import select
 
 from app.persistence.sqlite_db import get_session
-from app.scheduler.controller import enqueue_job, set_task_next_run
 from app.scheduler.models import SchedulerTaskRow
 from app.scheduler.utils import next_cron_time, utcnow
 from app.startup_jobs import register_startup_job
+
+from . import controller
 
 logger = logging.getLogger(__name__)
 _DISPATCHER_THREAD: threading.Thread | None = None
@@ -45,8 +46,8 @@ def dispatch_due_cron_tasks() -> int:
             continue
         scheduled_at = task.next_run_at or now
         dedupe_key = f"cron:{task.id}:{scheduled_at.isoformat()}"
-        enqueue_job(task.id, trigger_type="cron", dedupe_key=dedupe_key)
-        set_task_next_run(task.id, next_cron_time(task.cron_expr, base_time=now))
+        controller.enqueue_job(task.id, trigger_type="cron", dedupe_key=dedupe_key)
+        controller.set_task_next_run(task.id, next_cron_time(task.cron_expr, base_time=now))
         dispatched += 1
     return dispatched
 

@@ -8,13 +8,10 @@ import time
 from collections.abc import Callable
 from uuid import uuid4
 
-from app.scheduler.controller import (
-    claim_next_job,
-    mark_job_failed_or_retrying,
-    mark_job_succeeded,
-)
 from app.scheduler.handlers import run_task_handler
 from app.startup_jobs import register_startup_job
+
+from . import controller
 
 logger = logging.getLogger(__name__)
 _WORKER_THREAD: threading.Thread | None = None
@@ -40,17 +37,17 @@ def run_worker_loop(
             logger.info("scheduler worker stopped by stop_when callback")
             return
 
-        job = claim_next_job(effective_worker_id)
+        job = controller.claim_next_job(effective_worker_id)
         if job is None:
             time.sleep(poll_seconds)
             continue
 
         try:
             result = run_task_handler(job.task_type, job.payload)
-            mark_job_succeeded(job.id, result)
+            controller.mark_job_succeeded(job.id, result)
             logger.info("job %s succeeded", job.id)
         except Exception as exc:
-            mark_job_failed_or_retrying(job.id, str(exc))
+            controller.mark_job_failed_or_retrying(job.id, str(exc))
             logger.exception("job %s failed: %s", job.id, exc)
 
 

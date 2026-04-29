@@ -3,19 +3,14 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
-from app.evaluation.run.controller import (
-    EvaluationRunNotFoundError,
-    delete_evaluation_run,
-    enqueue_evaluation_run,
-    get_evaluation_run_detail,
-    list_evaluation_runs,
-)
 from app.evaluation.run.schemas import (
     EvaluationRunDetailPublic,
     RunEvaluationRunRequest,
 )
 from app.http_errors import http_bad_request
 from app.scheduler.schemas import SchedulerJobPublic
+
+from . import controller
 
 router = APIRouter(prefix="/evaluation/run", tags=["evaluation/run"])
 
@@ -28,7 +23,7 @@ def post_evaluation_run_for_profile(
     body: RunEvaluationRunRequest,
 ) -> SchedulerJobPublic:
     try:
-        return enqueue_evaluation_run(
+        return controller.enqueue_evaluation_run(
             body.profile_id,
             body.factor_id,
             data_set_id=body.data_set_id,
@@ -47,7 +42,7 @@ def get_evaluation_runs(
     limit: int | None = None,
 ) -> list[EvaluationRunDetailPublic]:
     try:
-        return list_evaluation_runs(factor_id=factor_id, limit=limit)
+        return controller.list_evaluation_runs(factor_id=factor_id, limit=limit)
     except ValueError as e:
         http_bad_request(e)
 
@@ -55,14 +50,14 @@ def get_evaluation_runs(
 @router.get("/{run_id}", response_model=EvaluationRunDetailPublic)
 def get_evaluation_run(run_id: str) -> EvaluationRunDetailPublic:
     try:
-        return get_evaluation_run_detail(run_id)
-    except EvaluationRunNotFoundError:
+        return controller.get_evaluation_run_detail(run_id)
+    except controller.EvaluationRunNotFoundError:
         raise HTTPException(status_code=404, detail="评价运行记录不存在") from None
 
 
 @router.delete("/{run_id}", status_code=204)
 def delete_evaluation_run_by_id_api(run_id: str) -> None:
     try:
-        delete_evaluation_run(run_id)
-    except EvaluationRunNotFoundError:
+        controller.delete_evaluation_run(run_id)
+    except controller.EvaluationRunNotFoundError:
         raise HTTPException(status_code=404, detail="评价运行记录不存在") from None

@@ -4,24 +4,11 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.data_set.controller import (
-    create_data_set as create_data_set_controller,
-)
-from app.data_set.controller import (
-    delete_data_set as delete_data_set_controller,
-)
-from app.data_set.controller import (
-    get_data_set_detail as get_data_set_detail_controller,
-)
-from app.data_set.controller import (
-    list_data_sets as list_data_sets_controller,
-)
-from app.data_set.controller import (
-    update_data_set as update_data_set_controller,
-)
 from app.data_set.schemas import DataSetCreate, DataSetPatch
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
+
+from . import controller
 
 
 def _http_error_detail(exc: HTTPException) -> str:
@@ -37,7 +24,7 @@ def _http_error_detail(exc: HTTPException) -> str:
 )
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     try:
-        created = create_data_set_controller(body)
+        created = controller.create_data_set(body)
     except HTTPException as e:
         raise ValueError(_http_error_detail(e)) from e
     return created.model_dump()
@@ -45,7 +32,7 @@ def create_data_set(body: DataSetCreate) -> dict[str, Any]:
 
 @safe_tool("获取数据集详情", description="查询单个数据集详情。\n入参 data_set_id；不存在需报错。")
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
-    rec = get_data_set_detail_controller(data_set_id)
+    rec = controller.get_data_set_detail(data_set_id)
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
     return rec.model_dump()
@@ -55,7 +42,7 @@ def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     "获取数据集列表", description="查询当前工作区数据集列表。\n返回列表供后续运行或编辑选择。"
 )
 def get_data_set_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_data_sets_controller()]
+    return [f.model_dump() for f in controller.list_data_sets()]
 
 
 @safe_tool(
@@ -64,7 +51,7 @@ def get_data_set_list() -> list[dict[str, Any]]:
 )
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
     try:
-        rec = update_data_set_controller(data_set_id, body)
+        rec = controller.update_data_set(data_set_id, body)
     except HTTPException as e:
         raise ValueError(_http_error_detail(e)) from e
     if rec is None:
@@ -74,8 +61,8 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
 
 @safe_tool("删除数据集", description="删除指定数据集。\n入参 data_set_id；返回删除前快照。")
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
-    rec = get_data_set_detail_controller(data_set_id)
-    if rec is None or not delete_data_set_controller(data_set_id):
+    rec = controller.get_data_set_detail(data_set_id)
+    if rec is None or not controller.delete_data_set(data_set_id):
         raise ValueError(f"数据集 {data_set_id} 不存在")
     return rec.model_dump()
 

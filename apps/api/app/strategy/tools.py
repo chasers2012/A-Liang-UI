@@ -9,28 +9,11 @@ from langchain.tools import ToolRuntime
 from langchain_core.messages import HumanMessage, SystemMessage
 from workflow.schemas import WorkflowGraphPersisted
 
-from app.strategy.controller import (
-    add_node,
-    connect_nodes,
-    connect_to_workflow_output,
-    connect_workflow_input,
-    create_strategy,
-    delete_strategy,
-    disconnect_between,
-    disconnect_link,
-    get_strategy,
-    get_strategy_workflow_template,
-    list_strategies,
-    list_strategy_nodes,
-    move_node,
-    patch_strategy,
-    remove_node,
-    set_node_param,
-    unset_node_param,
-)
 from app.strategy.schemas import StrategyCreate, StrategyPatch
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
+
+from . import controller
 
 _WORKFLOW_DRAFT_STORE_LOCK = asyncio.Lock()
 
@@ -213,7 +196,7 @@ def _review_strategy_workflow_with_llm(
     description="加载策略工作流模板。\n将工作流模板加载到store, 用于初始化策略编辑结构，这会覆盖现在的store中的workflowDraft，后续可基于模板填充节点与连线。",
 )
 async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str, Any]:
-    template = get_strategy_workflow_template()
+    template = controller.get_strategy_workflow_template()
     await _save_workflow_draft_to_store(
         runtime,
         WorkflowGraphPersisted.model_validate(template),
@@ -228,7 +211,7 @@ async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str,
     description="列出策略域可用工作流节点。\n返回节点类型定义（含输入/输出端口）用于前端节点选择器。",
 )
 def get_strategy_node_catalog() -> list[dict[str, Any]]:
-    return [item.model_dump() for item in list_strategy_nodes()]
+    return [item.model_dump() for item in controller.list_strategy_nodes()]
 
 
 @safe_tool(
@@ -260,7 +243,7 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
         description=description,
         workflow=workflow,
     )
-    strategy = create_strategy(
+    strategy = controller.create_strategy(
         StrategyCreate(name=name, description=description, workflow=workflow)
     )
     strategy_id = (
@@ -282,7 +265,7 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
     description="查询单个策略详情。\n获取已存在的策略的完整信息入参 strategy_id；不存在时报错。",
 )
 def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
-    return get_strategy(strategy_id)
+    return controller.get_strategy(strategy_id)
 
 
 @safe_tool(
@@ -290,7 +273,7 @@ def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
     description="加载策略以便编辑。\n将已存在的策略的工作流加载到store中的workflowDraft以便用于修改，这会覆盖现在的store中的workflowDraft，入参 strategy_id；不存在时报错。",
 )
 async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[str, Any]:
-    strategy = get_strategy(strategy_id)
+    strategy = controller.get_strategy(strategy_id)
     if strategy is None:
         raise ValueError(f"策略不存在: {strategy_id}")
 
@@ -315,7 +298,7 @@ async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[s
     description="查询当前工作区策略列表。\n返回策略列表用于选择运行或编辑目标。",
 )
 def get_strategy_list() -> list[dict[str, Any]]:
-    return [i.model_dump() for i in list_strategies()]
+    return [i.model_dump() for i in controller.list_strategies()]
 
 
 @safe_tool(
@@ -341,7 +324,7 @@ async def update_strategy(
         description=description,
         workflow=workflow,
     )
-    strategy = patch_strategy(
+    strategy = controller.patch_strategy(
         strategy_id,
         StrategyPatch(name=name, description=description, workflow=workflow),
     )
@@ -358,8 +341,8 @@ async def update_strategy(
 
 @safe_tool("删除策略", description="删除指定策略。\n入参 strategy_id；返回删除前记录。")
 def delete_strategy_tool(strategy_id: str) -> dict[str, Any]:
-    row = get_strategy(strategy_id)
-    delete_strategy(strategy_id)
+    row = controller.get_strategy(strategy_id)
+    controller.delete_strategy(strategy_id)
     return row
 
 
@@ -381,7 +364,7 @@ async def strategy_workflow_add_node(
                 out_workflow,
                 {"node_id": node_id},
             )
-        )(*add_node(workflow, node_type_id)),
+        )(*controller.add_node(workflow, node_type_id)),
     )
 
 
@@ -392,7 +375,7 @@ async def strategy_workflow_add_node(
 async def strategy_workflow_remove_node(node_id: str, runtime: ToolRuntime) -> dict[str, Any]:
     return await _mutate_workflow_draft(
         runtime,
-        lambda workflow: (remove_node(workflow, node_id), {"ok": True}),
+        lambda workflow: (controller.remove_node(workflow, node_id), {"ok": True}),
     )
 
 
@@ -407,7 +390,7 @@ async def strategy_workflow_move_node(
 ) -> dict[str, Any]:
     return await _mutate_workflow_draft(
         runtime,
-        lambda workflow: (move_node(workflow, node_id, pos), {"ok": True}),
+        lambda workflow: (controller.move_node(workflow, node_id, pos), {"ok": True}),
     )
 
 
@@ -424,7 +407,7 @@ async def strategy_workflow_set_node_param(
     return await _mutate_workflow_draft(
         runtime,
         lambda workflow: (
-            set_node_param(workflow, node_id, key, value),
+            controller.set_node_param(workflow, node_id, key, value),
             {"ok": True},
         ),
     )
@@ -441,7 +424,7 @@ async def strategy_workflow_unset_node_param(
 ) -> dict[str, Any]:
     return await _mutate_workflow_draft(
         runtime,
-        lambda workflow: (unset_node_param(workflow, node_id, key), {"ok": True}),
+        lambda workflow: (controller.unset_node_param(workflow, node_id, key), {"ok": True}),
     )
 
 
@@ -468,7 +451,7 @@ async def strategy_workflow_connect_nodes(
                 out_workflow,
                 {"link_id": created_link_id},
             )
-        )(*connect_nodes(workflow, from_node_id, from_socket, to_node_id, to_socket)),
+        )(*controller.connect_nodes(workflow, from_node_id, from_socket, to_node_id, to_socket)),
     )
 
 
@@ -494,7 +477,7 @@ async def strategy_workflow_connect_input(
                 out_workflow,
                 {"link_id": created_link_id},
             )
-        )(*connect_workflow_input(workflow, input_socket, to_node_id, to_socket)),
+        )(*controller.connect_workflow_input(workflow, input_socket, to_node_id, to_socket)),
     )
 
 
@@ -520,7 +503,11 @@ async def strategy_workflow_connect_output(
                 out_workflow,
                 {"link_id": created_link_id},
             )
-        )(*connect_to_workflow_output(workflow, from_node_id, from_socket, output_socket)),
+        )(
+            *controller.connect_to_workflow_output(
+                workflow, from_node_id, from_socket, output_socket
+            )
+        ),
     )
 
 
@@ -534,7 +521,7 @@ async def strategy_workflow_disconnect_link(
 ) -> dict[str, Any]:
     return await _mutate_workflow_draft(
         runtime,
-        lambda workflow: (disconnect_link(workflow, link_id), {"ok": True}),
+        lambda workflow: (controller.disconnect_link(workflow, link_id), {"ok": True}),
     )
 
 
@@ -555,7 +542,9 @@ async def strategy_workflow_disconnect_between(
     return await _mutate_workflow_draft(
         runtime,
         lambda workflow: (
-            disconnect_between(workflow, from_node_id, from_socket, to_node_id, to_socket),
+            controller.disconnect_between(
+                workflow, from_node_id, from_socket, to_node_id, to_socket
+            ),
             {"ok": True},
         ),
     )

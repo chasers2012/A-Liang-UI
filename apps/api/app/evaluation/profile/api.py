@@ -6,9 +6,6 @@ from fastapi import APIRouter, HTTPException
 
 from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.constants import empty_workflow_template_dict
-from app.evaluation.profile.controller import (
-    get_evaluation_profile_workflow_io_spec,
-)
 from app.evaluation.profile.models import EvaluationProfileRow
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.profile.schemas import (
@@ -18,6 +15,8 @@ from app.evaluation.profile.schemas import (
     WorkflowIOSpecPublic,
     workflow_public_dict,
 )
+
+from . import controller
 
 router = APIRouter(prefix="/evaluation/profile", tags=["evaluation/profile"])
 
@@ -51,7 +50,7 @@ def _merge_evaluation_profile_patch(
 
 @router.get("/workflow-io", response_model=WorkflowIOSpecPublic)
 def get_workflow_io() -> WorkflowIOSpecPublic:
-    return get_evaluation_profile_workflow_io_spec()
+    return controller.get_evaluation_profile_workflow_io_spec()
 
 
 @router.get("/workflow-template", response_model=dict)

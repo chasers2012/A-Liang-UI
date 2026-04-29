@@ -6,16 +6,10 @@ from typing import Any
 from factor import Factor
 
 from app.factors.constants import NEW_FACTOR_TEMPLATE
-from app.factors.controller import (
-    create_factor,
-    delete_factor,
-    factor_detail,
-    get_factor_detail_by_id,
-    list_factors,
-    update_factor,
-)
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
+
+from . import controller
 
 
 @safe_tool(
@@ -42,23 +36,23 @@ def create_factor_tool(source: str | None = None) -> dict[str, Any]:
     src = (source or "").strip()
     if not src:
         raise ValueError("需要传入因子源码")
-    rec = create_factor(src)
-    return factor_detail(rec).model_dump()
+    rec = controller.create_factor(src)
+    return controller.factor_detail(rec).model_dump()
 
 
 @safe_tool("获取因子详情", description="查询单个因子详情。\n入参 factor_id；不存在需抛出明确错误。")
 def get_factor_detail(factor_id: str) -> dict[str, Any]:
-    rec = get_factor_detail_by_id(factor_id)
+    rec = controller.get_factor_detail_by_id(factor_id)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
-    return factor_detail(rec).model_dump()
+    return controller.factor_detail(rec).model_dump()
 
 
 @safe_tool(
     "获取因子列表", description="查询因子列表。\n返回全部因子摘要列表，用于选择后续编辑或运行目标。"
 )
 def get_factor_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_factors()]
+    return [f.model_dump() for f in controller.list_factors()]
 
 
 @safe_tool(
@@ -68,15 +62,15 @@ def get_factor_list() -> list[dict[str, Any]]:
     ),
 )
 def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
-    rec = update_factor(factor_id, source)
+    rec = controller.update_factor(factor_id, source)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
-    return factor_detail(rec).model_dump()
+    return controller.factor_detail(rec).model_dump()
 
 
 @safe_tool("删除因子", description="删除指定因子。\n入参 factor_id；返回删除前快照，不存在需报错。")
 def delete_factor_tool(factor_id: str) -> dict[str, Any]:
-    rec = delete_factor(factor_id)
+    rec = controller.delete_factor(factor_id)
     return rec.model_dump()
 
 
