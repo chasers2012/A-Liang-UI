@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.chat.agents.subagnets.shared import (
+from deepagents import FilesystemPermission
+
+from .shared import (
     build_tools,
 )
-from deepagents import FilesystemPermission
 
 TOOL_IDS = {
     "strategy.get_strategy_workflow_template",

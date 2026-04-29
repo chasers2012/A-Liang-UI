@@ -5,8 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
-from app.chat import controller
-from app.chat.schemas import (
+from . import controller
+from .schemas import (
     ChatArchivedSummaryPublic,
     ChatAuthorizationRequest,
     ChatBatchDeleteBody,

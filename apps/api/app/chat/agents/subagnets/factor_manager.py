@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.chat.agents.subagnets.shared import (
+from .shared import (
     build_tools,
 )
 

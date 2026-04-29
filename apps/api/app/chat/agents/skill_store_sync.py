@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.chat.agents.store import get_agent_store
 from app.startup_jobs import register_startup_job
+
+from .store import get_agent_store
 
 logger = logging.getLogger(__name__)
 

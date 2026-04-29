@@ -15,8 +15,8 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.types import Command
 from langgraph.typing import InputT
 
-from app.chat.agents.main_agent import create_main_agent
-from app.chat.events import (
+from .agents.main_agent import create_main_agent
+from .events import (
     DeltaEvent,
     DoneEvent,
     ReasoningEvent,

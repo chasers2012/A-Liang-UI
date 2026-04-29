@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from sqlmodel import select
 
-from app.chat.models import ChatMessageRow, ChatRow
-from app.chat.schemas import (
+from app.common.datetime_utils import utc_now_iso
+from app.persistence.sqlite_db import get_session
+
+from .models import ChatMessageRow, ChatRow
+from .schemas import (
     AssistantBlockPublic,
     ChatMessageIn,
     ChatRecord,
     ChatsFile,
 )
-from app.common.datetime_utils import utc_now_iso
-from app.persistence.sqlite_db import get_session
 
 CHATS_DIR = "chat"
 

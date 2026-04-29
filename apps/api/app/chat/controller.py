@@ -16,11 +16,14 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langgraph.types import Command
 from workspace import workspace_path
 
-from app.chat.agent import (
+from app.common.datetime_utils import utc_now_iso
+from app.common.id import create_id_generator
+
+from .agent import (
     stream_event_aiter_for_chat,
 )
-from app.chat.config import get_llm_settings
-from app.chat.events import (
+from .config import get_llm_settings
+from .events import (
     DeltaEvent,
     DoneEvent,
     ErrorEvent,
@@ -31,8 +34,8 @@ from app.chat.events import (
     ToolEvent,
     ToolPayload,
 )
-from app.chat.registry import ChatRegistry
-from app.chat.schemas import (
+from .registry import ChatRegistry
+from .schemas import (
     AssistantBlockPublic,
     ChatArchivedSummaryPublic,
     ChatAuthorizationRequest,
@@ -51,8 +54,6 @@ from app.chat.schemas import (
     ensure_chat_message_id,
     message_text_for_model,
 )
-from app.common.datetime_utils import utc_now_iso
-from app.common.id import create_id_generator
 
 MAX_SESSION_MESSAGES = 200
 _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
