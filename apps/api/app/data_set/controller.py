@@ -285,35 +285,6 @@ def get_data_set_workflow_template() -> dict:
     return empty_preprocessing_workflow_dict()
 
 
-def _jsonable_value(v: object) -> object | None:
-    """Make pandas/numpy scalar values JSON serializable."""
-    if v is None:
-        return None
-
-    try:
-        if pd.isna(v):  # type: ignore[arg-type]
-            return None
-    except Exception:
-        # Best-effort conversion below.
-        pass
-
-    if isinstance(v, (str, int, float, bool)):
-        return v
-
-    try:
-        import numpy as np  # type: ignore
-
-        if isinstance(v, np.integer):
-            return int(v)
-        if isinstance(v, np.floating):
-            return float(v)
-    except Exception:
-        pass
-
-    # Fallback: keep as string (e.g., pandas Timestamp should not reach here due to date serialization).
-    return str(v)
-
-
 def get_data_set_panel_preview(
     data_set_id: str,
     *,

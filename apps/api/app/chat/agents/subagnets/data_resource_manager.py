@@ -16,6 +16,7 @@ TOOL_IDS = {
     "data_set.get_data_set_detail",
     "data_set.get_data_set_list",
     "data_set.update_data_set",
+    "data_set.get_data_set_panel_preview",
 }
 
 
@@ -26,6 +27,8 @@ def build_subagent() -> dict[str, Any] | None:
         "description": "用于维护数据源与数据集资产。"
         "只要数据集中包含了所需要的依赖字段，数据集就可以在任何需要使用数据源的地方复用。一个数据集可以聚合多个数据源。"
         "当任务是创建/更新/查询数据源或数据集、测试数据源连接时应委派给该子代理。",
-        "system_prompt": ("你是 data_resource_manager 子代理，专注数据源与数据集维护。"),
+        "system_prompt": (
+            "你是 data_resource_manager 子代理，专注数据源与数据集维护。除非现有的数据集缺少所需的列或无法覆盖所要求的时间范围，否则返回建议使用现有数据集"
+        ),
         **build_tools(TOOL_IDS),
     }

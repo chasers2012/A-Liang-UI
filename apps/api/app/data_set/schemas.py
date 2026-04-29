@@ -180,25 +180,29 @@ class DataSetPatch(SQLModel):
 
 
 class DataSetDatasourceBindingPublic(SQLModel):
-    datasource_id: str
-    datasource_name: str
-    datasource_type: str
-    columns: list[str]
-    date_column: str
-    asset_column: str
+    datasource_id: str = Field(description="数据源唯一标识，UUID。")
+    datasource_name: str = Field(description="数据源名称。")
+    datasource_type: str = Field(description="数据源类型。")
+    columns: list[str] = Field(description="从该数据源读取的字段列表。留空选取全部")
+    date_column: str = Field(description="日期字段名称。字段的原始名称，将被重命名为date")
+    asset_column: str = Field(description="资产标识字段名称。字段的原始名称，将被重命名为asset")
 
 
 class DataSetPublic(SQLModel):
-    id: str
-    name: str
-    description: str
-    datasource_bindings: list[DataSetDatasourceBindingPublic]
-    preprocessing_workflow: dict[str, Any]
-    start: str
-    end: str
-    instrument_codes: list[str]
-    created_at: str
-    updated_at: str
+    id: str = Field(description="数据集唯一标识，UUID。")
+    name: str = Field(description="数据集展示名称。")
+    description: str = Field(description="数据集描述信息。")
+    datasource_bindings: list[DataSetDatasourceBindingPublic] = Field(
+        description="已绑定数据源及其选定字段。"
+    )
+    preprocessing_workflow: dict[str, Any] = Field(
+        description="序列化后的预处理工作流图（只要有通向工作流输出的连线即可，可以没有节点）。"
+    )
+    start: str = Field(description="数据覆盖开始日期（ISO 字符串）。")
+    end: str = Field(description="数据覆盖结束日期（ISO 字符串）。")
+    instrument_codes: list[str] = Field(description="选中的标的代码列表。")
+    created_at: str = Field(description="创建时间戳（ISO 字符串）。")
+    updated_at: str = Field(description="最后更新时间戳（ISO 字符串）。")
 
 
 class DataSetPanelPreviewCsvResponse(SQLModel):

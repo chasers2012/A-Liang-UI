@@ -30,7 +30,10 @@ def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     return created.model_dump()
 
 
-@safe_tool("获取数据集详情", description="查询单个数据集详情。\n入参 data_set_id；不存在需报错。")
+@safe_tool(
+    "获取数据集详情",
+    description="查询单个数据集详情。\n入参 data_set_id: 数据集的id(UUID)。",
+)
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     rec = controller.get_data_set_detail(data_set_id)
     if rec is None:
@@ -67,10 +70,35 @@ def delete_data_set(data_set_id: str) -> dict[str, Any]:
     return rec.model_dump()
 
 
+@safe_tool(
+    "预览数据集",
+    description=(
+        "获取一段数据集中的数据。\n"
+        "用于测试数据集是否能正常使用。入参 data_set_id，可选 limit、sample_bdays、window；获取数据集的一段数据。"
+    ),
+)
+def get_data_set_panel_preview(
+    data_set_id: str,
+    limit: int = 200,
+    sample_bdays: int = 5,
+    window: int = 0,
+) -> dict[str, Any]:
+    return controller.get_data_set_panel_preview(
+        data_set_id=data_set_id,
+        limit=limit,
+        sample_bdays=sample_bdays,
+        window=window,
+    )
+
+
 TOOLS = {
     "data_set.create_data_set": (create_data_set, ToolAuthorization.allowed),
     "data_set.get_data_set_detail": (get_data_set_detail, ToolAuthorization.allowed),
     "data_set.get_data_set_list": (get_data_set_list, ToolAuthorization.allowed),
     "data_set.update_data_set": (update_data_set, ToolAuthorization.need_authorize),
     "data_set.delete_data_set": (delete_data_set, ToolAuthorization.disabled),
+    "data_set.get_data_set_panel_preview": (
+        get_data_set_panel_preview,
+        ToolAuthorization.allowed,
+    ),
 }
