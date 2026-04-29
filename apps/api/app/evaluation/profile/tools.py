@@ -16,6 +16,7 @@ from app.evaluation.profile.schemas import (
     EvaluationProfilePublic,
     workflow_public_dict,
 )
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
@@ -117,12 +118,33 @@ def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
     return public
 
 
-EVALUATION_SCHEME_CHAT_TOOLS = [
-    get_evaluation_profile_workflow_template,
-    get_workflow_node_types_source,
-    create_evaluation_profile,
-    get_evaluation_profile_detail,
-    get_evaluation_profile_list,
-    update_evaluation_profile,
-    delete_evaluation_profile,
-]
+TOOLS = {
+    "evaluation_profile.get_evaluation_profile_workflow_template": (
+        get_evaluation_profile_workflow_template,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_profile.get_workflow_node_types_source": (
+        get_workflow_node_types_source,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_profile.create_evaluation_profile": (
+        create_evaluation_profile,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_profile.get_evaluation_profile_detail": (
+        get_evaluation_profile_detail,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_profile.get_evaluation_profile_list": (
+        get_evaluation_profile_list,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_profile.update_evaluation_profile": (
+        update_evaluation_profile,
+        ToolAuthorization.need_authorize,
+    ),
+    "evaluation_profile.delete_evaluation_profile": (
+        delete_evaluation_profile,
+        ToolAuthorization.disabled,
+    ),
+}

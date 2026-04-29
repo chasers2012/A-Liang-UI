@@ -30,7 +30,6 @@ from app.strategy.controller import (
 )
 from app.strategy.schemas import StrategyCreate, StrategyPatch
 from app.tool.models import ToolAuthorization
-from app.tool.registry import ChatToolRegistry
 from app.tool.safe_tool import safe_tool
 
 _WORKFLOW_DRAFT_STORE_LOCK = asyncio.Lock()
@@ -562,72 +561,54 @@ async def strategy_workflow_disconnect_between(
     )
 
 
-def register_strategy_chat_tools() -> None:
-    tool_defs = [
-        (
-            "strategy.get_strategy_workflow_template",
-            get_strategy_workflow_template_tool,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.get_strategy_node_catalog",
-            get_strategy_node_catalog,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.get_strategy_workflow_draft",
-            get_strategy_workflow_draft,
-            ToolAuthorization.allowed,
-        ),
-        ("strategy.create_strategy", create_strategy_tool, ToolAuthorization.allowed),
-        ("strategy.get_strategy_detail", get_strategy_detail, ToolAuthorization.allowed),
-        ("strategy.load_strategy_detail", load_strategy_detail, ToolAuthorization.allowed),
-        ("strategy.get_strategy_list", get_strategy_list, ToolAuthorization.allowed),
-        ("strategy.update_strategy", update_strategy, ToolAuthorization.need_authorize),
-        ("strategy.delete_strategy", delete_strategy_tool, ToolAuthorization.disabled),
-        ("strategy.workflow.add_node", strategy_workflow_add_node, ToolAuthorization.allowed),
-        ("strategy.workflow.remove_node", strategy_workflow_remove_node, ToolAuthorization.allowed),
-        ("strategy.workflow.move_node", strategy_workflow_move_node, ToolAuthorization.allowed),
-        (
-            "strategy.workflow.set_node_param",
-            strategy_workflow_set_node_param,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.unset_node_param",
-            strategy_workflow_unset_node_param,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.connect_nodes",
-            strategy_workflow_connect_nodes,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.connect_input",
-            strategy_workflow_connect_input,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.connect_output",
-            strategy_workflow_connect_output,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.disconnect_link",
-            strategy_workflow_disconnect_link,
-            ToolAuthorization.allowed,
-        ),
-        (
-            "strategy.workflow.disconnect_between",
-            strategy_workflow_disconnect_between,
-            ToolAuthorization.allowed,
-        ),
-    ]
-    for tool_id, tool, authorization in tool_defs:
-        ChatToolRegistry.instance().register_tool(
-            tool,
-            name=tool_id,
-            category="策略",
-            authorization=authorization,
-        )
+TOOLS = {
+    "strategy.get_strategy_workflow_template": (
+        get_strategy_workflow_template_tool,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.get_strategy_node_catalog": (
+        get_strategy_node_catalog,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.get_strategy_workflow_draft": (
+        get_strategy_workflow_draft,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.create_strategy": (create_strategy_tool, ToolAuthorization.allowed),
+    "strategy.get_strategy_detail": (get_strategy_detail, ToolAuthorization.allowed),
+    "strategy.load_strategy_detail": (load_strategy_detail, ToolAuthorization.allowed),
+    "strategy.get_strategy_list": (get_strategy_list, ToolAuthorization.allowed),
+    "strategy.update_strategy": (update_strategy, ToolAuthorization.need_authorize),
+    "strategy.delete_strategy": (delete_strategy_tool, ToolAuthorization.disabled),
+    "strategy.workflow.add_node": (strategy_workflow_add_node, ToolAuthorization.allowed),
+    "strategy.workflow.remove_node": (strategy_workflow_remove_node, ToolAuthorization.allowed),
+    "strategy.workflow.move_node": (strategy_workflow_move_node, ToolAuthorization.allowed),
+    "strategy.workflow.set_node_param": (
+        strategy_workflow_set_node_param,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.unset_node_param": (
+        strategy_workflow_unset_node_param,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.connect_nodes": (
+        strategy_workflow_connect_nodes,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.connect_input": (
+        strategy_workflow_connect_input,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.connect_output": (
+        strategy_workflow_connect_output,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.disconnect_link": (
+        strategy_workflow_disconnect_link,
+        ToolAuthorization.allowed,
+    ),
+    "strategy.workflow.disconnect_between": (
+        strategy_workflow_disconnect_between,
+        ToolAuthorization.allowed,
+    ),
+}

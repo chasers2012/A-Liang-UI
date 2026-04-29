@@ -9,6 +9,7 @@ from app.common.datetime_utils import utc_now_iso
 from app.startup_jobs import register_startup_job
 from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN
 from app.strategy.examples import example_topk_equal_weight_workflow_dict
+from app.strategy.tools import TOOLS
 
 EXAMPLE_STRATEGY_ID = "example-topk-equal-weight"
 
@@ -60,6 +61,9 @@ def ensure_example_strategy() -> None:
 
 @register_startup_job
 def register_strategy_chat_tools() -> None:
-    from app.strategy.tools import register_strategy_chat_tools as register_tools
+    import app.tool.controller as tool_controller
 
-    register_tools()
+    tool_controller.register_tools(
+        TOOLS,
+        category="策略",
+    )

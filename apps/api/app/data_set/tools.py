@@ -20,6 +20,7 @@ from app.data_set.controller import (
     update_data_set as update_data_set_controller,
 )
 from app.data_set.schemas import DataSetCreate, DataSetPatch
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
@@ -79,10 +80,10 @@ def delete_data_set(data_set_id: str) -> dict[str, Any]:
     return rec.model_dump()
 
 
-DATA_SET_CHAT_TOOLS = [
-    create_data_set,
-    get_data_set_detail,
-    get_data_set_list,
-    update_data_set,
-    delete_data_set,
-]
+TOOLS = {
+    "data_set.create_data_set": (create_data_set, ToolAuthorization.allowed),
+    "data_set.get_data_set_detail": (get_data_set_detail, ToolAuthorization.allowed),
+    "data_set.get_data_set_list": (get_data_set_list, ToolAuthorization.allowed),
+    "data_set.update_data_set": (update_data_set, ToolAuthorization.need_authorize),
+    "data_set.delete_data_set": (delete_data_set, ToolAuthorization.disabled),
+}

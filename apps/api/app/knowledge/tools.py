@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from app.tool.models import ToolAuthorization
-from app.tool.registry import ChatToolRegistry
 from app.tool.safe_tool import safe_tool
 
 from .controller import search_knowledge
@@ -37,10 +36,6 @@ def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
     return build_chat_context(query, hits)
 
 
-def register_knowledge_tools() -> None:
-    ChatToolRegistry.instance().register_tool(
-        knowledge_search_tool,
-        name="knowledge.search",
-        category="知识库",
-        authorization=ToolAuthorization.allowed,
-    )
+TOOLS = {
+    "knowledge.search": (knowledge_search_tool, ToolAuthorization.allowed),
+}

@@ -21,6 +21,7 @@ from app.backtest.controller import (
     list_backtest_runs as list_backtest_runs_controller,
 )
 from app.backtest.schemas import RunBacktestRequest
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
@@ -108,12 +109,12 @@ def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, Any]:
         raise ValueError("回测运行记录不存在") from e
 
 
-BACKTEST_CHAT_TOOLS = [
-    run_backtest,
-    get_backtest_runs,
-    get_backtest_run_detail,
-    delete_backtest_run,
-    get_backtest_equity,
-    get_backtest_trades,
-    get_backtest_node_output,
-]
+TOOLS = {
+    "backtest.run_backtest": (run_backtest, ToolAuthorization.allowed),
+    "backtest.get_backtest_runs": (get_backtest_runs, ToolAuthorization.allowed),
+    "backtest.get_backtest_run_detail": (get_backtest_run_detail, ToolAuthorization.allowed),
+    "backtest.delete_backtest_run": (delete_backtest_run, ToolAuthorization.disabled),
+    "backtest.get_backtest_equity": (get_backtest_equity, ToolAuthorization.allowed),
+    "backtest.get_backtest_trades": (get_backtest_trades, ToolAuthorization.allowed),
+    "backtest.get_backtest_node_output": (get_backtest_node_output, ToolAuthorization.allowed),
+}

@@ -14,6 +14,7 @@ from app.datasource.schemas import (
     row_to_public,
 )
 from app.datasource.verify import verify_datasource
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
@@ -94,11 +95,14 @@ def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     return TestResult(ok=ok, message=msg).model_dump()
 
 
-DATASOURCE_CHAT_TOOLS = [
-    create_datasource,
-    get_datasource_detail,
-    get_datasource_list,
-    update_datasource,
-    delete_datasource,
-    test_datasource_connection,
-]
+TOOLS = {
+    "datasource.create_datasource": (create_datasource, ToolAuthorization.allowed),
+    "datasource.get_datasource_detail": (get_datasource_detail, ToolAuthorization.allowed),
+    "datasource.get_datasource_list": (get_datasource_list, ToolAuthorization.allowed),
+    "datasource.update_datasource": (update_datasource, ToolAuthorization.need_authorize),
+    "datasource.delete_datasource": (delete_datasource, ToolAuthorization.disabled),
+    "datasource.test_datasource_connection": (
+        test_datasource_connection,
+        ToolAuthorization.allowed,
+    ),
+}

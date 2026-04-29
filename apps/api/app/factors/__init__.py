@@ -1,6 +1,7 @@
 """Factor registry, validation, dynamic loading, and Alphalens / profile evaluation."""
 
 from app.factors.skills import register_factor_skills
+from app.factors.tools import TOOLS
 from app.startup_jobs import register_startup_job
 
 register_factor_skills()
@@ -8,6 +9,9 @@ register_factor_skills()
 
 @register_startup_job
 def register_factor_chat_tools() -> None:
-    from app.factors.tools import register_factor_chat_tools as _register_factor_chat_tools
+    import app.tool.controller as tool_controller
 
-    _register_factor_chat_tools()
+    tool_controller.register_tools(
+        TOOLS,
+        category="因子",
+    )

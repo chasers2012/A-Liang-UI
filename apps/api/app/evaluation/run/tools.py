@@ -18,6 +18,7 @@ from app.evaluation.run.controller import (
 from app.evaluation.run.controller import (
     list_evaluation_runs as list_evaluation_runs_controller,
 )
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
@@ -67,9 +68,12 @@ def delete_evaluation_run(run_id: str) -> None:
         raise ValueError(f"评价运行记录 {run_id} 不存在") from None
 
 
-EVALUATION_RUN_CHAT_TOOLS = [
-    run_evaluation_run,
-    list_evaluation_runs,
-    get_evaluation_run_detail,
-    delete_evaluation_run,
-]
+TOOLS = {
+    "evaluation_run.run_evaluation_run": (run_evaluation_run, ToolAuthorization.allowed),
+    "evaluation_run.list_evaluation_runs": (list_evaluation_runs, ToolAuthorization.allowed),
+    "evaluation_run.get_evaluation_run_detail": (
+        get_evaluation_run_detail,
+        ToolAuthorization.allowed,
+    ),
+    "evaluation_run.delete_evaluation_run": (delete_evaluation_run, ToolAuthorization.disabled),
+}
