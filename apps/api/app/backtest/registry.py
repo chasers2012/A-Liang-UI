@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from sqlmodel import select
 
-from app.backtest.models import BacktestRunRow
 from app.persistence.sqlite_db import get_session
+
+from .models import BacktestRunRow
 
 
 class BacktestRunsStore:

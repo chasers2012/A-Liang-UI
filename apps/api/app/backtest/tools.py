@@ -2,27 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.backtest.controller import (
-    BacktestRunNotFoundError,
-)
-from app.backtest.controller import (
-    delete_backtest_run as delete_backtest_run_controller,
-)
-from app.backtest.controller import (
-    enqueue_backtest_run as enqueue_backtest_run_controller,
-)
-from app.backtest.controller import (
-    get_backtest_node_output as get_backtest_node_output_controller,
-)
-from app.backtest.controller import (
-    get_backtest_run as get_backtest_run_controller,
-)
-from app.backtest.controller import (
-    list_backtest_runs as list_backtest_runs_controller,
-)
-from app.backtest.schemas import RunBacktestRequest
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
+
+from . import controller
+from .schemas import RunBacktestRequest
 
 
 @safe_tool(
@@ -31,7 +15,7 @@ from app.tool.safe_tool import safe_tool
 )
 def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
     try:
-        run = enqueue_backtest_run_controller(body)
+        run = controller.enqueue_backtest_run(body)
     except ValueError as e:
         raise ValueError(str(e)) from e
     return run.model_dump(mode="json")
@@ -46,7 +30,7 @@ def get_backtest_runs(
     status: str | None = None,
     limit: int | None = None,
 ) -> list[dict[str, Any]]:
-    runs = list_backtest_runs_controller(strategy_id=strategy_id, status=status, limit=limit)
+    runs = controller.list_backtest_runs(strategy_id=strategy_id, status=status, limit=limit)
     return [r.model_dump(mode="json") for r in runs]
 
 
@@ -55,8 +39,8 @@ def get_backtest_runs(
 )
 def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     try:
-        run = get_backtest_run_controller(run_id)
-    except BacktestRunNotFoundError as e:
+        run = controller.get_backtest_run(run_id)
+    except controller.BacktestRunNotFoundError as e:
         raise ValueError("回测运行记录不存在") from e
     return run.model_dump(mode="json")
 
@@ -68,9 +52,9 @@ def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
 def delete_backtest_run(run_id: str) -> dict[str, Any]:
     try:
         # Keep a detail snapshot to return a useful response.
-        _ = get_backtest_run_controller(run_id)
-        delete_backtest_run_controller(run_id)
-    except BacktestRunNotFoundError as e:
+        _ = controller.get_backtest_run(run_id)
+        controller.delete_backtest_run(run_id)
+    except controller.BacktestRunNotFoundError as e:
         raise ValueError("回测运行记录不存在") from e
     return {"run_id": run_id, "deleted": True}
 
@@ -81,8 +65,8 @@ def delete_backtest_run(run_id: str) -> dict[str, Any]:
 )
 def get_backtest_equity(run_id: str) -> dict[str, Any]:
     try:
-        run = get_backtest_run_controller(run_id)
-    except BacktestRunNotFoundError as e:
+        run = controller.get_backtest_run(run_id)
+    except controller.BacktestRunNotFoundError as e:
         raise ValueError("回测运行记录不存在") from e
     payload = (run.results or {}).get("equity_curve") if isinstance(run.results, dict) else None
     return {"run_id": run_id, "equity_curve": list(payload or [])}
@@ -91,8 +75,8 @@ def get_backtest_equity(run_id: str) -> dict[str, Any]:
 @safe_tool("获取回测成交明细", description="获取回测成交明细。\n入参 run_id；返回 trades 序列。")
 def get_backtest_trades(run_id: str) -> dict[str, Any]:
     try:
-        run = get_backtest_run_controller(run_id)
-    except BacktestRunNotFoundError as e:
+        run = controller.get_backtest_run(run_id)
+    except controller.BacktestRunNotFoundError as e:
         raise ValueError("回测运行记录不存在") from e
     payload = (run.results or {}).get("trades") if isinstance(run.results, dict) else None
     return {"run_id": run_id, "trades": list(payload or [])}
@@ -104,8 +88,8 @@ def get_backtest_trades(run_id: str) -> dict[str, Any]:
 )
 def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, Any]:
     try:
-        return get_backtest_node_output_controller(run_id, node_id)
-    except BacktestRunNotFoundError as e:
+        return controller.get_backtest_node_output(run_id, node_id)
+    except controller.BacktestRunNotFoundError as e:
         raise ValueError("回测运行记录不存在") from e
 
 

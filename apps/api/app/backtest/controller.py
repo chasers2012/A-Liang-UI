@@ -3,14 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.backtest.models import BacktestRunRow
-from app.backtest.registry import BacktestRunsStore
-from app.backtest.result_manager import BacktestResultManager
-from app.backtest.schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
 from app.data_set.controller import get_data_set, get_data_set_detail
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
 from app.strategy.registry import StrategyRegistry
+
+from .models import BacktestRunRow
+from .registry import BacktestRunsStore
+from .result_manager import BacktestResultManager
+from .schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
 
 
 class BacktestRunNotFoundError(ValueError):
@@ -152,7 +153,7 @@ def delete_backtest_run(run_id: str) -> None:
 
 
 def _backtest_run_handler(payload: dict[str, object]) -> dict[str, object]:
-    from app.backtest.engine.runner import run_backtest_and_persist
+    from .engine.runner import run_backtest_and_persist
 
     run_id = str(payload.get("run_id", "")).strip()
     if not run_id:

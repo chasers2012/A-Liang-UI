@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 from workspace import get_workspace_root
 
-from app.backtest.engine.serialize import portfolio_to_results_dict, serialize_node_results
+from .engine.serialize import portfolio_to_results_dict, serialize_node_results
 
 
 @lru_cache(maxsize=256)

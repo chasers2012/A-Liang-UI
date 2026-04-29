@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from app.backtest.tools import TOOLS
 from app.startup_jobs import register_startup_job
+
+from .tools import TOOLS
 
 
 @register_startup_job

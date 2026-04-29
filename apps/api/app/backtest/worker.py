@@ -5,8 +5,9 @@ import threading
 from contextlib import suppress
 from datetime import datetime, timezone
 
-from app.backtest.registry import BacktestRunsStore
 from app.startup_jobs import register_startup_job
+
+from .registry import BacktestRunsStore
 
 _QUEUE: queue.Queue[str] = queue.Queue()
 _WORKER_THREAD: threading.Thread | None = None
@@ -20,7 +21,7 @@ def _execute_backtest(run_id: str) -> None:
     # The actual vectorbt engine is implemented in app/backtest/engine/.
     # Keep this import local so the worker can start even if optional deps
     # are missing in some environments.
-    from app.backtest.engine.runner import run_backtest_and_persist
+    from .engine.runner import run_backtest_and_persist
 
     run_backtest_and_persist(run_id)
 
