@@ -9,10 +9,10 @@ WORKFLOW_PREPROCESSING_DOMAIN: str = "preprocessors"
 PREPROCESSING_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
         "name": "frames",
-        "required": True,
+        "required": False,
         "label": "原始 frames",
-        "description": "由数据集加载原始数据后提供给预处理工作流。",
-        "value_type": "raw_frames",
+        "description": "由数据集加载原始数据后提供给预处理工作流的 frames 映射。",
+        "value_type": "dataframe",
         "render_type": "socket",
     }
 ]
@@ -22,9 +22,9 @@ PREPROCESSING_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
         "name": "frames",
         "required": True,
         "label": "预处理结果",
-        "description": "预处理工作流输出的 frames 映射。",
-        "value_type": "raw_frames",
-        "render_type": "appendable",
+        "description": "预处理工作流输出的 DataFrame（将用于构建最终面板）。",
+        "value_type": "dataframe",
+        "render_type": "socket",
     }
 ]
 

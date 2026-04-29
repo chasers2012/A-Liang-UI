@@ -30,12 +30,12 @@ from app.datasource.schemas import utc_now_iso
 
 def _build_preprocessor_from_workflow(
     workflow_json: str | None,
-) -> Callable[[dict[str, pd.DataFrame]], dict[str, pd.DataFrame]] | None:
+) -> Callable[[dict[str, pd.DataFrame]], pd.DataFrame] | None:
     """
     Turn stored workflow JSON into a frames-preprocessor callable.
 
     The callable matches DataSet's required signature:
-    ``preprocessor(raw_frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]``.
+    ``preprocessor(raw_frames: dict[str, pd.DataFrame]) -> pd.DataFrame``.
     """
 
     workflow = (workflow_json or "").strip()
@@ -51,7 +51,7 @@ def _build_preprocessor_from_workflow(
 
     def _preprocessor(
         raw_frames: dict[str, pd.DataFrame],
-    ) -> dict[str, pd.DataFrame]:
+    ) -> pd.DataFrame:
         node_results = executor.execute(
             workflow,
             workflow_inputs={"frames": raw_frames, **raw_frames},
@@ -61,13 +61,9 @@ def _build_preprocessor_from_workflow(
         )
         frames_out = (workflow_out or {}).get("frames")
         if frames_out is None:
-            raise ValueError(
-                "preprocessing_workflow 必须通过 workflow_outputs.frames 输出 frames 映射"
-            )
-        if not isinstance(frames_out, dict):
-            raise ValueError(
-                "preprocessing_workflow 必须通过 workflow_outputs.frames 输出 frames 映射"
-            )
+            raise ValueError("数据集预处理工作流没有输出")
+        if not isinstance(frames_out, pd.DataFrame):
+            raise ValueError("数据集预处理工作流必须返回一个DataFrame")
         return frames_out
 
     return _preprocessor

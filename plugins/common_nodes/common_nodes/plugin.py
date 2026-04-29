@@ -3,6 +3,7 @@ from typing import ClassVar
 from app.nodes.node_plugin import NodePlugin
 
 from common_nodes.data_set_to_wide import DataSetToWideNode
+from common_nodes.dataframe_rename_columns import RenameDataFrameColumnsNode
 from common_nodes.factor_ref import FactorRefNode
 from common_nodes.json_nodes import JsonParseNode, JsonToDataframeNode, LongTextParamsNode
 from common_nodes.lag_node import LagNode
@@ -15,7 +16,11 @@ from common_nodes.param_input_nodes import (
     NumberParamsNode,
     StringParamsNode,
 )
-from common_nodes.table_index_nodes import MultiIndexToWideNode, WideToMultiIndexNode
+from common_nodes.table_index_nodes import (
+    MultiIndexToWideNode,
+    SetDataFrameIndexNode,
+    WideToMultiIndexNode,
+)
 
 
 class CommonNodesPlugin(NodePlugin):
@@ -23,6 +28,7 @@ class CommonNodesPlugin(NodePlugin):
     nodes: ClassVar[list[type]] = [
         LoadDataSet,
         DataSetToWideNode,
+        RenameDataFrameColumnsNode,
         FactorRefNode,
         NumberParamsNode,
         BooleanParamsNode,
@@ -32,6 +38,7 @@ class CommonNodesPlugin(NodePlugin):
         JsonToDataframeNode,
         JsonParseNode,
         LongTextParamsNode,
+        SetDataFrameIndexNode,
         WideToMultiIndexNode,
         MultiIndexToWideNode,
         LagNode,

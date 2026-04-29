@@ -15,6 +15,69 @@ def _parse_index_names(raw: str) -> list[str]:
 
 
 @workflow_node(
+    label="设置 DataFrame Index",
+    description=(
+        "将输入 DataFrame 的一个或多个列设置为索引。\n\n"
+        "参数使用英文逗号分隔列名，例如 `date` 或 `date,asset`。\n\n"
+        "例如：\n\n"
+        "配置 `index_columns = date,asset` 时，输入 DataFrame 为：\n\n"
+        "| date       | asset | value |\n"
+        "|------------|-------|-------|\n"
+        "| 2026-04-01 | A     | 1.2   |\n"
+        "| 2026-04-01 | B     | 2.3   |\n"
+        "| 2026-04-02 | A     | 1.4   |\n"
+        "| 2026-04-02 | B     | 2.1   |\n\n"
+        "转换后会得到：\n\n"
+        "行索引变为 `MultiIndex(date, asset)`，其中 `date/asset` 不再作为普通列出现；"
+        "只保留剩余列（此例为 `value`）。\n\n"
+        "| (date)     |(asset)| value |\n"
+        "|------------|-------|-------|\n"
+        "| 2026-04-01 | A     | 1.2   |\n"
+        "| 2026-04-01 | B     | 2.3   |\n"
+        "| 2026-04-02 | A     | 1.4   |\n"
+        "| 2026-04-02 | B     | 2.1   |"
+    ),
+    category="common",
+    input_sockets=[
+        Socket(
+            "table",
+            required=True,
+            value_type="dataframe",
+            label="DataFrame",
+            description="需要设置索引的 DataFrame。",
+        ),
+        StringNodeParam(
+            "index_columns",
+            required=True,
+            label="索引列名",
+            description="要设置为索引的列名，英文逗号分隔，例如 date,asset。",
+        ),
+    ],
+    output_sockets=[
+        Socket(
+            "out",
+            value_type="dataframe",
+            label="输出",
+            description="设置 index 后的 DataFrame。",
+        )
+    ],
+)
+class SetDataFrameIndexNode:
+    def execute(self, **kwargs: Any) -> pd.DataFrame:
+        table: pd.DataFrame = kwargs["table"]
+        raw_index_columns = str(kwargs.get("index_columns") or "")
+        index_columns = [part.strip() for part in raw_index_columns.split(",") if part.strip()]
+        if not index_columns:
+            raise ValueError("index_columns 不能为空，请传入至少一个列名（逗号分隔）")
+
+        missing_columns = [column for column in index_columns if column not in table.columns]
+        if missing_columns:
+            raise ValueError(f"DataFrame 中不存在这些列: {', '.join(missing_columns)}")
+
+        return table.set_index(index_columns)
+
+
+@workflow_node(
     label="宽表 → MultiIndex",
     description=(
         "将宽表转换为 MultiIndex(行索引，列索引) 长表。\n\n"

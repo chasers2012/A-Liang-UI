@@ -1,7 +1,7 @@
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import type { WorkflowSocketDefinition } from '@/components/workflow-graph/types';
 
-export const PREPROCESSING_DATAFRAME_VALUE_TYPE = 'raw_frames';
+export const PREPROCESSING_DATAFRAME_VALUE_TYPE = 'dataframe';
 export const SYSTEM_PREPROCESSING_NODE_TYPES = new Set<string>([]);
 
 export function buildFramesInputOutputs(
@@ -33,19 +33,23 @@ function removeInvalidWorkflowInputLinks(
   });
 }
 
-function hasWorkflowBoundaryDirectLink(links: WorkflowGraphPersisted['links']): boolean {
-  return links.some((link) => link.from.kind === 'workflow_input' && link.to.kind === 'workflow_output');
-}
-
 function appendMissingBoundaryDirectLinks(
   links: WorkflowGraphPersisted['links'],
   inputSocketNames: Set<string>,
   outputSocketName: string,
 ): WorkflowGraphPersisted['links'] {
   if (!outputSocketName) return links;
-  if (hasWorkflowBoundaryDirectLink(links)) return links;
+  const outputAlreadyConnected = links.some(
+    (link) => link.to.kind === 'workflow_output' && link.to.socket === outputSocketName,
+  );
+  if (outputAlreadyConnected) return links;
   const out = [...links];
   for (const socketName of inputSocketNames) {
+    // Only auto-wire inputs that are completely unconnected.
+    const hasAnyOutgoingLink = links.some(
+      (link) => link.from.kind === 'workflow_input' && link.from.socket === socketName,
+    );
+    if (hasAnyOutgoingLink) continue;
     out.push({
       id: `auto:${socketName}->workflow-output:${outputSocketName}`,
       from: { kind: 'workflow_input', socket: socketName },

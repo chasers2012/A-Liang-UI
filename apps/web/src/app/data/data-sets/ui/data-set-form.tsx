@@ -711,7 +711,13 @@ export function DataSetForm({ mode, dataSetId }: Props) {
                 bindingsLength={form.bindings.length}
                 dependencyFieldsByDsId={dependencyFieldsByDsId}
                 dsItems={dsItems}
-                bindingDatasources={bindingDatasources}
+                bindingDatasources={(() => {
+                  const currentId = row.datasource_id.trim();
+                  const takenIds = new Set(
+                    form.bindings.map((b, i) => (i === index ? '' : b.datasource_id.trim())).filter(Boolean),
+                  );
+                  return bindingDatasources.filter((d) => d.id === currentId || !takenIds.has(d.id));
+                })()}
                 updateBinding={updateBinding}
                 removeBinding={removeBinding}
               />

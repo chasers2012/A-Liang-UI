@@ -61,7 +61,7 @@ def _merge_instrument_codes(arg: list[str] | None, fallback: list[str] | None) -
 
 class DataSet:
     data_source_bindings: list[DataSourceBinding]
-    preprocessor: Callable[[dict[str, pd.DataFrame]], dict[str, pd.DataFrame]] | None
+    preprocessor: Callable[[dict[str, pd.DataFrame]], pd.DataFrame] | None
     start_date: str | None
     end_date: str | None
     instrument_codes: list[str] | None
@@ -70,7 +70,7 @@ class DataSet:
         self,
         data_source_bindings: list[DataSourceBinding],
         *,
-        preprocessor: Callable[[dict[str, pd.DataFrame]], dict[str, pd.DataFrame]] | None = None,
+        preprocessor: Callable[[dict[str, pd.DataFrame]], pd.DataFrame] | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         instrument_codes: list[str] | None = None,
@@ -206,25 +206,56 @@ class DataSet:
         self,
         *,
         raw_frames: dict[str, pd.DataFrame],
-    ) -> dict[str, pd.DataFrame]:
+    ) -> pd.DataFrame:
         if self.preprocessor is None:
-            return raw_frames
+            raise ValueError("数据集未配置预处理器")
         frames_out = self.preprocessor(raw_frames)
         if frames_out is None:
-            return raw_frames
-        if not isinstance(frames_out, dict):
-            raise ValueError("preprocessor 必须返回 frames 映射（dict[str, pd.DataFrame]]）")
+            raise ValueError("预处理器必须返回一个 DataFrame")
+        if not isinstance(frames_out, pd.DataFrame):
+            raise ValueError("预处理器必须返回一个 DataFrame")
         return frames_out
+
+    def _panel_from_preprocessed(
+        self,
+        *,
+        preprocessed: pd.DataFrame,
+        fields: list[str],
+    ) -> pd.DataFrame:
+        if preprocessed.empty:
+            return self._empty_panel(columns=fields)
+
+        # Accept either a panel (MultiIndex) or a raw table with date/asset columns.
+        if isinstance(preprocessed.index, pd.MultiIndex):
+            idx_names = [str(n) for n in (preprocessed.index.names or [])]
+            if "date" not in idx_names or "asset" not in idx_names:
+                raise ValueError("预处理器输出 DataFrame 的索引必须包含 MultiIndex(date, asset)")
+            panel = preprocessed
+        else:
+            missing_index = sorted({"date", "asset"} - set(preprocessed.columns))
+            if missing_index:
+                raise ValueError(
+                    "预处理器输出 DataFrame 必须包含 date/asset 列或 MultiIndex(date, asset) 索引；"
+                    f"缺少: {missing_index}"
+                )
+            tmp = preprocessed.copy()
+            tmp["date"] = pd.to_datetime(tmp["date"])
+            tmp["asset"] = tmp["asset"].astype(str)
+            panel = tmp.set_index(["date", "asset"]).sort_index()
+
+        missing_fields = [f for f in fields if f not in panel.columns]
+        if missing_fields:
+            raise ValueError(f"预处理器输出缺少请求字段: {sorted(missing_fields)}")
+        return panel.reindex(columns=fields)
 
     def get_panel(
         self,
-        *,
-        fields: list[str],
-        window: int,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        instrument_codes: list[str] | None = None,
-    ) -> pd.DataFrame:
+        fields,
+        window,
+        start_date=None,
+        end_date=None,
+        instrument_codes=None,
+    ):
         if not fields:
             raise ValueError("fields must be non-empty")
         if not self.data_source_bindings:
@@ -238,7 +269,7 @@ class DataSet:
 
         load_start = panel_load_start_date(eff_start, eff_end, window)
 
-        raw_frames, binding_meta = self._load_raw_frames_for_panel(
+        raw_frames, _binding_meta = self._load_raw_frames_for_panel(
             load_start=load_start,
             end_date=eff_end,
             instrument_codes=eff_codes,
@@ -247,31 +278,5 @@ class DataSet:
         if not raw_frames:
             return self._empty_panel(columns=fields)
 
-        raw_frames = self._apply_preprocessor(raw_frames=raw_frames)
-
-        # 3) standardize each binding and join
-        parts: list[pd.DataFrame] = []
-        for ds_key, (b, cols, filters) in binding_meta.items():
-            part = self._load_binding_panel(
-                b,
-                requested=fields,
-                cols=cols,
-                filters=filters,
-                raw_override=raw_frames.get(ds_key),
-            )
-            if not part.empty and part.shape[1] > 0:
-                parts.append(part)
-
-        if not parts:
-            raise ValueError(
-                f"preprocessor output does not contain requested fields: {sorted(fields)}"
-            )
-
-        merged = parts[0].sort_index()
-        for part in parts[1:]:
-            merged = merged.join(part.sort_index(), how="inner")
-
-        missing = [f for f in fields if f not in merged.columns]
-        if missing:
-            raise ValueError(f"Missing requested fields in merged panel: {missing}")
-        return merged.reindex(columns=fields)
+        preprocessed = self._apply_preprocessor(raw_frames=raw_frames)
+        return self._panel_from_preprocessed(preprocessed=preprocessed, fields=fields)
