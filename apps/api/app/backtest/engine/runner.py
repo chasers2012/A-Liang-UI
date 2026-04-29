@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
-from .registry import BacktestRunsStore
-from .result_manager import BacktestResultManager
+from ..registry import BacktestRunsStore
+from ..result_manager import BacktestResultManager
 
 
 def _position_to_target_weights(position: pd.DataFrame) -> pd.DataFrame:
@@ -57,8 +57,8 @@ def run_backtest_and_persist(run_id: str) -> None:
     from app.data_set.controller import get_data_set
     from app.strategy.registry import StrategyRegistry
 
-    from .engine.market_data import load_market_data
-    from .engine.vectorbt_runner import (
+    from .market_data import load_market_data
+    from .vectorbt_runner import (
         run_portfolio_from_target_weights,
     )
 
