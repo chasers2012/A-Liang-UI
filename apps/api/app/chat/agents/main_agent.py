@@ -5,7 +5,6 @@ from typing import Any
 from app.chat.agents.hitl_checkpointer import get_hitl_checkpointer
 from app.chat.agents.store import get_agent_store
 from app.chat.agents.subagnets import SUBAGENT_BUILDERS
-from app.tool.controller import ToolController
 from deepagents._models import resolve_model
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
 from deepagents.graph import (
@@ -29,14 +28,10 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
     model_spec = model if isinstance(model, str) else None
     resolved_model = resolve_model(model)
     profile = _harness_profile_for_model(resolved_model, model_spec)
-    ctrl = ToolController()
-    tools_by_id = ctrl.get_tools()
-    _, need_authorize = ctrl.split_tool_ids_by_authorization(tools_by_id.keys())
+
     subagents = []
     for builder in SUBAGENT_BUILDERS:
-        subagent = builder(tools_by_id, need_authorize_tool_ids=need_authorize)
-        if subagent:
-            subagents.append(subagent)
+        subagents.append(builder())
     has_interrupt_on = any(
         isinstance(subagent.get("interrupt_on"), dict) and bool(subagent.get("interrupt_on"))
         for subagent in subagents

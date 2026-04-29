@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from workflow import Node
 
-from app.nodes.registry import WorkflowNodesRegistry
 from app.plugin import Plugin
 from app.visibility.controller import list_domain_node_visibility_configs, toggle_node_visibility
+
+from .registry import WorkflowNodesRegistry
 
 
 class NodePlugin(Plugin):

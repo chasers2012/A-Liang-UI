@@ -5,16 +5,16 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from app.persistence.sqlite_db import get_session
-from app.tool.controller import ToolController
-from app.tool.models import ChatToolRow, ToolAuthorization
+
+from . import controller
+from .models import ChatToolRow, ToolAuthorization
 
 router = APIRouter(prefix="/tools", tags=["tools"])
 
 
 @router.get("")
 def list_tools() -> list[dict]:
-    ctrl = ToolController()
-    tools = ctrl.get_tools()
+    tools = controller.get_tools()
     available = set(tools.keys())
     with get_session() as session:
         rows = list(session.exec(select(ChatToolRow)))

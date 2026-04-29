@@ -7,15 +7,16 @@ from workflow.node_loader import WorkflowNodeLoader
 from workflow.parser import Parser
 
 from app.common.datetime_utils import utc_now_iso
-from app.nodes.models import WorkflowNodeRow
-from app.nodes.package_manager import WorkflowNodePackageManager
-from app.nodes.registry import WorkflowNodesRegistry
-from app.nodes.schemas import (
+from app.visibility.registry import WorkflowDomainNodesRegistry
+
+from .package_manager import WorkflowNodePackageManager
+from .registry import WorkflowNodesRegistry
+from .schemas import (
     WorkflowNodeCreate,
     WorkflowNodeDetailPublic,
+    WorkflowNodeRow,
     WorkflowNodeSummaryPublic,
 )
-from app.visibility.registry import WorkflowDomainNodesRegistry
 
 
 def create_workflow_node(body: WorkflowNodeCreate) -> WorkflowNodeRow:

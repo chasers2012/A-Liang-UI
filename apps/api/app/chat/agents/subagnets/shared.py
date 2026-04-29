@@ -2,22 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-
-def build_subagent_tools(
-    all_tools_by_id: dict[str, Any],
-    *,
-    candidate_tool_ids: set[str],
-) -> list[Any]:
-    picked: list[Any] = []
-    for tool_id in candidate_tool_ids:
-        tool = all_tools_by_id.get(tool_id)
-        if tool is None:
-            continue
-        runtime_tool_name = (getattr(tool, "name", "") or "").strip()
-        if not runtime_tool_name:
-            continue
-        picked.append(tool)
-    return picked
+import app.tool.controller as tool_controller
 
 
 def build_subagent_interrupt_on(
@@ -43,34 +28,25 @@ def build_subagent_interrupt_on(
     return interrupt_on or None
 
 
-def format_tool_boundary_section(
-    all_tools_by_id: dict[str, Any],
-    *,
-    tool_ids: set[str],
-) -> str:
-    lines: list[str] = []
-    for tool_id in sorted(tool_ids):
-        tool = all_tools_by_id.get(tool_id)
+def build_tools(candidate_tool_ids: list[str]):
+    tools_by_id = tool_controller.get_tools()
+    _, need_authorize = tool_controller.split_tool_ids_by_authorization(tools_by_id.keys())
+
+    tools: list[Any] = []
+    for tool_id in candidate_tool_ids:
+        tool = tools_by_id.get(tool_id)
         if tool is None:
             continue
-        tool_desc = (getattr(tool, "description", "") or "").strip()
-        tool_name = (getattr(tool, "name", "") or "").strip()
-        if tool_desc:
-            lines.append(f"- {tool_desc}")
-        else:
-            lines.append(f"- {tool_name}")
-    return "\n".join(lines) if lines else "- 无可用工具"
+        runtime_tool_name = (getattr(tool, "name", "") or "").strip()
+        if not runtime_tool_name:
+            continue
+        tools.append(tool)
 
-
-def append_tool_boundary_to_description(
-    base_description: str,
-    all_tools_by_id: dict[str, Any],
-    *,
-    tool_ids: set[str],
-) -> str:
-    return base_description
-    # return (
-    #     f"{base_description}\n"
-    #     "这个子代理可以调用这些工具：\n"
-    #     f"{format_tool_boundary_section(all_tools_by_id, tool_ids=tool_ids)}"
-    # )
+    return {
+        "tools": tools,
+        "interrupt_on": build_subagent_interrupt_on(
+            tools,
+            need_authorize_tool_ids=need_authorize,
+            all_tools_by_id=tools_by_id,
+        ),
+    }

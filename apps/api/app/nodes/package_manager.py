@@ -6,7 +6,7 @@ from collections.abc import Callable
 from custom_code import SourceFiles
 from workspace import workspace_path
 
-from app.nodes.constants import USER_NODE_WORKFLOW_ROOT
+from .constants import USER_NODE_WORKFLOW_ROOT
 
 
 class WorkflowNodePackageManager:

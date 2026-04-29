@@ -9,12 +9,13 @@ from workflow import Node
 from workflow.node_loader import WorkflowNodeLoader
 from workspace import ensure_dir
 
-from app.nodes.constants import (
+from app.persistence.sqlite_db import get_session
+
+from .constants import (
     PLUGIN_NODE_TIMESTAMP_ISO,
     USER_NODE_WORKFLOW_ROOT,
 )
-from app.nodes.models import WorkflowNodeRow
-from app.persistence.sqlite_db import get_session
+from .schemas import WorkflowNodeRow
 
 
 class WorkflowNodesRegistry:

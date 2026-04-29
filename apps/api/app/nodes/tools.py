@@ -5,16 +5,12 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from app.nodes.constants import DEFAULT_NODE_SOURCE
-from app.nodes.controller import (
-    create_workflow_node,
-    delete_workflow_node,
-    list_nodes,
-    load_node_detail,
-    update_node_record,
-)
-from app.nodes.schemas import WorkflowNodeCreate
+from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
+
+from . import controller
+from .constants import DEFAULT_NODE_SOURCE
+from .schemas import WorkflowNodeCreate
 
 
 @safe_tool(
@@ -31,8 +27,8 @@ def get_new_workflow_node_template() -> str:
 )
 def create_workflow_node_tool(source: str) -> dict[str, Any]:
     review = _review_node_source_with_llm(source)
-    rec = create_workflow_node(WorkflowNodeCreate(source=source))
-    detail = load_node_detail(rec.id)
+    rec = controller.create_workflow_node(WorkflowNodeCreate(source=source))
+    detail = controller.load_node_detail(rec.id)
     if detail is None:
         raise ValueError(f"节点 {rec.id} 创建后加载失败")
     out = detail.model_dump()
@@ -45,7 +41,7 @@ def create_workflow_node_tool(source: str) -> dict[str, Any]:
     description="查询工作流节点详情。\n入参 node_id是节点类型的id,不是节点实例的id；返回包含完整 source 的详情。",
 )
 def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
-    detail = load_node_detail(node_id)
+    detail = controller.load_node_detail(node_id)
     if detail is None:
         raise ValueError(f"节点 {node_id} 不存在")
     return detail.model_dump()
@@ -56,7 +52,7 @@ def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     description="查询工作流节点列表。\n返回节点列表用于图编辑器选择与预览。",
 )
 def get_workflow_node_list() -> list[dict[str, Any]]:
-    return [x.model_dump() for x in list_nodes()]
+    return [x.model_dump() for x in controller.list_nodes()]
 
 
 def _extract_json_block(text: str) -> str:
@@ -106,12 +102,6 @@ def _review_node_source_with_llm(source: str) -> dict[str, Any]:
     if not approved:
         issue_text = "；".join(str(x) for x in issues if str(x).strip()) or "未通过 LLM 审查"
         raise ValueError(f"源码审查未通过：{issue_text}")
-    return {
-        "approved": True,
-        "summary": str(review.get("summary", "")).strip(),
-        "issues": [str(x) for x in issues if str(x).strip()],
-        "suggestions": [str(x) for x in (review.get("suggestions") or []) if str(x).strip()],
-    }
 
 
 @safe_tool(
@@ -119,31 +109,32 @@ def _review_node_source_with_llm(source: str) -> dict[str, Any]:
     description="更新已有工作流节点。\n入参为节点源码source；更新前先执行 LLM 代码审查，审查通过后返回更新后的详情。",
 )
 def update_workflow_node(source: str) -> dict[str, Any]:
-    review = _review_node_source_with_llm(source)
-    rec = update_node_record(source)
+    _review_node_source_with_llm(source)
+    rec = controller.update_node_record(source)
     if rec is None:
         raise ValueError("节点不存在")
-    detail = load_node_detail(rec.id)
+    detail = controller.load_node_detail(rec.id)
     if detail is None:
         raise ValueError("节点不存在")
-    out = detail.model_dump()
-    out["review"] = review
-    return out
+    return detail.model_dump()
 
 
 @safe_tool("删除工作流节点", description="删除指定工作流节点。\n入参 node_id；返回删除记录。")
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
-    deleted = delete_workflow_node(node_id)
+    deleted = controller.delete_workflow_node(node_id)
     if deleted is None:
         raise ValueError(f"节点 {node_id} 不存在")
     return deleted.model_dump()
 
 
-WORKFLOW_NODE_CHAT_TOOLS = [
-    get_new_workflow_node_template,
-    create_workflow_node_tool,
-    get_workflow_node_detail,
-    get_workflow_node_list,
-    update_workflow_node,
-    delete_workflow_node_tool,
-]
+TOOLS = {
+    "node.get_new_workflow_node_template": (
+        get_new_workflow_node_template,
+        ToolAuthorization.allowed,
+    ),
+    "node.create_workflow_node": (create_workflow_node_tool, ToolAuthorization.allowed),
+    "node.get_workflow_node_detail": (get_workflow_node_detail, ToolAuthorization.allowed),
+    "node.get_workflow_node_list": (get_workflow_node_list, ToolAuthorization.allowed),
+    "node.update_workflow_node": (update_workflow_node, ToolAuthorization.need_authorize),
+    "node.delete_workflow_node": (delete_workflow_node_tool, ToolAuthorization.disabled),
+}

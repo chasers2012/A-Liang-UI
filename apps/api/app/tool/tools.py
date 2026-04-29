@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.tool.controller import ToolController
-from app.tool.safe_tool import safe_tool
+from . import controller
+from .safe_tool import safe_tool
 
 
 @safe_tool(
@@ -14,8 +14,7 @@ from app.tool.safe_tool import safe_tool
     ),
 )
 def list_available_tools() -> list[dict[str, Any]]:
-    ctrl = ToolController()
-    tools = ctrl.get_tools()
+    tools = controller.get_tools()
     out: list[dict[str, Any]] = []
     for name in sorted(tools.keys()):
         tool_obj = tools[name]

@@ -27,7 +27,7 @@ class ChatToolRegistry:
         self,
         tool: Any,
         *,
-        name: str | None = None,
+        id: str | None = None,
         category: str | None = None,
         authorization: ToolAuthorization = ToolAuthorization.need_authorize,
     ) -> None:
@@ -36,24 +36,24 @@ class ChatToolRegistry:
 
         `name` is optional; defaults to `tool.name`.
         """
-        tool_name = (name or getattr(tool, "name", "")).strip()
-        tool_display_name = (getattr(tool, "name", "") or "").strip() or tool_name
-        if not tool_name:
-            raise ValueError("tool 必须提供 name")
+        tool_id = (id or getattr(tool, "name", "")).strip()
+        tool_display_name = (getattr(tool, "name", "") or "").strip() or tool_id
+        if not tool_id:
+            raise ValueError("tool 必须提供 id")
         if not hasattr(tool, "invoke"):
-            raise ValueError(f"tool `{tool_name}` 必须实现 invoke(...)")
-        self._tools[tool_name] = tool
+            raise ValueError(f"tool `{tool_id}` 必须实现 invoke(...)")
+        self._tools[tool_id] = tool
         category_value = (category or "").strip()
         tool_authorization = authorization
 
         now = datetime.now(timezone.utc).isoformat()
         with get_session() as session:
-            existing = session.get(ChatToolRow, tool_name)
+            existing = session.get(ChatToolRow, tool_id)
             if existing is not None:
                 return
             session.add(
                 ChatToolRow(
-                    id=tool_name,
+                    id=tool_id,
                     name=tool_display_name,
                     category=category_value,
                     updated_at=now,
@@ -64,17 +64,17 @@ class ChatToolRegistry:
 
     def register_tools(
         self,
-        tools: dict[str, Any],
+        tools: dict[str, tuple[Any, ToolAuthorization]],
         *,
         category: str | None = None,
-        authorization: ToolAuthorization = ToolAuthorization.need_authorize,
     ) -> None:
-        for tool_name, tool in tools.items():
+        for tool_id, t in tools.items():
+            auth = t[1]
             self.register_tool(
-                tool,
-                name=tool_name,
+                t[0],
+                id=tool_id,
                 category=category,
-                authorization=authorization,
+                authorization=auth,
             )
 
     def get_tools(self) -> dict[str, Any]:
