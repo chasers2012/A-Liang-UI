@@ -2,7 +2,6 @@ export type ConfigModuleSpecPublic = {
   key: string;
   title: string;
   description: string | null;
-  filename: string;
   schema: Record<string, unknown>;
   uiSchema: Record<string, unknown>;
 };

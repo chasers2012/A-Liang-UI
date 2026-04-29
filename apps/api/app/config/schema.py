@@ -29,7 +29,6 @@ class ConfigModuleSpecPublic(BaseModel):
     key: str
     title: str
     description: str | None = None
-    filename: str
     json_schema: dict[str, Any] = Field(alias="schema")
     ui_schema: dict[str, Any] = Field(alias="uiSchema")
 

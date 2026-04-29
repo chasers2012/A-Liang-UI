@@ -6,27 +6,25 @@ import json
 from collections.abc import AsyncIterable, Iterable
 from typing import Any
 
+from langchain_core.messages import (
+    AIMessage,
+    AIMessageChunk,
+    ToolMessage,
+)
+from langchain_core.runnables.config import RunnableConfig
+from langgraph.types import Command
+from langgraph.typing import InputT
+
 from app.chat.agents.main_agent import create_main_agent
 from app.chat.events import (
     DeltaEvent,
     DoneEvent,
-    ErrorEvent,
     ReasoningEvent,
     StreamEventAny,
     TextPayload,
     ToolEvent,
     ToolPayload,
 )
-from app.chat.schemas import ChatMessageIn, message_text_for_model
-from langchain_core.messages import (
-    AIMessage,
-    AIMessageChunk,
-    BaseMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
-from langgraph.types import Command
 
 
 def _canonicalize_args(value: Any) -> str:
@@ -196,19 +194,6 @@ def _collect_run_segment_mapping_from_task(
     run_segment_id_map[ns_key] = tc_id
 
 
-def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseMessage]:
-    lc_messages: list[BaseMessage] = []
-    for m in messages:
-        text = message_text_for_model(m)
-        if m.role == "system":
-            lc_messages.append(SystemMessage(content=text))
-        elif m.role == "user":
-            lc_messages.append(HumanMessage(content=text))
-        else:
-            lc_messages.append(AIMessage(content=text))
-    return lc_messages
-
-
 def parse_messages(  # noqa: C901
     chunk: dict[str, Any],
     emitted_tool_event_keys: set[tuple[str, str]],
@@ -318,7 +303,7 @@ def parse_interrupt(
     data: Any,
     emitted_tool_event_keys: set[tuple[str, str]],
     pending_tool_starts: list[tuple[str, str | None, str]],
-) -> tuple[bool, list[ToolEvent]]:
+) -> list[ToolEvent] | None:
     """
     Parse interrupt payload from updates stream.
 
@@ -326,8 +311,9 @@ def parse_interrupt(
     - handled: whether the current updates chunk is an interrupt chunk
     - events: authorize tool events to emit; empty means terminate stream for this interrupt
     """
+    events: list[ToolEvent] = []
     if not isinstance(data, dict) or "__interrupt__" not in data:
-        return False, []
+        return None
     try:
         interrupt_value = data["__interrupt__"][0].value
     except Exception:
@@ -338,9 +324,8 @@ def parse_interrupt(
         interrupt_value,
     )
     if not matched_ids:
-        return True, []
+        return events
 
-    events: list[ToolEvent] = []
     for tc_id in matched_ids:
         event_key = ("authorize", tc_id)
         if event_key in emitted_tool_event_keys:
@@ -354,26 +339,23 @@ def parse_interrupt(
                 )
             )
         )
-    return True, events
+    return events
 
 
-async def _stream_events_from_agent_astream(
-    agent: Any,
+async def stream_event_aiter_for_chat(
+    llm: Any,
+    input: InputT | Command | None,
     *,
-    astream_input: Any,
-    max_tool_rounds: int,
-    configurable: dict[str, Any],
+    config: RunnableConfig = None,
 ) -> AsyncIterable[StreamEventAny]:
+    agent = await create_main_agent(model=llm)
     emitted_tool_event_keys: set[tuple[str, str]] = set()
     pending_tool_starts: list[tuple[str, str | None, str]] = []
     run_segment_id_map: dict[str, str] = {}
 
     async for chunk in agent.astream(
-        astream_input,
-        {
-            "recursion_limit": max_tool_rounds * 2,
-            "configurable": configurable,
-        },
+        input,
+        config,
         stream_mode=["messages", "tasks", "updates"],
         subgraphs=True,
         version="v2",
@@ -396,75 +378,17 @@ async def _stream_events_from_agent_astream(
             continue
 
         if ctype == "updates":
-            data = chunk.get("data") or {}
-            handled, events = parse_interrupt(
+            data = chunk.get("data")
+            events = parse_interrupt(
                 data,
                 emitted_tool_event_keys,
                 pending_tool_starts,
             )
-            if handled:
-                if not events:
-                    return
-                for event in events:
-                    yield event
+            if not isinstance(events, list):
+                continue
+            if not events:
                 return
-            continue
+            for event in events:
+                yield event
 
     yield DoneEvent()
-
-
-async def stream_event_aiter_for_chat(
-    llm: Any,
-    *,
-    chat_messages: list[ChatMessageIn] | None = None,
-    decision: dict[str, Any] | None = None,
-    max_tool_rounds: int | None = None,
-    thread_id: str | None = None,
-) -> AsyncIterable[StreamEventAny]:
-    if max_tool_rounds is None:
-        from app.chat.schemas import LlmSettings
-
-        max_tool_rounds = LlmSettings().max_tool_rounds
-
-    use_resume = decision is not None
-    if use_resume:
-        tid = (thread_id or "").strip()
-        if not tid:
-            yield ErrorEvent(payload="thread_id 不能为空")
-            return
-    elif chat_messages is None:
-        yield ErrorEvent(payload="chat_messages 不能为空")
-        return
-
-    try:
-        agent = await create_main_agent(model=llm)
-    except Exception as e:
-        yield ErrorEvent(payload=f"初始化失败：{e}")
-        return
-
-    astream_input: Any
-    configurable = {"thread_id": thread_id} if thread_id else {}
-    if use_resume:
-        # HumanInTheLoopMiddleware expects resume payload shape:
-        # {"decisions": [{"type": "approve" | "reject" | ...}]}
-        decision_data = decision or {}
-        if isinstance(decision_data.get("decisions"), list):
-            astream_input = Command(resume={"decisions": decision_data["decisions"]})
-        else:
-            yield ErrorEvent(payload="授权续跑失败：缺少有效 decisions")
-            return
-        configurable = {"thread_id": tid}
-    else:
-        astream_input = {"messages": _lc_messages_from_chat_messages(chat_messages or [])}
-
-    try:
-        async for event in _stream_events_from_agent_astream(
-            agent,
-            astream_input=astream_input,
-            max_tool_rounds=max_tool_rounds,
-            configurable=configurable,
-        ):
-            yield event
-    except Exception as e:
-        yield ErrorEvent(payload=f"LLM 调用失败：{e}")
-        return

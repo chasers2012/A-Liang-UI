@@ -12,6 +12,8 @@ from typing import Any
 from diskcache import Cache
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langgraph.types import Command
 from workspace import workspace_path
 
 from app.chat.agent import (
@@ -29,12 +31,7 @@ from app.chat.events import (
     ToolEvent,
     ToolPayload,
 )
-from app.chat.registry import (
-    ChatRegistry,
-    record_to_archived_summary,
-    record_to_detail,
-    record_to_summary,
-)
+from app.chat.registry import ChatRegistry
 from app.chat.schemas import (
     AssistantBlockPublic,
     ChatArchivedSummaryPublic,
@@ -51,8 +48,8 @@ from app.chat.schemas import (
     ChatRequest,
     ChatSummaryPublic,
     ChatToolCallPublic,
-    LlmSettings,
     ensure_chat_message_id,
+    message_text_for_model,
 )
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
@@ -62,6 +59,36 @@ _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
 _AUTH_PENDING_TTL_SECONDS = 10 * 60
 _AUTH_WAIT_POLL_SECONDS = 0.2
 _AUTH_CACHE = Cache(str(workspace_path(".quant-agent/chat_auth_cache")))
+
+
+def record_to_summary(rec: ChatRecord) -> ChatSummaryPublic:
+    return ChatSummaryPublic(
+        id=rec.id,
+        title=rec.title,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+        message_count=rec.message_count,
+    )
+
+
+def record_to_archived_summary(rec: ChatRecord) -> ChatArchivedSummaryPublic:
+    if not rec.archived_at:
+        raise ValueError("chat is not archived")
+    return ChatArchivedSummaryPublic(
+        **record_to_summary(rec).model_dump(),
+        archived_at=rec.archived_at,
+    )
+
+
+def record_to_detail(rec: ChatRecord) -> ChatDetailPublic:
+    messages = ChatRegistry.get_messages(rec.id) or []
+    return ChatDetailPublic(
+        id=rec.id,
+        title=rec.title,
+        messages=messages,
+        created_at=rec.created_at,
+        updated_at=rec.updated_at,
+    )
 
 
 def _auth_pending_key(thread_id: str) -> str:
@@ -94,9 +121,7 @@ def _clear_pending_auth(thread_id: str) -> None:
     _AUTH_CACHE.delete(_auth_decision_key(thread_id))
 
 
-def build_chat_model(
-    settings: LlmSettings,
-) -> BaseChatModel:
+def build_chat_model() -> BaseChatModel:
     model, kwargs = get_llm_settings()
     return init_chat_model(model, **kwargs)
 
@@ -372,6 +397,19 @@ async def _wait_for_authorization_decision(
         await asyncio.sleep(_AUTH_WAIT_POLL_SECONDS)
 
 
+def _lc_messages_from_chat_messages(messages: list[ChatMessageIn]) -> list[BaseMessage]:
+    lc_messages: list[BaseMessage] = []
+    for m in messages:
+        text = message_text_for_model(m)
+        if m.role == "system":
+            lc_messages.append(SystemMessage(content=text))
+        elif m.role == "user":
+            lc_messages.append(HumanMessage(content=text))
+        else:
+            lc_messages.append(AIMessage(content=text))
+    return lc_messages
+
+
 async def stream_async(  # noqa: C901
     body: ChatRequest,
     *,
@@ -405,19 +443,20 @@ async def stream_async(  # noqa: C901
             await out.put(_sse_wire_frame(message_ids_event))
             llm = build_chat_model()
             pending_decision: dict[str, Any] | None = None
-            while True:
-                stream_kwargs: dict[str, Any] = {
-                    "thread_id": thread_id,
-                }
-                if pending_decision is None:
-                    stream_kwargs["chat_messages"] = context_messages
-                else:
-                    stream_kwargs["decision"] = pending_decision
 
+            while True:
                 interrupted = False
+
+                input: Any
+                if pending_decision is not None:
+                    if not isinstance(pending_decision.get("decisions"), list):
+                        raise ValueError("授权续跑失败：缺少有效 decisions")
+                    input = Command(resume={"decisions": pending_decision["decisions"]})
+                else:
+                    input = {"messages": _lc_messages_from_chat_messages(context_messages or [])}
+
                 async for event in stream_event_aiter_for_chat(
-                    llm,
-                    **stream_kwargs,
+                    llm, input, config={"configurable": {"thread_id": thread_id}}
                 ):
                     if await is_disconnected():
                         return
@@ -454,6 +493,7 @@ async def stream_async(  # noqa: C901
                     )
                     continue
                 return
+
         except ValueError as e:
             if not await is_disconnected():
                 err_event = ErrorEvent(payload=f"{e}")

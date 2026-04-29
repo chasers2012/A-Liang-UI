@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.persistence.sql_types import JsonText
 from sqlmodel import Column, Field, Index, SQLModel
+
+from app.persistence.sql_types import JsonText
 
 
 class ChatRow(SQLModel, table=True):

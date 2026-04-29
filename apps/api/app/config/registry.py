@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.config.schema import ConfigModuleSpec
+from .schema import ConfigModuleSpec
 
 _REGISTRY: dict[str, ConfigModuleSpec] = {}
 

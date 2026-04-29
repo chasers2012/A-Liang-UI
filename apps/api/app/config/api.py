@@ -4,8 +4,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.config import controller
-from app.config.schema import ConfigSpecsResponse, ConfigValuesResponse
+from . import controller
+from .schema import ConfigSpecsResponse, ConfigValuesResponse
 
 router = APIRouter(prefix="/config", tags=["config"])
 

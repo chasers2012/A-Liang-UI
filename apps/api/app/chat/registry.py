@@ -1,18 +1,16 @@
 from __future__ import annotations
 
+from sqlmodel import select
+
 from app.chat.models import ChatMessageRow, ChatRow
 from app.chat.schemas import (
     AssistantBlockPublic,
-    ChatArchivedSummaryPublic,
-    ChatDetailPublic,
     ChatMessageIn,
     ChatRecord,
     ChatsFile,
-    ChatSummaryPublic,
 )
 from app.common.datetime_utils import utc_now_iso
 from app.persistence.sqlite_db import get_session
-from sqlmodel import select
 
 CHATS_DIR = "chat"
 
@@ -184,33 +182,3 @@ class ChatRegistry:
             row.updated_at = utc_now_iso()
             db.add(row)
             db.commit()
-
-
-def record_to_summary(rec: ChatRecord) -> ChatSummaryPublic:
-    return ChatSummaryPublic(
-        id=rec.id,
-        title=rec.title,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
-        message_count=rec.message_count,
-    )
-
-
-def record_to_archived_summary(rec: ChatRecord) -> ChatArchivedSummaryPublic:
-    if not rec.archived_at:
-        raise ValueError("chat is not archived")
-    return ChatArchivedSummaryPublic(
-        **record_to_summary(rec).model_dump(),
-        archived_at=rec.archived_at,
-    )
-
-
-def record_to_detail(rec: ChatRecord) -> ChatDetailPublic:
-    messages = ChatRegistry.get_messages(rec.id) or []
-    return ChatDetailPublic(
-        id=rec.id,
-        title=rec.title,
-        messages=messages,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
-    )

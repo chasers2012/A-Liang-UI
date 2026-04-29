@@ -5,9 +5,10 @@ from typing import Any
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from app.config.registry import get_config_spec, list_config_specs
-from app.config.schema import ConfigModuleSpec, ConfigModuleSpecPublic
 from app.workspace_config import load_workspace_config, save_workspace_config
+
+from .registry import get_config_spec, list_config_specs
+from .schema import ConfigModuleSpec, ConfigModuleSpecPublic
 
 
 class GenericConfigValues(BaseModel):
@@ -33,7 +34,6 @@ def list_specs() -> list[ConfigModuleSpecPublic]:
             key=spec.key,
             title=spec.title,
             description=spec.description,
-            filename=spec.filename,
             json_schema=spec.json_schema,
             ui_schema=spec.ui_schema,
         )

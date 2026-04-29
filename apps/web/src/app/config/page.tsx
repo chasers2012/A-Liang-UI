@@ -123,10 +123,7 @@ export default function AgentConfigPage() {
             <Card key={module.key}>
               <CardHeader>
                 <CardTitle>{module.title}</CardTitle>
-                <CardDescription>
-                  {module.description ?? '无描述'}
-                  <span className="ml-2 font-mono text-xs">config/{module.filename}</span>
-                </CardDescription>
+                <CardDescription>{module.description ?? '无描述'}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {moduleErrors[module.key] ? (
