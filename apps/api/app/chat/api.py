@@ -17,6 +17,7 @@ from .schemas import (
     ChatDetailPublic,
     ChatRenameBody,
     ChatRequest,
+    ChatStopRequest,
     ChatSummaryPublic,
 )
 
@@ -46,6 +47,15 @@ def chat_authorize(body: ChatAuthorizationRequest) -> dict[str, str]:
     """Submit authorization decision and return immediately."""
     try:
         return controller.submit_authorization(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@router.post("/stop")
+def chat_stop(body: ChatStopRequest) -> dict[str, str]:
+    """Request server-side cancellation for an in-flight stream."""
+    try:
+        return controller.stop_stream(body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

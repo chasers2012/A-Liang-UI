@@ -1,9 +1,10 @@
-import { atom, type Setter } from 'jotai';
+import { atom, type Getter, type Setter } from 'jotai';
 
 import {
   archiveAgentChat,
   createAgentChat,
   postAgentChatAuthorize,
+  postAgentChatStop,
   postAgentChatStream,
   renameAgentChat,
 } from '@/api/chat';
@@ -110,6 +111,25 @@ function rollbackOptimisticSend(set: Setter, targetSessionId: string, userId: st
   userMessageReplieIdsAtomFamily.remove(userId);
 }
 
+/** 从指定 user 消息起（含）丢弃本地列表与 atom，与服务端 replace_from_message_id 对齐。 */
+function trimLocalChatFromUserMessage(get: Getter, set: Setter, sessionId: string, fromUserMessageId: string): void {
+  const ids = get(sessionUserMessageIdsAtomFamily(sessionId)) ?? [];
+  const idx = ids.indexOf(fromUserMessageId);
+  if (idx === -1) return;
+  const tail = ids.slice(idx);
+  for (const uid of tail) {
+    const replyIds = get(userMessageReplieIdsAtomFamily(uid)) ?? [];
+    for (const rid of replyIds) {
+      set(messagesAtomFamily(rid), undefined);
+      messagesAtomFamily.remove(rid);
+    }
+    set(messagesAtomFamily(uid), undefined);
+    messagesAtomFamily.remove(uid);
+    userMessageReplieIdsAtomFamily.remove(uid);
+  }
+  set(sessionUserMessageIdsAtomFamily(sessionId), ids.slice(0, idx));
+}
+
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError';
 }
@@ -132,7 +152,146 @@ function handleSendChatMessageError(
     set(chatErrorAtom, error instanceof ApiError ? error.message : '请求失败，请检查 API 与网络。');
   }
   rollbackOptimisticSend(set, sessionId, userId, assistantId);
-  set(chatInputAtom, trimmedInput);
+  if (trimmedInput) {
+    set(chatInputAtom, trimmedInput);
+  }
+}
+
+async function streamSendMessage(
+  get: Getter,
+  set: Setter,
+  payload: {
+    sessionId: string;
+    text: string;
+    replaceFromMessageId?: string;
+    clearInputBeforeSend?: boolean;
+    restoreInputOnError?: boolean;
+  },
+): Promise<void> {
+  const { sessionId, text, replaceFromMessageId, clearInputBeforeSend, restoreInputOnError } = payload;
+  const trimmed = text.trim();
+  if (!trimmed || get(chatIsSendingAtom)) return;
+
+  if (replaceFromMessageId) {
+    trimLocalChatFromUserMessage(get, set, sessionId, replaceFromMessageId);
+  }
+
+  const sessionSummary = get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
+  const shouldAutoTitle =
+    !!sessionSummary &&
+    (sessionSummary.title || '').trim() === CHAT_DEFAULT_TITLE &&
+    (sessionSummary.message_count ?? 0) === 0;
+
+  const provisionalUserId = crypto.randomUUID();
+  const provisionalAssistantId = crypto.randomUUID();
+  const userTurn: ChatMessagePublic & { role: 'user' } = {
+    id: provisionalUserId,
+    role: 'user',
+    blocks: [{ kind: 'text', content: trimmed }],
+  };
+  let streamUserId = provisionalUserId;
+  let streamAssistantId = provisionalAssistantId;
+  let hasServerMessageIds = false;
+  const abortController = new AbortController();
+
+  set(chatErrorAtom, null);
+  if (clearInputBeforeSend) {
+    set(chatInputAtom, '');
+  }
+  set(chatIsSendingAtom, true);
+  set(isSessionGeneratingAtomFamily(sessionId), true);
+  set(chatAbortControllerAtom, abortController);
+  set(chatStreamingReplyIdAtom, provisionalAssistantId);
+  set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
+  set(messagesAtomFamily(userTurn.id), userTurn);
+  set(messagesAtomFamily(provisionalAssistantId), {
+    id: provisionalAssistantId,
+    role: 'assistant',
+    blocks: [],
+  });
+  set(userMessageReplieIdsAtomFamily(userTurn.id), [provisionalAssistantId]);
+
+  try {
+    const payloadMessage = toApiMessage(userTurn, true);
+    await postAgentChatStream(
+      {
+        session_id: sessionId,
+        message: payloadMessage,
+        ...(replaceFromMessageId ? { replace_from_message_id: replaceFromMessageId } : {}),
+      },
+      {
+        signal: abortController.signal,
+        onMessageIds: (ids) => {
+          if (!ids.user || !ids.assistant) return;
+          hasServerMessageIds = true;
+          set(remapPendingChatMessageIdsAtom, {
+            sessionId,
+            fromUser: streamUserId,
+            toUser: ids.user,
+            fromAssistant: streamAssistantId,
+            toAssistant: ids.assistant,
+          });
+          streamUserId = ids.user;
+          streamAssistantId = ids.assistant;
+          set(chatStreamingReplyIdAtom, ids.assistant);
+        },
+        onDelta: (delta) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantDelta(prev, delta));
+        },
+        onReasoning: (reasoning) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantReasoning(prev, reasoning));
+        },
+        onToolStart: (toolPayload) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) => applyToolStart(prev, toolPayload));
+        },
+        onToolResult: (toolPayload) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, toolPayload.id, {
+              status: 'ok',
+              result: toolPayload.result,
+            }),
+          );
+        },
+        onToolError: (toolPayload) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, toolPayload.id, {
+              status: 'error',
+              error: toolPayload.error,
+            }),
+          );
+        },
+        onToolAuthorize: (toolPayload) => {
+          set(messagesAtomFamily(streamAssistantId), (prev) =>
+            patchToolInBlocks(prev, toolPayload.id, { authorization_status: 'pending' }),
+          );
+        },
+      },
+    );
+
+    if (shouldAutoTitle) {
+      try {
+        await renameAgentChat(sessionId, {
+          title: summarizeFirstUserMessage(extractTextFromBlocks(userTurn.blocks)),
+        });
+      } catch {
+        // ignore title failures; chat content is already persisted.
+      }
+    }
+  } catch (e) {
+    handleSendChatMessageError(set, {
+      error: e,
+      hasServerMessageIds,
+      sessionId,
+      userId: streamUserId,
+      assistantId: streamAssistantId,
+      trimmedInput: restoreInputOnError ? trimmed : '',
+    });
+  } finally {
+    set(chatAbortControllerAtom, null);
+    set(chatIsSendingAtom, false);
+    set(isSessionGeneratingAtomFamily(sessionId), false);
+    set(chatStreamingReplyIdAtom, null);
+  }
 }
 
 export const createChatAtom = atom(null, async (get, set) => {
@@ -170,8 +329,15 @@ export const archiveChatAtom = atom(null, async (get, set, sessionId: string) =>
 
 export const stopChatMessageAtom = atom(null, (get, set) => {
   if (!get(chatIsSendingAtom)) return;
+  const sessionId = get(activeSessionIdAtom);
+  const assistantMessageId = get(chatStreamingReplyIdAtom);
   get(chatAbortControllerAtom)?.abort();
   set(chatAbortControllerAtom, null);
+  if (!sessionId) return;
+  void postAgentChatStop({
+    session_id: sessionId,
+    ...(assistantMessageId ? { assistant_message_id: assistantMessageId } : {}),
+  }).catch(() => undefined);
 });
 
 export const sendChatMessageAtom = atom(null, async (get, set) => {
@@ -187,120 +353,36 @@ export const sendChatMessageAtom = atom(null, async (get, set) => {
     targetSessionId = created.id;
   }
   if (!targetSessionId) return;
-  const sessionId = targetSessionId;
-
-  const sessionSummary = get(chatSessionsAtom).find((s) => s.id === sessionId) ?? null;
-  const shouldAutoTitle =
-    !!sessionSummary &&
-    (sessionSummary.title || '').trim() === CHAT_DEFAULT_TITLE &&
-    (sessionSummary.message_count ?? 0) === 0;
-
-  const provisionalUserId = crypto.randomUUID();
-  const provisionalAssistantId = crypto.randomUUID();
-  const userTurn: ChatMessagePublic & { role: 'user' } = {
-    id: provisionalUserId,
-    role: 'user',
-    blocks: [{ kind: 'text', content: trimmed }],
-  };
-  let streamUserId = provisionalUserId;
-  let streamAssistantId = provisionalAssistantId;
-  let hasServerMessageIds = false;
-  const abortController = new AbortController();
-
-  set(chatErrorAtom, null);
-  set(chatInputAtom, '');
-  set(chatIsSendingAtom, true);
-  set(isSessionGeneratingAtomFamily(sessionId), true);
-  set(chatAbortControllerAtom, abortController);
-  set(chatStreamingReplyIdAtom, provisionalAssistantId);
-  set(sessionUserMessageIdsAtomFamily(sessionId), (prev) => (prev ?? []).concat(userTurn.id));
-  set(messagesAtomFamily(userTurn.id), userTurn);
-  set(messagesAtomFamily(provisionalAssistantId), {
-    id: provisionalAssistantId,
-    role: 'assistant',
-    blocks: [],
+  await streamSendMessage(get, set, {
+    sessionId: targetSessionId,
+    text: trimmed,
+    clearInputBeforeSend: true,
+    restoreInputOnError: true,
   });
-  set(userMessageReplieIdsAtomFamily(userTurn.id), [provisionalAssistantId]);
-
-  try {
-    const payloadMessage = toApiMessage(userTurn, true);
-
-    await postAgentChatStream(
-      { session_id: sessionId, message: payloadMessage },
-      {
-        signal: abortController.signal,
-        onMessageIds: (ids) => {
-          if (!ids.user || !ids.assistant) return;
-          hasServerMessageIds = true;
-          set(remapPendingChatMessageIdsAtom, {
-            sessionId,
-            fromUser: streamUserId,
-            toUser: ids.user,
-            fromAssistant: streamAssistantId,
-            toAssistant: ids.assistant,
-          });
-          streamUserId = ids.user;
-          streamAssistantId = ids.assistant;
-          set(chatStreamingReplyIdAtom, ids.assistant);
-        },
-        onDelta: (delta) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantDelta(prev, delta));
-        },
-        onReasoning: (reasoning) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) => appendAssistantReasoning(prev, reasoning));
-        },
-        onToolStart: (payload) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) => applyToolStart(prev, payload));
-        },
-        onToolResult: (payload) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) =>
-            patchToolInBlocks(prev, payload.id, {
-              status: 'ok',
-              result: payload.result,
-            }),
-          );
-        },
-        onToolError: (payload) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) =>
-            patchToolInBlocks(prev, payload.id, {
-              status: 'error',
-              error: payload.error,
-            }),
-          );
-        },
-        onToolAuthorize: (payload) => {
-          set(messagesAtomFamily(streamAssistantId), (prev) =>
-            patchToolInBlocks(prev, payload.id, { authorization_status: 'pending' }),
-          );
-        },
-      },
-    );
-
-    if (shouldAutoTitle) {
-      try {
-        await renameAgentChat(sessionId, {
-          title: summarizeFirstUserMessage(extractTextFromBlocks(userTurn.blocks)),
-        });
-      } catch {
-        // ignore title failures; chat content is already persisted.
-      }
-    }
-  } catch (e) {
-    handleSendChatMessageError(set, {
-      error: e,
-      hasServerMessageIds,
-      sessionId,
-      userId: streamUserId,
-      assistantId: streamAssistantId,
-      trimmedInput: trimmed,
-    });
-  } finally {
-    set(chatAbortControllerAtom, null);
-    set(chatIsSendingAtom, false);
-    set(isSessionGeneratingAtomFamily(sessionId), false);
-    set(chatStreamingReplyIdAtom, null);
-  }
 });
+
+export const resendChatMessageAtom = atom(
+  null,
+  async (
+    get,
+    set,
+    payload: {
+      sessionId: string;
+      replaceFromMessageId: string;
+      text: string;
+    },
+  ) => {
+    const { sessionId, replaceFromMessageId, text } = payload;
+    if (!sessionId || !replaceFromMessageId) return;
+    await streamSendMessage(get, set, {
+      sessionId,
+      text,
+      replaceFromMessageId,
+      clearInputBeforeSend: false,
+      restoreInputOnError: false,
+    });
+  },
+);
 
 export const authorizeToolCallAtom = atom(
   null,

@@ -176,19 +176,13 @@ def _review_strategy_workflow_with_llm(
     try:
         review = json.loads(raw)
     except Exception as exc:
-        raise ValueError(f"LLM 审查结果不可解析：{exc}") from exc
+        raise ValueError(f"LLM 审查结果不可解析：{exc}, 请重试") from exc
 
     approved = bool(review.get("approved", False))
     issues = review.get("issues") or []
     if not approved:
         issue_text = "；".join(str(x) for x in issues if str(x).strip()) or "未通过 LLM 审查"
         raise ValueError(f"策略工作流审查未通过：{issue_text}")
-    return {
-        "approved": True,
-        "summary": str(review.get("summary", "")).strip(),
-        "issues": [str(x) for x in issues if str(x).strip()],
-        "suggestions": [str(x) for x in (review.get("suggestions") or []) if str(x).strip()],
-    }
 
 
 @safe_tool(
@@ -233,31 +227,34 @@ async def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     description="创建并保存策略。\n入参 name、description；使用store中的workflowDraft创建策略并返回创建后的策略详情。任何创建的新策略都要调用此工具才会生效。",
 )
 async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime) -> dict[str, Any]:
-    record = await _require_workflow_draft_record(runtime)
-    if _draft_strategy_id(record):
-        raise ValueError("当前草稿已绑定现有策略，请使用更新策略工具保存修改")
+    try:
+        record = await _require_workflow_draft_record(runtime)
+        if _draft_strategy_id(record):
+            raise ValueError("当前草稿已绑定现有策略，请使用更新策略工具保存修改")
 
-    workflow = await _require_workflow_draft(runtime)
-    review = _review_strategy_workflow_with_llm(
-        name=name,
-        description=description,
-        workflow=workflow,
-    )
-    strategy = controller.create_strategy(
-        StrategyCreate(name=name, description=description, workflow=workflow)
-    )
-    strategy_id = (
-        strategy.get("id") if isinstance(strategy, dict) else getattr(strategy, "id", None)
-    )
-    await _save_workflow_draft_to_store(
-        runtime,
-        workflow,
-        strategy_id=str(strategy_id) if strategy_id else None,
-        is_dirty=False,
-    )
-    out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
-    out["review"] = review
-    return out
+        workflow = await _require_workflow_draft(runtime)
+        review = _review_strategy_workflow_with_llm(
+            name=name,
+            description=description,
+            workflow=workflow,
+        )
+        strategy = controller.create_strategy(
+            StrategyCreate(name=name, description=description, workflow=workflow)
+        )
+        strategy_id = (
+            strategy.get("id") if isinstance(strategy, dict) else getattr(strategy, "id", None)
+        )
+        await _save_workflow_draft_to_store(
+            runtime,
+            workflow,
+            strategy_id=str(strategy_id) if strategy_id else None,
+            is_dirty=False,
+        )
+        out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
+        out["review"] = review
+        return out
+    except Exception as e:
+        raise ValueError(f"创建失败：{e}") from e
 
 
 @safe_tool(
@@ -308,35 +305,38 @@ def get_strategy_list() -> list[dict[str, Any]]:
 async def update_strategy(
     strategy_id: str, name: str, description: str, runtime: ToolRuntime
 ) -> dict[str, Any]:
-    record = await _require_workflow_draft_record(runtime)
-    draft_strategy_id = _draft_strategy_id(record)
-    if not draft_strategy_id:
-        raise ValueError("当前草稿尚未绑定策略，请先创建策略")
-    if draft_strategy_id != strategy_id:
-        raise ValueError(
-            f"当前草稿绑定的策略ID为 {draft_strategy_id}，不能更新其他策略 {strategy_id}"
-        )
+    try:
+        record = await _require_workflow_draft_record(runtime)
+        draft_strategy_id = _draft_strategy_id(record)
+        if not draft_strategy_id:
+            raise ValueError("当前草稿尚未绑定策略，请先创建策略")
+        if draft_strategy_id != strategy_id:
+            raise ValueError(
+                f"当前草稿绑定的策略ID为 {draft_strategy_id}，不能更新其他策略 {strategy_id}"
+            )
 
-    workflow = await _require_workflow_draft(runtime)
-    review = _review_strategy_workflow_with_llm(
-        strategy_id=strategy_id,
-        name=name,
-        description=description,
-        workflow=workflow,
-    )
-    strategy = controller.patch_strategy(
-        strategy_id,
-        StrategyPatch(name=name, description=description, workflow=workflow),
-    )
-    await _save_workflow_draft_to_store(
-        runtime,
-        workflow,
-        strategy_id=strategy_id,
-        is_dirty=False,
-    )
-    out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
-    out["review"] = review
-    return out
+        workflow = await _require_workflow_draft(runtime)
+        review = _review_strategy_workflow_with_llm(
+            strategy_id=strategy_id,
+            name=name,
+            description=description,
+            workflow=workflow,
+        )
+        strategy = controller.patch_strategy(
+            strategy_id,
+            StrategyPatch(name=name, description=description, workflow=workflow),
+        )
+        await _save_workflow_draft_to_store(
+            runtime,
+            workflow,
+            strategy_id=strategy_id,
+            is_dirty=False,
+        )
+        out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
+        out["review"] = review
+        return out
+    except Exception as e:
+        raise ValueError(f"更新失败：{e}") from e
 
 
 @safe_tool("删除策略", description="删除指定策略。\n入参 strategy_id；返回删除前记录。")

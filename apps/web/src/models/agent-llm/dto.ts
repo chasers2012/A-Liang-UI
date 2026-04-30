@@ -30,6 +30,7 @@ export type ChatRequestMessage = {
 export type ChatRequestPublic = {
   session_id: string;
   message: ChatRequestMessage;
+  replace_from_message_id?: string;
 };
 
 export type ChatSummaryPublic = {

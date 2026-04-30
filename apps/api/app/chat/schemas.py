@@ -86,6 +86,10 @@ class ChatRequest(BaseModel):
 
     session_id: str = Field(..., min_length=1, description="Target chat session id.")
     message: ChatMessageIn = Field(..., description="The single incoming user message.")
+    replace_from_message_id: str | None = Field(
+        default=None,
+        description="When provided, replace this message and all following context with the incoming message.",
+    )
 
     @field_validator("session_id", mode="before")
     @classmethod
@@ -94,6 +98,14 @@ class ChatRequest(BaseModel):
         if not s:
             raise ValueError("session_id 不能为空")
         return s
+
+    @field_validator("replace_from_message_id", mode="before")
+    @classmethod
+    def normalize_replace_from_message_id(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        message_id = str(value).strip()
+        return message_id or None
 
     @model_validator(mode="after")
     def validate_stream_message(self) -> ChatRequest:
@@ -115,6 +127,29 @@ class ChatAuthorizationRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     assistant_message_id: str = Field(..., min_length=1)
     decisions: list[ChatAuthorizationDecision] = Field(..., min_length=1)
+
+
+class ChatStopRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: str = Field(..., min_length=1)
+    assistant_message_id: str | None = None
+
+    @field_validator("session_id", mode="before")
+    @classmethod
+    def normalize_session_id(cls, value: object) -> str:
+        session_id = str(value).strip()
+        if not session_id:
+            raise ValueError("session_id 不能为空")
+        return session_id
+
+    @field_validator("assistant_message_id", mode="before")
+    @classmethod
+    def normalize_assistant_message_id(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        assistant_message_id = str(value).strip()
+        return assistant_message_id or None
 
 
 class ChatRecord(BaseModel):

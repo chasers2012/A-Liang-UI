@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
+import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import suppress
@@ -49,6 +51,7 @@ from .schemas import (
     ChatRecord,
     ChatRenameBody,
     ChatRequest,
+    ChatStopRequest,
     ChatSummaryPublic,
     ChatToolCallPublic,
     ensure_chat_message_id,
@@ -60,6 +63,49 @@ _CHAT_ID_GENERATOR = create_id_generator("ChatRegistry")
 _AUTH_PENDING_TTL_SECONDS = 10 * 60
 _AUTH_WAIT_POLL_SECONDS = 0.2
 _AUTH_CACHE = Cache(str(workspace_path(".quant-agent/chat_auth_cache")))
+_RUNNING_STREAMS_LOCK = threading.Lock()
+_RUNNING_STREAMS: dict[str, dict[str, Any]] = {}
+
+
+def _register_running_stream(
+    *,
+    thread_id: str,
+    session_id: str,
+    assistant_message_id: str,
+    task: asyncio.Task[Any],
+) -> None:
+    with _RUNNING_STREAMS_LOCK:
+        _RUNNING_STREAMS[thread_id] = {
+            "session_id": session_id,
+            "assistant_message_id": assistant_message_id,
+            "task": task,
+            "loop": task.get_loop(),
+            "started_at": time.monotonic(),
+        }
+
+
+def _unregister_running_stream(thread_id: str) -> None:
+    with _RUNNING_STREAMS_LOCK:
+        _RUNNING_STREAMS.pop(thread_id, None)
+
+
+def _resolve_stop_target_thread_id(body: ChatStopRequest) -> str | None:
+    with _RUNNING_STREAMS_LOCK:
+        candidates = [
+            (thread_id, meta)
+            for thread_id, meta in _RUNNING_STREAMS.items()
+            if meta.get("session_id") == body.session_id
+        ]
+    if not candidates:
+        return None
+    if body.assistant_message_id:
+        for thread_id, meta in candidates:
+            if meta.get("assistant_message_id") == body.assistant_message_id:
+                return thread_id
+        return None
+    # Fallback to the latest running stream in this session.
+    candidates.sort(key=lambda item: float(item[1].get("started_at", 0.0)), reverse=True)
+    return candidates[0][0]
 
 
 def record_to_summary(rec: ChatRecord) -> ChatSummaryPublic:
@@ -339,26 +385,25 @@ def _persist_chat_if_needed(
         return
 
 
-def _persist_user_messages_on_receive(session_id: str, message: ChatMessageIn) -> None:
-    rec = get_active_chat(session_id)
-    if rec is None:
-        return
-    message_filled = ensure_chat_message_id(message)
-    try:
-        if rec.message_count < MAX_SESSION_MESSAGES:
-            ChatRegistry.append_message(session_id, message_filled)
-            return
-        keep = (ChatRegistry.get_messages(session_id) or [])[-(MAX_SESSION_MESSAGES - 1) :]
-        replace_session_messages(session_id, [*keep, message_filled])
-    except ValueError:
-        return
-
-
 def _build_chat_context_messages(
     session_id: str,
     incoming_user: ChatMessageIn,
+    *,
+    replace_from_message_id: str | None = None,
 ) -> tuple[list[ChatMessageIn], list[ChatMessageIn]]:
     history_messages = ChatRegistry.get_messages(session_id) or []
+    if replace_from_message_id:
+        replace_index = next(
+            (
+                idx
+                for idx, message in enumerate(history_messages)
+                if message.id == replace_from_message_id and message.role == "user"
+            ),
+            None,
+        )
+        if replace_index is None:
+            raise ValueError("replace_from_message_id 对应的 user 消息不存在")
+        history_messages = history_messages[:replace_index]
     persisted_context_messages = [*history_messages, incoming_user]
     context_messages = list(persisted_context_messages)
     return persisted_context_messages, context_messages
@@ -378,6 +423,7 @@ def _prepare_chat_stream(
     persisted_context_messages, context_messages = _build_chat_context_messages(
         body.session_id,
         incoming_user,
+        replace_from_message_id=body.replace_from_message_id,
     )
     return body.session_id, incoming_user, persisted_context_messages, context_messages
 
@@ -426,7 +472,7 @@ async def stream_async(  # noqa: C901
     thread_id = f"{session_id}:{assistant_message_id}"
     blocks: list[AssistantBlockPublic] = []
 
-    _persist_user_messages_on_receive(session_id, incoming_user)
+    replace_session_messages(session_id, persisted_context_messages)
     out: asyncio.Queue[str | None] = asyncio.Queue()
 
     async def _producer() -> None:  # noqa: C901
@@ -513,6 +559,12 @@ async def stream_async(  # noqa: C901
                 await out.put(None)
 
     producer_task = asyncio.create_task(_producer())
+    _register_running_stream(
+        thread_id=thread_id,
+        session_id=session_id,
+        assistant_message_id=assistant_message_id,
+        task=producer_task,
+    )
 
     try:
         while True:
@@ -526,10 +578,33 @@ async def stream_async(  # noqa: C901
                 return
             yield ev
     finally:
+        _unregister_running_stream(thread_id)
         if not producer_task.done():
             producer_task.cancel()
             with suppress(asyncio.CancelledError):
                 await producer_task
+
+
+def stop_stream(body: ChatStopRequest) -> dict[str, Any]:
+    thread_id = _resolve_stop_target_thread_id(body)
+    if not thread_id:
+        raise ValueError("未找到可停止的运行任务")
+    with _RUNNING_STREAMS_LOCK:
+        meta = _RUNNING_STREAMS.get(thread_id)
+    if not meta:
+        raise ValueError("运行任务已结束")
+
+    task = meta.get("task")
+    loop = meta.get("loop")
+    if not isinstance(task, asyncio.Task) or not isinstance(loop, asyncio.AbstractEventLoop):
+        raise ValueError("运行任务状态异常")
+
+    if task.done():
+        _unregister_running_stream(thread_id)
+        return {"status": "stopped", "thread_id": thread_id}
+
+    loop.call_soon_threadsafe(task.cancel)
+    return {"status": "stopping", "thread_id": thread_id}
 
 
 def list_chats() -> list[ChatSummaryPublic]:

@@ -314,6 +314,21 @@ export async function postAgentChatAuthorize(body: {
   }
 }
 
+export async function postAgentChatStop(body: { session_id: string; assistant_message_id?: string }): Promise<void> {
+  const url = `${getQuantAgentApiBase()}/chat/stop`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(parseDetail(text), res.status);
+  }
+}
+
 export function listAgentChats(): Promise<ChatSummaryPublic[]> {
   return apiFetchJson<ChatSummaryPublic[]>('/chat');
 }
