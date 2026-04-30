@@ -7,15 +7,22 @@ import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   cancelSchedulerJobAtom,
   deleteSchedulerTaskAtom,
   refreshSchedulerPageAtom,
   schedulerPageAtom,
-  setSchedulerJobLimitAtom,
+  setSchedulerJobPageAtom,
   toggleSchedulerTaskEnabledAtom,
   triggerSchedulerTaskAtom,
 } from '@/models/scheduler/list-detail.atom';
@@ -29,9 +36,10 @@ function toLocalTime(v: string | null): string {
 }
 
 export default function SchedulerPage() {
-  const { tasks, jobs, loading, error, busyTaskId, busyJobId, jobLimit } = useAtomValue(schedulerPageAtom);
+  const { tasks, jobs, loading, error, busyTaskId, busyJobId, jobLimit, jobPage, jobTotal } =
+    useAtomValue(schedulerPageAtom);
   const refreshAll = useSetAtom(refreshSchedulerPageAtom);
-  const setJobLimit = useSetAtom(setSchedulerJobLimitAtom);
+  const setJobPage = useSetAtom(setSchedulerJobPageAtom);
   const triggerTask = useSetAtom(triggerSchedulerTaskAtom);
   const toggleTaskEnabled = useSetAtom(toggleSchedulerTaskEnabledAtom);
   const deleteTask = useSetAtom(deleteSchedulerTaskAtom);
@@ -51,6 +59,34 @@ export default function SchedulerPage() {
         .reverse(),
     [tasks],
   );
+  const pageSize = useMemo(() => {
+    const parsed = Number(jobLimit);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
+  }, [jobLimit]);
+  const totalPages = Math.max(1, Math.ceil(jobTotal / pageSize));
+  const canPrevPage = jobPage > 1;
+  const canNextPage = jobPage < totalPages;
+  const pageItems = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: Array<number | 'ellipsis'> = [1];
+    const start = Math.max(2, jobPage - 1);
+    const end = Math.min(totalPages - 1, jobPage + 1);
+
+    if (start > 2) {
+      pages.push('ellipsis');
+    }
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+    if (end < totalPages - 1) {
+      pages.push('ellipsis');
+    }
+    pages.push(totalPages);
+    return pages;
+  }, [jobPage, totalPages]);
 
   return (
     <Page title="任务调度" description="管理 scheduler 任务，支持手动触发、Cron 定时与作业状态查询。">
@@ -134,19 +170,67 @@ export default function SchedulerPage() {
           <CardTitle>作业列表</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-end gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="scheduler-job-limit">显示条数</Label>
-              <Input
-                id="scheduler-job-limit"
-                className="w-28"
-                value={jobLimit}
-                onChange={(e) => setJobLimit(e.target.value)}
-              />
-            </div>
+          <div className="flex flex-wrap items-end gap-2">
             <Button type="button" variant="outline" onClick={() => void refreshAll()} disabled={loading}>
               刷新
             </Button>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      aria-disabled={!canPrevPage || loading}
+                      className={!canPrevPage || loading ? 'pointer-events-none opacity-50' : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!canPrevPage || loading) return;
+                        setJobPage(jobPage - 1);
+                        void refreshAll();
+                      }}
+                    />
+                  </PaginationItem>
+                  {pageItems.map((item, index) =>
+                    item === 'ellipsis' ? (
+                      <PaginationItem key={`ellipsis-${index}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          href="#"
+                          isActive={item === jobPage}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (item === jobPage || loading) return;
+                            setJobPage(item);
+                            void refreshAll();
+                          }}
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      aria-disabled={!canNextPage || loading}
+                      className={!canNextPage || loading ? 'pointer-events-none opacity-50' : undefined}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!canNextPage || loading) return;
+                        setJobPage(jobPage + 1);
+                        void refreshAll();
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <span className="text-sm text-muted-foreground">
+                共 {jobTotal} 条 / {totalPages} 页
+              </span>
+            </div>
           </div>
 
           {!jobs.length ? (

@@ -3,13 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import and_, or_, update
-from sqlmodel import select
-
-from app.persistence.sqlite_db import get_session
 from app.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
+from app.scheduler.registry import SchedulerRegistry
 from app.scheduler.schemas import (
     CreateSchedulerTaskRequest,
+    SchedulerJobListResponse,
     SchedulerJobLogPublic,
     SchedulerJobPublic,
     SchedulerTaskPublic,
@@ -56,25 +54,19 @@ def _append_job_log(
     message: str | None = None,
     extra: dict[str, object] | None = None,
 ) -> None:
-    with get_session() as session:
-        log_row = SchedulerJobLogRow(
+    SchedulerRegistry.append_job_log(
+        SchedulerJobLogRow(
             id=uuid4().hex,
             job_id=job_id,
             event=event,
             message=message,
             extra=extra or {},
         )
-        session.add(log_row)
-        session.commit()
+    )
 
 
 def _ensure_task_name_unique(name: str, *, exclude_task_id: str | None = None) -> None:
-    with get_session() as session:
-        stmt = select(SchedulerTaskRow).where(SchedulerTaskRow.name == name)
-        if exclude_task_id is not None:
-            stmt = stmt.where(SchedulerTaskRow.id != exclude_task_id)
-        existing = session.exec(stmt).first()
-    if existing is not None:
+    if SchedulerRegistry.task_name_exists(name, exclude_task_id=exclude_task_id):
         raise SchedulerTaskConflictError(f"任务名称已存在: {name}")
 
 
@@ -97,70 +89,53 @@ def create_task(body: CreateSchedulerTaskRequest) -> SchedulerTaskPublic:
         created_at=now,
         updated_at=now,
     )
-    with get_session() as session:
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-    return _task_to_public(row)
+    return _task_to_public(SchedulerRegistry.create_task(row))
 
 
 def list_tasks(*, enabled: bool | None = None) -> list[SchedulerTaskPublic]:
-    with get_session() as session:
-        stmt = select(SchedulerTaskRow).order_by(SchedulerTaskRow.created_at.desc())
-        if enabled is not None:
-            stmt = stmt.where(SchedulerTaskRow.enabled == enabled)
-        rows = list(session.exec(stmt).all())
+    rows = SchedulerRegistry.list_tasks(enabled=enabled)
     return [_task_to_public(r) for r in rows]
 
 
 def get_task(task_id: str) -> SchedulerTaskPublic:
-    with get_session() as session:
-        row = session.get(SchedulerTaskRow, task_id)
+    row = SchedulerRegistry.get_task(task_id)
     if row is None:
         raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
     return _task_to_public(row)
 
 
 def update_task(task_id: str, body: UpdateSchedulerTaskRequest) -> SchedulerTaskPublic:
-    with get_session() as session:
-        row = session.get(SchedulerTaskRow, task_id)
-        if row is None:
-            raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
+    row = SchedulerRegistry.get_task(task_id)
+    if row is None:
+        raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
 
-        patch = body.model_dump(exclude_unset=True)
-        if "name" in patch and patch["name"] is not None:
-            _ensure_task_name_unique(patch["name"], exclude_task_id=task_id)
-            row.name = patch["name"]
-        if "task_type" in patch and patch["task_type"] is not None:
-            row.task_type = patch["task_type"]
-        if "cron_expr" in patch:
-            cron_expr = normalize_cron_expr(patch["cron_expr"])
-            validate_cron_expr(cron_expr)
-            row.cron_expr = cron_expr
-            row.next_run_at = next_cron_time(cron_expr, base_time=utcnow()) if cron_expr else None
-        if "payload" in patch and patch["payload"] is not None:
-            row.payload = patch["payload"]
-        if "enabled" in patch and patch["enabled"] is not None:
-            row.enabled = patch["enabled"]
-        if "max_retries" in patch and patch["max_retries"] is not None:
-            row.max_retries = patch["max_retries"]
-        if "timeout_seconds" in patch and patch["timeout_seconds"] is not None:
-            row.timeout_seconds = patch["timeout_seconds"]
-        row.updated_at = utcnow()
+    patch = body.model_dump(exclude_unset=True)
+    if "name" in patch and patch["name"] is not None:
+        _ensure_task_name_unique(patch["name"], exclude_task_id=task_id)
+        row.name = patch["name"]
+    if "task_type" in patch and patch["task_type"] is not None:
+        row.task_type = patch["task_type"]
+    if "cron_expr" in patch:
+        cron_expr = normalize_cron_expr(patch["cron_expr"])
+        validate_cron_expr(cron_expr)
+        row.cron_expr = cron_expr
+        row.next_run_at = next_cron_time(cron_expr, base_time=utcnow()) if cron_expr else None
+    if "payload" in patch and patch["payload"] is not None:
+        row.payload = patch["payload"]
+    if "enabled" in patch and patch["enabled"] is not None:
+        row.enabled = patch["enabled"]
+    if "max_retries" in patch and patch["max_retries"] is not None:
+        row.max_retries = patch["max_retries"]
+    if "timeout_seconds" in patch and patch["timeout_seconds"] is not None:
+        row.timeout_seconds = patch["timeout_seconds"]
+    row.updated_at = utcnow()
 
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        return _task_to_public(row)
+    return _task_to_public(SchedulerRegistry.save_task(row))
 
 
 def delete_task(task_id: str) -> None:
-    with get_session() as session:
-        row = session.get(SchedulerTaskRow, task_id)
-        if row is None:
-            raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
-        session.delete(row)
-        session.commit()
+    if not SchedulerRegistry.delete_task(task_id):
+        raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
 
 
 def enqueue_job(
@@ -171,27 +146,23 @@ def enqueue_job(
     dedupe_key: str | None = None,
 ) -> SchedulerJobPublic:
     now = utcnow()
-    with get_session() as session:
-        task = session.get(SchedulerTaskRow, task_id)
-        if task is None:
-            raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
-        merged_payload: dict[str, object] = dict(task.payload)
-        if payload_override:
-            merged_payload.update(payload_override)
+    task = SchedulerRegistry.get_task_for_enqueue(task_id)
+    if task is None:
+        raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
 
-        if dedupe_key:
-            stmt = select(SchedulerJobRow).where(
-                and_(
-                    SchedulerJobRow.task_id == task_id,
-                    SchedulerJobRow.dedupe_key == dedupe_key,
-                    SchedulerJobRow.status.in_(["queued", "running", "retrying"]),
-                )
-            )
-            existing = session.exec(stmt).first()
-            if existing is not None:
-                return _job_to_public(existing)
+    merged_payload: dict[str, object] = dict(task.payload)
+    if payload_override:
+        merged_payload.update(payload_override)
 
-        row = SchedulerJobRow(
+    if dedupe_key:
+        existing = SchedulerRegistry.get_active_task_job_by_dedupe_key(
+            task_id=task_id, dedupe_key=dedupe_key
+        )
+        if existing is not None:
+            return _job_to_public(existing)
+
+    row = SchedulerRegistry.create_job(
+        SchedulerJobRow(
             id=uuid4().hex,
             task_id=task.id,
             task_type=task.task_type,
@@ -205,9 +176,7 @@ def enqueue_job(
             timeout_seconds=task.timeout_seconds,
             payload=merged_payload,
         )
-        session.add(row)
-        session.commit()
-        session.refresh(row)
+    )
 
     _append_job_log(row.id, "queued", message=f"job queued by {trigger_type}")
     return _job_to_public(row)
@@ -223,21 +192,15 @@ def enqueue_oneoff_job(
     dedupe_key: str | None = None,
 ) -> SchedulerJobPublic:
     now = utcnow()
-    with get_session() as session:
-        if dedupe_key:
-            stmt = select(SchedulerJobRow).where(
-                and_(
-                    SchedulerJobRow.task_id.is_(None),
-                    SchedulerJobRow.task_type == task_type,
-                    SchedulerJobRow.dedupe_key == dedupe_key,
-                    SchedulerJobRow.status.in_(["queued", "running", "retrying"]),
-                )
-            )
-            existing = session.exec(stmt).first()
-            if existing is not None:
-                return _job_to_public(existing)
+    if dedupe_key:
+        existing = SchedulerRegistry.get_active_oneoff_job_by_dedupe_key(
+            task_type=task_type, dedupe_key=dedupe_key
+        )
+        if existing is not None:
+            return _job_to_public(existing)
 
-        row = SchedulerJobRow(
+    row = SchedulerRegistry.create_job(
+        SchedulerJobRow(
             id=uuid4().hex,
             task_id=None,
             task_type=task_type,
@@ -251,9 +214,7 @@ def enqueue_oneoff_job(
             timeout_seconds=timeout_seconds,
             payload=payload or {},
         )
-        session.add(row)
-        session.commit()
-        session.refresh(row)
+    )
 
     _append_job_log(row.id, "queued", message=f"one-off job queued by {trigger_type}")
     return _job_to_public(row)
@@ -272,70 +233,34 @@ def list_jobs(
     *,
     task_id: str | None = None,
     status: str | None = None,
-    limit: int | None = 50,
-) -> list[SchedulerJobPublic]:
-    with get_session() as session:
-        stmt = select(SchedulerJobRow).order_by(SchedulerJobRow.queued_at.desc())
-        if task_id is not None:
-            stmt = stmt.where(SchedulerJobRow.task_id == task_id)
-        if status is not None:
-            stmt = stmt.where(SchedulerJobRow.status == status)
-        if limit is not None:
-            stmt = stmt.limit(limit)
-        rows = list(session.exec(stmt).all())
-    return [_job_to_public(r) for r in rows]
+    page: int = 1,
+    page_size: int = 50,
+) -> SchedulerJobListResponse:
+    offset = (page - 1) * page_size
+    total, rows = SchedulerRegistry.list_jobs(
+        task_id=task_id,
+        status=status,
+        offset=offset,
+        limit=page_size,
+    )
+    return SchedulerJobListResponse(
+        items=[_job_to_public(r) for r in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 def list_job_logs(job_id: str, *, limit: int | None = 100) -> list[SchedulerJobLogPublic]:
-    with get_session() as session:
-        stmt = (
-            select(SchedulerJobLogRow)
-            .where(SchedulerJobLogRow.job_id == job_id)
-            .order_by(SchedulerJobLogRow.created_at.desc())
-        )
-        if limit is not None:
-            stmt = stmt.limit(limit)
-        rows = list(session.exec(stmt).all())
+    rows = SchedulerRegistry.list_job_logs(job_id, limit=limit)
     return [_log_to_public(r) for r in rows]
 
 
 def claim_next_job(worker_id: str) -> SchedulerJobPublic | None:
     now = utcnow()
-    with get_session() as session:
-        stmt = (
-            select(SchedulerJobRow)
-            .where(
-                and_(
-                    SchedulerJobRow.status.in_(["queued", "retrying"]),
-                    or_(SchedulerJobRow.next_run_at.is_(None), SchedulerJobRow.next_run_at <= now),
-                )
-            )
-            .order_by(SchedulerJobRow.queued_at.asc())
-            .limit(1)
-        )
-        row = session.exec(stmt).first()
-        if row is None:
-            return None
-
-        update_stmt = (
-            update(SchedulerJobRow)
-            .where(and_(SchedulerJobRow.id == row.id, SchedulerJobRow.status == row.status))
-            .values(
-                status="running",
-                worker_id=worker_id,
-                started_at=now,
-                attempt=row.attempt + 1,
-            )
-        )
-        result = session.exec(update_stmt)
-        if result.rowcount != 1:
-            session.rollback()
-            return None
-
-        session.commit()
-        running_row = session.get(SchedulerJobRow, row.id)
-        if running_row is None:
-            return None
+    running_row = SchedulerRegistry.claim_next_job(worker_id=worker_id, now=now)
+    if running_row is None:
+        return None
 
     _append_job_log(running_row.id, "running", message=f"claimed by worker {worker_id}")
     return _job_to_public(running_row)
@@ -343,41 +268,33 @@ def claim_next_job(worker_id: str) -> SchedulerJobPublic | None:
 
 def mark_job_succeeded(job_id: str, result_payload: object) -> SchedulerJobPublic:
     now = utcnow()
-    with get_session() as session:
-        row = session.get(SchedulerJobRow, job_id)
-        if row is None:
-            raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
-        row.status = "succeeded"
-        row.finished_at = now
-        row.result = result_payload
-        row.last_error = None
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        result = _job_to_public(row)
+    row = SchedulerRegistry.get_job(job_id)
+    if row is None:
+        raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
+    row.status = "succeeded"
+    row.finished_at = now
+    row.result = result_payload
+    row.last_error = None
+    result = _job_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "succeeded")
     return result
 
 
 def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJobPublic:
     now = utcnow()
-    with get_session() as session:
-        row = session.get(SchedulerJobRow, job_id)
-        if row is None:
-            raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
+    row = SchedulerRegistry.get_job(job_id)
+    if row is None:
+        raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
 
-        row.last_error = error_message
-        if row.attempt <= row.max_retries:
-            row.status = "retrying"
-            row.next_run_at = next_retry_time(row.attempt, base_time=now)
-            row.finished_at = None
-        else:
-            row.status = "failed"
-            row.finished_at = now
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        result = _job_to_public(row)
+    row.last_error = error_message
+    if row.attempt <= row.max_retries:
+        row.status = "retrying"
+        row.next_run_at = next_retry_time(row.attempt, base_time=now)
+        row.finished_at = None
+    else:
+        row.status = "failed"
+        row.finished_at = now
+    result = _job_to_public(SchedulerRegistry.save_job(row))
 
     if result.status == "retrying":
         _append_job_log(
@@ -395,28 +312,20 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
 
 
 def cancel_job(job_id: str) -> SchedulerJobPublic:
-    with get_session() as session:
-        row = session.get(SchedulerJobRow, job_id)
-        if row is None:
-            raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
-        if row.status in {"succeeded", "failed", "cancelled"}:
-            return _job_to_public(row)
-        row.status = "cancelled"
-        row.finished_at = utcnow()
-        session.add(row)
-        session.commit()
-        session.refresh(row)
-        result = _job_to_public(row)
+    row = SchedulerRegistry.get_job(job_id)
+    if row is None:
+        raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
+    if row.status in {"succeeded", "failed", "cancelled"}:
+        return _job_to_public(row)
+    row.status = "cancelled"
+    row.finished_at = utcnow()
+    result = _job_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "cancelled")
     return result
 
 
 def set_task_next_run(task_id: str, next_run_at: datetime | None) -> None:
-    with get_session() as session:
-        row = session.get(SchedulerTaskRow, task_id)
-        if row is None:
-            raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
-        row.next_run_at = next_run_at
-        row.updated_at = utcnow()
-        session.add(row)
-        session.commit()
+    if not SchedulerRegistry.set_task_next_run(
+        task_id=task_id, next_run_at=next_run_at, updated_at=utcnow()
+    ):
+        raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")

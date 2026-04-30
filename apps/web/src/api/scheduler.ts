@@ -1,6 +1,7 @@
 import { apiFetchJson } from './client';
 import type {
   CreateSchedulerTaskRequest,
+  SchedulerJobListResponse,
   SchedulerJobLogPublic,
   SchedulerJobPublic,
   SchedulerTaskPublic,
@@ -44,14 +45,16 @@ export function triggerSchedulerTask(taskId: string, payload?: Record<string, un
 export function listSchedulerJobs(params?: {
   taskId?: string;
   status?: string;
-  limit?: number;
-}): Promise<SchedulerJobPublic[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<SchedulerJobListResponse> {
   const qs = new URLSearchParams();
   if (params?.taskId) qs.set('task_id', params.taskId);
   if (params?.status) qs.set('status', params.status);
-  if (params?.limit) qs.set('limit', String(params.limit));
+  if (params?.page != null) qs.set('page', String(params.page));
+  if (params?.pageSize != null) qs.set('page_size', String(params.pageSize));
   const suffix = qs.toString();
-  return apiFetchJson<SchedulerJobPublic[]>(`/scheduler/jobs${suffix ? `?${suffix}` : ''}`);
+  return apiFetchJson<SchedulerJobListResponse>(`/scheduler/jobs${suffix ? `?${suffix}` : ''}`);
 }
 
 export function cancelSchedulerJob(jobId: string): Promise<SchedulerJobPublic> {

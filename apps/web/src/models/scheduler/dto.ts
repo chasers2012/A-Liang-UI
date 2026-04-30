@@ -36,6 +36,13 @@ export interface SchedulerJobPublic {
   last_error: string | null;
 }
 
+export interface SchedulerJobListResponse {
+  items: SchedulerJobPublic[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export interface SchedulerJobLogPublic {
   id: string;
   job_id: string;

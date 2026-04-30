@@ -72,6 +72,13 @@ class SchedulerJobPublic(BaseModel):
     last_error: str | None = None
 
 
+class SchedulerJobListResponse(BaseModel):
+    items: list[SchedulerJobPublic]
+    total: int = Field(ge=0)
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1)
+
+
 class SchedulerJobLogPublic(BaseModel):
     id: str
     job_id: str
