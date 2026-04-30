@@ -11,6 +11,7 @@ from .constants import DEFAULT_NODE_SOURCE
 from .schemas import (
     WorkflowNodeCreate,
     WorkflowNodeDetailPublic,
+    WorkflowNodeDetailsBatchRequest,
     WorkflowNodePatch,
     WorkflowNodeSummaryPublic,
 )
@@ -40,6 +41,11 @@ def create_node(body: WorkflowNodeCreate) -> WorkflowNodeDetailPublic:
     if detail is None:
         raise HTTPException(status_code=500, detail="节点创建后加载失败")
     return detail
+
+
+@router.post("/details/batch", response_model=list[WorkflowNodeDetailPublic])
+def get_nodes_detail_batch(body: WorkflowNodeDetailsBatchRequest) -> list[WorkflowNodeDetailPublic]:
+    return controller.load_node_details(body.node_ids)
 
 
 @router.get("/{node_id}", response_model=WorkflowNodeDetailPublic)

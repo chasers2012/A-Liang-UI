@@ -29,16 +29,17 @@ export interface NodeParamModel {
 export interface NodeSummaryPublic {
   id: string;
   name: string;
-  description: string;
+  desc: string;
   is_plugin: boolean;
-  created_at: string;
-  updated_at: string;
   category: string | null;
-  inputs: NodeTypeSocketPublic[];
-  outputs: NodeTypeSocketPublic[];
 }
 
 export interface NodeDetailPublic extends NodeSummaryPublic {
+  description: string;
+  created_at: string;
+  updated_at: string;
+  inputs: NodeTypeSocketPublic[];
+  outputs: NodeTypeSocketPublic[];
   source: string;
 }
 

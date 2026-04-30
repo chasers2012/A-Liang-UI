@@ -147,7 +147,7 @@ export function WorkflowGraphZoomToolbar(props: {
 export type WorkflowGraphCanvasHandle = {
   getGraph: () => WorkflowGraphPersisted;
   /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
-  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => void;
+  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => Promise<void>;
 };
 
 export type WorkflowGraphCanvasProps = {
@@ -158,6 +158,8 @@ export type WorkflowGraphCanvasProps = {
   readOnly?: boolean;
   onRefreshNodeDefinitions?: () => Promise<WorkflowNodeTypeDefinition[] | void> | WorkflowNodeTypeDefinition[] | void;
   onNodeSelect?: (node: { id: string; label?: string | null; outputs?: WorkflowNodeTypeDefinition['outputs'] }) => void;
+  resolveNodeTypeDefinition?: (typeKey: string) => Promise<WorkflowNodeTypeDefinition | null | undefined>;
+  resolveNodeTypeDefinitions?: (typeKeys: string[]) => Promise<WorkflowNodeTypeDefinition[] | null | undefined>;
 };
 
 function pickConnectionNodes(rf: ReactFlowInstance | null, sourceId: string, targetId: string) {
@@ -193,7 +195,16 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
 }
 export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps>(
   function WorkflowGraphCanvas(
-    { className, nodeTypes, initialGraph, readOnly = false, onRefreshNodeDefinitions, onNodeSelect },
+    {
+      className,
+      nodeTypes,
+      initialGraph,
+      readOnly = false,
+      onRefreshNodeDefinitions,
+      onNodeSelect,
+      resolveNodeTypeDefinition,
+      resolveNodeTypeDefinitions,
+    },
     ref,
   ) {
     const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(
@@ -294,9 +305,15 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
     }, []);
 
     const addNode = useCallback(
-      (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
+      async (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
         if (readOnly) return;
-        const def = catalog[typeKey];
+        let resolvedDef: WorkflowNodeTypeDefinition | null | undefined;
+        try {
+          resolvedDef = await resolveNodeTypeDefinition?.(typeKey);
+        } catch {
+          resolvedDef = undefined;
+        }
+        const def = resolvedDef ?? catalog[typeKey];
         const rf = reactFlowRef.current;
         if (!rf) return;
         rf.setNodes((prev) => {
@@ -328,7 +345,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
           });
         });
       },
-      [catalog, readOnly],
+      [catalog, readOnly, resolveNodeTypeDefinition],
     );
 
     const applyNodeDefinitionsToCurrentGraph = useCallback((defs: WorkflowNodeTypeDefinition[]) => {
@@ -362,16 +379,72 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
       );
     }, []);
 
+    const resolveCurrentGraphNodeDefinitions = useCallback(
+      async (defs: WorkflowNodeTypeDefinition[]) => {
+        if (!resolveNodeTypeDefinition) return defs;
+        const rf = reactFlowRef.current;
+        if (!rf) return defs;
+
+        const merged = new Map(defs.map((d) => [d.id, d]));
+        const backendTypes = new Set(
+          rf
+            .getNodes()
+            .map((node) => ((node.data ?? {}) as { backendType?: string }).backendType)
+            .filter((type): type is string => Boolean(type)),
+        );
+
+        const typeKeys = [...backendTypes];
+        if (typeKeys.length === 0) return [...merged.values()];
+
+        let unresolvedTypeKeys = typeKeys;
+        if (resolveNodeTypeDefinitions) {
+          try {
+            const resolvedBatch = await resolveNodeTypeDefinitions(typeKeys);
+            const resolvedTypeKeys = new Set<string>();
+            for (const def of resolvedBatch ?? []) {
+              merged.set(def.id, def);
+              resolvedTypeKeys.add(def.id);
+            }
+            unresolvedTypeKeys = typeKeys.filter((typeKey) => !resolvedTypeKeys.has(typeKey));
+          } catch {
+            // fallback to single fetch below
+          }
+        }
+
+        await Promise.all(
+          unresolvedTypeKeys.map(async (typeKey) => {
+            try {
+              const resolved = await resolveNodeTypeDefinition(typeKey);
+              if (resolved) merged.set(typeKey, resolved);
+            } catch {
+              // ignore single node definition refresh failure
+            }
+          }),
+        );
+
+        return [...merged.values()];
+      },
+      [resolveNodeTypeDefinition, resolveNodeTypeDefinitions],
+    );
+
     const onRefreshCurrentNodeDefinitions = useCallback(async () => {
       if (readOnly || refreshingNodeDefinitions) return;
       setRefreshingNodeDefinitions(true);
       try {
         const latestDefinitions = await onRefreshNodeDefinitions?.();
-        applyNodeDefinitionsToCurrentGraph(latestDefinitions ?? nodeTypes);
+        const refreshedDefinitions = await resolveCurrentGraphNodeDefinitions(latestDefinitions ?? nodeTypes);
+        applyNodeDefinitionsToCurrentGraph(refreshedDefinitions);
       } finally {
         setRefreshingNodeDefinitions(false);
       }
-    }, [applyNodeDefinitionsToCurrentGraph, nodeTypes, onRefreshNodeDefinitions, readOnly, refreshingNodeDefinitions]);
+    }, [
+      applyNodeDefinitionsToCurrentGraph,
+      nodeTypes,
+      onRefreshNodeDefinitions,
+      readOnly,
+      refreshingNodeDefinitions,
+      resolveCurrentGraphNodeDefinitions,
+    ]);
 
     const getGraph = useCallback(() => {
       const rf = reactFlowRef.current;
@@ -404,7 +477,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
         const rf = reactFlowRef.current;
         const el = e.currentTarget;
         if (!rf) {
-          addNode(typeKey);
+          void addNode(typeKey);
           return;
         }
         const rect = el.getBoundingClientRect();
@@ -416,10 +489,10 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
           clientPoint.y < rect.top ||
           clientPoint.y > rect.bottom
         ) {
-          addNode(typeKey);
+          void addNode(typeKey);
           return;
         }
-        addNode(typeKey, { position: flowPos });
+        void addNode(typeKey, { position: flowPos });
       },
       [addNode, readOnly],
     );

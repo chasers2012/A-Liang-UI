@@ -40,7 +40,7 @@ export default function NodesPage() {
           filteredItems?.map((m) => ({
             id: m.id,
             label: m.name,
-            description: m.description,
+            description: m.desc,
             category: m.category,
           })) ?? null
         }

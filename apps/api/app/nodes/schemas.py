@@ -50,19 +50,37 @@ class WorkflowNodePatch(BaseModel):
         return s
 
 
+class WorkflowNodeDetailsBatchRequest(BaseModel):
+    node_ids: list[str] = Field(default_factory=list)
+
+    @field_validator("node_ids")
+    @classmethod
+    def _validate_node_ids(cls, v: list[str]) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for item in v:
+            node_id = item.strip()
+            if not node_id or node_id in seen:
+                continue
+            seen.add(node_id)
+            out.append(node_id)
+        return out
+
+
 class WorkflowNodeSummaryPublic(BaseModel):
     id: str
     name: str
-    description: str
+    desc: str
     is_plugin: bool = False
-    created_at: str
-    updated_at: str
     category: str | None = None
-    inputs: list[dict]
-    outputs: list[dict]
 
 
 class WorkflowNodeDetailPublic(WorkflowNodeSummaryPublic):
+    description: str
+    created_at: str
+    updated_at: str
+    inputs: list[dict]
+    outputs: list[dict]
     source: str
 
 

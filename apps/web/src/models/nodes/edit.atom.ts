@@ -115,7 +115,7 @@ export const nodesVisibleDetailAtom = atom((get) => {
       : null;
 
   const baseName = detail?.name ?? createDefaults?.name ?? '';
-  const baseDescription = detail?.description ?? '';
+  const baseDescription = detail?.description ?? detail?.desc ?? '';
   const baseSource = detail?.source ?? createDefaults?.source ?? '';
 
   const editName = get(nodesEditNameAtom);
@@ -134,6 +134,7 @@ export const nodesVisibleDetailAtom = atom((get) => {
     return {
       id: '__new__',
       name: effectiveName || '新节点',
+      desc: effectiveDescription || '',
       description: effectiveDescription || '',
       is_plugin: false,
       created_at: nowIso,
@@ -148,7 +149,7 @@ export const nodesVisibleDetailAtom = atom((get) => {
   return {
     ...detail,
     name: effectiveName || detail.name,
-    description: effectiveDescription,
+    description: effectiveDescription || detail.description || detail.desc || '',
     source: effectiveSource,
     inputs,
     outputs,

@@ -9,6 +9,13 @@ export function getNode(id: string): Promise<NodeDetailPublic> {
   return apiFetchJson<NodeDetailPublic>(`/nodes/${encodeURIComponent(id)}`);
 }
 
+export function getNodesDetailBatch(node_ids: string[]): Promise<NodeDetailPublic[]> {
+  return apiFetchJson<NodeDetailPublic[]>('/nodes/details/batch', {
+    method: 'POST',
+    body: JSON.stringify({ node_ids }),
+  });
+}
+
 export function getNodeTemplate(): Promise<string> {
   return apiFetchJson<string>('/nodes/template');
 }

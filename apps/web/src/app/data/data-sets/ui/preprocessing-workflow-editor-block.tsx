@@ -4,16 +4,17 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { useSetAtom } from 'jotai';
 
 import { cn } from '@/lib/utils';
+import { getNode, getNodesDetailBatch, listNodes } from '@/api/nodes';
 
 import {
   WORKFLOW_GRAPH_NODE_DRAG_MIME,
   WorkflowGraphCanvas,
   type WorkflowGraphCanvasHandle,
+  toWorkflowNodeType,
   toWorkflowNodeTypes,
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
-import { listNodes } from '@/api/nodes';
 import { SearchList } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
@@ -43,15 +44,15 @@ export function PreprocessingWorkflowEditorBlock(props: {
   return (
     <div className={cn('flex h-full min-h-0 flex-1 flex-col gap-3', className)}>
       {wfMetaLoading ? (
-        <p className="text-sm text-muted-foreground">加载节点类型…</p>
+        <p className="text-sm text-muted-foreground">???????</p>
       ) : (
         <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <SearchList
             items={nodeTypes}
             className="w-[300px]"
-            title="节点列表"
-            searchPlaceholder="搜索名称/描述"
-            getGroupKey={(item) => item.category ?? '其他'}
+            title="????"
+            searchPlaceholder="????/??"
+            getGroupKey={(item) => item.category ?? '??'}
             renderTitle={(item) => item.label}
             renderDescription={(item) => item.description ?? ''}
             getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
@@ -66,6 +67,10 @@ export function PreprocessingWorkflowEditorBlock(props: {
             ref={canvasRef}
             nodeTypes={nodeTypes}
             initialGraph={workflow}
+            resolveNodeTypeDefinition={async (typeKey) => toWorkflowNodeType(await getNode(typeKey))}
+            resolveNodeTypeDefinitions={async (typeKeys) =>
+              (await getNodesDetailBatch(typeKeys)).map((detail) => toWorkflowNodeType(detail))
+            }
             onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshPreprocessorNodes())}
             className="h-full flex-1"
           />

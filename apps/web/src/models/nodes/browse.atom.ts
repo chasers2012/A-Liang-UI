@@ -131,7 +131,7 @@ export const filteredNodesAtom = atom((get) => {
       return false;
     }
     if (q) {
-      const hay = `${m.name}\n${m.description}\n${m.id}`.toLowerCase();
+      const hay = `${m.name}\n${m.desc}\n${m.id}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (selectedDomains.length > 0) {

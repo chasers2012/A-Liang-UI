@@ -62,7 +62,7 @@ export const refreshStrategyNodeTypesAtom = atom(null, async (_get, set) => {
   set(strategyNodeTypesAtom, (s) => ({ ...s, error: null }));
   try {
     const items = await listNodes('strategy');
-    set(strategyNodeTypesAtom, { items: items as NodeSummaryPublic[], error: null });
+    set(strategyNodeTypesAtom, { items, error: null });
   } catch (e) {
     set(strategyNodeTypesAtom, {
       items: null,

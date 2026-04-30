@@ -41,13 +41,27 @@ def _to_summary(rec: WorkflowNodeRow) -> WorkflowNodeSummaryPublic:
     return WorkflowNodeSummaryPublic(
         id=rec.id,
         name=rec.name,
-        description=rec.description,
+        desc=(rec.description or "").strip().splitlines()[0]
+        if (rec.description or "").strip()
+        else "",
         is_plugin=rec.is_plugin,
+        category=node_cls.category,
+    )
+
+
+def _to_detail(rec: WorkflowNodeRow) -> WorkflowNodeDetailPublic | None:
+    summary = _to_summary(rec)
+    if summary is None:
+        return None
+    node_cls = WorkflowNodesRegistry.resolve_node_class(rec)
+    return WorkflowNodeDetailPublic(
+        **summary.model_dump(),
+        description=rec.description,
         created_at=rec.created_at,
         updated_at=rec.updated_at,
-        category=node_cls.category,
         inputs=[Parser.serialize_socket(s) for s in node_cls.inputs],
         outputs=[Parser.serialize_socket(s) for s in node_cls.outputs],
+        source=WorkflowNodesRegistry.read_source(rec),
     )
 
 
@@ -103,12 +117,16 @@ def load_node_detail(node_id: str) -> WorkflowNodeDetailPublic | None:
     rec = WorkflowNodesRegistry.get_item(node_id)
     if rec is None:
         return None
-    summary = _to_summary(rec)
-    if summary is None:
-        return None
-    return WorkflowNodeDetailPublic(
-        **summary.model_dump(), source=WorkflowNodesRegistry.read_source(rec)
-    )
+    return _to_detail(rec)
+
+
+def load_node_details(node_ids: list[str]) -> list[WorkflowNodeDetailPublic]:
+    out: list[WorkflowNodeDetailPublic] = []
+    for node_id in node_ids:
+        detail = load_node_detail(node_id)
+        if detail is not None:
+            out.append(detail)
+    return out
 
 
 def list_nodes(domain: str | None = None) -> list[WorkflowNodeSummaryPublic]:

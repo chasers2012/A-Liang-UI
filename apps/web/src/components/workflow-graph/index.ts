@@ -1,4 +1,4 @@
-import { NodeSummaryPublic } from '@/models/nodes/dto';
+import type { NodeDetailPublic, NodeSummaryPublic } from '@/models/nodes/dto';
 import { WorkflowNodeTypeDefinition } from './types';
 
 export type { WorkflowGraphNode, WorkflowNodeTypeDefinition, WorkflowSocketDefinition } from './types';
@@ -17,9 +17,20 @@ export function toWorkflowNodeTypes(catalog: NodeSummaryPublic[]): WorkflowNodeT
   return catalog.map((c) => ({
     id: c.id,
     label: c.name,
-    description: c.description,
+    description: c.desc,
     category: c.category ?? undefined,
-    inputs: c.inputs,
-    outputs: c.outputs,
+    inputs: [],
+    outputs: [],
   }));
+}
+
+export function toWorkflowNodeType(detail: NodeDetailPublic): WorkflowNodeTypeDefinition {
+  return {
+    id: detail.id,
+    label: detail.name,
+    description: detail.description || detail.desc,
+    category: detail.category ?? undefined,
+    inputs: detail.inputs ?? [],
+    outputs: detail.outputs ?? [],
+  };
 }
