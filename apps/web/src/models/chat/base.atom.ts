@@ -21,10 +21,11 @@ export const chatSessionsAtoms = createRefreshableAsyncAtoms<ChatSummaryPublic[]
   },
 });
 export const chatSessionsAtom = withAtomEffect(chatSessionsAtoms.valueAtom, (get, set) => {
-  const list = get(chatSessionsAtom);
+  const list = get(chatSessionsAtoms.valueAtom);
   const activeId = get(activeSessionIdAtom);
 
   if (list.length === 0) return;
+  console.log('list', list);
   if (activeId && !list.some((s) => s.id === activeId)) {
     set(activeSessionIdAtom, list[0]?.id ?? null);
   }
@@ -47,16 +48,13 @@ export const managedSessionsAsyncAtom = atom(async (get): Promise<ManagedSession
     is_archived: true,
     archived_at: session.archived_at,
   }));
-  return [...activeSessions, ...archivedSessions].sort((a, b) => {
-    const aTs = new Date(a.archived_at ?? a.updated_at).getTime();
-    const bTs = new Date(b.archived_at ?? b.updated_at).getTime();
-    return bTs - aTs;
-  });
+  return [...activeSessions, ...archivedSessions];
 });
 
 export const managedSessionsAtom = toAsyncValueStateAtom(managedSessionsAsyncAtom);
 
 export const refreshManagedSessionsAtom = atom(null, (_get, set) => {
+  console.log('refresh');
   set(chatSessionsAtoms.refreshAtom);
   set(archivedSessionsAtoms.refreshAtom);
 });

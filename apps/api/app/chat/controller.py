@@ -609,7 +609,7 @@ def stop_stream(body: ChatStopRequest) -> dict[str, Any]:
 
 def list_chats() -> list[ChatSummaryPublic]:
     items = [i for i in ChatRegistry.list_items() if i.archived_at is None]
-    items.sort(key=lambda i: i.updated_at, reverse=True)
+    items.sort(key=lambda i: i.created_at, reverse=True)
     return [record_to_summary(i) for i in items]
 
 
@@ -640,7 +640,6 @@ def submit_authorization(
 
 def list_archived_chats() -> list[ChatArchivedSummaryPublic]:
     items = [i for i in ChatRegistry.list_items() if i.archived_at is not None]
-    items.sort(key=lambda i: i.archived_at or "", reverse=True)
     return [record_to_archived_summary(i) for i in items]
 
 

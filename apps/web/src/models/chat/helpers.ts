@@ -97,7 +97,7 @@ export function upsertSummary(list: ChatSummaryPublic[], detail: ChatDetailPubli
     message_count: detail.messages.length,
   };
   const filtered = list.filter((i) => i.id !== detail.id);
-  return [nextSummary, ...filtered].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+  return [nextSummary, ...filtered];
 }
 
 export function extractTextFromBlocks(blocks: AssistantBlock[] | undefined): string {
