@@ -310,26 +310,3 @@ def disconnect_link(workflow: WorkflowGraphPersisted, link_id: str) -> WorkflowG
         raise ValueError(f"连线不存在: {link_id}")
     new_workflow.links = filtered
     return _validate_workflow(new_workflow)
-
-
-def disconnect_between(
-    workflow: WorkflowGraphPersisted,
-    from_node_id: str,
-    from_socket: str,
-    to_node_id: str,
-    to_socket: str,
-) -> WorkflowGraphPersisted:
-    new_workflow = workflow.model_copy(deep=True)
-    new_workflow.links = [
-        link
-        for link in new_workflow.links
-        if not (
-            link.from_.kind == "node"
-            and link.from_.node_id == from_node_id
-            and link.from_.socket == from_socket
-            and link.to.kind == "node"
-            and link.to.node_id == to_node_id
-            and link.to.socket == to_socket
-        )
-    ]
-    return _validate_workflow(new_workflow)

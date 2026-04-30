@@ -434,7 +434,7 @@ async def strategy_workflow_unset_node_param(
         "创建节点到节点连线。\n"
         "入参 from_node_id、from_socket、to_node_id、to_socket，可选 link_id；"
         "基于 ToolContext.workflowDraft 更新草稿并返回 link_id。"
-        "注意只有value_type相同的socket才能连接"
+        "注意只有 value_type 相同的 socket 才能连接。"
     ),
 )
 async def strategy_workflow_connect_nodes(
@@ -525,31 +525,6 @@ async def strategy_workflow_disconnect_link(
     )
 
 
-@safe_tool(
-    "策略工作流-按端点断开",
-    description=(
-        "按起止端点删除 node->node 连线。\n"
-        "入参 from_node_id、from_socket、to_node_id、to_socket；基于 ToolContext.workflowDraft 更新草稿。"
-    ),
-)
-async def strategy_workflow_disconnect_between(
-    from_node_id: str,
-    from_socket: str,
-    to_node_id: str,
-    to_socket: str,
-    runtime: ToolRuntime,
-) -> dict[str, Any]:
-    return await _mutate_workflow_draft(
-        runtime,
-        lambda workflow: (
-            controller.disconnect_between(
-                workflow, from_node_id, from_socket, to_node_id, to_socket
-            ),
-            {"ok": True},
-        ),
-    )
-
-
 TOOLS = {
     "strategy.get_strategy_workflow_template": (
         get_strategy_workflow_template_tool,
@@ -594,10 +569,6 @@ TOOLS = {
     ),
     "strategy.workflow.disconnect_link": (
         strategy_workflow_disconnect_link,
-        ToolAuthorization.allowed,
-    ),
-    "strategy.workflow.disconnect_between": (
-        strategy_workflow_disconnect_between,
         ToolAuthorization.allowed,
     ),
 }
