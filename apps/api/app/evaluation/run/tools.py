@@ -9,7 +9,7 @@ from app.tool.safe_tool import safe_tool
 from . import controller
 
 
-@safe_tool("运行评价任务", parse_docstring=True)
+@safe_tool("run_evaluation_run", parse_docstring=True)
 def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
     """
     触发一次因子评价运行（异步调度）。
@@ -32,7 +32,7 @@ def run_evaluation_run(profile_id: str, factor_id: str) -> dict[str, Any]:
     return job.model_dump(mode="json")
 
 
-@safe_tool("获取评价运行列表", parse_docstring=True)
+@safe_tool("list_evaluation_runs", parse_docstring=True)
 def list_evaluation_runs(
     factor_id: str | None = None,
     limit: int | None = None,
@@ -51,7 +51,7 @@ def list_evaluation_runs(
     return [row.model_dump(mode="json") for row in rows]
 
 
-@safe_tool("获取评价运行详情", parse_docstring=True)
+@safe_tool("get_evaluation_run_detail", parse_docstring=True)
 def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     """
     查询评价运行详情。
@@ -69,7 +69,7 @@ def get_evaluation_run_detail(run_id: str) -> dict[str, Any]:
     return row.model_dump(mode="json")
 
 
-@safe_tool("删除评价运行记录", parse_docstring=True)
+@safe_tool("delete_evaluation_run", parse_docstring=True)
 def delete_evaluation_run(run_id: str) -> None:
     """
     删除评价运行记录。

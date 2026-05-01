@@ -13,7 +13,7 @@ from .constants import DEFAULT_NODE_SOURCE
 from .schemas import WorkflowNodeCreate
 
 
-@safe_tool("获取新工作流节点模板", parse_docstring=True)
+@safe_tool("get_new_workflow_node_template", parse_docstring=True)
 def get_new_workflow_node_template() -> str:
     """
     获取工作流节点源码模板。
@@ -26,7 +26,7 @@ def get_new_workflow_node_template() -> str:
     return DEFAULT_NODE_SOURCE
 
 
-@safe_tool("创建工作流节点", parse_docstring=True)
+@safe_tool("create_workflow_node_tool", parse_docstring=True)
 def create_workflow_node_tool(source: str) -> dict[str, Any]:
     """
     创建并保存工作流节点。
@@ -49,7 +49,7 @@ def create_workflow_node_tool(source: str) -> dict[str, Any]:
     return out
 
 
-@safe_tool("获取工作流节点详情", parse_docstring=True)
+@safe_tool("get_workflow_node_detail", parse_docstring=True)
 def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     """
     查询工作流节点详情。
@@ -68,7 +68,7 @@ def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@safe_tool("批量获取工作流节点详情", parse_docstring=True)
+@safe_tool("get_workflow_node_details", parse_docstring=True)
 def get_workflow_node_details(node_ids: list[str]) -> list[dict[str, Any]]:
     """
     批量查询工作流节点详情。
@@ -82,7 +82,7 @@ def get_workflow_node_details(node_ids: list[str]) -> list[dict[str, Any]]:
     return [x.model_dump() for x in controller.load_node_details(node_ids)]
 
 
-@safe_tool("获取工作流节点列表", parse_docstring=True)
+@safe_tool("get_workflow_node_list", parse_docstring=True)
 def get_workflow_node_list() -> list[dict[str, Any]]:
     """
     查询工作流节点列表。
@@ -133,7 +133,7 @@ def _review_node_source_with_llm(source: str) -> dict[str, Any]:
     try:
         review = json.loads(raw)
     except Exception as exc:
-        raise ValueError(f"LLM 审查结果不可解析：{exc}") from exc
+        raise ValueError(f"LLM 审查结果不可解析：{exc}, 审查结果：{raw}") from exc
 
     approved = bool(review.get("approved", False))
     issues = review.get("issues") or []
@@ -142,7 +142,7 @@ def _review_node_source_with_llm(source: str) -> dict[str, Any]:
         raise ValueError(f"源码审查未通过：{issue_text}")
 
 
-@safe_tool("更新工作流节点", parse_docstring=True)
+@safe_tool("update_workflow_node", parse_docstring=True)
 def update_workflow_node(source: str) -> dict[str, Any]:
     """
     更新已有工作流节点。
@@ -165,7 +165,7 @@ def update_workflow_node(source: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@safe_tool("删除工作流节点", parse_docstring=True)
+@safe_tool("delete_workflow_node_tool", parse_docstring=True)
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
     """
     删除指定工作流节点。

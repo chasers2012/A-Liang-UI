@@ -9,7 +9,7 @@ from . import controller
 from .schemas import RunBacktestRequest
 
 
-@safe_tool("运行回测", parse_docstring=True)
+@safe_tool("run_backtest", parse_docstring=True)
 def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
     """
     创建并提交一次回测任务。
@@ -27,7 +27,7 @@ def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
     return run.model_dump(mode="json")
 
 
-@safe_tool("获取回测任务列表", parse_docstring=True)
+@safe_tool("get_backtest_runs", parse_docstring=True)
 def get_backtest_runs(
     strategy_id: str | None = None,
     status: str | None = None,
@@ -48,7 +48,7 @@ def get_backtest_runs(
     return [r.model_dump(mode="json") for r in runs]
 
 
-@safe_tool("获取回测任务详情", parse_docstring=True)
+@safe_tool("get_backtest_run_detail", parse_docstring=True)
 def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     """
     查询回测任务详情。
@@ -66,7 +66,7 @@ def get_backtest_run_detail(run_id: str) -> dict[str, Any]:
     return run.model_dump(mode="json")
 
 
-@safe_tool("删除回测任务", parse_docstring=True)
+@safe_tool("delete_backtest_run", parse_docstring=True)
 def delete_backtest_run(run_id: str) -> dict[str, Any]:
     """
     删除指定回测任务。
@@ -86,7 +86,7 @@ def delete_backtest_run(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "deleted": True}
 
 
-@safe_tool("获取回测净值曲线", parse_docstring=True)
+@safe_tool("get_backtest_equity", parse_docstring=True)
 def get_backtest_equity(run_id: str) -> dict[str, Any]:
     """
     获取回测净值曲线。
@@ -105,7 +105,7 @@ def get_backtest_equity(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "equity_curve": list(payload or [])}
 
 
-@safe_tool("获取回测成交明细", parse_docstring=True)
+@safe_tool("get_backtest_trades", parse_docstring=True)
 def get_backtest_trades(run_id: str) -> dict[str, Any]:
     """
     获取回测成交明细。
@@ -124,7 +124,7 @@ def get_backtest_trades(run_id: str) -> dict[str, Any]:
     return {"run_id": run_id, "trades": list(payload or [])}
 
 
-@safe_tool("获取回测节点输出", parse_docstring=True)
+@safe_tool("get_backtest_node_output", parse_docstring=True)
 def get_backtest_node_output(run_id: str, node_id: str) -> dict[str, Any]:
     """
     获取回测节点输出内容。

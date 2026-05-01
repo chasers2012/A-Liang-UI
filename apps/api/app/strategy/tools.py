@@ -30,7 +30,7 @@ from .draft import (
 from .llm_review import review_strategy_workflow_with_llm
 
 
-@safe_tool("加载策略工作流模板", parse_docstring=True)
+@safe_tool("get_strategy_workflow_template_tool", parse_docstring=True)
 async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str, Any]:
     """
     加载策略工作流模板到当前会话的工作流草稿中。
@@ -64,7 +64,7 @@ async def get_strategy_workflow_template_tool(runtime: ToolRuntime) -> dict[str,
     return template
 
 
-@safe_tool("获取策略可用节点", parse_docstring=True)
+@safe_tool("get_strategy_node_catalog", parse_docstring=True)
 def get_strategy_node_catalog() -> list[dict[str, Any]]:
     """
     列出策略域可用工作流节点。
@@ -77,7 +77,7 @@ def get_strategy_node_catalog() -> list[dict[str, Any]]:
     return [item.model_dump() for item in controller.list_strategy_nodes()]
 
 
-@safe_tool("查看工作流草稿", parse_docstring=True)
+@safe_tool("get_strategy_workflow_draft", parse_docstring=True)
 async def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     """
     读取当前会话中正在编辑的工作流草稿。
@@ -101,7 +101,7 @@ async def get_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     }
 
 
-@safe_tool("清除工作流草稿", parse_docstring=True)
+@safe_tool("clear_strategy_workflow_draft", parse_docstring=True)
 async def clear_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     """
     清除当前会话中的工作流草稿。
@@ -118,7 +118,7 @@ async def clear_strategy_workflow_draft(runtime: ToolRuntime) -> dict[str, Any]:
     return {"ok": True}
 
 
-@safe_tool("创建策略", parse_docstring=True)
+@safe_tool("create_strategy_tool", parse_docstring=True)
 async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime) -> dict[str, Any]:
     """
     创建并保存策略。
@@ -163,7 +163,7 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
         raise ValueError(f"创建失败：{e}") from e
 
 
-@safe_tool("获取策略详情", parse_docstring=True)
+@safe_tool("get_strategy_detail", parse_docstring=True)
 def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
     """
     查询单个策略详情。
@@ -177,7 +177,7 @@ def get_strategy_detail(strategy_id: str) -> dict[str, Any]:
     return controller.get_strategy(strategy_id)
 
 
-@safe_tool("加载策略", parse_docstring=True)
+@safe_tool("load_strategy_detail", parse_docstring=True)
 async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[str, Any]:
     """
     加载策略以便编辑。
@@ -222,7 +222,7 @@ async def load_strategy_detail(strategy_id: str, runtime: ToolRuntime) -> dict[s
     return strategy
 
 
-@safe_tool("获取策略列表", parse_docstring=True)
+@safe_tool("get_strategy_list", parse_docstring=True)
 def get_strategy_list() -> list[dict[str, Any]]:
     """
     查询当前工作区策略列表。
@@ -233,7 +233,7 @@ def get_strategy_list() -> list[dict[str, Any]]:
     return [i.model_dump() for i in controller.list_strategies()]
 
 
-@safe_tool("更新策略", parse_docstring=True)
+@safe_tool("update_strategy", parse_docstring=True)
 async def update_strategy(
     strategy_id: str, name: str, description: str, runtime: ToolRuntime
 ) -> dict[str, Any]:
@@ -285,7 +285,7 @@ async def update_strategy(
         raise ValueError(f"更新失败：{e}") from e
 
 
-@safe_tool("删除策略", parse_docstring=True)
+@safe_tool("delete_strategy_tool", parse_docstring=True)
 def delete_strategy_tool(strategy_id: str) -> dict[str, Any]:
     """
     删除指定策略。
@@ -301,7 +301,7 @@ def delete_strategy_tool(strategy_id: str) -> dict[str, Any]:
     return row
 
 
-@safe_tool("策略工作流-添加节点", parse_docstring=True)
+@safe_tool("strategy_workflow_add_node", parse_docstring=True)
 async def strategy_workflow_add_node(
     runtime: ToolRuntime,
     node_type_ids: list[str],
@@ -334,7 +334,7 @@ async def strategy_workflow_add_node(
     return await mutate_workflow_draft(runtime, _add_many)
 
 
-@safe_tool("策略工作流-删除节点", parse_docstring=True)
+@safe_tool("strategy_workflow_remove_node", parse_docstring=True)
 async def strategy_workflow_remove_node(
     runtime: ToolRuntime,
     node_ids: list[str],
@@ -366,7 +366,7 @@ async def strategy_workflow_remove_node(
     return await mutate_workflow_draft(runtime, _remove_many)
 
 
-@safe_tool("策略工作流-移动节点", parse_docstring=True)
+@safe_tool("strategy_workflow_move_node", parse_docstring=True)
 async def strategy_workflow_move_node(
     runtime: ToolRuntime,
     moves: list[StrategyWorkflowMoveNodeOp],
@@ -398,7 +398,7 @@ async def strategy_workflow_move_node(
     return await mutate_workflow_draft(runtime, _move_many)
 
 
-@safe_tool("策略工作流-设置节点参数", parse_docstring=True)
+@safe_tool("strategy_workflow_set_node_param", parse_docstring=True)
 async def strategy_workflow_set_node_param(
     runtime: ToolRuntime,
     ops: list[StrategyWorkflowSetNodeParamOp],
@@ -439,7 +439,7 @@ async def strategy_workflow_set_node_param(
     return await mutate_workflow_draft(runtime, _set_many)
 
 
-@safe_tool("策略工作流-移除节点参数", parse_docstring=True)
+@safe_tool("strategy_workflow_unset_node_param", parse_docstring=True)
 async def strategy_workflow_unset_node_param(
     runtime: ToolRuntime,
     ops: list[StrategyWorkflowUnsetNodeParamOp],
@@ -480,7 +480,7 @@ async def strategy_workflow_unset_node_param(
     return await mutate_workflow_draft(runtime, _unset_many)
 
 
-@safe_tool("策略工作流-连接节点", parse_docstring=True)
+@safe_tool("strategy_workflow_connect_nodes", parse_docstring=True)
 async def strategy_workflow_connect_nodes(
     runtime: ToolRuntime,
     links: list[StrategyWorkflowConnectNodesOp],
@@ -531,7 +531,7 @@ async def strategy_workflow_connect_nodes(
     return await mutate_workflow_draft(runtime, _connect_many)
 
 
-@safe_tool("策略工作流-连接工作流输入", parse_docstring=True)
+@safe_tool("strategy_workflow_connect_input", parse_docstring=True)
 async def strategy_workflow_connect_input(
     input_socket: str,
     to_node_id: str,
@@ -563,7 +563,7 @@ async def strategy_workflow_connect_input(
     )
 
 
-@safe_tool("策略工作流-连接工作流输出", parse_docstring=True)
+@safe_tool("strategy_workflow_connect_output", parse_docstring=True)
 async def strategy_workflow_connect_output(
     from_node_id: str,
     from_socket: str,
@@ -599,7 +599,7 @@ async def strategy_workflow_connect_output(
     )
 
 
-@safe_tool("策略工作流-删除连线", parse_docstring=True)
+@safe_tool("strategy_workflow_disconnect_link", parse_docstring=True)
 async def strategy_workflow_disconnect_link(
     runtime: ToolRuntime,
     link_ids: list[str],

@@ -6,7 +6,7 @@ from . import controller
 from .safe_tool import safe_tool
 
 
-@safe_tool("列出可用工具", parse_docstring=True)
+@safe_tool("list_available_tools", parse_docstring=True)
 def list_available_tools() -> list[dict[str, Any]]:
     """
     查询系统当前可用工具列表。

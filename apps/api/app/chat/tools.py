@@ -258,7 +258,7 @@ def build_graph() -> Any:
 graph = build_graph()
 
 
-@safe_tool("需求分析", parse_docstring=True)
+@safe_tool("analyze_5w1h_requirement", parse_docstring=True)
 def analyze_5w1h_requirement(instruction: str) -> dict[str, Any]:
     """
     对用户需求执行 5W1H 结构化分析并给出综合结论。

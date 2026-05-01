@@ -16,7 +16,7 @@ def _http_error_detail(exc: HTTPException) -> str:
     return d if isinstance(d, str) else str(d)
 
 
-@safe_tool("创建数据集", parse_docstring=True)
+@safe_tool("create_data_set", parse_docstring=True)
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     """
     创建并保存数据集。
@@ -36,7 +36,7 @@ def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     return created.model_dump()
 
 
-@safe_tool("获取数据集详情", parse_docstring=True)
+@safe_tool("get_data_set_detail", parse_docstring=True)
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     """
     查询单个数据集详情。
@@ -53,7 +53,7 @@ def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@safe_tool("获取数据集列表", parse_docstring=True)
+@safe_tool("get_data_set_list", parse_docstring=True)
 def get_data_set_list() -> list[dict[str, Any]]:
     """
     查询当前工作区数据集列表。
@@ -64,7 +64,7 @@ def get_data_set_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in controller.list_data_sets()]
 
 
-@safe_tool("更新数据集", parse_docstring=True)
+@safe_tool("update_data_set", parse_docstring=True)
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
     """
     更新数据集配置。
@@ -87,7 +87,7 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@safe_tool("删除数据集", parse_docstring=True)
+@safe_tool("delete_data_set", parse_docstring=True)
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
     """
     删除指定数据集。
@@ -104,7 +104,7 @@ def delete_data_set(data_set_id: str) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@safe_tool("预览数据集", parse_docstring=True)
+@safe_tool("get_data_set_panel_preview", parse_docstring=True)
 def get_data_set_panel_preview(
     data_set_id: str,
     limit: int = 200,

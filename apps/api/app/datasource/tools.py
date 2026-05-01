@@ -18,7 +18,7 @@ from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
 
-@safe_tool("创建数据源", parse_docstring=True)
+@safe_tool("create_datasource", parse_docstring=True)
 def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     """
     创建并保存数据源。
@@ -39,7 +39,7 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     return row_to_public(created_row).model_dump()
 
 
-@safe_tool("获取数据源详情", parse_docstring=True)
+@safe_tool("get_datasource_detail", parse_docstring=True)
 def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     """
     查询单个数据源详情。
@@ -56,7 +56,7 @@ def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@safe_tool("获取数据源列表", parse_docstring=True)
+@safe_tool("get_datasource_list", parse_docstring=True)
 def get_datasource_list() -> list[dict[str, Any]]:
     """
     查询当前工作区数据源列表。
@@ -67,7 +67,7 @@ def get_datasource_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in list_datasources()]
 
 
-@safe_tool("更新数据源", parse_docstring=True)
+@safe_tool("update_datasource", parse_docstring=True)
 def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, Any]:
     """
     更新数据源配置。
@@ -97,7 +97,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
     return row_to_public(row).model_dump()
 
 
-@safe_tool("删除数据源", parse_docstring=True)
+@safe_tool("delete_datasource", parse_docstring=True)
 def delete_datasource(datasource_id: str) -> dict[str, Any]:
     """
     删除指定数据源。
@@ -114,7 +114,7 @@ def delete_datasource(datasource_id: str) -> dict[str, Any]:
     return row_to_public(row).model_dump()
 
 
-@safe_tool("测试数据源连通性", parse_docstring=True)
+@safe_tool("test_datasource_connection", parse_docstring=True)
 def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     """
     测试数据源连接是否可用。

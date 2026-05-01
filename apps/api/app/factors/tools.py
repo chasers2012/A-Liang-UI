@@ -12,7 +12,7 @@ from app.tool.safe_tool import safe_tool
 from . import controller
 
 
-@safe_tool("获取新因子模板", parse_docstring=True)
+@safe_tool("get_new_factor_template", parse_docstring=True)
 def get_new_factor_template() -> str:
     """
     获取新因子源码模板。
@@ -25,7 +25,7 @@ def get_new_factor_template() -> str:
     return NEW_FACTOR_TEMPLATE
 
 
-@safe_tool("获取因子基类源码", parse_docstring=True)
+@safe_tool("get_factor_base_source", parse_docstring=True)
 def get_factor_base_source() -> str:
     """
     获取因子基类源码。
@@ -36,7 +36,7 @@ def get_factor_base_source() -> str:
     return inspect.getsource(Factor)
 
 
-@safe_tool("创建因子", parse_docstring=True)
+@safe_tool("create_factor_tool", parse_docstring=True)
 def create_factor_tool(source: str | None = None) -> dict[str, Any]:
     """
     创建并保存新因子。
@@ -54,7 +54,7 @@ def create_factor_tool(source: str | None = None) -> dict[str, Any]:
     return controller.factor_detail(rec).model_dump()
 
 
-@safe_tool("获取因子详情", parse_docstring=True)
+@safe_tool("get_factor_detail", parse_docstring=True)
 def get_factor_detail(factor_id: str) -> dict[str, Any]:
     """
     查询单个因子详情。
@@ -71,7 +71,7 @@ def get_factor_detail(factor_id: str) -> dict[str, Any]:
     return controller.factor_detail(rec).model_dump()
 
 
-@safe_tool("获取因子列表", parse_docstring=True)
+@safe_tool("get_factor_list", parse_docstring=True)
 def get_factor_list() -> list[dict[str, Any]]:
     """
     查询因子列表。
@@ -82,7 +82,7 @@ def get_factor_list() -> list[dict[str, Any]]:
     return [f.model_dump() for f in controller.list_factors()]
 
 
-@safe_tool("编辑因子", parse_docstring=True)
+@safe_tool("update_factor_tool", parse_docstring=True)
 def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
     """
     更新已有因子源码。
@@ -100,7 +100,7 @@ def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
     return controller.factor_detail(rec).model_dump()
 
 
-@safe_tool("删除因子", parse_docstring=True)
+@safe_tool("delete_factor_tool", parse_docstring=True)
 def delete_factor_tool(factor_id: str) -> dict[str, Any]:
     """
     删除指定因子。

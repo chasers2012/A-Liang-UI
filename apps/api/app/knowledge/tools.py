@@ -24,7 +24,7 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
     return "\n".join(lines).strip()
 
 
-@safe_tool("知识库检索", parse_docstring=True)
+@safe_tool("knowledge_search_tool", parse_docstring=True)
 def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
     """
     检索与问题相关的知识库内容。

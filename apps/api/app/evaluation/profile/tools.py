@@ -47,7 +47,7 @@ def _merge_evaluation_profile_patch(
     row.updated_at = utc_now_iso()
 
 
-@safe_tool("获取评价方案工作流模板", parse_docstring=True)
+@safe_tool("get_evaluation_profile_workflow_template", parse_docstring=True)
 def get_evaluation_profile_workflow_template() -> str:
     """
     获取评价方案工作流模板。
@@ -60,7 +60,7 @@ def get_evaluation_profile_workflow_template() -> str:
     return json.dumps(empty_workflow_template_dict(), ensure_ascii=False)
 
 
-@safe_tool("获取工作流节点类型源码", parse_docstring=True)
+@safe_tool("get_workflow_node_types_source", parse_docstring=True)
 def get_workflow_node_types_source() -> str:
     """
     获取工作流节点类型源码。
@@ -74,7 +74,7 @@ def get_workflow_node_types_source() -> str:
     return path.read_text(encoding="utf-8")
 
 
-@safe_tool("创建评价方案", parse_docstring=True)
+@safe_tool("create_evaluation_profile", parse_docstring=True)
 def create_evaluation_profile(body: EvaluationProfileCreate) -> dict[str, Any]:
     """
     创建并保存评价方案。
@@ -92,7 +92,7 @@ def create_evaluation_profile(body: EvaluationProfileCreate) -> dict[str, Any]:
     return _to_public(row).model_dump()
 
 
-@safe_tool("获取评价方案详情", parse_docstring=True)
+@safe_tool("get_evaluation_profile_detail", parse_docstring=True)
 def get_evaluation_profile_detail(profile_id: str) -> dict[str, Any]:
     """
     查询评价方案详情。
@@ -109,7 +109,7 @@ def get_evaluation_profile_detail(profile_id: str) -> dict[str, Any]:
     return _to_public(row).model_dump()
 
 
-@safe_tool("获取评价方案列表", parse_docstring=True)
+@safe_tool("get_evaluation_profile_list", parse_docstring=True)
 def get_evaluation_profile_list() -> list[dict[str, Any]]:
     """
     查询评价方案列表。
@@ -120,7 +120,7 @@ def get_evaluation_profile_list() -> list[dict[str, Any]]:
     return [_to_public(i).model_dump() for i in EvaluationProfilesRegistry.list_all()]
 
 
-@safe_tool("更新评价方案", parse_docstring=True)
+@safe_tool("update_evaluation_profile", parse_docstring=True)
 def update_evaluation_profile(profile_id: str, body: EvaluationProfilePatch) -> dict[str, Any]:
     """
     更新评价方案配置。
@@ -141,7 +141,7 @@ def update_evaluation_profile(profile_id: str, body: EvaluationProfilePatch) -> 
     return _to_public(row).model_dump()
 
 
-@safe_tool("删除评价方案", parse_docstring=True)
+@safe_tool("delete_evaluation_profile", parse_docstring=True)
 def delete_evaluation_profile(profile_id: str) -> dict[str, Any]:
     """
     删除指定评价方案。
