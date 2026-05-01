@@ -488,7 +488,7 @@ async def strategy_workflow_connect_nodes(
     """
     批量在策略工作流草稿中创建节点到节点的连线。
 
-    只有 value_type 相同的 socket 才能连接。
+    支持 `value_type` 使用逗号分隔多个类型；两端只要有任意一个类型匹配即可连接。
 
     Args:
         runtime: 工具运行时上下文，用于读取并更新当前工作流草稿。
@@ -541,7 +541,7 @@ async def strategy_workflow_connect_input(
     """
     创建 `workflow_input` 到节点输入的连线。
 
-    注意：只有 `value_type` 相同的 socket 才能连接。
+    注意：支持 `value_type` 逗号分隔多个类型；两端任意类型匹配即可连接。
 
     Args:
         input_socket: 工作流输入 socket 名称。
@@ -573,7 +573,7 @@ async def strategy_workflow_connect_output(
     """
     创建节点输出到 `workflow_output` 的连线。
 
-    注意：只有 `value_type` 相同的 socket 才能连接。
+    注意：支持 `value_type` 逗号分隔多个类型；两端任意类型匹配即可连接。
 
     Args:
         from_node_id: 起点节点 ID。

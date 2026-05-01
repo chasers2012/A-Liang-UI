@@ -15,10 +15,10 @@ from workflow import workflow_node, Socket, Node
     description="",
     entry="execute",
     input_sockets=[
-        Socket("input", required=False, value_type="any"),
+        Socket("input", required=False, value_type=""),
     ],
     output_sockets=[
-        Socket("out", value_type="any"),
+        Socket("out", value_type=""),
     ],
 )
 class NewWorkflowNode(Node):

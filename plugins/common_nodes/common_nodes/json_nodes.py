@@ -35,7 +35,7 @@ def _json_to_dataframe(obj: Any) -> pd.DataFrame:
         Socket(
             "payload",
             required=False,
-            value_type="scalar_json",
+            value_type="scalar_json,string",
             label="JSON 输入",
             description="已解析的 dict/list 或 JSON 字符串；未连线时使用下方文本框",
         ),
@@ -83,7 +83,7 @@ class JsonToDataframeNode:
         Socket(
             "source_text",
             required=False,
-            value_type="string",
+            value_type="string,scalar_json",
             label="JSON 字符串",
             description="上游字符串；未连线时使用下方文本框",
         ),

@@ -34,6 +34,7 @@ import {
   WORKFLOW_OUTPUT_NODE_ID,
 } from './reactflow/serialize';
 import { normalizeAppendableHandle } from './reactflow/appendable-handle';
+import { isValueTypeCompatible } from './value-type';
 
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from './types';
 import { WorkflowGraphPersisted } from './reactflow/types';
@@ -281,7 +282,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
     );
 
     const isValidConnection: IsValidConnection = useCallback((c) => {
-      // 仅允许 “输出 -> 输入” 且两端 value_type 相同
+      // 支持 value_type 逗号分隔多类型；两端任一类型匹配即可连接。
       if (!c.source || !c.target) return false;
       if (!c.sourceHandle || !c.targetHandle) return false;
 
@@ -299,9 +300,7 @@ export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, Workflo
 
       // 对于 param（内联字段）常见 value_type 为空；此时视为“任意类型可接入”，
       // 由后续将 param 提升为 socket 后再按节点真实输入类型约束。
-      if (!inp.value_type || !out.value_type) return true;
-
-      return out.value_type === inp.value_type;
+      return isValueTypeCompatible(out.value_type, inp.value_type);
     }, []);
 
     const addNode = useCallback(

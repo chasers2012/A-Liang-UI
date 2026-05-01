@@ -12,6 +12,7 @@ import {
   TextareaParamRow,
 } from './params';
 import { WorkflowHandle } from './workflow-handle';
+import { isValueTypeCompatible } from '../../value-type';
 
 // eslint-disable-next-line complexity
 function pickSourceValueTypeFromStore(s: unknown): string | null {
@@ -110,10 +111,7 @@ export const ParamRow = memo(function ParamRow(props: {
   );
   const isTypeMismatch = useMemo(() => {
     if (!isConnecting) return false;
-    const targetType = (spec.type ?? '').trim();
-    const sourceType = (sourceValueType ?? '').trim();
-    if (!targetType || !sourceType) return false;
-    return targetType !== sourceType;
+    return !isValueTypeCompatible(sourceValueType ?? '', spec.type ?? '');
   }, [isConnecting, sourceValueType, spec.type]);
   if (!rt) {
     return null;

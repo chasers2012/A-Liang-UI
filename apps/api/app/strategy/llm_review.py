@@ -20,6 +20,16 @@ def _extract_json_block(text: str) -> str:
     return stripped
 
 
+def _build_workflow_schema_descriptions() -> dict[str, Any]:
+    schema = WorkflowGraphPersisted.model_json_schema(by_alias=True)
+    return {
+        "root": "WorkflowGraphPersisted",
+        "description": schema.get("description"),
+        "properties": schema.get("properties", {}),
+        "$defs": schema.get("$defs", {}),
+    }
+
+
 def review_strategy_workflow_with_llm(
     *,
     name: str,
@@ -56,6 +66,7 @@ def review_strategy_workflow_with_llm(
         "name": name,
         "description": description,
         "workflow": workflow_payload,
+        "workflow_schema_descriptions": _build_workflow_schema_descriptions(),
         "used_node_details": used_node_details,
     }
     resp = llm.invoke(

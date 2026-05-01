@@ -32,6 +32,18 @@ from app.strategy.schemas import (
 )
 
 
+def _parse_value_types(value_type: str) -> set[str]:
+    return {item.strip() for item in str(value_type or "").split(",") if item.strip()}
+
+
+def _is_socket_type_compatible(from_value_type: str, to_value_type: str) -> bool:
+    from_types = _parse_value_types(from_value_type)
+    to_types = _parse_value_types(to_value_type)
+    if not from_types or not to_types:
+        return True
+    return not from_types.isdisjoint(to_types)
+
+
 def get_strategy_workflow_template() -> dict:
     return strategy_workflow_template_dict()
 
@@ -231,7 +243,7 @@ def connect_nodes(
     to_node = _find_node_or_raise(new_workflow, to_node_id)
     from_socket_def = _find_socket_or_raise(from_node.outputs, from_socket, label="输出 socket")
     to_socket_def = _find_socket_or_raise(to_node.inputs, to_socket, label="输入 socket")
-    if from_socket_def.value_type != to_socket_def.value_type:
+    if not _is_socket_type_compatible(from_socket_def.value_type, to_socket_def.value_type):
         raise ValueError(
             "socket value_type 不匹配: "
             f"{from_node_id}.{from_socket}={from_socket_def.value_type}, "
@@ -259,7 +271,7 @@ def connect_workflow_input(
     )
     to_node = _find_node_or_raise(new_workflow, to_node_id)
     to_socket_def = _find_socket_or_raise(to_node.inputs, to_socket, label="输入 socket")
-    if workflow_input_def.value_type != to_socket_def.value_type:
+    if not _is_socket_type_compatible(workflow_input_def.value_type, to_socket_def.value_type):
         raise ValueError(
             "socket value_type 不匹配: "
             f"workflow_input.{input_socket}={workflow_input_def.value_type}, "
@@ -287,7 +299,7 @@ def connect_to_workflow_output(
     workflow_output_def = _find_socket_or_raise(
         new_workflow.workflow_outputs, output_socket, label="工作流输出 socket"
     )
-    if from_socket_def.value_type != workflow_output_def.value_type:
+    if not _is_socket_type_compatible(from_socket_def.value_type, workflow_output_def.value_type):
         raise ValueError(
             "socket value_type 不匹配: "
             f"{from_node_id}.{from_socket}={from_socket_def.value_type}, "

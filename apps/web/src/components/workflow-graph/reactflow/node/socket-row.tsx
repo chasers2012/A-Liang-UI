@@ -7,6 +7,7 @@ import type { WorkflowSocketDefinition } from '../../types';
 import { appendableHandleBase, appendableHandleId, normalizeAppendableHandle } from '../appendable-handle';
 import { SocketDescriptionTooltip } from './socket-description-tooltip';
 import { WorkflowHandle } from './workflow-handle';
+import { isValueTypeCompatible } from '../../value-type';
 
 // eslint-disable-next-line complexity
 function pickSourceValueTypeFromStore(s: unknown): string | null {
@@ -99,9 +100,10 @@ export const SocketRow = memo(function SocketRow({
           >
             {/** 拖线时，对类型不匹配的 target handle 显示 disabled 颜色并禁用连接 */}
             {(() => {
-              const targetType = (socket.value_type ?? '').trim();
-              const sourceType = (sourceValueType ?? '').trim();
-              const mismatch = isInput && isConnecting && targetType && sourceType ? targetType !== sourceType : false;
+              const mismatch =
+                isInput && isConnecting
+                  ? !isValueTypeCompatible(sourceValueType ?? '', socket.value_type ?? '')
+                  : false;
               return (
                 <WorkflowHandle isInput={isInput} id={handleId} disabled={readOnly || mismatch} mismatch={mismatch} />
               );
