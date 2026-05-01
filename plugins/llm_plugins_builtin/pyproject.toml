@@ -12,9 +12,11 @@ dependencies = [
     "langchain-ollama>=1.1.0",
     "langchain-openai>=1.2.1",
     "langchain-deepseek",
+    "langchain-anthropic",
 ]
 
 [project.entry-points."quant-agent.plugins"]
+llm_anthropic = "llm_plugins_builtin.anthropic:AnthropicLlmPlugin"
 llm_deepseek = "llm_plugins_builtin.deepseek:DeepSeekLlmPlugin"
 llm_ollama = "llm_plugins_builtin.ollama:OllamaLlmPlugin"
 llm_openai = "llm_plugins_builtin.openai:OpenAiLlmPlugin"

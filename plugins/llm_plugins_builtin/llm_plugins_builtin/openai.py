@@ -12,6 +12,7 @@ class _OpenAiConfig(BaseModel):
 
     api_key: str = ""
     base_url: str = ""
+    thinking: bool = False
 
     @model_validator(mode="after")
     def _validate(self) -> _OpenAiConfig:
@@ -35,6 +36,7 @@ class OpenAiLlmPlugin(LlmPlugin):
                     "type": "string",
                     "default": "",
                 },
+                "thinking": {"title": "Thinking", "type": "boolean", "default": False},
             },
             "required": ["api_key"],
         },
@@ -65,6 +67,7 @@ class OpenAiLlmPlugin(LlmPlugin):
             {
                 "api_key": self._require_non_empty(settings, "api_key", "api_key"),
                 "base_url": settings.get("base_url"),
+                "thinking": settings.get("thinking"),
             }
         )
         kwargs: dict[str, Any] = {
@@ -74,4 +77,7 @@ class OpenAiLlmPlugin(LlmPlugin):
         base_url = str(cfg.get("base_url") or "").strip()
         if base_url:
             kwargs["base_url"] = base_url.rstrip("/")
+        kwargs["extra_body"] = {
+            "thinking": {"type": ("enabled" if bool(cfg.get("thinking")) else "disabled")}
+        }
         return f"openai:{model}", kwargs

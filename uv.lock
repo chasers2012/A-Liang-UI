@@ -2553,6 +2553,7 @@ name = "llm-plugins-builtin"
 version = "0.1.0"
 source = { editable = "plugins/llm_plugins_builtin" }
 dependencies = [
+    { name = "langchain-anthropic" },
     { name = "langchain-deepseek" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
@@ -2561,6 +2562,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "langchain-anthropic" },
     { name = "langchain-deepseek" },
     { name = "langchain-ollama", specifier = ">=1.1.0" },
     { name = "langchain-openai", specifier = ">=1.2.1" },
