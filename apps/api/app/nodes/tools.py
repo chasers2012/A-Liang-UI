@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from pydantic import BaseModel, Field
 
+from app.llm_tools.review_with_llm import review_with_llm
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
@@ -93,53 +93,27 @@ def get_workflow_node_list() -> list[dict[str, Any]]:
     return [x.model_dump() for x in controller.list_nodes()]
 
 
-def _extract_json_block(text: str) -> str:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        parts = stripped.split("```")
-        for part in parts:
-            candidate = part.strip()
-            if candidate.startswith("json"):
-                payload = candidate[4:].strip()
-                if payload:
-                    return payload
-    return stripped
+class _NodeSourceReview(BaseModel):
+    approved: bool
+    summary: str = ""
+    issues: list[str] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
 
 
 def _review_node_source_with_llm(source: str) -> dict[str, Any]:
-    # Lazy import to avoid module import cycles with chat agent bootstrap path.
-    from app.chat.controller import build_chat_model
-
-    llm = build_chat_model()
     prompt = (
         "请审查下面的 Python 工作流节点源码是否适合上线使用，重点检查：语法正确性、"
         "明显运行时风险、危险操作（系统命令/文件破坏）、以及实现与注释是否一致。"
-        "请仅输出 JSON，格式为："
-        '{"approved": boolean, "summary": string, "issues": [string], "suggestions": [string]}'
-        "。如果没有问题，issues 传空数组。"
     )
-    resp = llm.invoke(
-        [
-            SystemMessage(content="你是严格的代码审查助手，只返回 JSON。"),
-            HumanMessage(content=f"{prompt}\n\n源码如下：\n```python\n{source}\n```"),
-        ],
-        config={
-            "metadata": {"silent_stream": True},
-        },
+    return review_with_llm(
+        system_prompt="你是严格的代码审查助手。",
+        review_prompt=prompt,
+        review_input=source,
+        output_model=_NodeSourceReview,
+        input_format="python",
+        input_title="源码如下：",
+        reject_message_prefix="源码审查未通过",
     )
-
-    content = resp.content if isinstance(resp.content, str) else str(resp.content)
-    raw = _extract_json_block(content)
-    try:
-        review = json.loads(raw)
-    except Exception as exc:
-        raise ValueError(f"LLM 审查结果不可解析：{exc}, 审查结果：{raw}") from exc
-
-    approved = bool(review.get("approved", False))
-    issues = review.get("issues") or []
-    if not approved:
-        issue_text = "；".join(str(x) for x in issues if str(x).strip()) or "未通过 LLM 审查"
-        raise ValueError(f"源码审查未通过：{issue_text}")
 
 
 @safe_tool("update_workflow_node", parse_docstring=True)
