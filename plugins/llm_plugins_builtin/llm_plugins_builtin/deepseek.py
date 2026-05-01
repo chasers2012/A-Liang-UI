@@ -7,25 +7,25 @@ from app.plugin.schema import PluginConfigSchema
 from pydantic import BaseModel, ConfigDict, model_validator
 
 
-class _OpenAiConfig(BaseModel):
+class _DeepSeekConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     api_key: str = ""
     base_url: str = ""
 
     @model_validator(mode="after")
-    def _validate(self) -> _OpenAiConfig:
+    def _validate(self) -> _DeepSeekConfig:
         if not self.api_key.strip():
             raise ValueError("API Key 不能为空")
         return self
 
 
-class OpenAiLlmPlugin(LlmPlugin):
-    name: Literal["openai"] = "openai"
+class DeepSeekLlmPlugin(LlmPlugin):
+    name: Literal["deepseek"] = "deepseek"
 
     config = PluginConfigSchema(
-        title="OpenAI",
-        description="配置 OpenAI 的 API。",
+        title="DeepSeek",
+        description="配置 DeepSeek / 兼容 OpenAI 的 API。",
         json_schema={
             "type": "object",
             "properties": {
@@ -45,16 +45,16 @@ class OpenAiLlmPlugin(LlmPlugin):
     )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        cfg = _OpenAiConfig.model_validate(config)
+        cfg = _DeepSeekConfig.model_validate(config)
         return cfg.model_dump(mode="json")
 
     @staticmethod
     def _require_non_empty(settings: dict[str, Any], key: str, label: str) -> Any:
         if key not in settings:
-            raise ValueError(f"OpenAI 配置缺失：{label} 为必填项")
+            raise ValueError(f"DeepSeek 配置缺失：{label} 为必填项")
         value = settings[key]
         if isinstance(value, str) and not value.strip():
-            raise ValueError(f"OpenAI 配置缺失：{label} 为必填项")
+            raise ValueError(f"DeepSeek 配置缺失：{label} 为必填项")
         return value
 
     def to_chat_model_spec(self, settings: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -74,4 +74,4 @@ class OpenAiLlmPlugin(LlmPlugin):
         base_url = str(cfg.get("base_url") or "").strip()
         if base_url:
             kwargs["base_url"] = base_url.rstrip("/")
-        return f"openai:{model}", kwargs
+        return f"deepseek:{model}", kwargs

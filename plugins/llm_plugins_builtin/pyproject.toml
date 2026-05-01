@@ -5,13 +5,17 @@ build-backend = "hatchling.build"
 [project]
 name = "llm-plugins-builtin"
 version = "0.1.0"
-description = "Built-in quant-agent LLM provider plugins (Ollama, OpenAI)"
+description = "Built-in quant-agent LLM provider plugins (Ollama, OpenAI, DeepSeek)"
 requires-python = ">=3.10"
 dependencies = [
     "quant-agent-api",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.2.1",
+    "langchain-deepseek",
 ]
 
 [project.entry-points."quant-agent.plugins"]
+llm_deepseek = "llm_plugins_builtin.deepseek:DeepSeekLlmPlugin"
 llm_ollama = "llm_plugins_builtin.ollama:OllamaLlmPlugin"
 llm_openai = "llm_plugins_builtin.openai:OpenAiLlmPlugin"
 
