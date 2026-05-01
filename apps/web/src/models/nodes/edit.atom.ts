@@ -11,6 +11,7 @@ import {
 import type { NodeTypeSocketPublic } from '@/models/evaluation-profile/dto';
 import { nodesListAtoms } from './list-detail.atom';
 import { deleteNode } from '@/api/nodes';
+import { findFirst, findNodes, parsePythonCall, withPythonTree, type TSNode } from '@/lib/python-parser';
 
 export type NodesEditState = {
   editing: boolean;
@@ -21,7 +22,13 @@ export type NodesEditState = {
   saveError: string | null;
 };
 
-export const nodesEditingAtom = atom(false);
+const nodesEditingStateAtom = atom(false);
+export const nodesEditingAtom = atom(
+  (get) => get(nodesEditingStateAtom),
+  (_get, set, next: boolean) => {
+    set(nodesEditingStateAtom, next);
+  },
+);
 export const nodesEditNameAtom = atom<string | undefined>(undefined);
 export const nodesEditDescriptionAtom = atom<string | undefined>(undefined);
 export const nodesSourceDraftAtom = atom<string | undefined>(undefined);
@@ -40,41 +47,142 @@ export const nodesCreateModeAtom = atom(
   },
 );
 
+const RENDER_TYPE_BY_CALLEE: Record<string, string> = {
+  Socket: 'socket',
+  NumberNodeParam: 'number',
+  StringNodeParam: 'input',
+  NodeParam: 'input',
+  TextareaNodeParam: 'textarea',
+  BooleanNodeParam: 'toggle',
+  OptionsNodeParam: 'select',
+  DateNodeParam: 'date',
+  DateTimeNodeParam: 'datetime',
+  RJSFNodeParam: 'rjsf',
+};
+
+const VALUE_TYPE_BY_CALLEE: Record<string, string> = {
+  NumberNodeParam: 'number',
+  StringNodeParam: 'string',
+  TextareaNodeParam: 'string',
+  BooleanNodeParam: 'boolean',
+  DateNodeParam: 'date',
+  DateTimeNodeParam: 'datetime',
+};
+
+function buildSocketModel(
+  callee: string,
+  named: Map<string, unknown>,
+  positionalName?: string,
+): NodeTypeSocketPublic | null {
+  const name = (named.get('name') as string | undefined) ?? positionalName ?? '';
+  if (!name) return null;
+
+  const inferredRenderType = RENDER_TYPE_BY_CALLEE[callee] ?? null;
+  const renderType = named.get('render_type');
+
+  const model: NodeTypeSocketPublic = (() => {
+    const rawValueType = named.get('value_type') as string | undefined;
+    const value_type = rawValueType?.trim() ? rawValueType : (VALUE_TYPE_BY_CALLEE[callee] ?? '');
+    return {
+      name,
+      required: Boolean(named.get('required') ?? false),
+      value_type,
+    };
+  })();
+
+  const rawLabel = named.get('label') as string | undefined;
+  const label = rawLabel?.trim() ? rawLabel : name;
+
+  // 与后端 Socket.__init__ 对齐：label 为空时回退到 name
+  model.label = label;
+  model.description = named.get('description') as string | undefined;
+  model.type = named.get('type') as string | undefined;
+  model.minimum = named.get('minimum') as number | null | undefined;
+  model.maximum = named.get('maximum') as number | null | undefined;
+  model.options = named.get('options') as Array<string | number> | undefined;
+
+  if (named.has('default')) model.default = named.get('default') as never;
+
+  model.render_type =
+    (typeof renderType === 'string' || renderType === null ? (renderType as string | null) : undefined) ??
+    inferredRenderType ??
+    undefined;
+
+  return model;
+}
+
+function parseSocketList(listNode: TSNode | null): NodeTypeSocketPublic[] {
+  if (!listNode) return [];
+
+  return listNode.namedChildren
+    .filter((child) => child.type === 'call')
+    .map((call) => parsePythonCall(call))
+    .filter((x): x is NonNullable<typeof x> => x != null)
+    .map(({ callee, args }) => ({
+      type: callee,
+      name: (args.positional[0] as string | undefined) ?? (args.keyword.name as string | undefined),
+      keyword: args.keyword,
+    }))
+    .filter(({ type }) => type === 'Socket' || type.endsWith('NodeParam'))
+    .map(({ type, name, keyword }) => buildSocketModel(type, new Map(Object.entries(keyword)), name))
+    .filter((x): x is NonNullable<typeof x> => x != null);
+}
+
+function getWorkflowNodeCallFromDecorator(decorator: TSNode): TSNode | null {
+  const call = findFirst(decorator, 'call');
+  if (!call) return null;
+  const func = call.childForFieldName('function');
+  return func?.text.trim() === 'workflow_node' ? call : null;
+}
+
+function getDecoratorNodesFromDecoratedDefinition(def: TSNode): TSNode[] {
+  return def.namedChildren.filter((c) => c.type === 'decorator');
+}
+
+function extractWorkflowNodeIOListsFromCall(call: TSNode): { inputList: TSNode | null; outputList: TSNode | null } {
+  const argsNode = call.childForFieldName('arguments');
+  if (!argsNode) return { inputList: null, outputList: null };
+
+  let inputList: TSNode | null = null;
+  let outputList: TSNode | null = null;
+
+  for (const child of argsNode.namedChildren) {
+    if (child.type !== 'keyword_argument') continue;
+    const name = child.childForFieldName('name')?.text.trim();
+    const value = child.childForFieldName('value');
+    if (!name || !value) continue;
+    if (name === 'input_sockets') inputList = value.type === 'list' ? value : null;
+    if (name === 'output_sockets') outputList = value.type === 'list' ? value : null;
+  }
+
+  return { inputList, outputList };
+}
+
+function findWorkflowNodeIOLists(root: TSNode): { inputList: TSNode | null; outputList: TSNode | null } | null {
+  for (const def of findNodes(root, 'decorated_definition')) {
+    for (const decorator of getDecoratorNodesFromDecoratedDefinition(def)) {
+      const call = getWorkflowNodeCallFromDecorator(decorator);
+      if (!call) continue;
+      return extractWorkflowNodeIOListsFromCall(call);
+    }
+  }
+  return null;
+}
+
 function parseWorkflowNodeSocketsFromSource(source: string): {
   inputs: NodeTypeSocketPublic[];
   outputs: NodeTypeSocketPublic[];
 } {
-  const parseSocketBlock = (blockKey: 'input_sockets' | 'output_sockets'): NodeTypeSocketPublic[] => {
-    const re = new RegExp(`${blockKey}\\s*=\\s*\\[([\\s\\S]*?)\\]`, 'm');
-    const m = re.exec(source);
-    if (!m) return [];
-    const block = m[1] ?? '';
-    const sockets: NodeTypeSocketPublic[] = [];
-    const socketRe = /Socket\(\s*"([^"]+)"([\s\S]*?)\)/g;
-    let sm: RegExpExecArray | null;
-    while ((sm = socketRe.exec(block))) {
-      const name = sm[1] ?? '';
-      const args = sm[2] ?? '';
-      const required = /\brequired\s*=\s*True\b/.test(args);
-      const valueType = /\bvalue_type\s*=\s*"([^"]+)"/.exec(args)?.[1] ?? 'any';
-      const label = /\blabel\s*=\s*"([^"]*)"/.exec(args)?.[1];
-      const description = /\bdescription\s*=\s*"([^"]*)"/.exec(args)?.[1];
-      if (!name) continue;
-      sockets.push({
-        name,
-        required,
-        value_type: valueType,
-        ...(label != null ? { label } : {}),
-        ...(description != null ? { description } : {}),
-      });
-    }
-    return sockets;
-  };
-
-  return {
-    inputs: parseSocketBlock('input_sockets'),
-    outputs: parseSocketBlock('output_sockets'),
-  };
+  return (
+    withPythonTree(source, (root) => {
+      const lists = findWorkflowNodeIOLists(root);
+      if (!lists) return { inputs: [], outputs: [] };
+      return {
+        inputs: parseSocketList(lists.inputList),
+        outputs: parseSocketList(lists.outputList),
+      };
+    }) ?? { inputs: [], outputs: [] }
+  );
 }
 
 export const nodesIsPluginNodeAtom = atom((get) => get(nodesDetailAtom)?.is_plugin === true);
