@@ -86,3 +86,26 @@ class WorkflowIOSpecPublic(BaseModel):
 class StrategyValidateResponse(BaseModel):
     ok: bool
     errors: list[str] = Field(default_factory=list)
+
+
+class StrategyWorkflowMoveNodeOp(BaseModel):
+    node_id: str = Field(description="要移动的节点 ID")
+    pos: list[float] | tuple[float, float] = Field(description="节点目标画布坐标，格式为 [x, y]")
+
+
+class StrategyWorkflowSetNodeParamOp(BaseModel):
+    node_id: str = Field(description="目标节点 ID")
+    key: str = Field(description="参数键")
+    value: Any = Field(description="参数值")
+
+
+class StrategyWorkflowUnsetNodeParamOp(BaseModel):
+    node_id: str = Field(description="目标节点 ID")
+    key: str = Field(description="要移除的参数键")
+
+
+class StrategyWorkflowConnectNodesOp(BaseModel):
+    from_node_id: str = Field(description="起点节点 ID")
+    from_socket_name: str = Field(description="起点节点输出 socket 名称")
+    to_node_id: str = Field(description="终点节点 ID")
+    to_socket_name: str = Field(description="终点节点输入 socket 名称")
