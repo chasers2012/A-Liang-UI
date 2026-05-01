@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import app.tool.controller as tool_controller
 from deepagents._models import resolve_model
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
 from deepagents.graph import (
@@ -24,6 +25,8 @@ from langgraph.graph.state import CompiledStateGraph
 from .hitl_checkpointer import get_hitl_checkpointer
 from .store import get_agent_store
 from .subagnets import SUBAGENT_BUILDERS
+
+MAIN_AGENT_TOOL_IDS = ("chat.analyze_5w1h_requirement",)
 
 
 async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any, Any, Any]:
@@ -83,6 +86,10 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
             -3,
             _ToolExclusionMiddleware(excluded=profile.excluded_tools),
         )
+    tools_by_id = tool_controller.get_tools()
+    main_agent_tools = [
+        tools_by_id[tool_id] for tool_id in MAIN_AGENT_TOOL_IDS if tool_id in tools_by_id
+    ]
 
     system_prompt = (
         "你是一个量化分析系统的接入口。"
@@ -94,6 +101,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
 
     return create_agent(
         model=resolved_model,
+        tools=main_agent_tools,
         system_prompt=system_prompt,
         middleware=middleware,
         checkpointer=get_hitl_checkpointer() if has_interrupt_on else None,
