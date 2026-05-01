@@ -1,7 +1,7 @@
 from app.chat.agents.skills import register_chat_agent_skills
+from app.llm import register_llm_settings_module
 from app.startup_jobs import register_startup_job
 
-from .config import register_llm_settings_module
 from .tools import TOOLS
 
 register_llm_settings_module()

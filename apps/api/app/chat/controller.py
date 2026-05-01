@@ -12,19 +12,17 @@ from contextlib import suppress
 from typing import Any
 
 from diskcache import Cache
-from langchain.chat_models import init_chat_model
-from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.types import Command
 from workspace import workspace_path
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
+from app.llm import build_chat_model
 
 from .agent import (
     stream_event_aiter_for_chat,
 )
-from .config import get_llm_settings
 from .events import (
     DeltaEvent,
     DoneEvent,
@@ -166,11 +164,6 @@ def _register_pending_auth(
 def _clear_pending_auth(thread_id: str) -> None:
     _AUTH_CACHE.delete(_auth_pending_key(thread_id))
     _AUTH_CACHE.delete(_auth_decision_key(thread_id))
-
-
-def build_chat_model() -> BaseChatModel:
-    model, kwargs = get_llm_settings()
-    return init_chat_model(model, **kwargs)
 
 
 def _append_delta_block(

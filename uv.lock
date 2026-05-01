@@ -26,6 +26,7 @@ members = [
     "datasources",
     "echarts-nodes",
     "factor",
+    "llm-plugins-builtin",
     "quant-agent",
     "quant-agent-api",
     "strategy-nodes",
@@ -2533,6 +2534,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/be/2a/2d5e6c67396fd2286
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/94/1f5d72655ab6534129540843776c40eff757387b88e798d8b3bf7e313fd4/langsmith-0.7.22-py3-none-any.whl", hash = "sha256:6e9d5148314d74e86748cb9d3898632cad0320c9323d95f70f969e5bc078eee4", size = 359927, upload-time = "2026-03-19T22:45:21.603Z" },
 ]
+
+[[package]]
+name = "llm-plugins-builtin"
+version = "0.1.0"
+source = { editable = "plugins/llm_plugins_builtin" }
+dependencies = [
+    { name = "quant-agent-api" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
 
 [[package]]
 name = "llvmlite"
@@ -5087,6 +5099,7 @@ dependencies = [
     { name = "common-nodes" },
     { name = "datasource-plugins-builtin" },
     { name = "echarts-nodes" },
+    { name = "llm-plugins-builtin" },
     { name = "quant-agent-api" },
     { name = "sqlmodel" },
     { name = "strategy-nodes" },
@@ -5111,6 +5124,7 @@ requires-dist = [
     { name = "common-nodes", editable = "plugins/common_nodes" },
     { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
     { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
+    { name = "llm-plugins-builtin", editable = "plugins/llm_plugins_builtin" },
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
     { name = "strategy-nodes", editable = "plugins/strategy_nodes" },
