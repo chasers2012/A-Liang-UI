@@ -13,19 +13,32 @@ from .constants import DEFAULT_NODE_SOURCE
 from .schemas import WorkflowNodeCreate
 
 
-@safe_tool(
-    "获取新工作流节点模板",
-    description="获取工作流节点源码模板。\n返回 DEFAULT_NODE_SOURCE，建议先填充关键逻辑后再创建。",
-)
+@safe_tool("获取新工作流节点模板", parse_docstring=True)
 def get_new_workflow_node_template() -> str:
+    """
+    获取工作流节点源码模板。
+
+    返回 `DEFAULT_NODE_SOURCE`；建议先填充关键逻辑后再创建节点。
+
+    Returns:
+        节点源码模板字符串。
+    """
     return DEFAULT_NODE_SOURCE
 
 
-@safe_tool(
-    "创建工作流节点",
-    description="创建并保存工作流节点。\n入参为source：节点源码；创建前先执行 LLM 代码审查，审查通过后返回完整节点详情。",
-)
+@safe_tool("创建工作流节点", parse_docstring=True)
 def create_workflow_node_tool(source: str) -> dict[str, Any]:
+    """
+    创建并保存工作流节点。
+
+    创建前会执行 LLM 代码审查，审查通过后返回包含完整 `source` 的节点详情。
+
+    Args:
+        source: 节点源码（完整 Python 源码）。
+
+    Returns:
+        创建后的节点详情（包含 `review` 字段）。
+    """
     review = _review_node_source_with_llm(source)
     rec = controller.create_workflow_node(WorkflowNodeCreate(source=source))
     detail = controller.load_node_detail(rec.id)
@@ -36,22 +49,47 @@ def create_workflow_node_tool(source: str) -> dict[str, Any]:
     return out
 
 
-@safe_tool(
-    "获取工作流节点详情",
-    description="查询工作流节点详情。\n入参 node_id是节点类型的id,不是节点实例的id；返回包含完整 source 的详情。",
-)
+@safe_tool("获取工作流节点详情", parse_docstring=True)
 def get_workflow_node_detail(node_id: str) -> dict[str, Any]:
+    """
+    查询工作流节点详情。
+
+    注意：`node_id` 是“节点类型 ID”，不是节点实例 ID；返回包含完整 `source` 的详情。
+
+    Args:
+        node_id: 节点类型 ID。
+
+    Returns:
+        节点详情字典。
+    """
     detail = controller.load_node_detail(node_id)
     if detail is None:
         raise ValueError(f"节点 {node_id} 不存在")
     return detail.model_dump()
 
 
-@safe_tool(
-    "获取工作流节点列表",
-    description="查询工作流节点列表。\n返回节点列表用于图编辑器选择与预览。",
-)
+@safe_tool("批量获取工作流节点详情", parse_docstring=True)
+def get_workflow_node_details(node_ids: list[str]) -> list[dict[str, Any]]:
+    """
+    批量查询工作流节点详情。
+
+    Args:
+        node_ids: 节点类型 ID 列表。
+
+    Returns:
+        存在节点的完整详情列表。
+    """
+    return [x.model_dump() for x in controller.load_node_details(node_ids)]
+
+
+@safe_tool("获取工作流节点列表", parse_docstring=True)
 def get_workflow_node_list() -> list[dict[str, Any]]:
+    """
+    查询工作流节点列表。
+
+    Returns:
+        节点列表，用于图编辑器选择与预览。
+    """
     return [x.model_dump() for x in controller.list_nodes()]
 
 
@@ -104,11 +142,19 @@ def _review_node_source_with_llm(source: str) -> dict[str, Any]:
         raise ValueError(f"源码审查未通过：{issue_text}")
 
 
-@safe_tool(
-    "更新工作流节点",
-    description="更新已有工作流节点。\n入参为节点源码source；更新前先执行 LLM 代码审查，审查通过后返回更新后的详情。",
-)
+@safe_tool("更新工作流节点", parse_docstring=True)
 def update_workflow_node(source: str) -> dict[str, Any]:
+    """
+    更新已有工作流节点。
+
+    更新前会执行 LLM 代码审查，审查通过后返回更新后的节点详情。
+
+    Args:
+        source: 节点源码（完整 Python 源码）。
+
+    Returns:
+        更新后的节点详情。
+    """
     _review_node_source_with_llm(source)
     rec = controller.update_node_record(source)
     if rec is None:
@@ -119,8 +165,17 @@ def update_workflow_node(source: str) -> dict[str, Any]:
     return detail.model_dump()
 
 
-@safe_tool("删除工作流节点", description="删除指定工作流节点。\n入参 node_id；返回删除记录。")
+@safe_tool("删除工作流节点", parse_docstring=True)
 def delete_workflow_node_tool(node_id: str) -> dict[str, Any]:
+    """
+    删除指定工作流节点。
+
+    Args:
+        node_id: 节点类型 ID。
+
+    Returns:
+        删除记录。
+    """
     deleted = controller.delete_workflow_node(node_id)
     if deleted is None:
         raise ValueError(f"节点 {node_id} 不存在")
@@ -134,6 +189,7 @@ TOOLS = {
     ),
     "node.create_workflow_node": (create_workflow_node_tool, ToolAuthorization.allowed),
     "node.get_workflow_node_detail": (get_workflow_node_detail, ToolAuthorization.allowed),
+    "node.get_workflow_node_details": (get_workflow_node_details, ToolAuthorization.allowed),
     "node.get_workflow_node_list": (get_workflow_node_list, ToolAuthorization.allowed),
     "node.update_workflow_node": (update_workflow_node, ToolAuthorization.need_authorize),
     "node.delete_workflow_node": (delete_workflow_node_tool, ToolAuthorization.disabled),

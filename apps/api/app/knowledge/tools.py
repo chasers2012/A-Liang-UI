@@ -24,14 +24,19 @@ def build_chat_context(query: str, hits: list[KnowledgeSearchHit]) -> str:
     return "\n".join(lines).strip()
 
 
-@safe_tool(
-    "知识库检索",
-    description=(
-        "检索与问题相关的知识库内容。\n"
-        "入参 query 为用户问题；优先基于命中内容回答，若证据不足需明确说明不确定性。"
-    ),
-)
+@safe_tool("知识库检索", parse_docstring=True)
 def knowledge_search_tool(query: str) -> list[dict[str, Any]]:
+    """
+    检索与问题相关的知识库内容。
+
+    入参 `query` 为用户问题；优先基于命中内容回答，若证据不足需明确说明不确定性。
+
+    Args:
+        query: 用户问题。
+
+    Returns:
+        用于对话的知识片段上下文（由后端命中构造的内容）。
+    """
     hits = search_knowledge(query)
     return build_chat_context(query, hits)
 

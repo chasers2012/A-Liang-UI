@@ -16,13 +16,19 @@ def _http_error_detail(exc: HTTPException) -> str:
     return d if isinstance(d, str) else str(d)
 
 
-@safe_tool(
-    "创建数据集",
-    description=(
-        "创建并保存数据集。\n入参 body 包含日期区间、标的与数据源绑定；至少一条绑定，columns 名称不得重复。"
-    ),
-)
+@safe_tool("创建数据集", parse_docstring=True)
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
+    """
+    创建并保存数据集。
+
+    入参 `body` 包含日期区间、标的与数据源绑定；至少一条绑定，columns 名称不得重复。
+
+    Args:
+        body: 数据集创建请求体。
+
+    Returns:
+        创建后的数据集详情。
+    """
     try:
         created = controller.create_data_set(body)
     except HTTPException as e:
@@ -30,29 +36,48 @@ def create_data_set(body: DataSetCreate) -> dict[str, Any]:
     return created.model_dump()
 
 
-@safe_tool(
-    "获取数据集详情",
-    description="查询单个数据集详情。\n入参 data_set_id: 数据集的id(UUID)。",
-)
+@safe_tool("获取数据集详情", parse_docstring=True)
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
+    """
+    查询单个数据集详情。
+
+    Args:
+        data_set_id: 数据集 ID（UUID）。
+
+    Returns:
+        数据集详情。
+    """
     rec = controller.get_data_set_detail(data_set_id)
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
     return rec.model_dump()
 
 
-@safe_tool(
-    "获取数据集列表", description="查询当前工作区数据集列表。\n返回列表供后续运行或编辑选择。"
-)
+@safe_tool("获取数据集列表", parse_docstring=True)
 def get_data_set_list() -> list[dict[str, Any]]:
+    """
+    查询当前工作区数据集列表。
+
+    Returns:
+        数据集列表，用于后续运行或编辑选择。
+    """
     return [f.model_dump() for f in controller.list_data_sets()]
 
 
-@safe_tool(
-    "更新数据集",
-    description="更新数据集配置。\n入参 data_set_id 与 DataSetPatch；仅更新传入字段，语义与 PATCH 接口一致。",
-)
+@safe_tool("更新数据集", parse_docstring=True)
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
+    """
+    更新数据集配置。
+
+    仅更新传入字段，语义与 PATCH 接口一致。
+
+    Args:
+        data_set_id: 数据集 ID。
+        body: 数据集更新内容。
+
+    Returns:
+        更新后的数据集详情。
+    """
     try:
         rec = controller.update_data_set(data_set_id, body)
     except HTTPException as e:
@@ -62,27 +87,42 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
     return rec.model_dump()
 
 
-@safe_tool("删除数据集", description="删除指定数据集。\n入参 data_set_id；返回删除前快照。")
+@safe_tool("删除数据集", parse_docstring=True)
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
+    """
+    删除指定数据集。
+
+    Args:
+        data_set_id: 数据集 ID。
+
+    Returns:
+        删除前快照。
+    """
     rec = controller.get_data_set_detail(data_set_id)
     if rec is None or not controller.delete_data_set(data_set_id):
         raise ValueError(f"数据集 {data_set_id} 不存在")
     return rec.model_dump()
 
 
-@safe_tool(
-    "预览数据集",
-    description=(
-        "获取一段数据集中的数据。\n"
-        "用于测试数据集是否能正常使用。入参 data_set_id，可选 limit、sample_bdays、window；获取数据集的一段数据。"
-    ),
-)
+@safe_tool("预览数据集", parse_docstring=True)
 def get_data_set_panel_preview(
     data_set_id: str,
     limit: int = 200,
     sample_bdays: int = 5,
     window: int = 0,
 ) -> dict[str, Any]:
+    """
+    预览数据集的一段数据，用于验证数据集是否可正常使用。
+
+    Args:
+        data_set_id: 数据集 ID。
+        limit: 返回行数上限。
+        sample_bdays: 抽样交易日数量。
+        window: 额外窗口大小（由后端解释）。
+
+    Returns:
+        数据集预览结果。
+    """
     return controller.get_data_set_panel_preview(
         data_set_id=data_set_id,
         limit=limit,
