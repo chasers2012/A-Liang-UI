@@ -327,17 +327,26 @@ export const archiveChatAtom = atom(null, async (get, set, sessionId: string) =>
   if (fallback) await set(sessionDetailAtomFamily(fallback));
 });
 
-export const stopChatMessageAtom = atom(null, (get, set) => {
+export const stopChatMessageAtom = atom(null, async (get, set) => {
   if (!get(chatIsSendingAtom)) return;
   const sessionId = get(activeSessionIdAtom);
   const assistantMessageId = get(chatStreamingReplyIdAtom);
-  get(chatAbortControllerAtom)?.abort();
-  set(chatAbortControllerAtom, null);
-  if (!sessionId) return;
-  void postAgentChatStop({
-    session_id: sessionId,
-    ...(assistantMessageId ? { assistant_message_id: assistantMessageId } : {}),
-  }).catch(() => undefined);
+  if (!sessionId) {
+    get(chatAbortControllerAtom)?.abort();
+    set(chatAbortControllerAtom, null);
+    return;
+  }
+  try {
+    await postAgentChatStop({
+      session_id: sessionId,
+      ...(assistantMessageId ? { assistant_message_id: assistantMessageId } : {}),
+    });
+  } catch {
+    // Ignore stop endpoint failures and still abort local stream below.
+  } finally {
+    get(chatAbortControllerAtom)?.abort();
+    set(chatAbortControllerAtom, null);
+  }
 });
 
 export const sendChatMessageAtom = atom(null, async (get, set) => {
