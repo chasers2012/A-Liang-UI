@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useSetAtom } from 'jotai';
-import { CheckCircle2, ChevronRight, Loader2, Wrench, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, Copy, Loader2, Wrench, XCircle } from 'lucide-react';
 
 import { unescapeUnicode } from 'unescape-unicode';
 
@@ -55,12 +55,48 @@ const ToolCallHeader = memo(function ToolCallHeader({
   );
 });
 
+const CopyButton = memo(function CopyButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!content) return;
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-6 text-muted-foreground hover:text-foreground"
+      onClick={handleCopy}
+      aria-label={copied ? '已复制' : '复制内容'}
+      title={copied ? '已复制' : '复制'}
+      disabled={!content}
+    >
+      {copied ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+    </Button>
+  );
+});
+
 const ToolCallArgs = memo(function ToolCallArgs({ args }: { args: unknown }) {
   const argsJson = useMemo(() => formatJson(args), [args]);
   return (
-    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-      {argsJson}
-    </pre>
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">参数</span>
+        <CopyButton content={argsJson} />
+      </div>
+      <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+        {argsJson}
+      </pre>
+    </>
   );
 });
 
@@ -68,9 +104,15 @@ const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknow
   const resultJson = useMemo(() => formatJson(result), [result]);
 
   return (
-    <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-      {resultJson}
-    </pre>
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">结果</span>
+        <CopyButton content={resultJson} />
+      </div>
+      <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+        {resultJson}
+      </pre>
+    </>
   );
 });
 
@@ -191,13 +233,11 @@ export function ChatToolCallCard({
         <div className="border-border/40 border-t px-3 py-2">
           {args !== undefined ? (
             <div className="mb-2">
-              <span className="text-[11px] text-muted-foreground">参数</span>
               <ToolCallArgs args={args} />
             </div>
           ) : null}
           {status === 'ok' && result !== undefined ? (
             <div>
-              <span className="text-[11px] text-muted-foreground">结果</span>
               <ToolCallResult result={result} />
             </div>
           ) : null}
