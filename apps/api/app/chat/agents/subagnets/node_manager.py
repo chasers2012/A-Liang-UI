@@ -27,5 +27,6 @@ def build_subagent() -> dict[str, Any] | None:
         "system_prompt": (
             "你是 node_manager 子代理，负责工作流节点资产维护，完成需求中关于`节点`的部分，其他内容仅作为参考。"
         ),
+        "skills": ["/skills/"],
         **build_tools(TOOL_IDS),
     }

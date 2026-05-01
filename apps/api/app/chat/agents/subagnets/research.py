@@ -20,5 +20,6 @@ def build_subagent() -> dict[str, Any] | None:
         "system_prompt": (
             "你是 research 子代理，负责研究与推理。你需要检索与要求相关的信息，并整理成一份简短的报告。"
         ),
+        "skills": ["/skills/"],
         **build_tools(TOOL_IDS),
     }

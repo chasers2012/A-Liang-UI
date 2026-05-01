@@ -28,5 +28,6 @@ def build_subagent() -> dict[str, Any] | None:
         "system_prompt": (
             "你是 evaluation_profile_manager 子代理，专注评价方案维护与评价运行管理。"
         ),
+        "skills": ["/skills/"],
         **build_tools(TOOL_IDS),
     }

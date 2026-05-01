@@ -12,6 +12,7 @@ from deepagents.middleware._tool_exclusion import _ToolExclusionMiddleware
 from deepagents.middleware.memory import MemoryMiddleware
 from deepagents.middleware.patch_tool_calls import PatchToolCallsMiddleware
 from deepagents.middleware.permissions import FilesystemPermission, _PermissionMiddleware
+from deepagents.middleware.skills import SkillsMiddleware
 from deepagents.middleware.subagents import SubAgentMiddleware
 from deepagents.middleware.summarization import create_summarization_middleware
 from langchain.agents import create_agent
@@ -42,6 +43,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
         default=StateBackend(),
         routes={
             "/memories/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
+            "/skills/": StoreBackend(namespace=lambda _rt: ("filesystem",)),
         },
     )
 
@@ -63,6 +65,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
 
     middleware = [
         TodoListMiddleware(),
+        SkillsMiddleware(backend=backend, sources=["/skills/"]),
         SubAgentMiddleware(
             backend=backend,
             subagents=inline_subagents,

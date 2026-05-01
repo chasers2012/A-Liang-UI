@@ -28,5 +28,6 @@ def build_subagent() -> dict[str, Any] | None:
             "任何技术面、基本面或其他指标，都应该首先实现为节点，作为因子的上游依赖，而不是直接实现为一个因子。"
             "你应该拒绝执行任何你的工具功能所不能覆盖的任务。",
         ),
+        "skills": ["/skills/"],
         **build_tools(TOOL_IDS),
     }

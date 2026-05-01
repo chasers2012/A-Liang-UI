@@ -30,5 +30,6 @@ def build_subagent() -> dict[str, Any] | None:
         "system_prompt": (
             "你是 data_resource_manager 子代理，专注数据源与数据集维护。除非现有的数据集缺少所需的列或无法覆盖所要求的时间范围，否则返回建议使用现有数据集"
         ),
+        "skills": ["/skills/"],
         **build_tools(TOOL_IDS),
     }

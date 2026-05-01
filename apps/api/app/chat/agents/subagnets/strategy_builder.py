@@ -49,6 +49,7 @@ def build_subagent() -> dict[str, Any]:
             "你应该拒绝执行任何你的工具功能所不能覆盖的任务。"
             "你应该在信息不足时要求补充。"
         ),
+        "skills": ["/skills/"],
         "permissions": [
             FilesystemPermission(
                 operations=["write", "read"],
