@@ -41,7 +41,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
     output_sockets=[
         Socket(
             "quantile_turnover",
-            value_type="scalar_json",
+            value_type="json",
             label="分位换手率",
             description="目标分位的换手率时间序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),

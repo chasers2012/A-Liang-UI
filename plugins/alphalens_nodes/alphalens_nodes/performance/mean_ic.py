@@ -46,7 +46,7 @@ from workflow import BooleanNodeParam, Socket, StringNodeParam, workflow_node
     output_sockets=[
         Socket(
             "mean_ic",
-            value_type="scalar_json",
+            value_type="json",
             label="平均 IC",
             description="Mean IC 结果\n\n**数据格式**\n- JSON 可序列化对象（dict/series 结构，键为周期或分组）",
         ),

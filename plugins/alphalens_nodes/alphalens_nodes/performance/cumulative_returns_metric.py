@@ -16,7 +16,7 @@ from workflow import Socket, workflow_node
         Socket(
             "returns",
             required=True,
-            value_type="scalar_json",
+            value_type="json",
             label="收益序列",
             description="简单收益率序列",
         ),
@@ -24,7 +24,7 @@ from workflow import Socket, workflow_node
     output_sockets=[
         Socket(
             "cumulative_returns",
-            value_type="scalar_json",
+            value_type="json",
             label="累计收益序列",
             description="累计化后的收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),

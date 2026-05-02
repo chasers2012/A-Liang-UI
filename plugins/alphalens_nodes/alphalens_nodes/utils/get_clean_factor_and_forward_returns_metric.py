@@ -186,7 +186,7 @@ def _coerce_filter_zscore_kwarg(raw: Any) -> int | float | None:
         Socket(
             "groupby_labels",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             label="分组标签",
             description="组代码到展示名称的映射。",
         ),

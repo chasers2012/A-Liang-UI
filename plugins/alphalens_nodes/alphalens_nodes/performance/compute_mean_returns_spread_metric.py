@@ -45,13 +45,13 @@ from workflow import NumberNodeParam, Socket, workflow_node
     output_sockets=[
         Socket(
             "mean_return_spread",
-            value_type="scalar_json",
+            value_type="json",
             label="分位收益差",
             description="高分位减低分位后的收益差\n\n**数据格式**\n- JSON 可序列化序列（dict[period, number]）",
         ),
         Socket(
             "mean_return_spread_std_error",
-            value_type="scalar_json",
+            value_type="json",
             label="分位收益差标准误",
             description="收益差对应标准误\n\n**数据格式**\n- JSON 可序列化序列（dict[period, number]）",
         ),

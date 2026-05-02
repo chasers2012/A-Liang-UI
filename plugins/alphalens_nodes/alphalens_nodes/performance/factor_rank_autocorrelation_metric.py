@@ -27,7 +27,7 @@ from workflow import NumberNodeParam, Socket, workflow_node
     output_sockets=[
         Socket(
             "autocorrelation",
-            value_type="scalar_json",
+            value_type="json",
             label="秩自相关",
             description="因子秩自相关时间序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),

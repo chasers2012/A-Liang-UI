@@ -65,7 +65,7 @@ from workflow import (
         NodeParam(
             "quantiles",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="指定分位",
             description="限制参与构建的分位集合（如 [1, 5]）",
@@ -73,7 +73,7 @@ from workflow import (
         NodeParam(
             "groups",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="指定分组",
             description="限制参与构建的组别集合",
@@ -89,7 +89,7 @@ from workflow import (
     output_sockets=[
         Socket(
             "returns",
-            value_type="scalar_json",
+            value_type="json",
             label="策略收益",
             description="Pyfolio 可直接消费的收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),
@@ -101,7 +101,7 @@ from workflow import (
         ),
         Socket(
             "benchmark",
-            value_type="scalar_json",
+            value_type="json",
             label="基准收益",
             description="对应 benchmark_period 的基准收益序列\n\n**数据格式**\n- JSON 可序列化时间序列（dict[datetime, number]）",
         ),

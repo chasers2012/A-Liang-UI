@@ -90,7 +90,7 @@ from .echarts_common import (
         NodeParam(
             "extra_options",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="额外配置(将并入 option 根级)",
             description="与自动生成的 option 合并，冲突键以后者覆盖前者",
@@ -99,7 +99,7 @@ from .echarts_common import (
     output_sockets=[
         Socket(
             "option",
-            value_type="scalar_json",
+            value_type="json",
             label="ECharts 配置",
             description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
         )

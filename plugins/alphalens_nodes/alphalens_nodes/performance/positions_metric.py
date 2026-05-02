@@ -30,7 +30,7 @@ from workflow import NodeParam, Socket, StringNodeParam, workflow_node
         NodeParam(
             "freq",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="频率(可选)",
             description="可选重采样频率（pandas offset/freq）",

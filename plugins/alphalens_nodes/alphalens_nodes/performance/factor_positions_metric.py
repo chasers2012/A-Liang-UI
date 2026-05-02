@@ -51,7 +51,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
         NodeParam(
             "quantiles",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="指定分位",
             description="限制参与计算的分位集合（如 [1, 5]）",
@@ -59,7 +59,7 @@ from workflow import BooleanNodeParam, NodeParam, Socket, StringNodeParam, workf
         NodeParam(
             "groups",
             required=False,
-            value_type="scalar_json",
+            value_type="json",
             default=None,
             label="指定分组",
             description="限制参与计算的组别集合",
