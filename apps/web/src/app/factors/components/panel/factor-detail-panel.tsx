@@ -50,10 +50,10 @@ function FactorDetailPanelContent() {
 
   return (
     <>
-      <TabsContent value="overview">
+      <TabsContent value="overview" className="mt-0 flex min-h-0 flex-1 flex-col overflow-y-auto">
         <PanelOverviewTab />
       </TabsContent>
-      <TabsContent value="source">
+      <TabsContent value="source" className="mt-0 flex min-h-0 flex-1 flex-col overflow-y-auto">
         <PanelSourceTab />
       </TabsContent>
     </>
