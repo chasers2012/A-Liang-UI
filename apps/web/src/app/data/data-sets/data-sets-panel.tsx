@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
@@ -24,6 +24,10 @@ export function DataSetsPanel() {
   const [deleting, setDeleting] = useAtom(dataSetsDeletingAtom);
   const refresh = useSetAtom(dataSetAtoms.refreshAtom);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;

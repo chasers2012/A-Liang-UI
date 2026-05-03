@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
 import { Plus } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
@@ -34,6 +35,11 @@ export function DatasourcesPanel() {
   const loadError = useAtomValue(datasourcesListAtoms.errorAtom);
   const deleteError = useAtomValue(datasourcesDeleteErrorAtom);
   const confirmDelete = useSetAtom(confirmDeleteDatasourceAtom);
+  const refresh = useSetAtom(datasourcesListAtoms.refreshAtom);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const runTest = async (ds: DataSourcePublic) => {
     setBusyId(ds.id);

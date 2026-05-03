@@ -2,6 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -79,6 +80,12 @@ function FactorsListPane() {
 }
 
 export default function FactorsPage() {
+  const refreshList = useSetAtom(factorsListAtoms.refreshAtom);
+
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
+
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <FactorsListPane />

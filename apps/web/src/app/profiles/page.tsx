@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useAtomValue } from 'jotai';
+import { useEffect } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,6 +17,11 @@ import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-de
 export default function EvaluationProfilesPage() {
   const items = useAtomValue(evaluationProfilesListAtoms.valueAtom);
   const error = useAtomValue(evaluationProfilesListAtoms.errorAtom);
+  const refreshList = useSetAtom(evaluationProfilesListAtoms.refreshAtom);
+
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
 
   return (
     <Page

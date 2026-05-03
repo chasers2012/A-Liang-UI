@@ -2,7 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -24,6 +24,11 @@ export default function NodesPage() {
   const setIsCreate = useSetAtom(nodesCreateModeAtom);
   const [selectedId, setSelectedId] = useAtom(nodesSelectedIdAtom);
   const setSearchQuery = useSetAtom(setNodesSearchQueryAtom);
+  const refreshList = useSetAtom(nodesListAtoms.refreshAtom);
+
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
 
   const onSelectNode = useCallback(
     (item: { id: string }) => {

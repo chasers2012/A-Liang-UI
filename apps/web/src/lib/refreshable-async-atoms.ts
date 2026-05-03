@@ -6,10 +6,19 @@ type ValueUpdater<T> = T | ((prev: T) => T);
 
 export function createRefreshableAsyncAtoms<T>(config: { initialValue: T; fetcher: (get: Getter) => Promise<T> }) {
   const refreshCountAtom = atom(0);
+  let inFlightRequest: Promise<T> | null = null;
 
   const asyncAtom = atom(async (get): Promise<T> => {
     get(refreshCountAtom);
-    return await config.fetcher(get);
+    if (inFlightRequest) {
+      return await inFlightRequest;
+    }
+    inFlightRequest = config.fetcher(get);
+    try {
+      return await inFlightRequest;
+    } finally {
+      inFlightRequest = null;
+    }
   });
 
   const asyncStateAtom = toAsyncValueStateAtom(asyncAtom);

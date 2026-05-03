@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { useAtomValue } from 'jotai';
+import { useEffect } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { buttonVariants } from '@/components/ui/button';
@@ -15,6 +16,11 @@ import { strategiesListAtoms } from '@/models/strategy/list-detail.atom';
 export default function StrategiesPage() {
   const items = useAtomValue(strategiesListAtoms.valueAtom);
   const error = useAtomValue(strategiesListAtoms.errorAtom);
+  const refreshList = useSetAtom(strategiesListAtoms.refreshAtom);
+
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
 
   return (
     <Page title="策略" description="策略定义与维护。">
