@@ -6,6 +6,7 @@ from pathlib import Path
 
 from workflow.schemas import WorkflowGraphPersisted
 
+from app.common.env import is_truthy
 from app.datasource.schemas import utc_now_iso
 from app.evaluation.profile.models import EvaluationProfileRow
 from app.evaluation.profile.redistry import EvaluationProfilesRegistry
@@ -19,18 +20,12 @@ def _display_name_from_stem(stem: str) -> str:
     return stem.replace("_", " ").strip() or stem
 
 
-def _is_truthy(value: str | None) -> bool:
-    if value is None:
-        return False
-    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
-
-
 def seed_evaluation_profile_examples() -> None:
     examples_dir = _examples_dir()
     if not examples_dir.is_dir():
         return
 
-    overwrite = _is_truthy(os.getenv("OVERWRITE_EXAMPLES", "false"))
+    overwrite = is_truthy(os.getenv("OVERWRITE_EXAMPLES", "false"))
     now = utc_now_iso()
     for path in sorted(examples_dir.glob("*.json")):
         try:

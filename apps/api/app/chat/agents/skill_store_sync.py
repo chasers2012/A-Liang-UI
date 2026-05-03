@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.common.env import is_truthy
 from app.startup_jobs import register_startup_job
 
 from .store import get_agent_store
@@ -29,12 +30,6 @@ class SkillSource:
 
 
 _SKILL_SOURCES: dict[tuple[str, str], SkillSource] = {}
-
-
-def _is_truthy(value: str | None) -> bool:
-    if value is None:
-        return False
-    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _normalize_name(value: str, *, field: str) -> str:
@@ -94,7 +89,7 @@ def _iter_skill_files(skill_dir: Path) -> list[tuple[Path, str]]:
 @register_startup_job
 async def sync_registered_skills_to_store() -> None:
     store = await get_agent_store()
-    overwrite = _is_truthy(os.getenv("OVERWRITE_SKILLS", "false"))
+    overwrite = is_truthy(os.getenv("OVERWRITE_SKILLS", "false"))
     total = len(_SKILL_SOURCES)
     created = 0
     overwritten = 0
