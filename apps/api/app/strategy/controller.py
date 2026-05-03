@@ -27,7 +27,6 @@ from app.strategy.schemas import (
     StrategyListPublic,
     StrategyPatch,
     StrategyPublic,
-    StrategyValidateResponse,
     workflow_public_dict,
 )
 
@@ -46,12 +45,6 @@ def _is_socket_type_compatible(from_value_type: str, to_value_type: str) -> bool
 
 def get_strategy_workflow_template() -> dict:
     return strategy_workflow_template_dict()
-
-
-def validate_strategy_workflow_only(_: str) -> StrategyValidateResponse:
-    # The full runtime validation (type-checking/graph execution) is implemented
-    # together with the engine. For now, schemas already validate basic shape.
-    return StrategyValidateResponse(ok=True, errors=[])
 
 
 def to_strategy_public(row: StrategyRow) -> StrategyPublic:
@@ -116,13 +109,6 @@ def patch_strategy(strategy_id: str, body: StrategyPatch) -> StrategyPublic | No
 
 def delete_strategy(strategy_id: str) -> bool:
     return StrategyRegistry.delete_by_id(strategy_id)
-
-
-def validate_strategy(strategy_id: str) -> StrategyValidateResponse | None:
-    row = StrategyRegistry.get_by_id(strategy_id)
-    if row is None:
-        return None
-    return validate_strategy_workflow_only(row.workflow)
 
 
 def to_strategy_public_dict(row: StrategyRow) -> dict[str, Any]:

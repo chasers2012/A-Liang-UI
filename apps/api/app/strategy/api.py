@@ -7,7 +7,6 @@ from app.strategy.schemas import (
     StrategyListPublic,
     StrategyPatch,
     StrategyPublic,
-    StrategyValidateResponse,
 )
 
 from . import controller
@@ -50,11 +49,3 @@ def patch_strategy_route(strategy_id: str, body: StrategyPatch) -> StrategyPubli
 def delete_strategy_route(strategy_id: str) -> None:
     if not controller.delete_strategy(strategy_id):
         raise HTTPException(status_code=404, detail="策略不存在")
-
-
-@router.post("/{strategy_id}/validate", response_model=StrategyValidateResponse)
-def validate_strategy_route(strategy_id: str) -> StrategyValidateResponse:
-    strategy_validate = controller.validate_strategy(strategy_id)
-    if strategy_validate is None:
-        raise HTTPException(status_code=404, detail="策略不存在")
-    return strategy_validate

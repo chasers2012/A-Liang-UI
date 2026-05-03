@@ -32,9 +32,3 @@ export function deleteStrategy(id: string): Promise<void> {
     method: 'DELETE',
   });
 }
-
-export function validateStrategy(id: string): Promise<{ ok: boolean; errors: string[] }> {
-  return apiFetchJson<{ ok: boolean; errors: string[] }>(`/strategies/${encodeURIComponent(id)}/validate`, {
-    method: 'POST',
-  });
-}

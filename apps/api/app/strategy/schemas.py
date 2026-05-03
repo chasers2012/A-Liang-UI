@@ -83,11 +83,6 @@ class WorkflowIOSpecPublic(BaseModel):
     workflow_outputs: list[dict] = Field(description="工作流输出参数定义列表")
 
 
-class StrategyValidateResponse(BaseModel):
-    ok: bool
-    errors: list[str] = Field(default_factory=list)
-
-
 class StrategyWorkflowMoveNodeOp(BaseModel):
     node_id: str = Field(description="要移动的节点 ID")
     pos: list[float] | tuple[float, float] = Field(description="节点目标画布坐标，格式为 [x, y]")
