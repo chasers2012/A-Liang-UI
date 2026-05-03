@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from workflow.schemas import WorkflowGraphNode, WorkflowGraphPersisted
+from workflow.schemas import (
+    WorkflowGraphNode,
+    WorkflowGraphPersisted,
+    WorkflowSocketDefinition,
+)
 
 
 def _is_connected_input(workflow: WorkflowGraphPersisted, node_id: str, socket_name: str) -> bool:
@@ -53,3 +57,54 @@ def validate_required_workflow_fields(workflow: WorkflowGraphPersisted | None) -
 
     if errors:
         raise ValueError("workflow 校验失败: " + "；".join(errors))
+
+
+def validate_workflow_graph(workflow: WorkflowGraphPersisted) -> WorkflowGraphPersisted:
+    return WorkflowGraphPersisted.model_validate(workflow.model_dump(by_alias=True))
+
+
+def ensure_socket_type_compatible(
+    from_value_type: str,
+    to_value_type: str,
+    *,
+    from_label: str,
+    to_label: str,
+) -> None:
+    if _is_socket_type_compatible(from_value_type, to_value_type):
+        return
+    raise ValueError(
+        f"socket value_type 不匹配: {from_label}={from_value_type}, {to_label}={to_value_type}"
+    )
+
+
+def ensure_node_input_can_accept_link(
+    workflow: WorkflowGraphPersisted,
+    to_node_id: str,
+    to_socket: str,
+    to_socket_def: WorkflowSocketDefinition,
+) -> None:
+    if _is_appendable_input_socket(to_socket_def):
+        return
+    for link in workflow.links:
+        to = link.to
+        if to.kind != "node":
+            continue
+        if to.node_id != to_node_id or to.socket != to_socket:
+            continue
+        raise ValueError(f"输入 socket 仅允许一条连线（非 appendable）: {to_node_id}.{to_socket}")
+
+
+def _parse_value_types(value_type: str) -> set[str]:
+    return {item.strip() for item in str(value_type or "").split(",") if item.strip()}
+
+
+def _is_socket_type_compatible(from_value_type: str, to_value_type: str) -> bool:
+    from_types = _parse_value_types(from_value_type)
+    to_types = _parse_value_types(to_value_type)
+    if not from_types or not to_types:
+        return True
+    return not from_types.isdisjoint(to_types)
+
+
+def _is_appendable_input_socket(socket_def: WorkflowSocketDefinition) -> bool:
+    return (socket_def.render_type or "").strip() == "appendable"
