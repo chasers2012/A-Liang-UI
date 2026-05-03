@@ -9,7 +9,10 @@ from app.common.datetime_utils import utc_now_iso
 from app.startup_jobs import register_startup_job
 from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN
 from app.strategy.examples import example_topk_equal_weight_workflow_dict
+from app.strategy.skills import register_strategy_skills
 from app.strategy.tools import TOOLS
+
+register_strategy_skills()
 
 EXAMPLE_STRATEGY_ID = "example-topk-equal-weight"
 

@@ -28,6 +28,7 @@ TOOL_IDS = {
     "strategy.workflow.connect_input",
     "strategy.workflow.connect_output",
     "strategy.workflow.disconnect_link",
+    "strategy.clear_strategy_workflow_draft",
     "backtest.run_backtest",
     "backtest.get_backtest_runs",
     "backtest.get_backtest_run_detail",

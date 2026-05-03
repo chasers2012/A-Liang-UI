@@ -27,7 +27,6 @@ from .draft import (
     save_workflow_draft_to_store,
     workflow_draft_namespace,
 )
-from .llm_review import review_strategy_workflow_with_llm
 
 
 @safe_tool("get_strategy_workflow_template_tool", parse_docstring=True)
@@ -139,11 +138,11 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
             raise ValueError("当前草稿已绑定现有策略，请使用更新策略工具保存修改")
 
         workflow = await require_workflow_draft(runtime)
-        review = review_strategy_workflow_with_llm(
-            name=name,
-            description=description,
-            workflow=workflow,
-        )
+        # review = review_strategy_workflow_with_llm(
+        #     name=name,
+        #     description=description,
+        #     workflow=workflow,
+        # )
         strategy = controller.create_strategy(
             StrategyCreate(name=name, description=description, workflow=workflow)
         )
@@ -156,9 +155,7 @@ async def create_strategy_tool(name: str, description: str, runtime: ToolRuntime
             strategy_id=str(strategy_id) if strategy_id else None,
             is_dirty=False,
         )
-        out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
-        out["review"] = review
-        return out
+        return dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
     except Exception as e:
         raise ValueError(f"创建失败：{e}") from e
 
@@ -262,12 +259,12 @@ async def update_strategy(
             )
 
         workflow = await require_workflow_draft(runtime)
-        review = review_strategy_workflow_with_llm(
-            strategy_id=strategy_id,
-            name=name,
-            description=description,
-            workflow=workflow,
-        )
+        # review = review_strategy_workflow_with_llm(
+        #     strategy_id=strategy_id,
+        #     name=name,
+        #     description=description,
+        #     workflow=workflow,
+        # )
         strategy = controller.patch_strategy(
             strategy_id,
             StrategyPatch(name=name, description=description, workflow=workflow),
@@ -278,9 +275,7 @@ async def update_strategy(
             strategy_id=strategy_id,
             is_dirty=False,
         )
-        out = dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
-        out["review"] = review
-        return out
+        return dict(strategy) if isinstance(strategy, dict) else strategy.model_dump()
     except Exception as e:
         raise ValueError(f"更新失败：{e}") from e
 
