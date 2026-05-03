@@ -24,7 +24,8 @@ class SkillSource:
 
     @property
     def store_path(self) -> str:
-        return f"/{self.skill_name}"
+        """Virtual store prefix: /skills/<module>/<skill_name> (module from register_skill_source)."""
+        return _posix_join(_SKILL_ROOT, self.module, self.skill_name)
 
 
 _SKILL_SOURCES: dict[tuple[str, str], SkillSource] = {}
@@ -40,7 +41,18 @@ def _normalize_name(value: str, *, field: str) -> str:
     normalized = value.strip().replace("\\", "/").strip("/")
     if not normalized:
         raise ValueError(f"{field} cannot be empty")
+    if ".." in normalized.split("/"):
+        raise ValueError(f"{field} cannot contain '..' path segments")
     return normalized
+
+
+def _posix_join(*segments: str) -> str:
+    parts: list[str] = []
+    for segment in segments:
+        segment = segment.strip().replace("\\", "/").strip("/")
+        if segment:
+            parts.append(segment)
+    return "/" + "/".join(parts)
 
 
 def register_skill_source(module: str, skill_name: str, skill_dir: Path) -> None:

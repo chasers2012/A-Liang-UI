@@ -26,7 +26,26 @@ from .hitl_checkpointer import get_hitl_checkpointer
 from .store import get_agent_store
 from .subagnets import SUBAGENT_BUILDERS
 
-MAIN_AGENT_TOOL_IDS = ("chat.analyze_5w1h_requirement",)
+MAIN_AGENT_TOOL_IDS = ()
+
+TASK_SYSTEM_PROMPT = """## `task` (subagent spawner)
+
+You have access to a `task` tool to launch short-lived subagents that handle isolated tasks. These agents are ephemeral — they live only for the duration of the task and return a single result.
+
+When to use the task tool:
+- When a task requires abilities you don't have
+- When you only care about the output of the subagent, and not the intermediate steps (ex. performing a lot of research and then returned a synthesized report, performing a series of computations or lookups to achieve a concise, relevant answer.)
+
+Subagent lifecycle:
+1. **Spawn** → Provide clear role, instructions, and expected output
+2. **Run** → The subagent completes the task autonomously
+3. **Return** → The subagent provides a single structured result
+4. **Reconcile** → Incorporate or synthesize the result into the main thread
+
+When NOT to use the task tool:
+- If you need to see the intermediate reasoning or steps after the subagent has completed (the task tool hides them)
+
+"""
 
 
 async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any, Any, Any]:
@@ -52,6 +71,11 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
 
     permissions = [
         FilesystemPermission(
+            operations=["read"],
+            paths=["/skills/**"],
+            mode="allow",
+        ),
+        FilesystemPermission(
             operations=["write", "read"],
             paths=["/**"],
             mode="deny",
@@ -73,6 +97,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
             backend=backend,
             subagents=inline_subagents,
             task_description=profile.tool_description_overrides.get("task"),
+            system_prompt=TASK_SYSTEM_PROMPT,
         ),
         create_summarization_middleware(resolved_model, backend),
         PatchToolCallsMiddleware(),
