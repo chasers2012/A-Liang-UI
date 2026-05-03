@@ -20,13 +20,14 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import TodoListMiddleware
 from langchain_anthropic.middleware import AnthropicPromptCachingMiddleware
 from langchain_core.language_models.chat_models import BaseChatModel
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
-from .hitl_checkpointer import get_hitl_checkpointer
 from .store import get_agent_store
 from .subagnets import SUBAGENT_BUILDERS
 
 MAIN_AGENT_TOOL_IDS = ()
+_CHECKPOINTER: MemorySaver | None = None
 
 TASK_SYSTEM_PROMPT = """## `task` (subagent spawner)
 
@@ -46,6 +47,13 @@ When NOT to use the task tool:
 - If you need to see the intermediate reasoning or steps after the subagent has completed (the task tool hides them)
 
 """
+
+
+def _get_hitl_checkpointer() -> MemorySaver:
+    global _CHECKPOINTER
+    if _CHECKPOINTER is None:
+        _CHECKPOINTER = MemorySaver()
+    return _CHECKPOINTER
 
 
 async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[Any, Any, Any, Any]:
@@ -129,7 +137,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
         tools=main_agent_tools,
         system_prompt=system_prompt,
         middleware=middleware,
-        checkpointer=get_hitl_checkpointer() if has_interrupt_on else None,
+        checkpointer=_get_hitl_checkpointer() if has_interrupt_on else None,
         store=await get_agent_store(),
     ).with_config(
         {
