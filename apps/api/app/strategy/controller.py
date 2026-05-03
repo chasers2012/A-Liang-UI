@@ -131,12 +131,45 @@ def _find_node_or_raise(workflow: WorkflowGraphPersisted, node_id: str) -> Workf
 
 
 def _find_socket_or_raise(
-    sockets: list[WorkflowSocketDefinition], socket_name: str, *, label: str
+    sockets: list[WorkflowSocketDefinition],
+    socket_name: str,
+    *,
+    label: str,
+    node_id: str | None = None,
+    node_type: str | None = None,
 ) -> WorkflowSocketDefinition:
     socket = next((item for item in sockets if item.name == socket_name), None)
     if socket is None:
-        raise ValueError(f"{label}不存在: {socket_name}")
+        names = [s.name for s in sockets if getattr(s, "name", None)]
+        available = "、".join(names) if names else "（无）"
+        if node_id is not None and node_type is not None:
+            raise ValueError(
+                f"节点 {node_id}（类型 {node_type}）不存在名为 {socket_name!r} 的{label}；"
+                f"可用的{label}名称: {available}"
+            )
+        raise ValueError(f"{label}不存在: {socket_name}；可用的名称: {available}")
     return socket
+
+
+def _is_appendable_input_socket(socket_def: WorkflowSocketDefinition) -> bool:
+    return (socket_def.render_type or "").strip() == "appendable"
+
+
+def _raise_if_node_input_already_wired(
+    workflow: WorkflowGraphPersisted,
+    to_node_id: str,
+    to_socket: str,
+    to_socket_def: WorkflowSocketDefinition,
+) -> None:
+    if _is_appendable_input_socket(to_socket_def):
+        return
+    for link in workflow.links:
+        to = link.to
+        if to.kind != "node":
+            continue
+        if to.node_id != to_node_id or to.socket != to_socket:
+            continue
+        raise ValueError(f"输入 socket 仅允许一条连线（非 appendable）: {to_node_id}.{to_socket}")
 
 
 def add_node(
@@ -227,14 +260,27 @@ def connect_nodes(
     new_workflow = workflow.model_copy(deep=True)
     from_node = _find_node_or_raise(new_workflow, from_node_id)
     to_node = _find_node_or_raise(new_workflow, to_node_id)
-    from_socket_def = _find_socket_or_raise(from_node.outputs, from_socket, label="输出 socket")
-    to_socket_def = _find_socket_or_raise(to_node.inputs, to_socket, label="输入 socket")
+    from_socket_def = _find_socket_or_raise(
+        from_node.outputs,
+        from_socket,
+        label="输出 socket",
+        node_id=from_node.id,
+        node_type=from_node.type,
+    )
+    to_socket_def = _find_socket_or_raise(
+        to_node.inputs,
+        to_socket,
+        label="输入 socket",
+        node_id=to_node.id,
+        node_type=to_node.type,
+    )
     if not _is_socket_type_compatible(from_socket_def.value_type, to_socket_def.value_type):
         raise ValueError(
             "socket value_type 不匹配: "
             f"{from_node_id}.{from_socket}={from_socket_def.value_type}, "
             f"{to_node_id}.{to_socket}={to_socket_def.value_type}"
         )
+    _raise_if_node_input_already_wired(new_workflow, to_node_id, to_socket, to_socket_def)
     link = WorkflowGraphLink(
         id=str(uuid4()),
         from_=WorkflowGraphEndpointNode(kind="node", node_id=from_node_id, socket=from_socket),
