@@ -84,11 +84,24 @@ export function TextareaParamRow(props: IParamRowProps<string> & { rows?: number
 
 type tOptionItem = string | number | { label: string | number; value: string | number };
 
-export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: tOptionItem[] }) {
+const normalizeSelectOptions = (rawOptions: unknown): tOptionItem[] => {
+  if (Array.isArray(rawOptions)) return rawOptions;
+  if (rawOptions === null || rawOptions === undefined) return [];
+  if (typeof rawOptions === 'object') {
+    return Object.entries(rawOptions as Record<string, unknown>).map(([value, label]) => ({
+      label: String(label),
+      value,
+    }));
+  }
+  return [];
+};
+
+export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: unknown }) {
   const { label, description, options, readOnly, value, onChange } = props;
   const current = value === null || value === undefined ? '' : String(value);
+  const normalizedOptions = normalizeSelectOptions(options);
 
-  const optionsItems = (options ?? []).map((o) => {
+  const optionsItems = normalizedOptions.map((o) => {
     if (typeof o === 'object' && o.label && o.value) {
       return o;
     }
@@ -103,7 +116,9 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: t
         value={current}
         onValueChange={(v) => {
           if (v === null || v === undefined) return;
-          const hit = options.find((o) => String(o) === v);
+          const hit = normalizedOptions.find((o) =>
+            typeof o === 'object' && o !== null ? String(o.value) === v : String(o) === v,
+          );
           if (hit === undefined) {
             onChange(v);
             return;
