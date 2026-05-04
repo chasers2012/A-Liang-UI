@@ -3,8 +3,36 @@ from __future__ import annotations
 from typing import Any
 
 from langchain.tools import ToolRuntime
+from workflow.editing import (
+    add_node as workflow_add_node,
+)
+from workflow.editing import (
+    connect_nodes as workflow_connect_nodes,
+)
+from workflow.editing import (
+    connect_to_workflow_output as workflow_connect_to_workflow_output,
+)
+from workflow.editing import (
+    connect_workflow_input as workflow_connect_workflow_input,
+)
+from workflow.editing import (
+    disconnect_link as workflow_disconnect_link,
+)
+from workflow.editing import (
+    move_node as workflow_move_node,
+)
+from workflow.editing import (
+    remove_node as workflow_remove_node,
+)
+from workflow.editing import (
+    set_node_param as workflow_set_node_param,
+)
+from workflow.editing import (
+    unset_node_param as workflow_unset_node_param,
+)
 from workflow.schemas import WorkflowGraphPersisted
 
+from app.nodes.controller import build_workflow_node_for_graph
 from app.strategy.schemas import (
     StrategyCreate,
     StrategyPatch,
@@ -314,6 +342,7 @@ async def strategy_workflow_add_node(
     ids = [str(x).strip() for x in node_type_ids if str(x).strip()]
     if not ids:
         raise ValueError("node_type_ids 不能为空")
+    allowed_node_ids = {node.id for node in controller.list_strategy_nodes()}
 
     def _add_many(
         workflow: WorkflowGraphPersisted,
@@ -321,7 +350,14 @@ async def strategy_workflow_add_node(
         out_workflow = workflow
         created: list[str] = []
         for t in ids:
-            out_workflow, node_id = controller.add_node(out_workflow, t)
+            out_workflow, node_id = workflow_add_node(
+                out_workflow,
+                t,
+                allowed_node_ids=allowed_node_ids,
+                build_node_payload=lambda type_id, instance_id: build_workflow_node_for_graph(
+                    type_id, instance_id=instance_id
+                ),
+            )
             created.append(node_id)
         result: dict[str, Any] = {"node_ids": created}
         return out_workflow, result
@@ -354,7 +390,7 @@ async def strategy_workflow_remove_node(
         out_workflow = workflow
         removed: list[str] = []
         for nid in ids:
-            out_workflow = controller.remove_node(out_workflow, nid)
+            out_workflow = workflow_remove_node(out_workflow, nid)
             removed.append(nid)
         return out_workflow, {"removed_node_ids": removed}
 
@@ -386,7 +422,7 @@ async def strategy_workflow_move_node(
         out_workflow = workflow
         moved: list[dict[str, Any]] = []
         for nid, pos in normalized:
-            out_workflow = controller.move_node(out_workflow, nid, pos)
+            out_workflow = workflow_move_node(out_workflow, nid, pos)
             moved.append({"node_id": nid, "pos": list(pos) if isinstance(pos, tuple) else pos})
         return out_workflow, {"moved": moved}
 
@@ -427,7 +463,7 @@ async def strategy_workflow_set_node_param(
         out_workflow = workflow
         updated: list[dict[str, str]] = []
         for node_id, key, value in normalized:
-            out_workflow = controller.set_node_param(out_workflow, node_id, key, value)
+            out_workflow = workflow_set_node_param(out_workflow, node_id, key, value)
             updated.append({"node_id": node_id, "key": key})
         return out_workflow, {"updated": updated}
 
@@ -468,7 +504,7 @@ async def strategy_workflow_unset_node_param(
         out_workflow = workflow
         removed: list[dict[str, str]] = []
         for node_id, key in normalized:
-            out_workflow = controller.unset_node_param(out_workflow, node_id, key)
+            out_workflow = workflow_unset_node_param(out_workflow, node_id, key)
             removed.append({"node_id": node_id, "key": key})
         return out_workflow, {"removed": removed}
 
@@ -517,7 +553,7 @@ async def strategy_workflow_connect_nodes(
         out_workflow = workflow
         created: list[str] = []
         for from_node_id, from_socket_name, to_node_id, to_socket_name in normalized:
-            out_workflow, link_id = controller.connect_nodes(
+            out_workflow, link_id = workflow_connect_nodes(
                 out_workflow, from_node_id, from_socket_name, to_node_id, to_socket_name
             )
             created.append(link_id)
@@ -554,7 +590,7 @@ async def strategy_workflow_connect_input(
                 out_workflow,
                 {"link_id": created_link_id},
             )
-        )(*controller.connect_workflow_input(workflow, input_socket, to_node_id, to_socket)),
+        )(*workflow_connect_workflow_input(workflow, input_socket, to_node_id, to_socket)),
     )
 
 
@@ -586,11 +622,7 @@ async def strategy_workflow_connect_output(
                 out_workflow,
                 {"link_id": created_link_id},
             )
-        )(
-            *controller.connect_to_workflow_output(
-                workflow, from_node_id, from_socket, output_socket
-            )
-        ),
+        )(*workflow_connect_to_workflow_output(workflow, from_node_id, from_socket, output_socket)),
     )
 
 
@@ -619,7 +651,7 @@ async def strategy_workflow_disconnect_link(
         out_workflow = workflow
         deleted: list[str] = []
         for lid in ids:
-            out_workflow = controller.disconnect_link(out_workflow, lid)
+            out_workflow = workflow_disconnect_link(out_workflow, lid)
             deleted.append(lid)
         return out_workflow, {"deleted_link_ids": deleted}
 
