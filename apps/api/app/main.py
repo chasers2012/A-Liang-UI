@@ -1,14 +1,18 @@
 import logging
+import logging.config
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from inspect import isawaitable, iscoroutinefunction
 from pathlib import Path
 
+import yaml
+
 # Imports must follow bootstrap so workspace node packages exist before routers load catalogs.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from workspace import workspace_path
 
 import app.llm_tools
 import app.persistence
@@ -23,7 +27,6 @@ from app.evaluation.profile import api as evaluation_profiles_router
 from app.evaluation.run import api as evaluation_runs_router
 from app.factors import api as factors_router
 from app.knowledge import api as knowledge_router
-from app.log_config import configure_logging
 from app.nodes import api as nodes_router
 from app.scheduler import api as scheduler_router
 from app.startup_jobs import STARTUP_JOBS
@@ -59,9 +62,28 @@ def _bootstrap_env() -> None:
         _load_env_file(candidate)
 
 
+def _get_uvicorn_log_config(config_path: Path) -> dict[str, object] | None:
+    if not config_path.is_file():
+        return None
+
+    loaded = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        raise ValueError(f"Invalid log config yaml, expected mapping: {config_path}")
+
+    log_file = workspace_path("logs", "api", os.getenv("API_LOG_FILE", "api.log"))
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+
+    handlers = loaded.get("handlers")
+    if isinstance(handlers, dict):
+        file_handler = handlers.get("file")
+        if isinstance(file_handler, dict):
+            file_handler["filename"] = str(log_file)
+
+    return loaded
+
+
 _bootstrap_env()
-configure_logging()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
@@ -131,6 +153,14 @@ if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "8000"))
     log_level = os.getenv("LOG_LEVEL", "info")
+    log_config_path = Path(__file__).resolve().with_name("log_conf.yaml")
+    log_config = _get_uvicorn_log_config(log_config_path)
 
     logger.info("Starting quant-agent API on http://%s:%s", host, port)
-    uvicorn.run(app, host=host, port=port, log_level=log_level)
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level=log_level,
+        log_config=log_config,
+    )
