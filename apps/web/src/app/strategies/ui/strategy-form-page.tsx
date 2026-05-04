@@ -28,7 +28,7 @@ export function StrategyFormPage(props: Props) {
   const id = props.id ?? null;
   const isEdit = Boolean(id);
   const formId = isEdit ? 'strategy-edit-form' : 'strategy-new-form';
-  const cancelHref = isEdit ? `/strategies/${encodeURIComponent(id ?? '')}` : '/strategies';
+  const cancelHref = isEdit ? `/strategies?strategyId=${encodeURIComponent(id ?? '')}` : '/strategies';
 
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
@@ -48,7 +48,7 @@ export function StrategyFormPage(props: Props) {
     e.preventDefault();
     const wf = canvasRef.current?.getGraph() ?? state.workflow;
     const savedId = await submit({ id, workflow: wf });
-    if (savedId) router.push(`/strategies/${encodeURIComponent(savedId)}`);
+    if (savedId) router.push(`/strategies?strategyId=${encodeURIComponent(savedId)}`);
   };
 
   const pageTitle = isEdit ? (

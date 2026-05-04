@@ -134,7 +134,7 @@ export default function BacktestRunDetailPage() {
         <div className="flex items-center gap-2">
           {safeRun.strategy_id ? (
             <Link
-              href={`/strategies/${encodeURIComponent(safeRun.strategy_id)}`}
+              href={`/strategies?strategyId=${encodeURIComponent(safeRun.strategy_id)}`}
               className={cn(buttonVariants({ variant: 'outline' }))}
             >
               查看策略
