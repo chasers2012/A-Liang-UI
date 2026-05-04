@@ -19,8 +19,8 @@ class TextPayload(BaseModel):
 
 class ToolPayload(BaseModel):
     stage: Literal["start", "result", "error", "authorize"]
-    # Only required for stage="start". For terminal events ("result"/"error"),
-    # the client can reconcile by tool call id.
+    # Name/args are carried on start and authorize so the client can render
+    # the tool call context even when execution is paused for HITL.
     name: str | None = None
     id: str
     args: Any | None = None

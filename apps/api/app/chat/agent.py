@@ -9,6 +9,7 @@ from typing import Any
 from langchain_core.messages import (
     AIMessage,
     AIMessageChunk,
+    BaseMessage,
     ToolMessage,
 )
 from langchain_core.runnables.config import RunnableConfig
@@ -84,7 +85,6 @@ def _match_tool_call_ids_from_pending(
     pending_starts: list[tuple[str, str | None, str]],
     interrupt_data: Any,
 ) -> list[str]:
-    """Match tool call ids using interrupt action_requests name+args."""
     req_pairs = _extract_interrupt_action_requests(interrupt_data)
     if not req_pairs:
         return []
@@ -119,24 +119,25 @@ def _chunk_text(content: Any) -> str:
     return "".join(parts)
 
 
-def _ai_message_reasoning_content(message: AIMessage | AIMessageChunk) -> str:
-    raw = message.additional_kwargs.get("reasoning_content")
-    if isinstance(raw, str):
-        return raw
-    if isinstance(raw, list):
-        parts: list[str] = []
-        for item in raw:
-            if isinstance(item, str):
-                parts.append(item)
-                continue
-            if (
-                isinstance(item, dict)
-                and item.get("type") in ("text", "reasoning")
-                and isinstance(item.get("text"), str)
-            ):
-                parts.append(item["text"])
-        return "".join(parts)
-    return ""
+def _reasoning_from_content_blocks(blocks: Any) -> str:
+    # LangChain standard content blocks may carry reasoning tokens in
+    # `{"type": "reasoning", "reasoning": "..."}` entries.
+    if not isinstance(blocks, list):
+        return ""
+    parts: list[str] = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") != "reasoning":
+            continue
+        reasoning_text = block.get("reasoning")
+        if isinstance(reasoning_text, str):
+            parts.append(reasoning_text)
+            continue
+        text = block.get("text")
+        if isinstance(text, str):
+            parts.append(text)
+    return "".join(parts)
 
 
 def _format_run_segment_id(ns: Any) -> str | None:
@@ -159,6 +160,43 @@ def _extract_tools_namespace_key(ns: Any) -> str | None:
         if isinstance(item, str) and item.startswith("tools:"):
             return item
     return None
+
+
+def _message_tool_calls(message: BaseMessage) -> list[dict[str, Any]]:
+    if isinstance(message, AIMessage):
+        tool_calls = getattr(message, "tool_calls", None)
+        if isinstance(tool_calls, list):
+            return [tc for tc in tool_calls if isinstance(tc, dict)]
+    return []
+
+
+def _updates_message_tool_events(
+    message: BaseMessage,
+    pending_tool_starts: list[tuple[str, str | None, str]],
+    run_segment_id: str | None,
+) -> Iterable[StreamEventAny]:
+    for tool_call in _message_tool_calls(message):
+        tc_id = tool_call.get("id")
+        if not isinstance(tc_id, str) or not tc_id:
+            continue
+        name = tool_call.get("name")
+        args = _normalize_args_shape(tool_call.get("args"))
+        pending_tool_starts.append(
+            (
+                tc_id,
+                name if isinstance(name, str) else None,
+                _canonicalize_args(args),
+            )
+        )
+        yield ToolEvent(
+            payload=ToolPayload(
+                stage="start",
+                name=name if isinstance(name, str) else None,
+                id=tc_id,
+                args=args,
+                run_segment_id=run_segment_id,
+            )
+        )
 
 
 def _should_skip_stream_chunk(metadata: Any) -> bool:
@@ -194,15 +232,25 @@ def _collect_run_segment_mapping_from_task(
     run_segment_id_map[ns_key] = tc_id
 
 
-def parse_messages(  # noqa: C901
+def _resolve_run_segment_id(
     chunk: dict[str, Any],
-    emitted_tool_event_keys: set[tuple[str, str]],
-    pending_tool_starts: list[tuple[str, str | None, str]],
     run_segment_id_map: dict[str, str],
-) -> Iterable[StreamEventAny]:
+) -> str | None:
     raw_ns_key = _extract_tools_namespace_key(chunk.get("ns"))
     raw_segment_id = _format_run_segment_id(chunk.get("ns"))
-    rsid = run_segment_id_map.get(raw_ns_key or "", raw_segment_id)
+    if raw_ns_key:
+        mapped = run_segment_id_map.get(raw_ns_key)
+        if mapped is not None:
+            return mapped
+    if raw_segment_id:
+        return run_segment_id_map.get(raw_segment_id)
+    return None
+
+
+def parse_messages(
+    chunk: dict[str, Any],
+    rsid: str | None,
+) -> Iterable[StreamEventAny]:
     chunk_data = chunk.get("data")
     if not isinstance(chunk_data, tuple) or len(chunk_data) != 2:
         return
@@ -212,133 +260,145 @@ def parse_messages(  # noqa: C901
     if _should_skip_stream_chunk(metadata):
         return
 
-    if isinstance(token, AIMessageChunk):
-        reasoning = _ai_message_reasoning_content(token)
-        if reasoning:
-            yield ReasoningEvent(
-                payload=TextPayload(
-                    text=reasoning,
-                    run_segment_id=rsid,
-                )
-            )
-
-        if token.tool_call_chunks:
-            # Per Deep Agents streaming docs, tool calls surface as tool_call_chunks.
-            for tc in token.tool_call_chunks:
-                name = tc.get("name")
-                tc_id = tc.get("id")
-                if not isinstance(tc_id, str) or not tc_id:
-                    # Some early chunks may not carry a stable tool_call id yet.
-                    # Skip until id is available to avoid invalid ToolPayload.
-                    continue
-                event_key = ("start", tc_id)
-                if event_key in emitted_tool_event_keys:
-                    continue
-                emitted_tool_event_keys.add(event_key)
-                event = ToolEvent(
-                    payload=ToolPayload(
-                        stage="start",
-                        name=name,
-                        id=tc_id,
-                        args=tc.get("args"),
-                        run_segment_id=rsid,
-                    )
-                )
-                if event.payload.id:
-                    normalized_args = _normalize_args_shape(event.payload.args)
-                    pending_tool_starts.append(
-                        (
-                            event.payload.id,
-                            event.payload.name,
-                            _canonicalize_args(normalized_args),
-                        )
-                    )
-                yield event
-
-        text = _chunk_text(token.content)
-        if text:
-            yield DeltaEvent(
-                payload=TextPayload(
-                    text=text,
-                    run_segment_id=rsid,
-                )
-            )
+    if not isinstance(token, AIMessageChunk):
         return
-
-    if isinstance(token, ToolMessage):
-        tc_id = token.tool_call_id
-        if not isinstance(tc_id, str) or not tc_id:
-            return
-        if token.status == "error":
-            event_key = ("error", tc_id)
-            if event_key in emitted_tool_event_keys:
-                return
-            emitted_tool_event_keys.add(event_key)
-            yield ToolEvent(
-                payload=ToolPayload(
-                    stage="error",
-                    id=tc_id,
-                    error=str(token.content),
-                    run_segment_id=rsid,
-                )
-            )
-            return
-
-        result = token.artifact if token.artifact is not None else token.content
-        event_key = ("result", tc_id)
-        if event_key in emitted_tool_event_keys:
-            return
-        emitted_tool_event_keys.add(event_key)
-        yield ToolEvent(
-            payload=ToolPayload(
-                stage="result",
-                id=tc_id,
-                result=result,
+    reasoning = _reasoning_from_content_blocks(getattr(token, "content_blocks", None))
+    if reasoning:
+        yield ReasoningEvent(
+            payload=TextPayload(
+                text=reasoning,
                 run_segment_id=rsid,
             )
         )
 
+    text = _chunk_text(token.content)
+    if text:
+        yield DeltaEvent(
+            payload=TextPayload(
+                text=text,
+                run_segment_id=rsid,
+            )
+        )
+    return
 
-def parse_interrupt(
+
+def _parse_updates_tool_events(
     data: Any,
-    emitted_tool_event_keys: set[tuple[str, str]],
+    pending_tool_starts: list[tuple[str, str | None, str]],
+    rsid: str | None,
+) -> list[ToolEvent] | None:
+    if not isinstance(data, dict):
+        return None
+
+    events: list[ToolEvent] = []
+    for source, update in data.items():
+        if source not in ("model", "tools"):
+            continue
+        if not isinstance(update, dict):
+            continue
+        messages = update.get("messages")
+        if not isinstance(messages, list) or not messages:
+            continue
+        last_message = messages[-1]
+        if isinstance(last_message, ToolMessage):
+            tc_id = last_message.tool_call_id
+            if not isinstance(tc_id, str) or not tc_id:
+                continue
+            if last_message.status == "error":
+                events.append(
+                    ToolEvent(
+                        payload=ToolPayload(
+                            stage="error",
+                            id=tc_id,
+                            error=str(last_message.content),
+                        )
+                    )
+                )
+                continue
+            result = (
+                last_message.artifact if last_message.artifact is not None else last_message.content
+            )
+            events.append(
+                ToolEvent(
+                    payload=ToolPayload(
+                        stage="result",
+                        id=tc_id,
+                        result=result,
+                    )
+                )
+            )
+            continue
+
+        events.extend(
+            _updates_message_tool_events(
+                last_message,
+                pending_tool_starts,
+                rsid,
+            )
+        )
+
+    return events
+
+
+def _extract_interrupt_action_requests_from_updates(data: Any) -> Any:
+    if not isinstance(data, dict):
+        return None
+    interrupt = data.get("__interrupt__")
+    if interrupt is None:
+        return None
+    if isinstance(interrupt, list) and interrupt:
+        first = interrupt[0]
+        return getattr(first, "value", first)
+    return interrupt
+
+
+def parse_interrupt_updates(
+    data: Any,
     pending_tool_starts: list[tuple[str, str | None, str]],
 ) -> list[ToolEvent] | None:
-    """
-    Parse interrupt payload from updates stream.
-
-    Returns:
-    - handled: whether the current updates chunk is an interrupt chunk
-    - events: authorize tool events to emit; empty means terminate stream for this interrupt
-    """
-    events: list[ToolEvent] = []
-    if not isinstance(data, dict) or "__interrupt__" not in data:
+    interrupt_data = _extract_interrupt_action_requests_from_updates(data)
+    if interrupt_data is None:
         return None
-    try:
-        interrupt_value = data["__interrupt__"][0].value
-    except Exception:
-        interrupt_value = data.get("__interrupt__")
 
     matched_ids = _match_tool_call_ids_from_pending(
         pending_tool_starts,
-        interrupt_value,
+        interrupt_data,
     )
     if not matched_ids:
-        return events
+        return []
 
-    for tc_id in matched_ids:
-        event_key = ("authorize", tc_id)
-        if event_key in emitted_tool_event_keys:
-            continue
-        emitted_tool_event_keys.add(event_key)
+    events: list[ToolEvent] = []
+    interrupt_requests = _extract_interrupt_action_requests(interrupt_data)
+    for idx, tc_id in enumerate(matched_ids):
+        name = None
+        args = None
+        if idx < len(interrupt_requests):
+            name, args = interrupt_requests[idx]
         events.append(
             ToolEvent(
                 payload=ToolPayload(
                     stage="authorize",
                     id=tc_id,
+                    name=name,
+                    args=_normalize_args_shape(args),
                 )
             )
         )
+    return events
+
+
+def parse_update(
+    data: Any,
+    pending_tool_starts: list[tuple[str, str | None, str]],
+    rsid: str | None,
+) -> list[ToolEvent]:
+    interrupt_events = parse_interrupt_updates(data, pending_tool_starts)
+    if interrupt_events:
+        return interrupt_events
+
+    events = _parse_updates_tool_events(data, pending_tool_starts, rsid)
+    if not isinstance(events, list):
+        return []
     return events
 
 
@@ -349,7 +409,6 @@ async def stream_event_aiter_for_chat(
     config: RunnableConfig = None,
 ) -> AsyncIterable[StreamEventAny]:
     agent = await create_main_agent(model=llm)
-    emitted_tool_event_keys: set[tuple[str, str]] = set()
     pending_tool_starts: list[tuple[str, str | None, str]] = []
     run_segment_id_map: dict[str, str] = {}
 
@@ -362,13 +421,13 @@ async def stream_event_aiter_for_chat(
     ):
         if not isinstance(chunk, dict):
             continue
+        rsid = _resolve_run_segment_id(chunk, run_segment_id_map)
+
         ctype = chunk.get("type")
         if ctype == "messages":
             for event in parse_messages(
                 chunk,
-                emitted_tool_event_keys,
-                pending_tool_starts,
-                run_segment_id_map,
+                rsid,
             ):
                 yield event
             continue
@@ -378,16 +437,11 @@ async def stream_event_aiter_for_chat(
             continue
 
         if ctype == "updates":
-            data = chunk.get("data")
-            events = parse_interrupt(
-                data,
-                emitted_tool_event_keys,
+            events = parse_update(
+                chunk.get("data"),
                 pending_tool_starts,
+                rsid,
             )
-            if not isinstance(events, list):
-                continue
-            if not events:
-                return
             for event in events:
                 yield event
 
