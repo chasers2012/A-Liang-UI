@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
-
-if TYPE_CHECKING:
-    from vectorbt.portfolio.base import Portfolio
+from vectorbt.portfolio.base import Portfolio
 
 
 def parse_dates(df: pd.DataFrame) -> pd.DataFrame:

@@ -5,12 +5,16 @@ from multiprocessing.process import parent_process
 
 from workflow.schemas import WorkflowGraphPersisted
 
+import app.tool.controller as tool_controller
 from app.common.datetime_utils import utc_now_iso
+from app.persistence.sqlite_db import get_session
 from app.startup_jobs import register_startup_job
 from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN
 from app.strategy.examples import example_topk_equal_weight_workflow_dict
+from app.strategy.models import StrategyRow
 from app.strategy.skills import register_strategy_skills
 from app.strategy.tools import TOOLS
+from app.visibility.controller import ensure_domain_node_visibility_config
 
 register_strategy_skills()
 
@@ -22,8 +26,6 @@ def _ensure_strategy_domain_node_visibility() -> None:
     if parent_process() is not None:
         return
 
-    from app.visibility.controller import ensure_domain_node_visibility_config
-
     ensure_domain_node_visibility_config(WORKFLOW_STRATEGY_DOMAIN)
 
 
@@ -34,9 +36,6 @@ def ensure_example_strategy() -> None:
 
     The strategy is inserted only if missing (idempotent).
     """
-
-    from app.persistence.sqlite_db import get_session
-    from app.strategy.models import StrategyRow
 
     with get_session() as session:
         if session.get(StrategyRow, EXAMPLE_STRATEGY_ID) is not None:
@@ -64,8 +63,6 @@ def ensure_example_strategy() -> None:
 
 @register_startup_job
 def register_strategy_chat_tools() -> None:
-    import app.tool.controller as tool_controller
-
     tool_controller.register_tools(
         TOOLS,
         category="策略",

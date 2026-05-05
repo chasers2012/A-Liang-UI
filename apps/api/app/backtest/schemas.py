@@ -5,6 +5,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.data_set.controller import list_data_sets
+from app.strategy.registry import StrategyRegistry
+
 BacktestRunStatus = Literal["queued", "running", "success", "failed", "cancelled"]
 
 FromSignalsDirection = Literal["longonly", "shortonly", "both"]
@@ -73,9 +76,6 @@ def _schema_defaults(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
-    from app.data_set.controller import list_data_sets
-    from app.strategy.registry import StrategyRegistry
-
     strategies = StrategyRegistry.list_all()
     data_sets = list_data_sets()
     strategy_one_of = [{"const": s.id, "title": f"{s.name}"} for s in strategies]

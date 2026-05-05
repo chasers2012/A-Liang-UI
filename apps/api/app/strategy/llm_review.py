@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from workflow.schemas import WorkflowGraphPersisted
 
 from app.llm_tools.review_with_llm import review_with_llm
+from app.nodes import controller as nodes_controller
 
 
 class _StrategyWorkflowReview(BaseModel):
@@ -31,8 +32,6 @@ def review_strategy_workflow_with_llm(
     workflow: WorkflowGraphPersisted,
     strategy_id: str | None = None,
 ) -> dict[str, Any]:
-    from app.nodes import controller as nodes_controller
-
     workflow_payload = workflow.model_dump(by_alias=True)
     used_node_type_ids = sorted(
         {

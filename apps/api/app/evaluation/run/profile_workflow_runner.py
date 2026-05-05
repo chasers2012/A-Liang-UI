@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+import numpy as np
+import pandas as pd
 from workflow import WorkflowExecutor
 
 from app.data_set.controller import get_data_set
@@ -17,8 +19,6 @@ from app.factors.controller import get_factor
 
 def _to_jsonable_pandas(value: Any) -> Any | None:
     try:
-        import pandas as pd
-
         if isinstance(value, pd.DataFrame):
             frame = value.copy()
             frame.columns = [str(c) for c in frame.columns]
@@ -45,8 +45,6 @@ def _to_jsonable_pandas(value: Any) -> Any | None:
 
 def _to_jsonable_numpy(value: Any) -> Any | None:
     try:
-        import numpy as np
-
         if isinstance(value, np.ndarray):
             return _to_jsonable(value.tolist())
         if isinstance(value, np.generic):

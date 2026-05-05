@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from app.startup_jobs import register_startup_job
 
+from .engine.runner import run_backtest_and_persist
 from .registry import BacktestRunsStore
 
 _QUEUE: queue.Queue[str] = queue.Queue()
@@ -18,11 +19,6 @@ def enqueue_backtest(run_id: str) -> None:
 
 
 def _execute_backtest(run_id: str) -> None:
-    # The actual vectorbt engine is implemented in app/backtest/engine/.
-    # Keep this import local so the worker can start even if optional deps
-    # are missing in some environments.
-    from .engine.runner import run_backtest_and_persist
-
     run_backtest_and_persist(run_id)
 
 

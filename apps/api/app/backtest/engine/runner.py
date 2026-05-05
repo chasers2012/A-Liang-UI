@@ -5,9 +5,15 @@ import traceback
 from datetime import datetime, timezone
 
 import pandas as pd
+from workflow import WorkflowExecutor
+
+from app.data_set.controller import get_data_set
+from app.strategy.registry import StrategyRegistry
 
 from ..registry import BacktestRunsStore
 from ..result_manager import BacktestResultManager
+from .market_data import load_market_data
+from .vectorbt_runner import run_portfolio_from_signals
 
 
 def run_backtest_and_persist(run_id: str) -> None:
@@ -25,16 +31,6 @@ def run_backtest_and_persist(run_id: str) -> None:
     )
     if rec is None:
         return
-
-    from workflow import WorkflowExecutor
-
-    from app.data_set.controller import get_data_set
-    from app.strategy.registry import StrategyRegistry
-
-    from .market_data import load_market_data
-    from .vectorbt_runner import (
-        run_portfolio_from_signals,
-    )
 
     try:
         strategy = StrategyRegistry.get_by_id(rec.strategy_id)

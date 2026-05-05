@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.data_set.controller import get_data_set
 from app.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
 from app.evaluation.profile.models import EvaluationProfileRow
+from app.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.evaluation.run.models import EvaluationRunRow
 from app.factors.registry import FactorItemsRegistry
 from app.scheduler.controller import enqueue_oneoff_job
@@ -49,8 +50,6 @@ def run_evaluation_run(
     *,
     data_set_id: str | None = None,
 ) -> EvaluationRunRowPublic:
-    from app.evaluation.profile.redistry import EvaluationProfilesRegistry
-
     prof = EvaluationProfilesRegistry.get_by_id(profile_id)
     if prof is None:
         raise ProfileNotFoundError(profile_id)
@@ -85,8 +84,6 @@ def enqueue_evaluation_run(
     *,
     data_set_id: str | None = None,
 ) -> SchedulerJobPublic:
-    from app.evaluation.profile.redistry import EvaluationProfilesRegistry
-
     prof = EvaluationProfilesRegistry.get_by_id(profile_id)
     if prof is None:
         raise ProfileNotFoundError(profile_id)

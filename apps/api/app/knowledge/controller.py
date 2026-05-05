@@ -187,8 +187,6 @@ def _retrieval_to_hit(
 
 
 def _knowledge_index_handler(payload: dict[str, object]) -> dict[str, object]:
-    from .controller import index_document
-
     document_id = str(payload.get("document_id", "")).strip()
     if not document_id:
         raise ValueError("knowledge.index 任务需要 document_id")

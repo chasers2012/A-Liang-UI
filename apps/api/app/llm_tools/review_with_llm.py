@@ -6,6 +6,8 @@ from typing import Any, Literal, TypeVar
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
+from app.llm import build_chat_model
+
 TReviewModel = TypeVar("TReviewModel", bound=BaseModel)
 
 
@@ -19,9 +21,6 @@ def review_with_llm(
     input_title: str = "审查对象如下：",
     reject_message_prefix: str = "审查未通过",
 ) -> dict[str, Any]:
-    # Lazy import avoids introducing module import cycles.
-    from app.chat.controller import build_chat_model
-
     llm = build_chat_model()
 
     if input_format == "json":

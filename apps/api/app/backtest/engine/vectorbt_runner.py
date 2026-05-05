@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
-
-if TYPE_CHECKING:
-    from vectorbt.portfolio.base import Portfolio
+import vectorbt as vbt
+from vectorbt.portfolio.base import Portfolio
 
 
 def run_portfolio_from_signals(
@@ -15,8 +14,6 @@ def run_portfolio_from_signals(
     exits: pd.DataFrame,
     **kwargs: Any,
 ) -> Portfolio:
-    import vectorbt as vbt
-
     # Align inputs
     px = price.sort_index()
     ent = entries.reindex(px.index).reindex(columns=px.columns).fillna(False).astype(bool)

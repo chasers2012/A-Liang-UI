@@ -9,6 +9,8 @@ from langgraph.constants import Send
 from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
 
+from app.llm import build_chat_model
+from app.tool.api import list_tools
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
@@ -162,8 +164,6 @@ def _parse_json_response(raw_content: Any) -> dict[str, Any]:
 
 def _build_tool_context() -> str:
     # Reuse tools API payload so context reflects the same view as external interface.
-    from app.tool.api import list_tools
-
     tools = list_tools()
     if not tools:
         return "可用工具：无"
@@ -182,8 +182,6 @@ def _build_tool_context() -> str:
 
 
 def analyze_dimension(state: DimensionState) -> dict[str, Any]:
-    from app.chat.controller import build_chat_model
-
     llm = build_chat_model()
     prompt = f"""\
 ## 待分析维度
@@ -204,8 +202,6 @@ def analyze_dimension(state: DimensionState) -> dict[str, Any]:
 
 
 def synthesize(state: GraphState) -> dict[str, Any]:
-    from app.chat.controller import build_chat_model
-
     llm = build_chat_model()
     dimensions_text = "\n\n".join(
         f"### {r['dimension']}\n"

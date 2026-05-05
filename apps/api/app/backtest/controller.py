@@ -8,6 +8,7 @@ from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
 from app.strategy.registry import StrategyRegistry
 
+from .engine.runner import run_backtest_and_persist
 from .models import BacktestRunRow
 from .registry import BacktestRunsStore
 from .result_manager import BacktestResultManager
@@ -153,8 +154,6 @@ def delete_backtest_run(run_id: str) -> None:
 
 
 def _backtest_run_handler(payload: dict[str, object]) -> dict[str, object]:
-    from .engine.runner import run_backtest_and_persist
-
     run_id = str(payload.get("run_id", "")).strip()
     if not run_id:
         raise ValueError("backtest.run 任务需要 run_id")
