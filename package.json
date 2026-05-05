@@ -25,10 +25,6 @@
     "format:check": "prettier . --check",
     "prepare": "husky"
   },
-  "lint-staged": {
-    "apps/web/src/**/*.{js,jsx,ts,tsx,mjs,cjs}": "pnpm --filter web exec eslint --fix",
-    "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml,css}": "prettier --write"
-  },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
