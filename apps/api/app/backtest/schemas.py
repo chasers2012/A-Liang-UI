@@ -486,11 +486,13 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "type": "boolean",
                 "title": "组内共享现金",
                 "description": "分组组合下，组内标的是否共享同一现金池。",
+                "default": True,
             },
             "group_by": {
                 "type": "boolean",
                 "title": "按组聚合",
                 "description": "是否按分组进行聚合计算和展示。",
+                "default": True,
             },
             "ffill_val_price": {
                 "type": "boolean",
