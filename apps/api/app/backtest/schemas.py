@@ -502,12 +502,17 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                         "properties": {
                             "direction": {"const": "longonly"},
                             "upon_short_conflict": False,
+                            "upon_opposite_entry": False,
+                            "upon_dir_conflict": False,
+                            "lock_cash": False,
                         }
                     },
                     {
                         "properties": {
                             "direction": {"const": "shortonly"},
                             "upon_long_conflict": False,
+                            "upon_opposite_entry": False,
+                            "upon_dir_conflict": False,
                         }
                     },
                     {
@@ -517,67 +522,80 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                     },
                 ]
             },
-            "upon_opposite_entry": {
+            "upon_long_conflict": {
                 "oneOf": [
                     {
                         "properties": {
                             "direction": {"const": "longonly"},
-                            "upon_opposite_entry": {
+                            "upon_long_conflict": {
                                 "type": "string",
-                                "title": "反向入场处理",
-                                "description": "仅单向模式下禁用反手类动作，仅允许忽略/平仓/减仓。",
+                                "title": "多头冲突处理",
+                                "description": "单向模式下不提供反向处理，仅允许忽略/优先入场/优先出场/邻接处理。",
                                 "oneOf": [
                                     {
                                         "const": "ignore",
                                         "title": "忽略",
-                                        "description": "忽略反向入场信号。",
+                                        "description": "忽略冲突信号。",
                                     },
                                     {
-                                        "const": "close",
-                                        "title": "平仓",
-                                        "description": "仅平掉当前仓位。",
+                                        "const": "entry",
+                                        "title": "优先入场",
+                                        "description": "优先执行入场信号。",
                                     },
                                     {
-                                        "const": "closereduce",
-                                        "title": "平仓或减仓",
-                                        "description": "优先减少或平掉当前仓位。",
+                                        "const": "exit",
+                                        "title": "优先出场",
+                                        "description": "优先执行出场信号。",
+                                    },
+                                    {
+                                        "const": "adjacent",
+                                        "title": "邻接处理",
+                                        "description": "按邻接规则转换/处理冲突信号。",
                                     },
                                 ],
                             },
                         }
                     },
+                    {"properties": {"direction": {"const": "shortonly"}}},
+                    {"properties": {"direction": {"const": "both"}}},
+                ]
+            },
+            "upon_short_conflict": {
+                "oneOf": [
+                    {"properties": {"direction": {"const": "longonly"}}},
                     {
                         "properties": {
                             "direction": {"const": "shortonly"},
-                            "upon_opposite_entry": {
+                            "upon_short_conflict": {
                                 "type": "string",
-                                "title": "反向入场处理",
-                                "description": "仅单向模式下禁用反手类动作，仅允许忽略/平仓/减仓。",
+                                "title": "空头冲突处理",
+                                "description": "单向模式下不提供反向处理，仅允许忽略/优先入场/优先出场/邻接处理。",
                                 "oneOf": [
                                     {
                                         "const": "ignore",
                                         "title": "忽略",
-                                        "description": "忽略反向入场信号。",
+                                        "description": "忽略冲突信号。",
                                     },
                                     {
-                                        "const": "close",
-                                        "title": "平仓",
-                                        "description": "仅平掉当前仓位。",
+                                        "const": "entry",
+                                        "title": "优先入场",
+                                        "description": "优先执行入场信号。",
                                     },
                                     {
-                                        "const": "closereduce",
-                                        "title": "平仓或减仓",
-                                        "description": "优先减少或平掉当前仓位。",
+                                        "const": "exit",
+                                        "title": "优先出场",
+                                        "description": "优先执行出场信号。",
+                                    },
+                                    {
+                                        "const": "adjacent",
+                                        "title": "邻接处理",
+                                        "description": "按邻接规则转换/处理冲突信号。",
                                     },
                                 ],
                             },
                         }
                     },
-                    {
-                        "properties": {
-                            "direction": {"const": "both"},
-                        }
-                    },
+                    {"properties": {"direction": {"const": "both"}}},
                 ]
             },
             "upon_stop_exit": {
@@ -626,11 +644,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                             },
                         }
                     },
-                    {
-                        "properties": {
-                            "direction": {"const": "both"},
-                        }
-                    },
+                    {"properties": {"direction": {"const": "both"}}},
                 ]
             },
         },

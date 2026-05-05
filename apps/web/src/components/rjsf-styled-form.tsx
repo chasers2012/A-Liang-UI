@@ -53,7 +53,7 @@ function HoverDescriptionFieldTemplate(props: FieldTemplateProps) {
     children,
   } = props;
 
-  if (hidden) return <div className="hidden">{children}</div>;
+  if (hidden) return null;
 
   const description = typeof rawDescription === 'string' ? rawDescription.trim() : '';
   const showDescriptionTooltip = description.length > 0;
@@ -217,32 +217,37 @@ function buildTabPagination(schema: RJSFSchema, uiSchema: NavDrivenUiSchema): Ta
 function buildTabSchemaAndUi(
   pagination: TabPagination | null,
   tab: string | null,
+  formData: Record<string, unknown>,
 ): { schema: RJSFSchema; uiSchema: UiSchema } | null {
   if (!pagination || !tab) return null;
   const activeFields = tab === '__ungrouped__' ? pagination.ungrouped : (pagination.fieldsByTab.get(tab) ?? []);
   const properties = (pagination.schema.properties ?? {}) as Record<string, RJSFSchema>;
+  const dependencies =
+    ((pagination.schema as Record<string, unknown>).dependencies as Record<string, unknown> | undefined) ?? {};
+  const dependencyKeys = Object.keys(dependencies);
   const tabProperties: Record<string, RJSFSchema> = {};
+  [...activeFields, ...dependencyKeys].forEach((key) => {
+    if (properties[key]) tabProperties[key] = properties[key];
+  });
   const tabRequired = ((pagination.schema.required ?? []) as string[]).filter((k) => activeFields.includes(k));
-  activeFields.forEach((k) => {
-    if (properties[k]) tabProperties[k] = properties[k];
-  });
-  const dependencyKeys = Object.keys(
-    ((pagination.schema as Record<string, unknown>).dependencies as Record<string, unknown> | undefined) ?? {},
-  );
-  dependencyKeys.forEach((key) => {
-    if (!tabProperties[key] && properties[key]) {
-      tabProperties[key] = properties[key];
-    }
-  });
   const tabSchema: RJSFSchema = {
     ...pagination.schema,
     properties: tabProperties,
     required: tabRequired,
+    dependencies: filterDependenciesForTab(dependencies, activeFields) as RJSFSchema['dependencies'],
   };
   const tabUi: UiSchema = {};
+  const hiddenByDependency = getHiddenFieldsFromDependencies(dependencies, formData);
   activeFields.forEach((k) => {
-    const fieldUi = pagination.uiSchema[k] as UiSchema | undefined;
-    if (fieldUi) tabUi[k] = fieldUi;
+    const fieldUi = ((pagination.uiSchema[k] as UiSchema | undefined) ?? {}) as Record<string, unknown>;
+    if (hiddenByDependency.has(k)) {
+      tabUi[k] = {
+        ...fieldUi,
+        'ui:widget': 'hidden',
+      };
+      return;
+    }
+    if (Object.keys(fieldUi).length > 0) tabUi[k] = fieldUi as UiSchema;
   });
   dependencyKeys
     .filter((key) => !activeFields.includes(key))
@@ -255,11 +260,89 @@ function buildTabSchemaAndUi(
   return { schema: tabSchema, uiSchema: tabUi };
 }
 
+function getHiddenFieldsFromDependencies(
+  dependencies: Record<string, unknown>,
+  formData: Record<string, unknown>,
+): Set<string> {
+  const hidden = new Set<string>();
+
+  Object.entries(dependencies).forEach(([depKey, depSchema]) => {
+    if (!depSchema || typeof depSchema !== 'object') return;
+    const oneOf = (depSchema as Record<string, unknown>).oneOf;
+    if (!Array.isArray(oneOf)) return;
+    const currentValue = formData[depKey];
+    const matched = oneOf.find((candidate): candidate is Record<string, unknown> => {
+      if (!candidate || typeof candidate !== 'object') return false;
+      const props = (candidate as Record<string, unknown>).properties;
+      if (!props || typeof props !== 'object' || Array.isArray(props)) return false;
+      const depProp = (props as Record<string, unknown>)[depKey];
+      const depConst =
+        depProp && typeof depProp === 'object' && !Array.isArray(depProp)
+          ? (depProp as Record<string, unknown>).const
+          : undefined;
+      return depConst === undefined || depConst === currentValue;
+    });
+
+    if (!matched) return;
+    const props = (matched.properties ?? {}) as Record<string, unknown>;
+    Object.entries(props).forEach(([field, value]) => {
+      if (value === false) hidden.add(field);
+    });
+  });
+
+  return hidden;
+}
+
+function filterDependenciesForTab(
+  dependencies: Record<string, unknown>,
+  activeFields: string[],
+): Record<string, unknown> {
+  const active = new Set(activeFields);
+
+  const pruneNode = (node: unknown, triggerKey: string): unknown => {
+    if (!node || typeof node !== 'object') return node;
+    if (Array.isArray(node)) return node.map((item) => pruneNode(item, triggerKey));
+
+    const rec = node as Record<string, unknown>;
+    const out: Record<string, unknown> = {};
+
+    for (const [k, v] of Object.entries(rec)) {
+      if (k === 'properties' && v && typeof v === 'object' && !Array.isArray(v)) {
+        const props = v as Record<string, unknown>;
+        const nextProps: Record<string, unknown> = {};
+        for (const [field, fieldSchema] of Object.entries(props)) {
+          // Keep trigger field for dependency matching, and fields in current tab for rendering.
+          if (field === triggerKey || active.has(field)) {
+            nextProps[field] = pruneNode(fieldSchema, triggerKey);
+          }
+        }
+        out[k] = nextProps;
+        continue;
+      }
+
+      if (v && typeof v === 'object') {
+        out[k] = pruneNode(v, triggerKey);
+      } else {
+        out[k] = v;
+      }
+    }
+
+    return out;
+  };
+
+  const nextDeps: Record<string, unknown> = {};
+  for (const [depKey, depSchema] of Object.entries(dependencies)) {
+    nextDeps[depKey] = pruneNode(depSchema, depKey);
+  }
+  return nextDeps;
+}
+
 function resolveTabState(
   tabbedByNav: boolean,
   schema: RJSFSchema | undefined,
   uiSchema: UiSchema | undefined,
   activeTab: string | null,
+  formData: Record<string, unknown>,
 ) {
   if (!tabbedByNav || !schema || !uiSchema) {
     return { pagination: null, resolvedTab: null, tabSchemaAndUi: null };
@@ -272,7 +355,7 @@ function resolveTabState(
   return {
     pagination,
     resolvedTab,
-    tabSchemaAndUi: buildTabSchemaAndUi(pagination, resolvedTab),
+    tabSchemaAndUi: buildTabSchemaAndUi(pagination, resolvedTab, formData),
   };
 }
 
@@ -281,11 +364,11 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
   const schema = props.schema as RJSFSchema | undefined;
   const uiSchema = props.uiSchema as UiSchema | undefined;
   const shouldHideSubmit = resolveSubmitButtonNorender(uiSchema);
+  const formData = useMemo(() => (props.formData as Record<string, unknown>) ?? {}, [props.formData]);
   const { pagination, resolvedTab, tabSchemaAndUi } = useMemo(
-    () => resolveTabState(tabbedByNav, schema, uiSchema, activeTab),
-    [tabbedByNav, schema, uiSchema, activeTab],
+    () => resolveTabState(tabbedByNav, schema, uiSchema, activeTab, formData),
+    [tabbedByNav, schema, uiSchema, activeTab, formData],
   );
-  const formData = (props.formData as Record<string, unknown>) ?? {};
   const handleChange = (next: RjsfOnChangeArg) => {
     if (tabSchemaAndUi) {
       const nextData = (next.formData as Record<string, unknown>) ?? {};
