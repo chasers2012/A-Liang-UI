@@ -5,7 +5,13 @@ from fastapi import APIRouter, HTTPException
 from app.http_errors import http_bad_request
 
 from . import controller
-from .schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
+from .schemas import (
+    BacktestRunDetail,
+    BacktestRunFormSpecPublic,
+    BacktestRunSummary,
+    RunBacktestRequest,
+    backtest_run_form_spec_public,
+)
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
 
@@ -16,6 +22,11 @@ def run_backtest(body: RunBacktestRequest) -> BacktestRunSummary:
         return controller.enqueue_backtest_run(body)
     except ValueError as e:
         http_bad_request(e)
+
+
+@router.get("/run/spec", response_model=BacktestRunFormSpecPublic)
+def get_backtest_run_spec() -> BacktestRunFormSpecPublic:
+    return backtest_run_form_spec_public()
 
 
 @router.get("", response_model=list[BacktestRunSummary])

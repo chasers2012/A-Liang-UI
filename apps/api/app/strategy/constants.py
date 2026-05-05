@@ -19,24 +19,74 @@ STRATEGY_WORKFLOW_INPUTS: list[dict[str, Any]] = [
 
 STRATEGY_WORKFLOW_OUTPUTS: list[dict[str, Any]] = [
     {
-        "name": "position",
+        "name": "entries",
         "required": True,
-        "label": "持仓",
+        "label": "开仓信号",
         "description": (
-            "MultiIndex(date, asset) 的持仓矩阵。\n"
+            "宽表布尔矩阵，表示每个时间点/资产是否触发开仓。\n"
             "\n"
             "示例：\n"
             "\n"
-            "| date       | asset | position |\n"
-            "|------------|-------|----------|\n"
-            "| 2026-04-01 | AAPL  | 0.50     |\n"
-            "| 2026-04-01 | MSFT  | 0.50     |\n"
-            "| 2026-04-02 | AAPL  | 0.70     |\n"
-            "| 2026-04-02 | MSFT  | 0.30     |\n"
+            "| date       | AAPL  | MSFT |\n"
+            "|------------|-------|------|\n"
+            "| 2026-04-01 | True  | False|\n"
+            "| 2026-04-02 | False | True |\n"
         ),
         "value_type": "dataframe",
         "render_type": "socket",
     },
+    {
+        "name": "exits",
+        "required": True,
+        "label": "平仓信号",
+        "description": (
+            "宽表布尔矩阵，表示每个时间点/资产是否触发平仓。\n"
+            "\n"
+            "示例：\n"
+            "\n"
+            "| date       | AAPL  | MSFT |\n"
+            "|------------|-------|------|\n"
+            "| 2026-04-01 | False | False|\n"
+            "| 2026-04-02 | True  | False|\n"
+        ),
+        "value_type": "dataframe",
+        "render_type": "socket",
+    },
+    # Optional dataframe outputs used by vectorbt `from_signals` advanced params.
+    *[
+        {
+            "name": name,
+            "required": False,
+            "label": label,
+            "description": f"可选：用于 from_signals 参数 `{name}` 的宽表输出。",
+            "value_type": "dataframe",
+            "render_type": "socket",
+        }
+        for name, label in [
+            ("short_entries", "做空开仓信号"),
+            ("short_exits", "做空平仓信号"),
+            ("size", "下单规模"),
+            ("price", "下单价格"),
+            ("fees", "手续费"),
+            ("fixed_fees", "固定手续费"),
+            ("slippage", "滑点"),
+            ("min_size", "最小下单规模"),
+            ("max_size", "最大下单规模"),
+            ("size_granularity", "下单粒度"),
+            ("reject_prob", "拒单概率"),
+            ("lock_cash", "锁定现金"),
+            ("allow_partial", "允许部分成交"),
+            ("raise_reject", "拒单时抛错"),
+            ("log", "交易日志开关"),
+            ("val_price", "估值价格"),
+            ("open", "开盘价"),
+            ("high", "最高价"),
+            ("low", "最低价"),
+            ("sl_stop", "止损比例"),
+            ("sl_trail", "移动止损开关"),
+            ("tp_stop", "止盈比例"),
+        ]
+    ],
 ]
 
 STRATEGY_EMPTY_WORKFLOW_TEMPLATE: dict[str, Any] = {

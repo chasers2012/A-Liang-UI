@@ -8,11 +8,21 @@ import type {
 } from '@/models/backtest/dto';
 import { apiFetchJson } from './client';
 
+export type BacktestRunFormSpec = {
+  schema: unknown;
+  uiSchema: unknown;
+  default_values: Record<string, unknown>;
+};
+
 export function runBacktest(body: unknown): Promise<BacktestRunSummary> {
   return apiFetchJson<BacktestRunSummary>('/backtests/run', {
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+export function getBacktestRunSpec(): Promise<BacktestRunFormSpec> {
+  return apiFetchJson<BacktestRunFormSpec>('/backtests/run/spec');
 }
 
 export function listBacktests(params?: {

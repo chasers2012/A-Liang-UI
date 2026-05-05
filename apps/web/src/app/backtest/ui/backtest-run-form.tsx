@@ -2,21 +2,22 @@
 
 import type { FormEvent } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
+import type { RJSFSchema, UiSchema } from '@rjsf/utils';
+import validator from '@rjsf/validator-ajv8';
+import { useEffect } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect } from 'react';
+import { RjsfStyledForm } from '@/components/rjsf-styled-form';
 import {
   backtestRunFormAtom,
   loadBacktestRunCatalogAtom,
+  loadBacktestRunSpecAtom,
   setBacktestRunDataSetIdAtom,
-  setBacktestRunFeesAtom,
-  setBacktestRunInitialCashAtom,
-  setBacktestRunSlippageAtom,
+  setBacktestRunFormDataAtom,
   setBacktestRunStrategyIdAtom,
   submitBacktestRunAtom,
 } from '@/models/backtest/run.atom';
@@ -64,25 +65,31 @@ function BacktestCatalogSelect(props: {
 }
 
 export function BacktestRunForm() {
-  const { strategyId, dataSetId, initialCash, fees, slippage, submitting, catalogLoading, error } =
+  const { strategyId, dataSetId, spec, formData, submitting, catalogLoading, specLoading, error } =
     useAtomValue(backtestRunFormAtom);
   const strategies = useAtomValue(strategiesListAtoms.valueAtom) ?? [];
   const dataSets = useAtomValue(dataSetAtoms.valueAtom) ?? [];
 
   const loadCatalog = useSetAtom(loadBacktestRunCatalogAtom);
+  const loadSpec = useSetAtom(loadBacktestRunSpecAtom);
   const setStrategyId = useSetAtom(setBacktestRunStrategyIdAtom);
   const setDataSetId = useSetAtom(setBacktestRunDataSetIdAtom);
-  const setInitialCash = useSetAtom(setBacktestRunInitialCashAtom);
-  const setFees = useSetAtom(setBacktestRunFeesAtom);
-  const setSlippage = useSetAtom(setBacktestRunSlippageAtom);
+  const setFormData = useSetAtom(setBacktestRunFormDataAtom);
   const submit = useSetAtom(submitBacktestRunAtom);
 
   useEffect(() => {
     void loadCatalog();
-  }, [loadCatalog]);
+    void loadSpec();
+  }, [loadCatalog, loadSpec]);
 
   const submitDisabled =
-    submitting || catalogLoading || !strategyId.trim() || !dataSetId.trim() || !strategies.length || !dataSets.length;
+    submitting ||
+    catalogLoading ||
+    specLoading ||
+    !strategyId.trim() ||
+    !dataSetId.trim() ||
+    !strategies.length ||
+    !dataSets.length;
 
   const onRun = async (e: FormEvent) => {
     e.preventDefault();
@@ -131,33 +138,19 @@ export function BacktestRunForm() {
             </Button>
           </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="initial_cash">initial_cash</Label>
-            <Input
-              id="initial_cash"
-              type="number"
-              min={0.0000001}
-              step="any"
-              value={initialCash}
-              onChange={(e) => setInitialCash(e.target.value)}
-            />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="fees">fees</Label>
-            <Input id="fees" type="number" min={0} step="any" value={fees} onChange={(e) => setFees(e.target.value)} />
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="slippage">slippage</Label>
-            <Input
-              id="slippage"
-              type="number"
-              min={0}
-              step="any"
-              value={slippage}
-              onChange={(e) => setSlippage(e.target.value)}
-            />
+          <div className="md:col-span-3 max-w-xl">
+            {spec ? (
+              <RjsfStyledForm
+                schema={(spec.schema ?? {}) as RJSFSchema}
+                uiSchema={(spec.uiSchema ?? {}) as UiSchema}
+                validator={validator}
+                formData={formData}
+                onChange={(next) => setFormData((next.formData as Record<string, unknown>) ?? {})}
+                liveValidate={false}
+                noHtml5Validate
+                tabbedByNav
+              />
+            ) : null}
           </div>
         </form>
       </CardContent>

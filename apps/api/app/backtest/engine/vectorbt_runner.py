@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -8,31 +8,35 @@ if TYPE_CHECKING:
     from vectorbt.portfolio.base import Portfolio
 
 
-def run_portfolio_from_target_weights(
+def run_portfolio_from_signals(
     *,
     price: pd.DataFrame,
-    target_weights: pd.DataFrame,
+    entries: pd.DataFrame,
+    exits: pd.DataFrame,
     initial_cash: float,
     fees: float,
     slippage: float,
     freq: str = "1D",
+    from_signals_kwargs: dict[str, Any] | None = None,
 ) -> Portfolio:
     import vectorbt as vbt
 
     # Align inputs
     px = price.sort_index()
-    w = target_weights.reindex(px.index)
-    w = w.reindex(columns=px.columns)
+    ent = entries.reindex(px.index).reindex(columns=px.columns).fillna(False).astype(bool)
+    ex = exits.reindex(px.index).reindex(columns=px.columns).fillna(False).astype(bool)
 
-    # Use target percent sizing: each timestamp's weights are desired portfolio weights.
-    return vbt.Portfolio.from_orders(
+    kwargs = dict(from_signals_kwargs or {})
+
+    return vbt.Portfolio.from_signals(
         px,
-        size=w,
-        size_type="targetpercent",
-        group_by=True,
-        cash_sharing=True,
+        ent,
+        ex,
+        group_by=bool(kwargs.pop("group_by", True)),
+        cash_sharing=bool(kwargs.pop("cash_sharing", True)),
         init_cash=float(initial_cash),
         fees=float(fees),
         slippage=float(slippage),
-        freq=freq,
+        freq=str(kwargs.pop("freq", freq)),
+        **kwargs,
     )

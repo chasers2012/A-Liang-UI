@@ -9,31 +9,71 @@ import pandas as pd
 from ..registry import BacktestRunsStore
 from ..result_manager import BacktestResultManager
 
+DF_SIGNAL_KWARGS = {
+    "short_entries",
+    "short_exits",
+    "size",
+    "price",
+    "fees",
+    "fixed_fees",
+    "slippage",
+    "min_size",
+    "max_size",
+    "size_granularity",
+    "reject_prob",
+    "lock_cash",
+    "allow_partial",
+    "raise_reject",
+    "log",
+    "val_price",
+    "open",
+    "high",
+    "low",
+    "sl_stop",
+    "sl_trail",
+    "tp_stop",
+}
 
-def _position_to_target_weights(position: pd.DataFrame) -> pd.DataFrame:
-    if not isinstance(position.index, pd.MultiIndex):
-        raise ValueError("策略输出 position 必须是 MultiIndex(date, asset)")
-    if len(position.index.names) < 2:
-        raise ValueError("策略输出 position 的索引必须包含 date、asset 两级")
-
-    level_names = list(position.index.names)
-    try:
-        date_level = level_names.index("date")
-        asset_level = level_names.index("asset")
-    except ValueError as exc:
-        raise ValueError("策略输出 position 的索引名必须为 date、asset") from exc
-
-    if position.shape[1] == 0:
-        raise ValueError("策略输出 position 必须至少包含一列持仓值")
-    value_col = position.columns[0]
-
-    weights = position[value_col].unstack(level=asset_level)
-    if date_level != 0:
-        weights = weights.sort_index()
-
-    weights.index.name = "date"
-    weights.columns = [str(c) for c in weights.columns]
-    return weights.dropna()
+SCALAR_SIGNAL_KWARGS = {
+    "size",
+    "size_type",
+    "price",
+    "fees",
+    "fixed_fees",
+    "slippage",
+    "min_size",
+    "max_size",
+    "size_granularity",
+    "reject_prob",
+    "lock_cash",
+    "allow_partial",
+    "raise_reject",
+    "log",
+    "accumulate",
+    "upon_long_conflict",
+    "upon_short_conflict",
+    "upon_dir_conflict",
+    "upon_opposite_entry",
+    "direction",
+    "val_price",
+    "open",
+    "high",
+    "low",
+    "sl_stop",
+    "sl_trail",
+    "tp_stop",
+    "stop_entry_price",
+    "stop_exit_price",
+    "upon_stop_exit",
+    "upon_stop_update",
+    "use_stops",
+    "cash_sharing",
+    "group_by",
+    "ffill_val_price",
+    "update_value",
+    "seed",
+    "freq",
+}
 
 
 def run_backtest_and_persist(run_id: str) -> None:
@@ -59,7 +99,7 @@ def run_backtest_and_persist(run_id: str) -> None:
 
     from .market_data import load_market_data
     from .vectorbt_runner import (
-        run_portfolio_from_target_weights,
+        run_portfolio_from_signals,
     )
 
     try:
@@ -81,23 +121,29 @@ def run_backtest_and_persist(run_id: str) -> None:
         wf_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
         )
-        position = (wf_out or {}).get("position")
-        if position is None:
-            # Backward compatible fallback for older workflow output key.
-            position = (wf_out or {}).get("backtest_inputs")
-        if not isinstance(position, pd.DataFrame):
-            raise ValueError("策略未输出 position")
-
-        target_weights = _position_to_target_weights(position)
-
         price = load_market_data(ds).close
 
-        pf = run_portfolio_from_target_weights(
+        entries = (wf_out or {}).get("entries")
+        exits = (wf_out or {}).get("exits")
+        if not isinstance(entries, pd.DataFrame) or not isinstance(exits, pd.DataFrame):
+            raise ValueError("策略必须输出 entries 和 exits（DataFrame）")
+
+        signal_kwargs: dict[str, object] = {
+            k: params[k] for k in SCALAR_SIGNAL_KWARGS if k in params and params[k] is not None
+        }
+        for k in DF_SIGNAL_KWARGS:
+            v = (wf_out or {}).get(k)
+            if isinstance(v, pd.DataFrame):
+                signal_kwargs[k] = v
+
+        pf = run_portfolio_from_signals(
             price=price,
-            target_weights=target_weights,
-            initial_cash=float(params["initial_cash"]),
-            fees=float(params["fees"]),
-            slippage=float(params["slippage"]),
+            entries=entries,
+            exits=exits,
+            initial_cash=float(params.get("initial_cash", 1_000_000)),
+            fees=float(params.get("fees", 0.0)),
+            slippage=float(params.get("slippage", 0.0)),
+            from_signals_kwargs=signal_kwargs,
         )
         results_dir = results.write_node_results(run_id, node_results)
         results.write_portfolio_results(run_id, pf)
