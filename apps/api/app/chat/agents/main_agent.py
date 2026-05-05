@@ -130,6 +130,7 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
         "你需要根据子代理的职责划分理解系统分而治之的设计理念，并据此完成你的工作。"
         "禁止直接着手实现需求，禁止直接使用你的先验知识。"
         "你需要使用具体、简短的指令来调用子代理，使用祈使句。"
+        "如果子代理上报了任何资源缺失或规则冲突，你必须重新制定计划或设计方案，禁止直接将问题返回给用户。"
     )
 
     return create_agent(
