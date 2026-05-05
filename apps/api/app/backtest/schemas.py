@@ -104,21 +104,21 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "init_cash": {
                 "type": "number",
                 "title": "初始资金",
-                "description": "组合起始现金（init_cash），必须大于 0。",
-                "minimum": 1e-12,
+                "description": "初始资金。",
+                "minimum": 1,
                 "default": 1_000_000,
             },
             "fees": {
                 "type": "number",
                 "title": "手续费率",
-                "description": "成交比例手续费（fees），如 0.001 表示千分之一。",
+                "description": "按订单价值百分比收取的手续费（fees）。",
                 "minimum": 0.0,
                 "default": 0.0003,
             },
             "slippage": {
                 "type": "number",
                 "title": "滑点率",
-                "description": "成交滑点比例（slippage），用于模拟买卖价偏移。",
+                "description": "按价格百分比计的滑点（slippage）。",
                 "minimum": 0.0,
                 "default": 0.0,
             },
@@ -146,7 +146,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "accumulate": {
                 "type": "string",
                 "title": "仓位累加模式",
-                "description": "控制同向信号是否可加减仓。",
+                "description": "仓位累加模式。True 等价于 both，False 等价于 disabled。启用后 from_signals 的行为更接近 from_orders。",
                 "oneOf": [
                     {
                         "const": "disabled",
@@ -173,12 +173,12 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "allow_partial": {
                 "type": "boolean",
                 "title": "允许部分成交",
-                "description": "资金不足或受约束时，是否允许部分成交。",
+                "description": "是否允许部分成交；当 size 为 np.inf 时不生效。",
             },
             "upon_long_conflict": {
                 "type": "string",
                 "title": "多头冲突处理",
-                "description": "同一时间多头入场/出场信号冲突时的处理方式。",
+                "description": "多头入场与出场信号同时出现时的处理模式，可选择忽略、优先入场、优先出场、邻接处理或反向处理。",
                 "oneOf": [
                     {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
@@ -206,7 +206,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "upon_short_conflict": {
                 "type": "string",
                 "title": "空头冲突处理",
-                "description": "同一时间空头入场/出场信号冲突时的处理方式。",
+                "description": "空头入场与出场信号同时出现时的处理模式，可选择忽略、优先入场、优先出场、邻接处理或反向处理。",
                 "oneOf": [
                     {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
@@ -234,7 +234,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "upon_opposite_entry": {
                 "type": "string",
                 "title": "反向入场处理",
-                "description": "已有持仓时出现反向入场信号的处理方式。",
+                "description": "已有持仓时出现反向入场信号的处理模式，可选择忽略、平仓、平仓或减仓、反手、反手或减仓。",
                 "oneOf": [
                     {
                         "const": "ignore",
@@ -262,7 +262,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "upon_dir_conflict": {
                 "type": "string",
                 "title": "方向冲突处理",
-                "description": "当方向规则与信号规则冲突时的处理方式。",
+                "description": "同一时点多空方向同时触发时的处理模式，可选择忽略、优先多头、优先空头或同时忽略两者。",
                 "oneOf": [
                     {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
@@ -290,7 +290,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "size_type": {
                 "type": "string",
                 "title": "下单数量类型",
-                "description": "size 的解释方式。",
+                "description": "下单规模解释方式。仅支持 Amount / Value / Percent；Percent 不支持直接反手。",
                 "oneOf": [
                     {
                         "const": "amount",
@@ -308,92 +308,72 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "size": {
                 "type": "number",
                 "title": "下单规模",
-                "description": "与 size_type 联动：数量/金额/比例。",
+                "description": "订单规模（size）；在 from_signals 中不允许负值，方向应由信号表达。",
             },
             "price": {
                 "type": "number",
                 "title": "下单价格",
-                "description": "订单使用的价格；留空时按引擎默认价格。",
+                "description": "订单价格（price），默认 np.inf。现金共享且 call_seq=auto 时，同组订单应使用同一时间戳价格。",
             },
             "fixed_fees": {
                 "type": "number",
                 "title": "固定手续费",
-                "description": "每笔订单固定手续费（绝对值）。",
+                "description": "每笔订单固定手续费金额（fixed_fees）。",
             },
             "min_size": {
                 "type": "number",
                 "title": "最小下单量",
-                "description": "小于该阈值的订单会被拒绝或忽略。",
+                "description": "订单可被接受的最小规模（min_size）。",
             },
             "max_size": {
                 "type": "number",
                 "title": "最大下单量",
-                "description": "单笔订单允许的最大规模。",
+                "description": "最大下单规模。超出时会部分成交；若启用累加且该值过小，可能无法正常平仓。",
             },
             "size_granularity": {
                 "type": "number",
                 "title": "下单粒度",
-                "description": "下单量按该步长离散化（如最小交易单位）。",
+                "description": "下单规模粒度（size_granularity）。",
             },
             "reject_prob": {
                 "type": "number",
                 "title": "拒单概率",
-                "description": "模拟订单被随机拒绝的概率（0~1）。",
+                "description": "订单被拒绝的概率（reject_prob）。",
             },
             "lock_cash": {
                 "type": "boolean",
                 "title": "锁定现金",
-                "description": "订单挂起后是否预留/锁定现金，避免重复占用。",
+                "description": "做空时是否锁定现金（lock_cash）。",
             },
             "raise_reject": {
                 "type": "boolean",
                 "title": "拒单抛错",
-                "description": "订单被拒绝时是否抛出异常中断。",
+                "description": "订单被拒绝时是否抛出异常（raise_reject）。",
             },
             "log": {
                 "type": "boolean",
                 "title": "记录日志",
-                "description": "开启后记录订单处理日志，便于排查但更慢。",
-            },
-            "val_price": {
-                "type": "number",
-                "title": "估值价格",
-                "description": "用于估值/计算组合价值的价格。",
-            },
-            "open": {
-                "type": "number",
-                "title": "开盘价",
-                "description": "K 线开盘价（用于价格上下文，如止损止盈）。",
-            },
-            "high": {
-                "type": "number",
-                "title": "最高价",
-                "description": "K 线最高价（用于价格上下文，如止损止盈）。",
-            },
-            "low": {
-                "type": "number",
-                "title": "最低价",
-                "description": "K 线最低价（用于价格上下文，如止损止盈）。",
+                "description": "是否记录订单日志（log）。",
             },
             "sl_stop": {
                 "type": "number",
                 "title": "止损比例",
-                "description": "止损触发阈值，通常为相对比例。",
+                "description": "止损阈值。多头为低于入场价的百分比、空头为高于入场价的百分比；0.01 表示 1%。",
             },
             "sl_trail": {
                 "type": "boolean",
                 "title": "追踪止损",
-                "description": "是否使用追踪止损（随价格有利变动而抬升/下移）。",
+                "description": "是否将 sl_stop 作为追踪止损。",
             },
             "tp_stop": {
                 "type": "number",
                 "title": "止盈比例",
-                "description": "止盈触发阈值，通常为相对比例。",
+                "description": "止盈阈值。多头为高于入场价的百分比、空头为低于入场价的百分比；0.01 表示 1%。",
             },
             "stop_entry_price": {
                 "type": "string",
                 "title": "止损止盈入场参考价",
-                "description": "用于计算止损/止盈锚点的入场参考价格。",
+                "description": "止损/止盈的入场参考价类型。若按元素提供，将在入场时生效。",
                 "oneOf": [
                     {
                         "const": "val_price",
@@ -420,7 +400,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "stop_exit_price": {
                 "type": "string",
                 "title": "止损止盈出场价格",
-                "description": "止损/止盈触发后使用的出场定价方式。",
+                "description": "止损/止盈触发后的出场定价方式。若按元素提供，将在出场时生效。",
                 "oneOf": [
                     {
                         "const": "stoplimit",
@@ -439,7 +419,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "upon_stop_exit": {
                 "type": "string",
                 "title": "止损止盈出场动作",
-                "description": "止损/止盈触发后的仓位处理动作。",
+                "description": "止损/止盈触发后的处理模式。若按元素提供，将在出场时生效。",
                 "oneOf": [
                     {"const": "close", "title": "平仓", "description": "平掉当前仓位。"},
                     {
@@ -462,7 +442,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "upon_stop_update": {
                 "type": "string",
                 "title": "止损止盈更新策略",
-                "description": "新信号出现时如何更新已有止损/止盈设置。",
+                "description": "重复入场时的止损/止盈更新模式。仅在启用累加时生效。",
                 "oneOf": [
                     {"const": "keep", "title": "保持", "description": "保留已有止损止盈。"},
                     {
@@ -480,39 +460,39 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
             "use_stops": {
                 "type": "boolean",
                 "title": "启用止损止盈",
-                "description": "总开关：是否启用止损止盈逻辑。",
+                "description": "是否启用止损逻辑。默认在存在任一止损/止盈或自定义调整函数时自动启用；关闭可提升简单场景速度。",
             },
             "cash_sharing": {
                 "type": "boolean",
                 "title": "组内共享现金",
-                "description": "分组组合下，组内标的是否共享同一现金池。",
+                "description": "是否在同一分组内共享现金。若 group_by 为 None 且启用该项，会自动形成单一分组；该模式会引入跨资产依赖。",
                 "default": True,
             },
             "group_by": {
                 "type": "boolean",
                 "title": "按组聚合",
-                "description": "是否按分组进行聚合计算和展示。",
+                "description": "列分组方式（group_by），用于定义资金共享与按组统计。",
                 "default": True,
             },
             "ffill_val_price": {
                 "type": "boolean",
                 "title": "估值价前向填充",
-                "description": "估值价缺失时是否前向填充。",
+                "description": "是否仅在估值价格已知时跟踪；否则未知 close 会导致下一时刻估值价为 NaN。",
             },
             "update_value": {
                 "type": "boolean",
                 "title": "逐步更新净值",
-                "description": "是否在每个时间步更新组合净值状态。",
+                "description": "每笔订单成交后是否更新分组价值（update_value）。",
             },
             "seed": {
                 "type": "integer",
                 "title": "随机种子",
-                "description": "随机过程（如拒单概率）使用的种子，保证可复现。",
+                "description": "用于 call_seq 与仿真起始阶段的随机种子（seed）。",
             },
             "freq": {
                 "type": "string",
                 "title": "时间频率",
-                "description": "时间序列频率（如 1D、1h），用于年化等统计指标。",
+                "description": "当无法从 close 解析时使用的索引频率（freq）。",
             },
         },
         "dependencies": {
