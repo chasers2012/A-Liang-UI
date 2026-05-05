@@ -4,6 +4,7 @@ from app.nodes.node_plugin import NodePlugin
 
 from common_nodes.data_set_to_wide import DataSetToWideNode
 from common_nodes.dataframe_rename_columns import RenameDataFrameColumnsNode
+from common_nodes.dataframe_to_numeric import DataFrameToNumericNode
 from common_nodes.factor_ref import FactorRefNode
 from common_nodes.json_nodes import JsonParseNode, JsonToDataframeNode, LongTextParamsNode
 from common_nodes.lag_node import LagNode
@@ -28,6 +29,7 @@ class CommonNodesPlugin(NodePlugin):
     nodes: ClassVar[list[type]] = [
         LoadDataSet,
         DataSetToWideNode,
+        DataFrameToNumericNode,
         RenameDataFrameColumnsNode,
         FactorRefNode,
         NumberParamsNode,

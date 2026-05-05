@@ -96,17 +96,24 @@ const normalizeSelectOptions = (rawOptions: unknown): tOptionItem[] => {
   return [];
 };
 
-export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: unknown }) {
+function optionValueKey(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'object' && v !== null && 'value' in v) {
+    const inner = (v as { value?: unknown }).value;
+    return inner === null || inner === undefined ? '' : String(inner);
+  }
+  return String(v);
+}
+
+export function SelectParamRow(props: IParamRowProps<unknown> & { options: unknown }) {
   const { label, description, options, readOnly, value, onChange } = props;
-  const current = value === null || value === undefined ? '' : String(value);
   const normalizedOptions = normalizeSelectOptions(options);
 
   const optionsItems = normalizedOptions.map((o) => {
-    if (typeof o === 'object' && o.label && o.value) {
-      return o;
-    }
-    return { label: String(o), value: String(o) };
+    if (typeof o === 'object' && o !== null && 'label' in o && 'value' in o) return o;
+    return { label: String(o), value: o as string | number };
   });
+  const current = value === null || value === undefined ? undefined : optionValueKey(value);
 
   return (
     <div>
@@ -116,22 +123,17 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: u
         value={current}
         onValueChange={(v) => {
           if (v === null || v === undefined) return;
-          const hit = normalizedOptions.find((o) =>
-            typeof o === 'object' && o !== null ? String(o.value) === v : String(o) === v,
-          );
-          if (hit === undefined) {
-            onChange(v);
-            return;
-          }
-          onChange(hit);
+          const hit = optionsItems.find((o) => String(o.value) === String(v));
+          onChange(hit ? hit.value : v);
         }}
         disabled={readOnly}
       >
         <SelectTrigger size="sm" className="h-7 w-full text-xs">
           <SelectValue placeholder="请选择">
             {(val) => {
-              const key = val === null || val === undefined ? '' : String(val);
-              if (key === '') return null;
+              // Only treat null/undefined as "no selection". Empty string is a valid value.
+              if (val === null || val === undefined) return null;
+              const key = String(val);
               const hit = optionsItems.find((o) => String(o.value) === key);
               return hit?.label ?? key;
             }}
@@ -139,7 +141,7 @@ export function SelectParamRow(props: IParamRowProps<tOptionItem> & { options: u
         </SelectTrigger>
         <SelectContent>
           {optionsItems.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
+            <SelectItem key={String(o.value)} value={String(o.value)}>
               {o.label}
             </SelectItem>
           ))}
