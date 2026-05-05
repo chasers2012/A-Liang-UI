@@ -69,7 +69,7 @@ def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunSummary:
         data_set_id=body.data_set_id,
         status="queued",
         queued_at=now,
-        params=body.model_dump(mode="json"),
+        params=body.params,
     )
     created_row = BacktestRunsStore.append(row)
     enqueue_oneoff_job(

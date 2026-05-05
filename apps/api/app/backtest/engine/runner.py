@@ -9,72 +9,6 @@ import pandas as pd
 from ..registry import BacktestRunsStore
 from ..result_manager import BacktestResultManager
 
-DF_SIGNAL_KWARGS = {
-    "short_entries",
-    "short_exits",
-    "size",
-    "price",
-    "fees",
-    "fixed_fees",
-    "slippage",
-    "min_size",
-    "max_size",
-    "size_granularity",
-    "reject_prob",
-    "lock_cash",
-    "allow_partial",
-    "raise_reject",
-    "log",
-    "val_price",
-    "open",
-    "high",
-    "low",
-    "sl_stop",
-    "sl_trail",
-    "tp_stop",
-}
-
-SCALAR_SIGNAL_KWARGS = {
-    "size",
-    "size_type",
-    "price",
-    "fees",
-    "fixed_fees",
-    "slippage",
-    "min_size",
-    "max_size",
-    "size_granularity",
-    "reject_prob",
-    "lock_cash",
-    "allow_partial",
-    "raise_reject",
-    "log",
-    "accumulate",
-    "upon_long_conflict",
-    "upon_short_conflict",
-    "upon_dir_conflict",
-    "upon_opposite_entry",
-    "direction",
-    "val_price",
-    "open",
-    "high",
-    "low",
-    "sl_stop",
-    "sl_trail",
-    "tp_stop",
-    "stop_entry_price",
-    "stop_exit_price",
-    "upon_stop_exit",
-    "upon_stop_update",
-    "use_stops",
-    "cash_sharing",
-    "group_by",
-    "ffill_val_price",
-    "update_value",
-    "seed",
-    "freq",
-}
-
 
 def run_backtest_and_persist(run_id: str) -> None:
     results = BacktestResultManager.instance()
@@ -121,7 +55,10 @@ def run_backtest_and_persist(run_id: str) -> None:
         wf_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
         )
-        price = load_market_data(ds).close
+        market_data = load_market_data(ds)
+        if not isinstance(market_data.close, pd.DataFrame):
+            raise ValueError("数据集缺少 close 字段，无法执行回测")
+        price = market_data.close
 
         entries = (wf_out or {}).get("entries")
         exits = (wf_out or {}).get("exits")
@@ -129,21 +66,19 @@ def run_backtest_and_persist(run_id: str) -> None:
             raise ValueError("策略必须输出 entries 和 exits（DataFrame）")
 
         signal_kwargs: dict[str, object] = {
-            k: params[k] for k in SCALAR_SIGNAL_KWARGS if k in params and params[k] is not None
+            k: v
+            for k, v in params.items()
+            if v is not None and k not in {"strategy_id", "data_set_id"}
         }
-        for k in DF_SIGNAL_KWARGS:
-            v = (wf_out or {}).get(k)
-            if isinstance(v, pd.DataFrame):
-                signal_kwargs[k] = v
+        signal_kwargs["open"] = market_data.open
+        signal_kwargs["high"] = market_data.high
+        signal_kwargs["low"] = market_data.low
 
         pf = run_portfolio_from_signals(
             price=price,
             entries=entries,
             exits=exits,
-            initial_cash=float(params.get("initial_cash", 1_000_000)),
-            fees=float(params.get("fees", 0.0)),
-            slippage=float(params.get("slippage", 0.0)),
-            from_signals_kwargs=signal_kwargs,
+            **signal_kwargs,
         )
         results_dir = results.write_node_results(run_id, node_results)
         results.write_portfolio_results(run_id, pf)

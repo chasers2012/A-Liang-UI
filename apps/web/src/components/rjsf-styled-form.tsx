@@ -27,6 +27,15 @@ type RjsfStyledFormProps = ComponentProps<typeof Form> & {
 };
 type RjsfOnChangeArg = Parameters<NonNullable<RjsfStyledFormProps['onChange']>>[0];
 
+type SubmitButtonOptions = { norender?: boolean };
+
+function resolveSubmitButtonNorender(uiSchema: UiSchema | undefined): boolean {
+  const opts = (uiSchema as Record<string, unknown> | undefined)?.['ui:submitButtonOptions'] as
+    | SubmitButtonOptions
+    | undefined;
+  return Boolean(opts?.norender);
+}
+
 function HoverDescriptionFieldTemplate(props: FieldTemplateProps) {
   const {
     id,
@@ -76,7 +85,30 @@ function HoverDescriptionFieldTemplate(props: FieldTemplateProps) {
           ) : null}
         </div>
       ) : null}
-      {children}
+      {displayLabel ? (
+        children
+      ) : showDescriptionTooltip ? (
+        <div className="flex items-center gap-1.5">
+          {children}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  className="inline-flex cursor-help items-center text-muted-foreground hover:text-foreground"
+                  aria-label={`${label || id} 字段说明`}
+                >
+                  <HelpCircle className="size-3.5" />
+                </span>
+              }
+            />
+            <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+              {description}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ) : (
+        children
+      )}
       {!readonly && !disabled ? errors : null}
       {help}
     </div>
@@ -248,6 +280,7 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const schema = props.schema as RJSFSchema | undefined;
   const uiSchema = props.uiSchema as UiSchema | undefined;
+  const shouldHideSubmit = resolveSubmitButtonNorender(uiSchema);
   const { pagination, resolvedTab, tabSchemaAndUi } = useMemo(
     () => resolveTabState(tabbedByNav, schema, uiSchema, activeTab),
     [tabbedByNav, schema, uiSchema, activeTab],
@@ -299,6 +332,15 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
         templates={{
           ...(props.templates ?? {}),
           FieldTemplate: HoverDescriptionFieldTemplate,
+          DescriptionFieldTemplate: () => null,
+          ...(shouldHideSubmit
+            ? {
+                ButtonTemplates: {
+                  ...(props.templates?.ButtonTemplates ?? {}),
+                  SubmitButton: () => null,
+                },
+              }
+            : {}),
         }}
         className={cn(RJSF_BASE_CLASSNAME, className)}
       />

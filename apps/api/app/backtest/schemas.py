@@ -35,55 +35,8 @@ class RunBacktestRequest(BaseModel):
     strategy_id: str
     data_set_id: str
 
-    # Optional overrides
-    start: str | None = None
-    end: str | None = None
-
-    initial_cash: float = Field(gt=0)
-    fees: float = Field(ge=0)
-    slippage: float = Field(ge=0)
-    signal_lag: int = 1
-    execution_price: Literal["close", "open"] = "close"
-
-    # vectorbt.Portfolio.from_signals 参数（常用子集）
-    direction: FromSignalsDirection = "longonly"
-    accumulate: FromSignalsAccumulate = "disabled"
-    allow_partial: bool = True
-    upon_long_conflict: FromSignalsConflictMode = "ignore"
-    upon_short_conflict: FromSignalsConflictMode = "ignore"
-    upon_opposite_entry: FromSignalsOppositeEntryMode = "ignore"
-    upon_dir_conflict: FromSignalsConflictMode = "ignore"
-    size_type: Literal["amount", "value", "percent"] = "percent"
-
-    # 其他 from_signals 参数（标量形态）
-    size: float | None = None
-    price: float | None = None
-    fixed_fees: float | None = None
-    min_size: float | None = None
-    max_size: float | None = None
-    size_granularity: float | None = None
-    reject_prob: float | None = None
-    lock_cash: bool | None = None
-    raise_reject: bool | None = None
-    log: bool | None = None
-    val_price: float | None = None
-    open: float | None = None
-    high: float | None = None
-    low: float | None = None
-    sl_stop: float | None = None
-    sl_trail: bool | None = None
-    tp_stop: float | None = None
-    stop_entry_price: Literal["val_price", "price", "fill_price", "close"] | None = None
-    stop_exit_price: Literal["stoplimit", "stopmarket", "price", "close"] | None = None
-    upon_stop_exit: Literal["close", "closereduce", "reverse", "reversereduce"] | None = None
-    upon_stop_update: Literal["keep", "override", "overridenan"] | None = None
-    use_stops: bool | None = None
-    cash_sharing: bool = True
-    group_by: bool = True
-    ffill_val_price: bool | None = None
-    update_value: bool | None = None
-    seed: int | None = None
-    freq: str = "1D"
+    # 回测参数透传容器：参数名和参数值由 /backtests/run/spec 控制
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
 class BacktestRunFormSpecPublic(BaseModel):
@@ -106,29 +59,68 @@ class BacktestTradesResponse(BaseModel):
     trades: list[dict[str, Any]] = Field(default_factory=list)
 
 
+def _schema_defaults(schema: dict[str, Any]) -> dict[str, Any]:
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return {}
+    out: dict[str, Any] = {}
+    for key, node in props.items():
+        if not isinstance(node, dict):
+            continue
+        if "default" in node:
+            out[str(key)] = node["default"]
+    return out
+
+
 def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
-    # 注意：strategy_id / data_set_id 由前端目录选择器负责，这里仅渲染“参数部分”。
+    from app.data_set.controller import list_data_sets
+    from app.strategy.registry import StrategyRegistry
+
+    strategies = StrategyRegistry.list_all()
+    data_sets = list_data_sets()
+    strategy_one_of = [{"const": s.id, "title": f"{s.name}"} for s in strategies]
+    data_set_one_of = [{"const": d.id, "title": f"{d.name}"} for d in data_sets]
+    default_strategy_id = strategy_one_of[0]["const"] if strategy_one_of else ""
+    default_data_set_id = data_set_one_of[0]["const"] if data_set_one_of else ""
+
     schema: dict[str, Any] = {
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "initial_cash": {
+            "strategy_id": {
+                "type": "string",
+                "title": "策略",
+                "description": "回测使用的策略。",
+                "oneOf": strategy_one_of,
+                "default": default_strategy_id,
+            },
+            "data_set_id": {
+                "type": "string",
+                "title": "数据集",
+                "description": "回测使用的数据集。",
+                "oneOf": data_set_one_of,
+                "default": default_data_set_id,
+            },
+            "init_cash": {
                 "type": "number",
                 "title": "初始资金",
                 "description": "组合起始现金（init_cash），必须大于 0。",
                 "minimum": 1e-12,
+                "default": 1_000_000,
             },
             "fees": {
                 "type": "number",
                 "title": "手续费率",
                 "description": "成交比例手续费（fees），如 0.001 表示千分之一。",
                 "minimum": 0.0,
+                "default": 0.0003,
             },
             "slippage": {
                 "type": "number",
                 "title": "滑点率",
                 "description": "成交滑点比例（slippage），用于模拟买卖价偏移。",
                 "minimum": 0.0,
+                "default": 0.0,
             },
             "direction": {
                 "type": "string",
@@ -136,17 +128,17 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "longonly",
-                        "title": "仅多头（longonly）",
+                        "title": "仅多头",
                         "description": "只允许做多开仓与平多。",
                     },
                     {
                         "const": "shortonly",
-                        "title": "仅空头（shortonly）",
+                        "title": "仅空头",
                         "description": "只允许做空开仓与平空。",
                     },
                     {
                         "const": "both",
-                        "title": "双向（both）",
+                        "title": "双向",
                         "description": "允许多头与空头两种方向。",
                     },
                 ],
@@ -158,22 +150,22 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "disabled",
-                        "title": "禁用累加（disabled）",
+                        "title": "禁用累加",
                         "description": "重复信号不增减仓，仅处理开平仓逻辑。",
                     },
                     {
                         "const": "both",
-                        "title": "双向累加（both）",
+                        "title": "双向累加",
                         "description": "允许加仓与减仓。",
                     },
                     {
                         "const": "addonly",
-                        "title": "仅加仓（addonly）",
+                        "title": "仅加仓",
                         "description": "仅允许增加仓位，不允许减仓。",
                     },
                     {
                         "const": "removeonly",
-                        "title": "仅减仓（removeonly）",
+                        "title": "仅减仓",
                         "description": "仅允许减少仓位，不允许加仓。",
                     },
                 ],
@@ -188,25 +180,25 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "title": "多头冲突处理",
                 "description": "同一时间多头入场/出场信号冲突时的处理方式。",
                 "oneOf": [
-                    {"const": "ignore", "title": "忽略（ignore）", "description": "忽略冲突信号。"},
+                    {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
                         "const": "entry",
-                        "title": "优先入场（entry）",
+                        "title": "优先入场",
                         "description": "优先执行入场信号。",
                     },
                     {
                         "const": "exit",
-                        "title": "优先出场（exit）",
+                        "title": "优先出场",
                         "description": "优先执行出场信号。",
                     },
                     {
                         "const": "adjacent",
-                        "title": "邻接处理（adjacent）",
+                        "title": "邻接处理",
                         "description": "按邻接规则转换/处理冲突信号。",
                     },
                     {
                         "const": "opposite",
-                        "title": "反向处理（opposite）",
+                        "title": "反向处理",
                         "description": "按反向规则处理冲突信号。",
                     },
                 ],
@@ -216,25 +208,25 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "title": "空头冲突处理",
                 "description": "同一时间空头入场/出场信号冲突时的处理方式。",
                 "oneOf": [
-                    {"const": "ignore", "title": "忽略（ignore）", "description": "忽略冲突信号。"},
+                    {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
                         "const": "entry",
-                        "title": "优先入场（entry）",
+                        "title": "优先入场",
                         "description": "优先执行入场信号。",
                     },
                     {
                         "const": "exit",
-                        "title": "优先出场（exit）",
+                        "title": "优先出场",
                         "description": "优先执行出场信号。",
                     },
                     {
                         "const": "adjacent",
-                        "title": "邻接处理（adjacent）",
+                        "title": "邻接处理",
                         "description": "按邻接规则转换/处理冲突信号。",
                     },
                     {
                         "const": "opposite",
-                        "title": "反向处理（opposite）",
+                        "title": "反向处理",
                         "description": "按反向规则处理冲突信号。",
                     },
                 ],
@@ -246,23 +238,23 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "ignore",
-                        "title": "忽略（ignore）",
+                        "title": "忽略",
                         "description": "忽略反向入场信号。",
                     },
-                    {"const": "close", "title": "平仓（close）", "description": "仅平掉当前仓位。"},
+                    {"const": "close", "title": "平仓", "description": "仅平掉当前仓位。"},
                     {
                         "const": "closereduce",
-                        "title": "平仓或减仓（closereduce）",
+                        "title": "平仓或减仓",
                         "description": "优先减少或平掉当前仓位。",
                     },
                     {
                         "const": "reverse",
-                        "title": "反手（reverse）",
+                        "title": "反手",
                         "description": "先平仓再开反向仓位。",
                     },
                     {
                         "const": "reversereduce",
-                        "title": "反手或减仓（reversereduce）",
+                        "title": "反手或减仓",
                         "description": "按可成交量进行反手或减仓处理。",
                     },
                 ],
@@ -272,25 +264,25 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "title": "方向冲突处理",
                 "description": "当方向规则与信号规则冲突时的处理方式。",
                 "oneOf": [
-                    {"const": "ignore", "title": "忽略（ignore）", "description": "忽略冲突信号。"},
+                    {"const": "ignore", "title": "忽略", "description": "忽略冲突信号。"},
                     {
                         "const": "entry",
-                        "title": "优先入场（entry）",
+                        "title": "优先入场",
                         "description": "优先执行入场信号。",
                     },
                     {
                         "const": "exit",
-                        "title": "优先出场（exit）",
+                        "title": "优先出场",
                         "description": "优先执行出场信号。",
                     },
                     {
                         "const": "adjacent",
-                        "title": "邻接处理（adjacent）",
+                        "title": "邻接处理",
                         "description": "按邻接规则转换/处理冲突信号。",
                     },
                     {
                         "const": "opposite",
-                        "title": "反向处理（opposite）",
+                        "title": "反向处理",
                         "description": "按反向规则处理冲突信号。",
                     },
                 ],
@@ -302,13 +294,13 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "amount",
-                        "title": "数量（amount）",
+                        "title": "数量",
                         "description": "按标的数量下单。",
                     },
-                    {"const": "value", "title": "金额（value）", "description": "按名义金额下单。"},
+                    {"const": "value", "title": "金额", "description": "按名义金额下单。"},
                     {
                         "const": "percent",
-                        "title": "比例（percent）",
+                        "title": "比例",
                         "description": "按可用资金比例下单。",
                     },
                 ],
@@ -405,22 +397,22 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "val_price",
-                        "title": "估值价（val_price）",
+                        "title": "估值价",
                         "description": "以估值价格作为参考。",
                     },
                     {
                         "const": "price",
-                        "title": "下单价（price）",
+                        "title": "下单价",
                         "description": "以下单价格作为参考。",
                     },
                     {
                         "const": "fill_price",
-                        "title": "成交价（fill_price）",
+                        "title": "成交价",
                         "description": "以实际成交价作为参考。",
                     },
                     {
                         "const": "close",
-                        "title": "收盘价（close）",
+                        "title": "收盘价",
                         "description": "以收盘价作为参考。",
                     },
                 ],
@@ -432,16 +424,16 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "oneOf": [
                     {
                         "const": "stoplimit",
-                        "title": "止损限价（stoplimit）",
+                        "title": "止损限价",
                         "description": "按止损限价模式出场。",
                     },
                     {
                         "const": "stopmarket",
-                        "title": "止损市价（stopmarket）",
+                        "title": "止损市价",
                         "description": "按止损市价模式出场。",
                     },
-                    {"const": "price", "title": "下单价（price）", "description": "以下单价出场。"},
-                    {"const": "close", "title": "收盘价（close）", "description": "以收盘价出场。"},
+                    {"const": "price", "title": "下单价", "description": "以下单价出场。"},
+                    {"const": "close", "title": "收盘价", "description": "以收盘价出场。"},
                 ],
             },
             "upon_stop_exit": {
@@ -449,20 +441,20 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "title": "止损止盈出场动作",
                 "description": "止损/止盈触发后的仓位处理动作。",
                 "oneOf": [
-                    {"const": "close", "title": "平仓（close）", "description": "平掉当前仓位。"},
+                    {"const": "close", "title": "平仓", "description": "平掉当前仓位。"},
                     {
                         "const": "closereduce",
-                        "title": "平仓或减仓（closereduce）",
+                        "title": "平仓或减仓",
                         "description": "优先减仓，不足时平仓。",
                     },
                     {
                         "const": "reverse",
-                        "title": "反手（reverse）",
+                        "title": "反手",
                         "description": "平仓后开反向仓位。",
                     },
                     {
                         "const": "reversereduce",
-                        "title": "反手或减仓（reversereduce）",
+                        "title": "反手或减仓",
                         "description": "按可成交量进行反手或减仓。",
                     },
                 ],
@@ -472,15 +464,15 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 "title": "止损止盈更新策略",
                 "description": "新信号出现时如何更新已有止损/止盈设置。",
                 "oneOf": [
-                    {"const": "keep", "title": "保持（keep）", "description": "保留已有止损止盈。"},
+                    {"const": "keep", "title": "保持", "description": "保留已有止损止盈。"},
                     {
                         "const": "override",
-                        "title": "覆盖（override）",
+                        "title": "覆盖",
                         "description": "使用新值覆盖旧值。",
                     },
                     {
                         "const": "overridenan",
-                        "title": "仅覆盖非空（overridenan）",
+                        "title": "仅覆盖非空",
                         "description": "仅当新值非空时才覆盖。",
                     },
                 ],
@@ -555,17 +547,17 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                                 "oneOf": [
                                     {
                                         "const": "ignore",
-                                        "title": "忽略（ignore）",
+                                        "title": "忽略",
                                         "description": "忽略反向入场信号。",
                                     },
                                     {
                                         "const": "close",
-                                        "title": "平仓（close）",
+                                        "title": "平仓",
                                         "description": "仅平掉当前仓位。",
                                     },
                                     {
                                         "const": "closereduce",
-                                        "title": "平仓或减仓（closereduce）",
+                                        "title": "平仓或减仓",
                                         "description": "优先减少或平掉当前仓位。",
                                     },
                                 ],
@@ -582,17 +574,17 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                                 "oneOf": [
                                     {
                                         "const": "ignore",
-                                        "title": "忽略（ignore）",
+                                        "title": "忽略",
                                         "description": "忽略反向入场信号。",
                                     },
                                     {
                                         "const": "close",
-                                        "title": "平仓（close）",
+                                        "title": "平仓",
                                         "description": "仅平掉当前仓位。",
                                     },
                                     {
                                         "const": "closereduce",
-                                        "title": "平仓或减仓（closereduce）",
+                                        "title": "平仓或减仓",
                                         "description": "优先减少或平掉当前仓位。",
                                     },
                                 ],
@@ -618,12 +610,12 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                                 "oneOf": [
                                     {
                                         "const": "close",
-                                        "title": "平仓（close）",
+                                        "title": "平仓",
                                         "description": "平掉当前仓位。",
                                     },
                                     {
                                         "const": "closereduce",
-                                        "title": "平仓或减仓（closereduce）",
+                                        "title": "平仓或减仓",
                                         "description": "优先减仓，不足时平仓。",
                                     },
                                 ],
@@ -640,12 +632,12 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                                 "oneOf": [
                                     {
                                         "const": "close",
-                                        "title": "平仓（close）",
+                                        "title": "平仓",
                                         "description": "平掉当前仓位。",
                                     },
                                     {
                                         "const": "closereduce",
-                                        "title": "平仓或减仓（closereduce）",
+                                        "title": "平仓或减仓",
                                         "description": "优先减仓，不足时平仓。",
                                     },
                                 ],
@@ -660,7 +652,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 ]
             },
         },
-        "required": ["initial_cash", "fees", "slippage"],
+        "required": ["strategy_id", "data_set_id", "init_cash", "fees", "slippage"],
     }
 
     ui_schema: dict[str, Any] = {
@@ -680,7 +672,10 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
                 {"nav": "execution_valuation", "name": "执行与估值"},
             ],
         },
-        "initial_cash": {"nav": "basic"},
+        "ui:submitButtonOptions": {"norender": True},
+        "strategy_id": {"nav": "basic"},
+        "data_set_id": {"nav": "basic"},
+        "init_cash": {"nav": "basic"},
         "fees": {"nav": "basic"},
         "slippage": {"nav": "basic"},
         "freq": {"nav": "basic"},
@@ -721,16 +716,7 @@ def backtest_run_form_spec_public() -> BacktestRunFormSpecPublic:
         "seed": {"nav": "execution_valuation"},
     }
 
-    defaults = RunBacktestRequest(
-        strategy_id="__placeholder__",
-        data_set_id="__placeholder__",
-        initial_cash=1_000_000,
-        fees=0.0003,
-        slippage=0.0,
-    ).model_dump(mode="json")
-
-    # 只返回表单字段的默认值
-    default_values = {k: defaults[k] for k in schema["properties"] if k in defaults}
+    default_values = _schema_defaults(schema)
 
     return BacktestRunFormSpecPublic(
         schema=schema, uiSchema=ui_schema, default_values=default_values
