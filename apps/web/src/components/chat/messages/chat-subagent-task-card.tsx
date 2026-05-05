@@ -51,7 +51,8 @@ export const ChatSubagentTaskCard = memo(function ChatSubagentTaskCard({
   nestedBlocks?: AssistantBlock[];
   isSending: boolean;
 }) {
-  const { status, args, result, error } = call;
+  const { status, args } = call;
+  const isTaskFinished = status === 'ok' || status === 'error';
   const { description, subagentType } = useMemo(() => parseTaskToolArgs(args), [args]);
   const authorization = getPersistedAuthorization(call);
   const initRef = useRef(false);
@@ -71,9 +72,6 @@ export const ChatSubagentTaskCard = memo(function ChatSubagentTaskCard({
       setOpen(status === 'running' || status === 'error');
     }, 0);
   });
-
-  const argsJson = useMemo(() => formatJson(args), [args]);
-  const resultJson = useMemo(() => formatJson(result), [result]);
 
   return (
     <div className="mb-2 rounded-md border border-violet-500/25 bg-violet-500/4 text-left last:mb-0 dark:border-violet-400/20 dark:bg-violet-950/25">
@@ -124,6 +122,7 @@ export const ChatSubagentTaskCard = memo(function ChatSubagentTaskCard({
                 key={item.kind === 'tool' ? item.call.id : `n-${idx}-${item.kind}`}
                 block={item}
                 isSending={isSending}
+                isFinished={isTaskFinished}
                 sessionId={sessionId}
                 assistantMessageId={assistantMessageId}
               />
@@ -139,29 +138,6 @@ export const ChatSubagentTaskCard = memo(function ChatSubagentTaskCard({
           ) : null}
         </div>
       ) : null}
-
-      {/* {open && (
-        <div className="border-t border-violet-500/15 px-3 py-2 dark:border-violet-400/10">
-          {args !== undefined ? (
-            <div className="mb-2">
-              <span className="text-[11px] text-muted-foreground">原始参数</span>
-              <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-                {argsJson}
-              </pre>
-            </div>
-          ) : null}
-          {status === 'ok' && result !== undefined ? (
-            <div>
-              <span className="text-[11px] text-muted-foreground">结果</span>
-              <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
-                {resultJson}
-              </pre>
-            </div>
-          ) : null}
-          {status === 'error' && error ? <p className="text-[11px] leading-relaxed text-destructive">{error}</p> : null}
-          
-        </div>
-      )} */}
     </div>
   );
 });

@@ -12,20 +12,22 @@ import { ChatToolCallCard } from './chat-tool-call-card';
 export const ChatAssistantSingleBlock = memo(function ChatAssistantSingleBlock({
   block,
   isSending,
+  isFinished,
   sessionId,
   assistantMessageId,
 }: {
   block: AssistantBlock;
   isSending: boolean;
+  isFinished?: boolean;
   sessionId: string;
   assistantMessageId: string;
 }) {
   if (block.kind === 'text') {
     if (!block.content.trim()) return null;
-    return <MarkdownContent content={block.content} isFinished={!isSending || !!block.completed} />;
+    return <MarkdownContent content={block.content} isFinished={isFinished ?? (!isSending || !!block.completed)} />;
   }
   if (block.kind === 'reasoning') {
-    return <ChatReasoningCard content={block.content} />;
+    return <ChatReasoningCard content={block.content} isFinished={isFinished ?? !isSending} />;
   }
   if (block.kind === 'tool') {
     return <ChatToolCallCard call={block.call} sessionId={sessionId} assistantMessageId={assistantMessageId} />;

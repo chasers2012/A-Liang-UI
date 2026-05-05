@@ -6,7 +6,13 @@ import { Brain, ChevronRight } from 'lucide-react';
 import { MarkdownContent } from '@/components/markdown/markdown-content';
 import { cn } from '@/lib/utils';
 
-export const ChatReasoningCard = memo(function ChatReasoningCard({ content }: { content: string }) {
+export const ChatReasoningCard = memo(function ChatReasoningCard({
+  content,
+  isFinished = true,
+}: {
+  content: string;
+  isFinished?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   if (!content.trim()) return null;
 
@@ -29,7 +35,7 @@ export const ChatReasoningCard = memo(function ChatReasoningCard({ content }: { 
       </button>
       {open ? (
         <div className="border-border/40 border-t px-3 py-2">
-          <MarkdownContent content={content} />
+          <MarkdownContent content={content} isFinished={isFinished} />
         </div>
       ) : null}
     </div>

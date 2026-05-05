@@ -39,6 +39,57 @@ export type SubagentTaskShell = {
   nested: AssistantBlock[];
 };
 
+function appendWithReasoningMerge(target: AssistantBlock[], block: AssistantBlock): void {
+  const last = target[target.length - 1];
+  if (last?.kind === 'reasoning' && block.kind === 'reasoning') {
+    target[target.length - 1] = {
+      ...last,
+      content: `${last.content}${block.content}`,
+      run_segment_id: block.run_segment_id ?? last.run_segment_id,
+    };
+    return;
+  }
+  if (last?.kind === 'text' && block.kind === 'text') {
+    target[target.length - 1] = {
+      ...last,
+      content: `${last.content}${block.content}`,
+      run_segment_id: block.run_segment_id ?? last.run_segment_id,
+      completed: block.completed ?? last.completed,
+    };
+    return;
+  }
+  target.push(block);
+}
+
+function appendTopLevelWithReasoningMerge(
+  target: Array<AssistantBlock | SubagentTaskShell>,
+  block: AssistantBlock,
+): void {
+  const last = target[target.length - 1];
+  if (!last || isSubagentTaskShell(last)) {
+    target.push(block);
+    return;
+  }
+  if (last.kind === 'reasoning' && block.kind === 'reasoning') {
+    target[target.length - 1] = {
+      ...last,
+      content: `${last.content}${block.content}`,
+      run_segment_id: block.run_segment_id ?? last.run_segment_id,
+    };
+    return;
+  }
+  if (last.kind === 'text' && block.kind === 'text') {
+    target[target.length - 1] = {
+      ...last,
+      content: `${last.content}${block.content}`,
+      run_segment_id: block.run_segment_id ?? last.run_segment_id,
+      completed: block.completed ?? last.completed,
+    };
+    return;
+  }
+  target.push(block);
+}
+
 /** 将扁平块序列变为「普通块 | task 外壳」交错列表。仅支持一层 subagent shell。 */
 export function buildAssistantRenderSequence(blocks: AssistantBlock[]): Array<AssistantBlock | SubagentTaskShell> {
   const out: Array<AssistantBlock | SubagentTaskShell> = [];
@@ -53,7 +104,7 @@ export function buildAssistantRenderSequence(blocks: AssistantBlock[]): Array<As
 
       // 一层限制：子 task 不再创建 shell，直接作为父 shell 内的普通工具块。
       if (ownerShell) {
-        ownerShell.nested.push(block);
+        appendWithReasoningMerge(ownerShell.nested, block);
         if (ownSegmentId) {
           shellBySegment.set(ownSegmentId, ownerShell);
         }
@@ -69,10 +120,10 @@ export function buildAssistantRenderSequence(blocks: AssistantBlock[]): Array<As
     }
 
     if (ownerShell) {
-      ownerShell.nested.push(block);
+      appendWithReasoningMerge(ownerShell.nested, block);
       continue;
     }
-    out.push(block);
+    appendTopLevelWithReasoningMerge(out, block);
   }
   return out;
 }

@@ -25,7 +25,6 @@ export const chatSessionsAtom = withAtomEffect(chatSessionsAtoms.valueAtom, (get
   const activeId = get(activeSessionIdAtom);
 
   if (list.length === 0) return;
-  console.log('list', list);
   if (activeId && !list.some((s) => s.id === activeId)) {
     set(activeSessionIdAtom, list[0]?.id ?? null);
   }
