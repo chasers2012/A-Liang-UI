@@ -42,17 +42,17 @@ export function ProfileWorkflowEditorBlock(props: {
 
   return (
     <div className={cn('flex flex-col min-h-0 flex-1 gap-3', className)}>
-      <Label className="">???</Label>
+      <Label className="">评估配置节点</Label>
       {wfMetaLoading ? (
-        <p className="text-sm text-muted-foreground">???????</p>
+        <p className="text-sm text-muted-foreground">正在加载评估节点…</p>
       ) : (
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <SearchList
             className="w-[300px]"
             items={nodeTypes}
-            title="????"
-            searchPlaceholder="????/??"
-            getGroupKey={(item) => item.category ?? '??'}
+            title="评估配置节点"
+            searchPlaceholder="搜索节点/描述"
+            getGroupKey={(item) => item.category ?? '未分类'}
             renderTitle={(item) => item.label}
             renderDescription={(item) => item.description ?? ''}
             getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
