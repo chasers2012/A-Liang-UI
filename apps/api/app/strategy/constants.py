@@ -8,11 +8,11 @@ WORKFLOW_STRATEGY_DOMAIN: str = "strategy"
 
 STRATEGY_WORKFLOW_INPUTS: list[dict[str, Any]] = [
     {
-        "name": "data_set_id",
+        "name": "data_set",
         "required": True,
-        "label": "数据集ID",
-        "description": "策略计算与回测使用的数据集 ID",
-        "value_type": "string",
+        "label": "数据集",
+        "description": "策略计算与回测使用的数据集",
+        "value_type": "data_set",
         "render_type": "socket",
     },
 ]

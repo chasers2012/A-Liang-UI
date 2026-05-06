@@ -46,7 +46,7 @@ def run_backtest_and_persist(run_id: str) -> None:
         executor = WorkflowExecutor()
         node_results = executor.execute(
             strategy.workflow,
-            workflow_inputs={"data_set_id": rec.data_set_id},
+            workflow_inputs={"data_set": ds},
         )
         wf_out = (
             (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}

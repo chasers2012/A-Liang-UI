@@ -18,23 +18,16 @@ from app.strategy.constants import STRATEGY_WORKFLOW_INPUTS, STRATEGY_WORKFLOW_O
 def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
     """
     A minimal, runnable built-in strategy workflow using existing nodes:
-    data_set_id -> LoadDataSet -> FactorRefNode -> RankTopKEqualWeightNode -> RebalanceNode
+    data_set -> FactorRefNode -> RankTopKEqualWeightNode -> RebalanceNode
     -> ThresholdMask -> Lag -> MaskNot/MaskAnd -> entries/exits
 
     Contract:
-    - workflow input `data_set_id`: DataSet ID (str)
+    - workflow input `data_set`: DataSet object
     - workflow output `entries`/`exits`: price-shaped boolean DataFrames
     """
 
     wf = WorkflowGraphPersisted(
         nodes=[
-            WorkflowGraphNode(
-                id="load",
-                type="common_nodes.load_data_set.LoadDataSet",
-                pos=(0, 0),
-                label="Load Data Set",
-                params={},
-            ),
             WorkflowGraphNode(
                 id="factor",
                 type="common_nodes.factor_ref.FactorRefNode",
@@ -101,11 +94,7 @@ def example_topk_equal_weight_workflow_dict() -> dict[str, Any]:
         ],
         links=[
             WorkflowGraphLink(
-                from_=WorkflowGraphEndpointInput(kind="workflow_input", socket="data_set_id"),
-                to=WorkflowGraphEndpointNode(kind="node", node_id="load", socket="data_set_id"),
-            ),
-            WorkflowGraphLink(
-                from_=WorkflowGraphEndpointNode(kind="node", node_id="load", socket="data_set"),
+                from_=WorkflowGraphEndpointInput(kind="workflow_input", socket="data_set"),
                 to=WorkflowGraphEndpointNode(kind="node", node_id="factor", socket="data_set"),
             ),
             WorkflowGraphLink(
