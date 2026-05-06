@@ -7,7 +7,7 @@ from app.agents.skill_store_sync import register_skill_source
 
 def register_chat_agent_skills() -> None:
     """Register packaged chat-agent skills under /skills/common/<skill_name>/."""
-    skills_dir = Path(__file__).resolve().parent / "skills" / "common"
+    skills_dir = Path(__file__).resolve().parent / "common"
     for entry in sorted(skills_dir.iterdir()):
         if not entry.is_dir() or entry.name.startswith(".") or entry.name.startswith("__"):
             continue
