@@ -1,0 +1,814 @@
+{
+  "nodes": [
+    {
+      "id": "factor",
+      "type": "common_nodes.factor_ref.FactorRefNode",
+      "pos": [-64.46106263090724, -4.444647105255001],
+      "label": "因子计算",
+      "category": null,
+      "inputs": [
+        {
+          "name": "data_set",
+          "required": true,
+          "value_type": "data_set",
+          "render_type": "socket",
+          "label": "数据集",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "factor",
+          "required": false,
+          "value_type": "object",
+          "render_type": "rjsf",
+          "label": "因子",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": {
+            "type": "object",
+            "properties": {
+              "factor_id": {
+                "type": "string",
+                "title": "因子",
+                "oneOf": [
+                  {
+                    "const": "464e6ed8-a630-502f-84b2-de19fd42b6cf",
+                    "title": "10日动量因子"
+                  },
+                  {
+                    "const": "f18621a1-381f-5b5d-a98c-f42893ecd8b1",
+                    "title": "5日反转因子"
+                  },
+                  {
+                    "const": "605c94bd-f296-550f-8122-c298afee35d4",
+                    "title": "20日低波动因子"
+                  }
+                ]
+              }
+            },
+            "dependencies": {
+              "factor_id": {
+                "oneOf": [
+                  {
+                    "title": "10日动量因子",
+                    "type": "object",
+                    "properties": {
+                      "factor_id": {
+                        "const": "464e6ed8-a630-502f-84b2-de19fd42b6cf",
+                        "title": "因子"
+                      },
+                      "factor_params": {
+                        "type": "object",
+                        "title": "因子参数",
+                        "properties": {
+                          "lookback": {
+                            "type": "number",
+                            "title": "Lookback",
+                            "default": 10,
+                            "minimum": 2,
+                            "maximum": 120
+                          }
+                        },
+                        "additionalProperties": false,
+                        "default": {
+                          "lookback": 10
+                        }
+                      }
+                    },
+                    "required": ["factor_id"]
+                  },
+                  {
+                    "title": "5日反转因子",
+                    "type": "object",
+                    "properties": {
+                      "factor_id": {
+                        "const": "f18621a1-381f-5b5d-a98c-f42893ecd8b1",
+                        "title": "因子"
+                      },
+                      "factor_params": {
+                        "type": "object",
+                        "title": "因子参数",
+                        "properties": {
+                          "lookback": {
+                            "type": "number",
+                            "title": "Lookback",
+                            "default": 5,
+                            "minimum": 2,
+                            "maximum": 60
+                          }
+                        },
+                        "additionalProperties": false,
+                        "default": {
+                          "lookback": 5
+                        }
+                      }
+                    },
+                    "required": ["factor_id"]
+                  },
+                  {
+                    "title": "20日低波动因子",
+                    "type": "object",
+                    "properties": {
+                      "factor_id": {
+                        "const": "605c94bd-f296-550f-8122-c298afee35d4",
+                        "title": "因子"
+                      },
+                      "factor_params": {
+                        "type": "object",
+                        "title": "因子参数",
+                        "properties": {
+                          "window": {
+                            "type": "number",
+                            "title": "Window",
+                            "default": 20,
+                            "minimum": 5,
+                            "maximum": 120
+                          }
+                        },
+                        "additionalProperties": false,
+                        "default": {
+                          "window": 20
+                        }
+                      }
+                    },
+                    "required": ["factor_id"]
+                  }
+                ]
+              }
+            }
+          },
+          "ui_schema": {
+            "ui:submitButtonOptions": {
+              "norender": true
+            },
+            "ui:title": "",
+            "factor_id": {
+              "ui:options": {
+                "label": false
+              }
+            },
+            "factor_params": {
+              "ui:options": {
+                "label": false
+              }
+            }
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "factor",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "因子矩阵"
+        }
+      ],
+      "params": {
+        "factor_id": "",
+        "factor": {
+          "factor_id": "464e6ed8-a630-502f-84b2-de19fd42b6cf",
+          "factor_params": {
+            "lookback": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "rank",
+      "type": "strategy_nodes.nodes.RankTopKEqualWeightNode",
+      "pos": [232.5758392989228, -17.77858842101989],
+      "label": "TopK 等权",
+      "category": null,
+      "inputs": [
+        {
+          "name": "factor",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "因子",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "mask",
+          "required": false,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "k",
+          "required": true,
+          "value_type": "",
+          "render_type": "number",
+          "label": "K",
+          "default": 10,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "ascending",
+          "required": false,
+          "value_type": "",
+          "render_type": "toggle",
+          "label": "升序(小值优先)",
+          "default": false,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "weights",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "权重"
+        }
+      ],
+      "params": {
+        "k": 10,
+        "ascending": false
+      }
+    },
+    {
+      "id": "reb",
+      "type": "strategy_nodes.nodes.RebalanceNode",
+      "pos": [537.0204864041775, -16.29703938593491],
+      "label": "调仓频率",
+      "category": null,
+      "inputs": [
+        {
+          "name": "weights",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "权重",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "freq",
+          "required": true,
+          "value_type": "",
+          "render_type": "number",
+          "label": "调仓频率",
+          "default": 1,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "weights",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "权重"
+        }
+      ],
+      "params": {
+        "freq": 1
+      }
+    },
+    {
+      "id": "mask",
+      "type": "common_nodes.mask_nodes.ThresholdMask",
+      "pos": [823.6865450884125, -35.55717684203972],
+      "label": "阈值掩码",
+      "category": null,
+      "inputs": [
+        {
+          "name": "input",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输入",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "threshold",
+          "required": true,
+          "value_type": "",
+          "render_type": "number",
+          "label": "阈值",
+          "default": 0,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "operator",
+          "required": false,
+          "value_type": "",
+          "render_type": "select",
+          "label": "比较方式",
+          "default": null,
+          "options": [
+            {
+              "label": "输入 > 阈值",
+              "value": "gt"
+            },
+            {
+              "label": "输入 >= 阈值",
+              "value": "ge"
+            },
+            {
+              "label": "输入 < 阈值",
+              "value": "lt"
+            },
+            {
+              "label": "输入 <= 阈值",
+              "value": "le"
+            }
+          ],
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "掩码"
+        }
+      ],
+      "params": {
+        "threshold": 0,
+        "operator": "gt"
+      }
+    },
+    {
+      "id": "lag",
+      "type": "common_nodes.lag_node.LagNode",
+      "pos": [1142.9466825445174, -162.97039385934883],
+      "label": "Lag",
+      "category": null,
+      "inputs": [
+        {
+          "name": "table",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "宽表",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "bars",
+          "required": true,
+          "value_type": "",
+          "render_type": "number",
+          "label": "bars",
+          "default": 1,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输出"
+        }
+      ],
+      "params": {
+        "bars": 1
+      }
+    },
+    {
+      "id": "not_prev",
+      "type": "common_nodes.mask_nodes.MaskNotNode",
+      "pos": [1442.9466825445174, -204.4482949998444],
+      "label": "掩码取反",
+      "category": null,
+      "inputs": [
+        {
+          "name": "mask",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输出"
+        }
+      ],
+      "params": {}
+    },
+    {
+      "id": "not_cur",
+      "type": "common_nodes.mask_nodes.MaskNotNode",
+      "pos": [1165.8970129836248, 128.88929421050995],
+      "label": "掩码取反",
+      "category": null,
+      "inputs": [
+        {
+          "name": "mask",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输出"
+        }
+      ],
+      "params": {}
+    },
+    {
+      "id": "entries",
+      "type": "common_nodes.mask_nodes.MaskAndNode",
+      "pos": [1728.1311921936676, -136.29703938593494],
+      "label": "掩码与",
+      "category": null,
+      "inputs": [
+        {
+          "name": "left",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "左侧掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "right",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "右侧掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输出"
+        }
+      ],
+      "params": {}
+    },
+    {
+      "id": "exits",
+      "type": "common_nodes.mask_nodes.MaskAndNode",
+      "pos": [1587.3840338605937, 136.29703938593485],
+      "label": "掩码与",
+      "category": null,
+      "inputs": [
+        {
+          "name": "left",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "左侧掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        },
+        {
+          "name": "right",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "右侧掩码",
+          "default": null,
+          "options": null,
+          "minimum": null,
+          "maximum": null,
+          "rows": null,
+          "json_schema": null,
+          "ui_schema": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "required": true,
+          "value_type": "dataframe",
+          "render_type": "socket",
+          "label": "输出"
+        }
+      ],
+      "params": {}
+    }
+  ],
+  "links": [
+    {
+      "id": "workflow-input:data_set->factor:data_set",
+      "from": {
+        "kind": "workflow_input",
+        "socket": "data_set"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "factor",
+        "socket": "data_set"
+      }
+    },
+    {
+      "id": "factor:factor->rank:factor",
+      "from": {
+        "kind": "node",
+        "node_id": "factor",
+        "socket": "factor"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "rank",
+        "socket": "factor"
+      }
+    },
+    {
+      "id": "rank:weights->reb:weights",
+      "from": {
+        "kind": "node",
+        "node_id": "rank",
+        "socket": "weights"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "reb",
+        "socket": "weights"
+      }
+    },
+    {
+      "id": "reb:weights->mask:input",
+      "from": {
+        "kind": "node",
+        "node_id": "reb",
+        "socket": "weights"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "input"
+      }
+    },
+    {
+      "id": "mask:mask->lag:table",
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "table"
+      }
+    },
+    {
+      "id": "lag:out->not_prev:mask",
+      "from": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "not_prev",
+        "socket": "mask"
+      }
+    },
+    {
+      "id": "mask:mask->not_cur:mask",
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "not_cur",
+        "socket": "mask"
+      }
+    },
+    {
+      "id": "lag:out->exits:left",
+      "from": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "left"
+      }
+    },
+    {
+      "id": "not_cur:out->exits:right",
+      "from": {
+        "kind": "node",
+        "node_id": "not_cur",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "right"
+      }
+    },
+    {
+      "id": "entries:out->workflow-output:entries:1",
+      "from": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "workflow_output",
+        "socket": "entries"
+      }
+    },
+    {
+      "id": "exits:out->workflow-output:exits:1",
+      "from": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "workflow_output",
+        "socket": "exits"
+      }
+    },
+    {
+      "id": "5285378c-68d9-45b2-aad3-4988eb414fad",
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "right"
+      }
+    },
+    {
+      "id": "2cb0f409-93b8-43f9-b9cf-63192d798ce6",
+      "from": {
+        "kind": "node",
+        "node_id": "not_prev",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "left"
+      }
+    }
+  ],
+  "workflow_inputs": [
+    {
+      "name": "data_set",
+      "required": true,
+      "value_type": "data_set",
+      "render_type": "socket",
+      "label": "数据集"
+    }
+  ],
+  "workflow_outputs": [
+    {
+      "name": "entries",
+      "required": true,
+      "value_type": "dataframe",
+      "render_type": "socket",
+      "label": "开仓信号"
+    },
+    {
+      "name": "exits",
+      "required": true,
+      "value_type": "dataframe",
+      "render_type": "socket",
+      "label": "平仓信号"
+    },
+    {
+      "name": "short_entries",
+      "required": false,
+      "value_type": "dataframe",
+      "render_type": "socket",
+      "label": "做空开仓信号"
+    },
+    {
+      "name": "short_exits",
+      "required": false,
+      "value_type": "dataframe",
+      "render_type": "socket",
+      "label": "做空平仓信号"
+    }
+  ],
+  "workflow_boundary_positions": {
+    "input": [-300.0, 0.0],
+    "output": [2157.0259582460617, -26.66788263152978]
+  }
+}

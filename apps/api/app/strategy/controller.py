@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Protocol
 
+from workflow.schemas import WorkflowGraphPersisted
 from workflow.validation import validate_required_workflow_fields
 
-from app.datasource.schemas import utc_now_iso
+from app.common.datetime_utils import utc_now_iso
 from app.nodes.controller import (
     list_nodes as list_workflow_nodes,
 )
 from app.nodes.schemas import WorkflowNodeSummaryPublic
+from app.persistence.sqlite_db import get_session
 from app.strategy.constants import WORKFLOW_STRATEGY_DOMAIN, strategy_workflow_template_dict
 from app.strategy.models import StrategyRow
 from app.strategy.registry import StrategyRegistry
@@ -22,8 +24,50 @@ from app.strategy.schemas import (
 )
 
 
+class StrategyWorkflowSpecLike(Protocol):
+    id: str
+    name: str
+    description: str
+    workflow: dict | None
+
+
 def get_strategy_workflow_template() -> dict:
     return strategy_workflow_template_dict()
+
+
+def register_plugin_strategy_workflow(workflow_spec: StrategyWorkflowSpecLike) -> None:
+    strategy_id = str(workflow_spec.id).strip()
+    if not strategy_id:
+        raise ValueError("plugin strategy id cannot be empty")
+
+    strategy_name = str(workflow_spec.name).strip()
+    if not strategy_name:
+        raise ValueError("plugin strategy name cannot be empty")
+
+    raw_workflow = (
+        workflow_spec.workflow
+        if workflow_spec.workflow is not None
+        else strategy_workflow_template_dict()
+    )
+    validated_workflow = WorkflowGraphPersisted.model_validate(raw_workflow).model_dump(
+        by_alias=True
+    )
+
+    now = utc_now_iso()
+    with get_session() as session:
+        existed = session.get(StrategyRow, strategy_id)
+        created_at = existed.created_at if existed is not None else now
+        session.merge(
+            StrategyRow(
+                id=strategy_id,
+                name=strategy_name,
+                description=(workflow_spec.description or "").strip(),
+                workflow=json.dumps(validated_workflow, ensure_ascii=False),
+                created_at=created_at,
+                updated_at=now,
+            )
+        )
+        session.commit()
 
 
 def to_strategy_public(row: StrategyRow) -> StrategyPublic:
