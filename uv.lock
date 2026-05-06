@@ -18,7 +18,6 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "agent-workflow-nodes",
     "alphalens-nodes",
     "common-nodes",
     "custom-code",
@@ -30,7 +29,7 @@ members = [
     "quant-agent",
     "quant-agent-api",
     "strategy-nodes",
-    "technical-factors",
+    "technical-nodes",
     "workflow",
     "workspace",
 ]
@@ -52,17 +51,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/ca/14/787e5498cd062640f
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/46/02ac5e262d4af18054b3e922b2baedbb2a03289ee792162de60a865defc5/accelerate-1.13.0-py3-none-any.whl", hash = "sha256:cf1a3efb96c18f7b152eb0fa7490f3710b19c3f395699358f08decca2b8b62e0", size = 383744, upload-time = "2026-03-04T19:34:10.313Z" },
 ]
-
-[[package]]
-name = "agent-workflow-nodes"
-version = "0.1.0"
-source = { editable = "lib/agent_workflow_nodes" }
-dependencies = [
-    { name = "workflow" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "workflow", editable = "lib/workflow" }]
 
 [[package]]
 name = "aiofiles"
@@ -5126,7 +5114,7 @@ dependencies = [
     { name = "quant-agent-api" },
     { name = "sqlmodel" },
     { name = "strategy-nodes" },
-    { name = "technical-factors" },
+    { name = "technical-nodes" },
 ]
 
 [package.dev-dependencies]
@@ -5151,7 +5139,7 @@ requires-dist = [
     { name = "quant-agent-api", editable = "apps/api" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
     { name = "strategy-nodes", editable = "plugins/strategy_nodes" },
-    { name = "technical-factors", editable = "plugins/technical_factors" },
+    { name = "technical-nodes", editable = "plugins/technical_nodes" },
 ]
 
 [package.metadata.requires-dev]
@@ -6115,9 +6103,9 @@ wheels = [
 ]
 
 [[package]]
-name = "technical-factors"
+name = "technical-nodes"
 version = "0.1.0"
-source = { editable = "plugins/technical_factors" }
+source = { editable = "plugins/technical_nodes" }
 dependencies = [
     { name = "quant-agent-api" },
     { name = "vectorbt" },

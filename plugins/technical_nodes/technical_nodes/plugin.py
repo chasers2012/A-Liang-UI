@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from app.nodes.node_plugin import NodePlugin
 
-from technical_factors.nodes import (
+from technical_nodes.nodes import (
     AtrNode,
     BbandsNode,
     EmaNode,
@@ -15,8 +15,8 @@ from technical_factors.nodes import (
 )
 
 
-class TechnicalFactorsPlugin(NodePlugin):
-    name = "technical-factors"
+class TechnicalNodesPlugin(NodePlugin):
+    name = "technical-nodes"
     nodes: ClassVar[list[type]] = [
         MaNode,
         EmaNode,

@@ -3,7 +3,7 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "technical-factors"
+name = "technical-nodes"
 version = "0.1.0"
 description = "Technical indicator workflow node plugin for quant-agent"
 requires-python = ">=3.10"
@@ -14,11 +14,11 @@ dependencies = [
 ]
 
 [project.entry-points."quant-agent.plugins"]
-technical-factors = "technical_factors.plugin:TechnicalFactorsPlugin"
+technical-nodes = "technical_nodes.plugin:TechnicalNodesPlugin"
 
 [tool.uv.sources]
 quant-agent-api = { workspace = true }
 workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
-packages = ["technical_factors"]
+packages = ["technical_nodes"]
