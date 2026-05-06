@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
+  Bot,
   BookOpen,
   Database,
   GitBranch,
@@ -55,6 +56,7 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
   { title: '任务', url: '/scheduler', icon: ListChecks },
   { title: '知识库', url: '/knowledge', icon: BookOpen },
   { title: '节点', url: '/nodes', icon: Workflow },
+  { title: '子代理', url: '/subagents', icon: Bot },
   { title: '工具', url: '/tools', icon: Wrench },
   { title: '配置', url: '/config', icon: Settings },
 ];

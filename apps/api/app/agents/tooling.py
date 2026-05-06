@@ -28,7 +28,7 @@ def build_subagent_interrupt_on(
     return interrupt_on or None
 
 
-def build_tools(candidate_tool_ids: list[str]):
+def build_tools(candidate_tool_ids: list[str]) -> dict[str, Any]:
     tools_by_id = tool_controller.get_tools()
     _, need_authorize = tool_controller.split_tool_ids_by_authorization(tools_by_id.keys())
 
@@ -50,3 +50,9 @@ def build_tools(candidate_tool_ids: list[str]):
             all_tools_by_id=tools_by_id,
         ),
     }
+
+
+def resolve_subagent_tool_ids(subagent_id: str, default_tool_ids: set[str]) -> list[str]:
+    import app.agents.controller as agents_controller
+
+    return agents_controller.get_subagent_tool_ids(subagent_id, list(default_tool_ids))

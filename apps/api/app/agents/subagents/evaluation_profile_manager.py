@@ -2,21 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "evaluation_profile.get_evaluation_profile_workflow_template",
-    "evaluation_profile.get_workflow_node_types_source",
-    "evaluation_profile.create_evaluation_profile",
-    "evaluation_profile.get_evaluation_profile_detail",
-    "evaluation_profile.get_evaluation_profile_list",
-    "evaluation_profile.update_evaluation_profile",
-    "evaluation_run.run_evaluation_run",
-    "evaluation_run.list_evaluation_runs",
-    "evaluation_run.get_evaluation_run_detail",
-}
+CATALOG_ITEM = get_subagent_catalog_item("evaluation_profile_manager")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: evaluation_profile_manager")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any] | None:
@@ -29,5 +21,5 @@ def build_subagent() -> dict[str, Any] | None:
             "你是 evaluation_profile_manager 子代理，专注评价方案维护与评价运行管理。"
         ),
         "skills": ["/skills/"],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("evaluation_profile_manager", TOOL_IDS)),
     }

@@ -4,38 +4,13 @@ from typing import Any
 
 from deepagents import FilesystemPermission
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "strategy.get_strategy_workflow_template",
-    "strategy.get_strategy_node_catalog",
-    "strategy.get_strategy_workflow_draft",
-    "strategy.create_strategy",
-    "strategy.get_strategy_detail",
-    "strategy.load_strategy_detail",
-    "strategy.get_strategy_list",
-    "strategy.update_strategy",
-    "strategy.workflow.add_node",
-    "strategy.workflow.draft_node",
-    "strategy.workflow.remove_node",
-    "strategy.workflow.update_node_metadata",
-    "strategy.workflow.move_node",
-    "strategy.workflow.set_node_param",
-    "strategy.workflow.unset_node_param",
-    "strategy.workflow.connect_nodes",
-    "strategy.workflow.connect_input",
-    "strategy.workflow.connect_output",
-    "strategy.workflow.disconnect_link",
-    "strategy.clear_strategy_workflow_draft",
-    "backtest.run_backtest",
-    "backtest.get_backtest_runs",
-    "backtest.get_backtest_run_detail",
-    "backtest.get_backtest_equity",
-    "backtest.get_backtest_trades",
-    "backtest.get_backtest_node_output",
-}
+CATALOG_ITEM = get_subagent_catalog_item("strategy-manager")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: strategy-manager")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any]:
@@ -63,5 +38,5 @@ def build_subagent() -> dict[str, Any]:
                 mode="deny",
             ),
         ],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("strategy-manager", TOOL_IDS)),
     }

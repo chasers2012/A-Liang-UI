@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from app.chat.agents.skill_store_sync import register_skill_source
+from app.agents.skill_store_sync import register_skill_source
 
 
 def register_factor_skills() -> None:

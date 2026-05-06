@@ -2,22 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "datasource.create_datasource",
-    "datasource.get_datasource_detail",
-    "datasource.get_datasource_list",
-    "datasource.update_datasource",
-    "datasource.test_datasource_connection",
-    "data_set.create_data_set",
-    "data_set.get_data_set_detail",
-    "data_set.get_data_set_list",
-    "data_set.update_data_set",
-    "data_set.get_data_set_panel_preview",
-}
+CATALOG_ITEM = get_subagent_catalog_item("data_resource_manager")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: data_resource_manager")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any] | None:
@@ -31,5 +22,5 @@ def build_subagent() -> dict[str, Any] | None:
             "你是 data_resource_manager 子代理，专注数据源与数据集维护。除非现有的数据集缺少所需的列或无法覆盖所要求的时间范围，否则返回建议使用现有数据集"
         ),
         "skills": ["/skills/"],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("data_resource_manager", TOOL_IDS)),
     }

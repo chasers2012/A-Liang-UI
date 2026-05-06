@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "knowledge.search",
-}
+CATALOG_ITEM = get_subagent_catalog_item("research")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: research")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any] | None:
@@ -21,5 +21,5 @@ def build_subagent() -> dict[str, Any] | None:
             "你是 research 子代理，负责研究与推理。你需要检索与要求相关的信息，并整理成一份简短的报告。"
         ),
         "skills": ["/skills/"],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("research", TOOL_IDS)),
     }

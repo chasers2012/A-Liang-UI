@@ -2,17 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "node.get_new_workflow_node_template",
-    "node.create_workflow_node",
-    "node.get_workflow_node_detail",
-    "node.get_workflow_node_list",
-    "node.update_workflow_node",
-}
+CATALOG_ITEM = get_subagent_catalog_item("node_manager")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: node_manager")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any] | None:
@@ -28,5 +24,5 @@ def build_subagent() -> dict[str, Any] | None:
             "你是 node_manager 子代理，负责工作流节点资产维护，完成需求中关于`节点`的部分，其他内容仅作为参考。"
         ),
         "skills": ["/skills/"],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("node_manager", TOOL_IDS)),
     }

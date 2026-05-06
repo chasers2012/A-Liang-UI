@@ -4,17 +4,13 @@ from typing import Any
 
 from factor import Factor
 
-from .shared import (
-    build_tools,
-)
+from app.agents.subagent_catalog import get_subagent_catalog_item
+from app.agents.tooling import build_tools, resolve_subagent_tool_ids
 
-TOOL_IDS = {
-    "factor.get_new_factor_template",
-    "factor.create_factor",
-    "factor.get_factor_detail",
-    "factor.get_factor_list",
-    "factor.update_factor",
-}
+CATALOG_ITEM = get_subagent_catalog_item("factor_manager")
+if CATALOG_ITEM is None:
+    raise RuntimeError("missing subagent catalog item: factor_manager")
+TOOL_IDS = set(CATALOG_ITEM.default_tool_ids)
 
 
 def build_subagent() -> dict[str, Any] | None:
@@ -46,5 +42,5 @@ def build_subagent() -> dict[str, Any] | None:
             + "- 在创建或编辑因子时，如果遇到任何逻辑困境或资源限制，你必须立即停止创建或编辑并上报问题，禁止使用任何形式的降级或兼容方案workaround。"
         ),
         "skills": ["/skills/"],
-        **build_tools(TOOL_IDS),
+        **build_tools(resolve_subagent_tool_ids("factor_manager", TOOL_IDS)),
     }

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import app.tool.controller as tool_controller
 from deepagents._models import resolve_model
 from deepagents.backends import CompositeBackend, StateBackend, StoreBackend
 from deepagents.graph import (
@@ -23,10 +22,13 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
-from .store import get_agent_store
-from .subagnets import SUBAGENT_BUILDERS
+import app.agents.controller as agents_controller
+import app.tool.controller as tool_controller
 
-MAIN_AGENT_TOOL_IDS = ()
+from .store import get_agent_store
+from .subagent_catalog import get_subagent_catalog_item
+from .subagents import SUBAGENT_BUILDERS
+
 _CHECKPOINTER: MemorySaver | None = None
 
 TASK_SYSTEM_PROMPT = """## `task` (subagent spawner)
@@ -119,9 +121,16 @@ async def create_main_agent(model: str | BaseChatModel) -> CompiledStateGraph[An
             -3,
             _ToolExclusionMiddleware(excluded=profile.excluded_tools),
         )
+    main_agent_catalog_item = get_subagent_catalog_item("main_agent")
+    if main_agent_catalog_item is None:
+        raise RuntimeError("missing subagent catalog item: main_agent")
+    main_agent_tool_ids = agents_controller.get_subagent_tool_ids(
+        "main_agent",
+        list(main_agent_catalog_item.default_tool_ids),
+    )
     tools_by_id = tool_controller.get_tools()
     main_agent_tools = [
-        tools_by_id[tool_id] for tool_id in MAIN_AGENT_TOOL_IDS if tool_id in tools_by_id
+        tools_by_id[tool_id] for tool_id in main_agent_tool_ids if tool_id in tools_by_id
     ]
 
     system_prompt = (

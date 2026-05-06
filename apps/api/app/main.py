@@ -18,6 +18,7 @@ import app.llm_tools
 import app.persistence
 import app.plugin
 import app.scheduler
+from app.agents import api as agents_router
 from app.backtest import api as backtests_router
 from app.chat import api as agent_llm_router
 from app.config import api as config_router
@@ -106,6 +107,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
+app.include_router(agents_router.router)
 app.include_router(agent_llm_router.router)
 app.include_router(config_router.router)
 app.include_router(datasources_router.router)
