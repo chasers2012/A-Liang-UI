@@ -12,13 +12,13 @@ from factor import Factor
 from factor.loader import parse_factor_meta_from_source
 
 from app.common.datetime_utils import utc_now_iso
+from app.common.id import generate_id
 from app.factors.models import FactorRow
 from app.factors.registry import FactorItemsRegistry
 from app.factors.schemas import (
     FactorDetailPublic,
     FactorParamSpecPublic,
     FactorSummaryPublic,
-    generate_id,
     row_to_summary,
     source_relative_path,
 )
@@ -85,7 +85,7 @@ def _validate_factor_metadata(
 
 
 def create_factor(source: str) -> FactorRow:
-    fid = generate_id()
+    fid = generate_id("factors")
     now = utc_now_iso()
     name, group, description, dependencies, param_specs = parse_factor_meta_from_source(source)
     name, group, description, dependencies, param_specs = _validate_factor_metadata(
@@ -109,6 +109,14 @@ def create_factor(source: str) -> FactorRow:
     )
     SourceFiles.write_source_text(rec.source_path, source, validators=[validate_source_syntax])
     return FactorItemsRegistry.add_item(rec)
+
+
+def register_plugin_factor(factor_cls: type[Factor]) -> None:
+    factor_name = getattr(factor_cls, "name", "")
+    if not isinstance(factor_name, str) or not factor_name.strip():
+        raise ValueError("因子 name 不能为空")
+    factor_id = generate_id("factors", factor_name.strip())
+    FactorItemsRegistry.register_plugin_factor(factor_id, factor_cls)
 
 
 def update_factor(factor_id: str, source: str) -> FactorRow:

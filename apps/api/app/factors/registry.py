@@ -30,7 +30,7 @@ class FactorItemsRegistry:
             session.merge(
                 FactorRow(
                     id=fid,
-                    name=fid,
+                    name=getattr(factor_cls, "name", fid),
                     group=getattr(factor_cls, "group", "factor") or "factor",
                     description=getattr(factor_cls, "description", "") or "",
                     is_plugin=True,

@@ -12,6 +12,7 @@ dependencies = [
     "strategy-nodes",
     "alphalens-nodes",
     "technical-nodes",
+    "example-factors",
     "sqlmodel>=0.0.38",
 ]
 
@@ -24,6 +25,7 @@ common-nodes = { workspace = true }
 strategy-nodes = { workspace = true }
 alphalens-nodes = { workspace = true }
 technical-nodes = { workspace = true }
+example-factors = { workspace = true }
 datasources = { workspace = true }
 factor = { workspace = true }
 workspace = { workspace = true }
@@ -31,7 +33,7 @@ custom-code = { workspace = true }
 workflow = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/llm_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/llm_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors"]
 
 [dependency-groups]
 dev = [

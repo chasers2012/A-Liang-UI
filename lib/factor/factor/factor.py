@@ -43,14 +43,13 @@ class Factor(ABC):
     - 应当按照因子的功能给因子设定一个合理的分组，优先从现有的分组中选取。
 
     Subclasses define:
-    - ``name``: factor id
-    - ``group``: registry grouping (optional override; default ``"factor"``)
+    - ``name``: 因子名称
+    - ``group``: 因子分组
     - ``window``: maximum lookback length
     - ``calc(**kwargs)``: compute values from dependency wide DataFrame (index=date, columns=asset)
     """
 
     name: str = "factor"
-    label: str = "因子"
     group: str = "factor"
     description: str = "因子描述"
 
