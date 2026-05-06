@@ -1,0 +1,282 @@
+{
+  "nodes": [
+    {
+      "id": "factor",
+      "type": "common_nodes.factor_ref.FactorRefNode",
+      "pos": [300, 0],
+      "label": "Factor Reference",
+      "params": {
+        "factor_id": ""
+      }
+    },
+    {
+      "id": "rank",
+      "type": "strategy_nodes.nodes.RankTopKEqualWeightNode",
+      "pos": [600, 0],
+      "label": "Rank TopK Equal Weight",
+      "params": {
+        "k": 10,
+        "ascending": false
+      }
+    },
+    {
+      "id": "reb",
+      "type": "strategy_nodes.nodes.RebalanceNode",
+      "pos": [900, 0],
+      "label": "Rebalance",
+      "params": {
+        "freq": 1
+      }
+    },
+    {
+      "id": "mask",
+      "type": "common_nodes.mask_nodes.ThresholdMask",
+      "pos": [1200, 0],
+      "label": "Weights > 0 Mask",
+      "params": {
+        "threshold": 0.0,
+        "operator": "gt"
+      }
+    },
+    {
+      "id": "lag",
+      "type": "common_nodes.lag_node.LagNode",
+      "pos": [1500, 0],
+      "label": "Lag(1)",
+      "params": {
+        "bars": 1
+      }
+    },
+    {
+      "id": "not_prev",
+      "type": "common_nodes.mask_nodes.MaskNotNode",
+      "pos": [1800, -120],
+      "label": "NOT Prev",
+      "params": {}
+    },
+    {
+      "id": "not_cur",
+      "type": "common_nodes.mask_nodes.MaskNotNode",
+      "pos": [1800, 120],
+      "label": "NOT Cur",
+      "params": {}
+    },
+    {
+      "id": "entries",
+      "type": "common_nodes.mask_nodes.MaskAndNode",
+      "pos": [2100, -120],
+      "label": "Entries",
+      "params": {}
+    },
+    {
+      "id": "exits",
+      "type": "common_nodes.mask_nodes.MaskAndNode",
+      "pos": [2100, 120],
+      "label": "Exits",
+      "params": {}
+    }
+  ],
+  "links": [
+    {
+      "from": {
+        "kind": "workflow_input",
+        "socket": "data_set"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "factor",
+        "socket": "data_set"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "factor",
+        "socket": "factor"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "rank",
+        "socket": "factor"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "rank",
+        "socket": "weights"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "reb",
+        "socket": "weights"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "reb",
+        "socket": "weights"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "input"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "table"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "not_prev",
+        "socket": "mask"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "not_cur",
+        "socket": "mask"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "mask",
+        "socket": "mask"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "left"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "not_prev",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "right"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "lag",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "left"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "not_cur",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "right"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "entries",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "workflow_output",
+        "socket": "entries"
+      }
+    },
+    {
+      "from": {
+        "kind": "node",
+        "node_id": "exits",
+        "socket": "out"
+      },
+      "to": {
+        "kind": "workflow_output",
+        "socket": "exits"
+      }
+    }
+  ],
+  "workflow_inputs": [
+    {
+      "name": "data_set",
+      "required": true,
+      "label": "数据集",
+      "description": "策略计算与回测使用的数据集",
+      "value_type": "data_set",
+      "render_type": "socket"
+    }
+  ],
+  "workflow_outputs": [
+    {
+      "name": "entries",
+      "required": true,
+      "label": "开仓信号",
+      "description": "宽表布尔矩阵，表示每个时间点/资产是否触发开仓。\n\n示例：\n\n| date       | AAPL  | MSFT |\n|------------|-------|------|\n| 2026-04-01 | True  | False|\n| 2026-04-02 | False | True |\n",
+      "value_type": "dataframe",
+      "render_type": "socket"
+    },
+    {
+      "name": "exits",
+      "required": true,
+      "label": "平仓信号",
+      "description": "宽表布尔矩阵，表示每个时间点/资产是否触发平仓。\n\n示例：\n\n| date       | AAPL  | MSFT |\n|------------|-------|------|\n| 2026-04-01 | False | False|\n| 2026-04-02 | True  | False|\n",
+      "value_type": "dataframe",
+      "render_type": "socket"
+    },
+    {
+      "name": "short_entries",
+      "required": false,
+      "label": "做空开仓信号",
+      "description": "可选：用于 from_signals 参数 `short_entries` 的宽表输出。",
+      "value_type": "dataframe",
+      "render_type": "socket"
+    },
+    {
+      "name": "short_exits",
+      "required": false,
+      "label": "做空平仓信号",
+      "description": "可选：用于 from_signals 参数 `short_exits` 的宽表输出。",
+      "value_type": "dataframe",
+      "render_type": "socket"
+    }
+  ],
+  "workflow_boundary_positions": {
+    "input": [-300, 0],
+    "output": [2400, 0]
+  }
+}
