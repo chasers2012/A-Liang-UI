@@ -7,7 +7,12 @@ from pathlib import Path
 
 from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
-from docling.document_converter import DocumentConverter
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+    TableFormerMode,
+    TableStructureOptions,
+)
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
@@ -68,10 +73,9 @@ def _parse_heading_fix_result(
         if int(item.id) != expected_id:
             return None
         level = int(item.level)
-        title = item.title.strip()
         level = min(6, max(1, level))
-        if not title:
-            title = heading_rows[expected_id][2]
+        # Keep the original heading text and only apply adjusted level.
+        title = heading_rows[expected_id][2]
         updated_rows.append((heading_rows[expected_id][0], level, title))
     return updated_rows
 
@@ -101,7 +105,21 @@ def _build_heading_level_lookup(markdown_text: str) -> dict[HeadingPath, Heading
 def _get_docling_converter() -> DocumentConverter:
     global _docling_converter
     if _docling_converter is None:
-        _docling_converter = DocumentConverter()
+        # Prefer faster table reconstruction for PDF ingestion:
+        # - table mode "fast" sacrifices some structural precision for latency.
+        # - cell matching off avoids extra alignment work.
+        pdf_options = PdfPipelineOptions(
+            do_ocr=False,
+            table_structure_options=TableStructureOptions(
+                mode=TableFormerMode.FAST,
+                do_cell_matching=False,
+            ),
+        )
+        _docling_converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
+            }
+        )
     return _docling_converter
 
 
@@ -145,9 +163,10 @@ def _normalize_markdown_headings_with_llm(markdown_text: str) -> str:
             "请修复 Markdown 文档的标题层级。\n"
             "要求：\n"
             "1. 你只会收到标题列表，不会收到正文。\n"
-            "2. 可以调整标题 level(1-6) 与 title 文本，使结构更清晰。\n"
+            "2. 可以调整标题 level(1-6)，使结构更清晰。\n"
             "3. 每一项标题都可能过高或过低，需要联系整体的格式和语义将它修改到合适的层级\n"
             "4. 保持条目数量和 id 完全不变，不新增不删除。\n"
+            "5. 不得修改标题title文本"
         )
         structured_llm = llm.with_structured_output(HeadingFixOutput)
         result = structured_llm.invoke(
