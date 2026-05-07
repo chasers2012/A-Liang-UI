@@ -15,7 +15,7 @@ from .config import (
     get_knowledge_settings,
 )
 from .models import KnowledgeChunkRow, KnowledgeDocumentRow
-from .parser import extract_text_from_path
+from .parser import extract_chunks_from_path, extract_chunks_from_text
 from .rag import RetrievalResult, VectorStoreAdapter
 from .schemas import (
     KnowledgeDocumentCreateRequest,
@@ -127,16 +127,18 @@ def index_document(
     if row is None:
         raise ValueError("文档不存在")
     raw_content = (content or "").strip()
-    if not raw_content and uploaded_path:
+    chunks: list[str] | None = None
+    if uploaded_path:
         file_path = workspace_path(uploaded_path)
-        raw_content, _ = extract_text_from_path(Path(file_path))
-    if not raw_content:
+        chunks, _ = extract_chunks_from_path(Path(file_path))
+    elif raw_content:
+        chunks, _ = extract_chunks_from_text(raw_content, filename=row.name)
+    else:
         raise ValueError("文档内容为空，无法建立索引")
 
     try:
         settings = get_settings()
         adapter = VectorStoreAdapter(settings)
-        chunks = adapter.split_text(raw_content)
         chunk_ids = [str(uuid4()) for _ in chunks]
         docs = adapter.upsert_chunks(
             document_id=document_id,

@@ -45,16 +45,6 @@ class KnowledgeRagSettings(BaseConfig):
                     "title": "Rerank 模型",
                     "default": "BAAI/bge-reranker-base",
                 },
-                "chunk_size": {
-                    "type": "integer",
-                    "title": "切片长度",
-                    "default": 800,
-                },
-                "chunk_overlap": {
-                    "type": "integer",
-                    "title": "切片重叠",
-                    "default": 120,
-                },
                 "vector_store": {
                     "type": "string",
                     "title": "向量存储",
@@ -81,7 +71,7 @@ class KnowledgeRagSettings(BaseConfig):
                     "default": {"normalize_embeddings": True},
                 },
             },
-            "required": ["enabled", "top_k", "threshold", "chunk_size", "chunk_overlap"],
+            "required": ["enabled", "top_k", "threshold"],
         }
         ui_schema: dict[str, Any] = {"ui:submitButtonOptions": {"norender": True}}
         return schema, ui_schema

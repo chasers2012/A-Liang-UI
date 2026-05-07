@@ -10,7 +10,6 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from workspace import workspace_path
 
 from .config import KnowledgeSettings
@@ -62,7 +61,6 @@ class VectorStoreAdapter:
             return
         self._settings = settings
         self._embedding = LocalEmbeddings(settings)
-        self._splitter: RecursiveCharacterTextSplitter | None = None
         self._reranker: Any = None
         persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
@@ -72,15 +70,6 @@ class VectorStoreAdapter:
             persist_directory=persist_dir.as_posix(),
         )
         self.__class__._initialized = True
-
-    @property
-    def splitter(self) -> RecursiveCharacterTextSplitter:
-        if self._splitter is None:
-            self._splitter = RecursiveCharacterTextSplitter(
-                chunk_size=int(self._settings.get("chunk_size", 800)),
-                chunk_overlap=int(self._settings.get("chunk_overlap", 120)),
-            )
-        return self._splitter
 
     @property
     def reranker(self) -> CrossEncoderReranker:
@@ -93,9 +82,6 @@ class VectorStoreAdapter:
                 top_n=int(self._settings.get("rerank_top_n", 4)),
             )
         return self._reranker
-
-    def split_text(self, text: str) -> list[str]:
-        return [piece.strip() for piece in self.splitter.split_text(text) if piece.strip()]
 
     def upsert_chunks(
         self,
