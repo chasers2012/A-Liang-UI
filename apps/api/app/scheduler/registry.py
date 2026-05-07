@@ -186,6 +186,28 @@ class SchedulerRegistry:
             return session.get(SchedulerJobRow, row.id)
 
     @classmethod
+    def requeue_running_jobs(cls, *, now: datetime) -> list[str]:
+        with get_session() as session:
+            stmt = select(SchedulerJobRow.id).where(SchedulerJobRow.status == "running")
+            job_ids = list(session.exec(stmt).all())
+            if not job_ids:
+                return []
+
+            update_stmt = (
+                update(SchedulerJobRow)
+                .where(SchedulerJobRow.id.in_(job_ids))
+                .values(
+                    status="retrying",
+                    next_run_at=now,
+                    worker_id=None,
+                    started_at=None,
+                )
+            )
+            session.exec(update_stmt)
+            session.commit()
+            return job_ids
+
+    @classmethod
     def get_job(cls, job_id: str) -> SchedulerJobRow | None:
         with get_session() as session:
             return session.get(SchedulerJobRow, job_id)

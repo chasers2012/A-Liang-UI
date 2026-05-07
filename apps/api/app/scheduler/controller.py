@@ -329,3 +329,16 @@ def set_task_next_run(task_id: str, next_run_at: datetime | None) -> None:
         task_id=task_id, next_run_at=next_run_at, updated_at=utcnow()
     ):
         raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
+
+
+def recover_incomplete_jobs_on_startup() -> int:
+    now = utcnow()
+    job_ids = SchedulerRegistry.requeue_running_jobs(now=now)
+    for job_id in job_ids:
+        _append_job_log(
+            job_id,
+            "retrying",
+            message="job recovered after API restart",
+            extra={"reason": "api_restart_recovery", "next_run_at": now.isoformat()},
+        )
+    return len(job_ids)

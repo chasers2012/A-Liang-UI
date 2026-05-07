@@ -58,6 +58,13 @@ def main() -> None:
 
 
 @register_startup_job
+def recover_scheduler_jobs_after_restart() -> None:
+    recovered = controller.recover_incomplete_jobs_on_startup()
+    if recovered > 0:
+        logger.info("scheduler recovered %s unfinished jobs after restart", recovered)
+
+
+@register_startup_job
 def start_scheduler_worker() -> None:
     global _WORKER_THREAD
 
