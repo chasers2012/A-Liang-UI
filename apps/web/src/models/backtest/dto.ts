@@ -19,6 +19,13 @@ export interface BacktestRunDetail extends BacktestRunSummary {
   results: unknown;
 }
 
+export interface BacktestRunListResponse {
+  items: BacktestRunSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
 export interface BacktestEquityResponse {
   run_id: string;
   equity_curve: Array<Record<string, unknown>>;

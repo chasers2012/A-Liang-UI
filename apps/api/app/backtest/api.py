@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.http_errors import http_bad_request
 
@@ -8,6 +8,7 @@ from . import controller
 from .schemas import (
     BacktestRunDetail,
     BacktestRunFormSpecPublic,
+    BacktestRunListResponse,
     BacktestRunSummary,
     RunBacktestRequest,
     backtest_run_form_spec_public,
@@ -29,13 +30,19 @@ def get_backtest_run_spec() -> BacktestRunFormSpecPublic:
     return backtest_run_form_spec_public()
 
 
-@router.get("", response_model=list[BacktestRunSummary])
+@router.get("", response_model=BacktestRunListResponse)
 def get_backtest_runs(
     strategy_id: str | None = None,
     status: str | None = None,
-    limit: int | None = None,
-) -> list[BacktestRunSummary]:
-    return controller.list_backtest_runs(strategy_id=strategy_id, status=status, limit=limit)
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1),
+) -> BacktestRunListResponse:
+    return controller.list_backtest_runs(
+        strategy_id=strategy_id,
+        status=status,
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.get("/{run_id}", response_model=BacktestRunDetail)

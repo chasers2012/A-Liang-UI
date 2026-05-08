@@ -5,5 +5,5 @@ import type { BacktestRunSummary } from './dto';
 
 export const backtestsListAtoms = createRefreshableAsyncAtoms<BacktestRunSummary[] | null>({
   initialValue: null,
-  fetcher: async () => await listBacktests({ limit: 50 }),
+  fetcher: async () => (await listBacktests({ page: 1, pageSize: 10 })).items,
 });

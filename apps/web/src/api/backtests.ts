@@ -1,6 +1,7 @@
 import type {
   BacktestEquityResponse,
   BacktestRunDetail,
+  BacktestRunListResponse,
   BacktestRunSummary,
   BacktestTradesResponse,
   BacktestNodeOutputResponse,
@@ -28,14 +29,16 @@ export function getBacktestRunSpec(): Promise<BacktestRunFormSpec> {
 export function listBacktests(params?: {
   strategyId?: string;
   status?: string;
-  limit?: number;
-}): Promise<BacktestRunSummary[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<BacktestRunListResponse> {
   const qs = new URLSearchParams();
   if (params?.strategyId) qs.set('strategy_id', params.strategyId);
   if (params?.status) qs.set('status', params.status);
-  if (params?.limit) qs.set('limit', String(params.limit));
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.pageSize) qs.set('page_size', String(params.pageSize));
   const suffix = qs.toString();
-  return apiFetchJson<BacktestRunSummary[]>(`/backtests${suffix ? `?${suffix}` : ''}`);
+  return apiFetchJson<BacktestRunListResponse>(`/backtests${suffix ? `?${suffix}` : ''}`);
 }
 
 export function getBacktest(runId: string): Promise<BacktestRunDetail> {

@@ -12,7 +12,12 @@ from .engine.runner import run_backtest_and_persist
 from .models import BacktestRunRow
 from .registry import BacktestRunsStore
 from .result_manager import BacktestResultManager
-from .schemas import BacktestRunDetail, BacktestRunSummary, RunBacktestRequest
+from .schemas import (
+    BacktestRunDetail,
+    BacktestRunListResponse,
+    BacktestRunSummary,
+    RunBacktestRequest,
+)
 
 
 class BacktestRunNotFoundError(ValueError):
@@ -88,12 +93,19 @@ def list_backtest_runs(
     *,
     strategy_id: str | None = None,
     status: str | None = None,
-    limit: int | None = None,
-) -> list[BacktestRunSummary]:
-    return [
-        _to_summary(r)
-        for r in BacktestRunsStore.list_items(strategy_id=strategy_id, status=status, limit=limit)
-    ]
+    page: int = 1,
+    page_size: int = 10,
+) -> BacktestRunListResponse:
+    offset = (page - 1) * page_size
+    total, rows = BacktestRunsStore.list_items(
+        strategy_id=strategy_id, status=status, offset=offset, limit=page_size
+    )
+    return BacktestRunListResponse(
+        items=[_to_summary(r) for r in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
 
 
 def get_backtest_run(run_id: str) -> BacktestRunDetail:

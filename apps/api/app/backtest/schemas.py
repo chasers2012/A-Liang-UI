@@ -34,6 +34,13 @@ class BacktestRunDetail(BacktestRunSummary):
     results: Any = None
 
 
+class BacktestRunListResponse(BaseModel):
+    items: list[BacktestRunSummary]
+    total: int = Field(ge=0)
+    page: int = Field(ge=1)
+    page_size: int = Field(ge=1)
+
+
 class RunBacktestRequest(BaseModel):
     strategy_id: str
     data_set_id: str

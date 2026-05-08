@@ -31,21 +31,28 @@ def run_backtest(body: RunBacktestRequest) -> dict[str, Any]:
 def get_backtest_runs(
     strategy_id: str | None = None,
     status: str | None = None,
-    limit: int | None = None,
-) -> list[dict[str, Any]]:
+    page: int = 1,
+    page_size: int = 10,
+) -> dict[str, Any]:
     """
     查询回测任务列表。
 
     Args:
         strategy_id: 可选，按策略 ID 过滤。
         status: 可选，按状态过滤。
-        limit: 可选，控制返回数量上限。
+        page: 页码，从 1 开始。
+        page_size: 每页数量。
 
     Returns:
-        回测任务列表（JSON 可序列化）。
+        分页回测任务列表（JSON 可序列化）。
     """
-    runs = controller.list_backtest_runs(strategy_id=strategy_id, status=status, limit=limit)
-    return [r.model_dump(mode="json") for r in runs]
+    result = controller.list_backtest_runs(
+        strategy_id=strategy_id,
+        status=status,
+        page=page,
+        page_size=page_size,
+    )
+    return result.model_dump(mode="json")
 
 
 @safe_tool("get_backtest_run_detail", parse_docstring=True)
