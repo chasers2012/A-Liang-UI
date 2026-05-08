@@ -8,8 +8,8 @@ from app.plugin import PluginConfigSchema
 from factor.datasource import BetweenFilter, FactorDataSource, InFilter, LoadFilter
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import bindparam
+from sqlalchemy.engine import Engine
 from sqlmodel import create_engine, inspect, text
-from sqlmodel.engine import Engine
 
 
 class SqlConfig(BaseModel):

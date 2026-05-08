@@ -21,6 +21,7 @@ members = [
     "alphalens-nodes",
     "common-nodes",
     "custom-code",
+    "datasource-plugins-baostock",
     "datasource-plugins-builtin",
     "echarts-nodes",
     "example-evaluation-profiles",
@@ -288,6 +289,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9a/8e/82a0fe20a541c03148528be8cac2408564a6c9a0cc7e9171802bc1d26985/attrs-26.1.0.tar.gz", hash = "sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32", size = 952055, upload-time = "2026-03-19T14:22:25.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/64/b4/17d4b0b2a2dc85a6df63d1157e028ed19f90d4cd97c36717afef2bc2f395/attrs-26.1.0-py3-none-any.whl", hash = "sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309", size = 67548, upload-time = "2026-03-19T14:22:23.645Z" },
+]
+
+[[package]]
+name = "baostock"
+version = "0.9.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/5e/471c14eebb204ed89de0fe11740d6f4513d44454fe5e35bc13b29ef3e510/baostock-0.9.1.tar.gz", hash = "sha256:5ec3a44cbec9471872b0a4ae02c39aea29db688bb740b769167393bc6e244a39", size = 25560, upload-time = "2026-04-14T09:55:28.382Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/eb/fadb92e38fbb2fefa3d9d3c14d016cf3a5920e34666aeb9950bc5311c856/baostock-0.9.1-py3-none-any.whl", hash = "sha256:a30749f095fd58ecd7ba3799dad605d355ad8e6d19310bc437039e1e526f15fe", size = 47918, upload-time = "2026-04-14T09:55:27.129Z" },
 ]
 
 [[package]]
@@ -918,6 +931,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/a4/f71d9cf3a5ac257c993b5ca3f93df5f7fb395c725e7f1e6479d2514173c3/dataclasses_json-0.6.7.tar.gz", hash = "sha256:b6b3e528266ea45b9535223bc53ca645f5208833c29229e847b3f26a1cc55fc0", size = 32227, upload-time = "2024-06-09T16:20:19.103Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c3/be/d0d44e092656fe7a06b55e6103cbce807cdbdee17884a5367c68c9860853/dataclasses_json-0.6.7-py3-none-any.whl", hash = "sha256:0dbf33f26c8d5305befd61b39d2b3414e8a407bedc2834dea9b8d642666fb40a", size = 28686, upload-time = "2024-06-09T16:20:16.715Z" },
+]
+
+[[package]]
+name = "datasource-plugins-baostock"
+version = "0.1.0"
+source = { editable = "plugins/datasource_plugins_baostock" }
+dependencies = [
+    { name = "baostock" },
+    { name = "quant-agent-api" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "baostock", specifier = ">=0.9.1" },
+    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [[package]]
@@ -4822,6 +4850,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alphalens-nodes" },
     { name = "common-nodes" },
+    { name = "datasource-plugins-baostock" },
     { name = "datasource-plugins-builtin" },
     { name = "echarts-nodes" },
     { name = "example-evaluation-profiles" },
@@ -4849,6 +4878,7 @@ dev = [
 requires-dist = [
     { name = "alphalens-nodes", editable = "plugins/alphalens_nodes" },
     { name = "common-nodes", editable = "plugins/common_nodes" },
+    { name = "datasource-plugins-baostock", editable = "plugins/datasource_plugins_baostock" },
     { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
     { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
     { name = "example-evaluation-profiles", editable = "plugins/example_evaluation_profiles" },
