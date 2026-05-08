@@ -21,8 +21,19 @@ FIXED_COLUMNS = [
 json_schema = {"type": "object", "properties": {}, "required": []}
 
 
-def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
-    start_date, end_date, selected_codes = extract_code_dates(filters)
+def load_frame(
+    *,
+    columns: list[str],
+    date_column: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    asset_column: str | None = None,
+    asset_values: list[str] | None = None,
+    config: dict,
+) -> pd.DataFrame:
+    start_date, end_date, selected_codes = extract_code_dates(
+        start_date=start_date, end_date=end_date, asset_values=asset_values
+    )
     quarters = quarter_range(start_date, end_date)
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None

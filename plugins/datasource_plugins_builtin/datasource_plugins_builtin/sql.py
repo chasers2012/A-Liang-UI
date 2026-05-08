@@ -5,7 +5,7 @@ from typing import Any, Literal
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
 from app.plugin import PluginConfigSchema
-from factor.datasource import BetweenFilter, FactorDataSource, InFilter, LoadFilter
+from factor.datasource import FactorDataSource
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import bindparam
 from sqlalchemy.engine import Engine
@@ -107,7 +107,11 @@ class SqlDataSource(FactorDataSource):
         self,
         *,
         columns: list[str],
-        filters: list[LoadFilter] | None = None,
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         prep = self._engine.dialect.identifier_preparer
 
@@ -123,37 +127,30 @@ class SqlDataSource(FactorDataSource):
         params: dict = {}
         stmt = None
 
-        if filters:
-            codes_needed = False
-            for i, flt in enumerate(filters):
-                if isinstance(flt, BetweenFilter):
-                    col_sql = _quote_ident(self._engine, flt.column)
-                    p1 = f"b{i}_s"
-                    p2 = f"b{i}_e"
-                    where_parts.append(f"{col_sql} >= :{p1} AND {col_sql} <= :{p2}")
-                    params[p1] = str(flt.start)
-                    params[p2] = str(flt.end)
-                elif isinstance(flt, InFilter):
-                    col_sql = _quote_ident(self._engine, flt.column)
-                    pname = f"in{i}"
-                    where_parts.append(f"{col_sql} IN :{pname}")
-                    params[pname] = [str(v) for v in (flt.values or [])]
-                    codes_needed = True
-                else:
-                    raise TypeError(f"Unsupported filter: {type(flt)!r}")
+        codes_needed = False
+        if date_column is not None:
+            col_sql = _quote_ident(self._engine, date_column)
+            if start_date is not None:
+                where_parts.append(f"{col_sql} >= :date_start")
+                params["date_start"] = str(start_date)
+            if end_date is not None:
+                where_parts.append(f"{col_sql} <= :date_end")
+                params["date_end"] = str(end_date)
 
-            sql = f"SELECT {', '.join(select_parts)} FROM {self._table_sql}"
-            if where_parts:
-                sql += f" WHERE {' AND '.join(where_parts)}"
-            if codes_needed:
-                stmt = text(sql)
-                for k in [k for k in params if k.startswith("in")]:
-                    stmt = stmt.bindparams(bindparam(k, expanding=True))
-            else:
-                stmt = text(sql)
-        else:
-            sql = f"SELECT {', '.join(select_parts)} FROM {self._table_sql}"
-            stmt = text(sql)
+        if asset_values is not None:
+            if asset_column is None:
+                raise ValueError("asset_values 过滤需要 asset_column")
+            col_sql = _quote_ident(self._engine, asset_column)
+            where_parts.append(f"{col_sql} IN :asset_values")
+            params["asset_values"] = [str(v) for v in asset_values]
+            codes_needed = True
+
+        sql = f"SELECT {', '.join(select_parts)} FROM {self._table_sql}"
+        if where_parts:
+            sql += f" WHERE {' AND '.join(where_parts)}"
+        stmt = text(sql)
+        if codes_needed:
+            stmt = stmt.bindparams(bindparam("asset_values", expanding=True))
 
         return pd.read_sql(stmt, self._engine, params=params)
 

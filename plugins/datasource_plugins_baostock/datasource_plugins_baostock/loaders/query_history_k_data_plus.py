@@ -93,11 +93,22 @@ def _normalize_fields(fields: list[str]) -> list[str]:
     return [f for f in normalized if f in K_DATA_FIELDS]
 
 
-def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
+def load_frame(
+    *,
+    columns: list[str],
+    date_column: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    asset_column: str | None = None,
+    asset_values: list[str] | None = None,
+    config: dict,
+) -> pd.DataFrame:
 
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     selected_fields = _normalize_fields(config.get("fields", []))
-    start_date, end_date, selected_codes = extract_code_dates(filters)
+    start_date, end_date, selected_codes = extract_code_dates(
+        start_date=start_date, end_date=end_date, asset_values=asset_values
+    )
 
     api_fn = getattr(bs, API_NAME, None)
     if api_fn is None or not callable(api_fn):

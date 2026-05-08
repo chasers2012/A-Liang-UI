@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
-from factor.datasource import BetweenFilter, InFilter, LoadFilter
 
 
 def as_dataframe(rs, *, columns: list[str] | None = None) -> pd.DataFrame:
@@ -17,22 +16,15 @@ def as_dataframe(rs, *, columns: list[str] | None = None) -> pd.DataFrame:
 
 
 def extract_code_dates(
-    filters: list[LoadFilter] | None,
+    *,
+    start_date: str | None,
+    end_date: str | None,
+    asset_values: list[str] | None,
 ) -> tuple[str | None, str | None, list[str] | None]:
-    start_date: str | None = None
-    end_date: str | None = None
-    selected_codes: list[str] | None = None
-    for flt in filters or []:
-        if isinstance(flt, BetweenFilter):
-            start_date = str(pd.Timestamp(flt.start).date())
-            end_date = str(pd.Timestamp(flt.end).date())
-        elif isinstance(flt, InFilter):
-            if flt.column != "code":
-                continue
-            selected_codes = [str(v).strip() for v in (flt.values or []) if str(v).strip()]
-        else:
-            raise TypeError(f"Unsupported filter: {type(flt)!r}")
-    return start_date, end_date, selected_codes
+    normalized_start = str(pd.Timestamp(start_date).date()) if start_date else None
+    normalized_end = str(pd.Timestamp(end_date).date()) if end_date else None
+    selected_codes = [str(v).strip() for v in (asset_values or []) if str(v).strip()] or None
+    return normalized_start, normalized_end, selected_codes
 
 
 def quarter_range(start_date: str | None, end_date: str | None) -> list[tuple[int, int]]:

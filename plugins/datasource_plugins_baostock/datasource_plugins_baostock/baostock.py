@@ -6,7 +6,7 @@ import baostock as bs
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
 from app.plugin import PluginConfigSchema
-from factor.datasource import BetweenFilter, FactorDataSource, InFilter, LoadFilter
+from factor.datasource import FactorDataSource
 
 from .common import (
     BaoStockConfig,
@@ -42,14 +42,25 @@ class BaoStockDataSource(FactorDataSource):
         return sorted({str(col).strip() for col in fixed_columns if str(col).strip()})
 
     def load_frame(
-        self, *, columns: list[str], filters: list[LoadFilter] | None = None
+        self,
+        *,
+        columns: list[str],
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         loader = API_LOADERS.get(self._api_name)
         if loader is None:
             raise ValueError(f"BaoStock 未配置 loader: {self._api_name}")
         return loader(
             columns=columns,
-            filters=filters,
+            date_column=date_column,
+            start_date=start_date,
+            end_date=end_date,
+            asset_column=asset_column,
+            asset_values=asset_values,
             config=self._api_params,
         )
 
@@ -59,7 +70,7 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
 
     config = PluginConfigSchema(
         title="BaoStock 数据源",
-        description="通过 baostock 拉取 A 股数据（参数由数据集 filters 驱动）。",
+        description="通过 baostock 拉取 A 股数据（参数由数据集时间和资产过滤驱动）。",
         json_schema={
             "type": "object",
             "properties": {
@@ -154,11 +165,14 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
 
             start_date, end_date = self._get_verify_trade_dates()
             codes = self._get_top5_sz50_codes(end_date)
-            filters = [
-                BetweenFilter("date", start_date, end_date),
-                InFilter("code", codes),
-            ]
-            df = probe.load_frame(columns=[], filters=filters)
+            df = probe.load_frame(
+                columns=[],
+                date_column="date",
+                start_date=start_date,
+                end_date=end_date,
+                asset_column="code",
+                asset_values=codes,
+            )
             if df.empty:
                 return VerifyResult(ok=False, message="BaoStock 查询失败: empty result")
         except Exception as e:

@@ -44,8 +44,24 @@ class BoundFactorDataSource(FactorDataSource):
     def list_columns(self) -> list[str]:
         return self._inner.list_columns()
 
-    def load_frame(self, *, columns: list[str], filters=None):  # type: ignore[no-untyped-def]
-        return self._inner.load_frame(columns=columns, filters=filters)
+    def load_frame(
+        self,
+        *,
+        columns: list[str],
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
+    ):  # type: ignore[no-untyped-def]
+        return self._inner.load_frame(
+            columns=columns,
+            date_column=date_column,
+            start_date=start_date,
+            end_date=end_date,
+            asset_column=asset_column,
+            asset_values=asset_values,
+        )
 
 
 def get_datasource(id: str) -> FactorDataSource | None:

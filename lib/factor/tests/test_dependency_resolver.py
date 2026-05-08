@@ -28,12 +28,26 @@ class _FixedSource(FactorDataSource):
         self,
         *,
         columns: list[str],
-        filters=None,
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         missing = [c for c in columns if c not in self._df.columns]
         if missing:
             raise KeyError(missing)
-        return self._df[list(columns)].copy()
+        out = self._df[list(columns)].copy()
+        if date_column is not None and date_column in out.columns:
+            ser = pd.to_datetime(out[date_column], errors="coerce")
+            if start_date is not None:
+                out = out.loc[ser >= pd.Timestamp(start_date)]
+                ser = ser.loc[out.index]
+            if end_date is not None:
+                out = out.loc[ser <= pd.Timestamp(end_date)]
+        if asset_column is not None and asset_values is not None and asset_column in out.columns:
+            out = out.loc[out[asset_column].astype(str).isin([str(v) for v in asset_values])]
+        return out
 
 
 def test_resolver_merges_two_sources_inner_join() -> None:

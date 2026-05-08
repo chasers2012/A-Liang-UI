@@ -44,7 +44,11 @@ class FactorDataSource(ABC):
         self,
         *,
         columns: list[str],
-        filters: list[LoadFilter] | None = None,
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         """读取一个普通 DataFrame（不设 index，不做列重命名）。"""
         raise NotImplementedError

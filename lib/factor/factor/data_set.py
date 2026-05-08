@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import pandas as pd
 
-from factor.datasource import BetweenFilter, FactorDataSource, InFilter
+from factor.datasource import FactorDataSource
 from factor.panel import panel_load_start_date
 
 
@@ -136,24 +136,6 @@ class DataSet:
         needed_cols.extend(phys_cols)
         return list(dict.fromkeys([str(c) for c in needed_cols]))
 
-    def _filters_for_binding(
-        self,
-        binding: DataSourceBinding,
-        *,
-        load_start: str,
-        end_date: str,
-        instrument_codes: list[str] | None,
-    ) -> list:
-        filters: list = [BetweenFilter(column=binding.date_column, start=load_start, end=end_date)]
-        if instrument_codes is not None:
-            if binding.asset_column is None:
-                raise ValueError("instrument_codes 过滤需要 asset_column；或在预处理里完成资产筛选")
-            # instrument_codes 默认按资产列（asset_column）进行匹配
-            filters.append(
-                InFilter(column=binding.asset_column, values=[str(c) for c in instrument_codes])
-            )
-        return filters
-
     def _empty_panel(self, *, columns: list[str]) -> pd.DataFrame:
         empty_idx = pd.MultiIndex.from_arrays([[], []], names=["date", "asset"])
         return pd.DataFrame(columns=columns, index=empty_idx)
@@ -178,13 +160,24 @@ class DataSet:
         *,
         requested: list[str],
         cols: list[str],
-        filters: list,
+        date_column: str,
+        start_date: str,
+        end_date: str,
+        asset_column: str | None,
+        asset_values: list[str] | None,
         raw_override: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         raw = (
             raw_override
             if raw_override is not None
-            else binding.datasource.load_frame(columns=cols, filters=filters)
+            else binding.datasource.load_frame(
+                columns=cols,
+                date_column=date_column,
+                start_date=start_date,
+                end_date=end_date,
+                asset_column=asset_column,
+                asset_values=asset_values,
+            )
         )
         if raw.empty:
             return self._empty_panel(columns=[])
@@ -220,24 +213,46 @@ class DataSet:
         instrument_codes: list[str] | None,
     ) -> tuple[
         dict[str, pd.DataFrame],
-        dict[str, tuple[DataSourceBinding, list[str], list]],
+        dict[str, tuple[DataSourceBinding, list[str], str, str, str, str | None, list[str] | None]],
     ]:
         raw_frames: dict[str, pd.DataFrame] = {}
-        binding_meta: dict[str, tuple[DataSourceBinding, list[str], list]] = {}
+        binding_meta: dict[
+            str, tuple[DataSourceBinding, list[str], str, str, str, str | None, list[str] | None]
+        ] = {}
 
         for b in self.data_source_bindings:
             cols = self._physical_plan_for_binding(b)
-            filters = self._filters_for_binding(
-                b,
-                load_start=load_start,
-                end_date=end_date,
-                instrument_codes=instrument_codes,
-            )
+            date_column = b.date_column
+            start_date = load_start
+            asset_column = b.asset_column
+            asset_values = None
+            if instrument_codes is not None:
+                if asset_column is None:
+                    raise ValueError(
+                        "instrument_codes 过滤需要 asset_column；或在预处理里完成资产筛选"
+                    )
+                # instrument_codes 默认按资产列（asset_column）进行匹配
+                asset_values = [str(c) for c in instrument_codes]
             key = getattr(b.datasource, "id", None)
             ds_key = str(key) if key is not None else str(id(b.datasource))
-            raw = b.datasource.load_frame(columns=cols, filters=filters)
+            raw = b.datasource.load_frame(
+                columns=cols,
+                date_column=date_column,
+                start_date=start_date,
+                end_date=end_date,
+                asset_column=asset_column,
+                asset_values=asset_values,
+            )
             raw_frames[ds_key] = self._standardize_binding_index_columns(binding=b, frame=raw)
-            binding_meta[ds_key] = (b, cols, filters)
+            binding_meta[ds_key] = (
+                b,
+                cols,
+                date_column,
+                start_date,
+                end_date,
+                asset_column,
+                asset_values,
+            )
 
         return raw_frames, binding_meta
 

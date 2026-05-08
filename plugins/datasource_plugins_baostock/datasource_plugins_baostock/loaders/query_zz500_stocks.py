@@ -14,8 +14,19 @@ json_schema = {
 }
 
 
-def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
-    start_date, _, _ = extract_code_dates(filters)
+def load_frame(
+    *,
+    columns: list[str],
+    date_column: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    asset_column: str | None = None,
+    asset_values: list[str] | None = None,
+    config: dict,
+) -> pd.DataFrame:
+    start_date, _, _ = extract_code_dates(
+        start_date=start_date, end_date=end_date, asset_values=asset_values
+    )
     rs = bs.query_zz500_stocks(date=start_date)
     if str(rs.error_code) != "0":
         raise ValueError(f"BaoStock 获取中证500成分股失败: {rs.error_msg}")

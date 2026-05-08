@@ -7,7 +7,7 @@ from typing import Any, Literal
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
 from app.plugin import PluginConfigSchema
-from factor.datasource import BetweenFilter, FactorDataSource, InFilter, LoadFilter
+from factor.datasource import FactorDataSource
 from pydantic import BaseModel, Field, model_validator
 from workspace import get_workspace_root
 
@@ -66,7 +66,11 @@ class CsvDataSource(FactorDataSource):
         self,
         *,
         columns: list[str],
-        filters: list[LoadFilter] | None = None,
+        date_column: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_column: str | None = None,
+        asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         read_kw = self._read_csv_kwargs_effective()
         usecols = sorted({str(c) for c in columns})
@@ -83,32 +87,27 @@ class CsvDataSource(FactorDataSource):
             usecols=usecols,
             **read_kw,
         )
-        if not filters:
-            return df
-
         mask = pd.Series(True, index=df.index)
-        for flt in filters:
-            if isinstance(flt, BetweenFilter):
-                if flt.column not in df.columns:
-                    raise ValueError(f"CSV 缺少过滤列: {flt.column!r}")
-                s = df[flt.column]
-                if pd.api.types.is_datetime64_any_dtype(s) or pd.api.types.is_datetime64tz_dtype(s):
-                    ser = s
-                    start = pd.Timestamp(flt.start)
-                    end = pd.Timestamp(flt.end)
-                else:
-                    ser = pd.to_datetime(s, errors="coerce")
-                    start = pd.Timestamp(flt.start)
-                    end = pd.Timestamp(flt.end)
-                m = (ser >= start) & (ser <= end)
-                mask &= m.fillna(False)
-            elif isinstance(flt, InFilter):
-                if flt.column not in df.columns:
-                    raise ValueError(f"CSV 缺少过滤列: {flt.column!r}")
-                values = {str(v) for v in (flt.values or [])}
-                mask &= df[flt.column].astype(str).isin(values)
-            else:
-                raise TypeError(f"Unsupported filter: {type(flt)!r}")
+        if date_column is not None:
+            if date_column not in df.columns:
+                raise ValueError(f"CSV 缺少过滤列: {date_column!r}")
+            ser = df[date_column]
+            if not (
+                pd.api.types.is_datetime64_any_dtype(ser) or pd.api.types.is_datetime64tz_dtype(ser)
+            ):
+                ser = pd.to_datetime(ser, errors="coerce")
+            if start_date is not None:
+                mask &= (ser >= pd.Timestamp(start_date)).fillna(False)
+            if end_date is not None:
+                mask &= (ser <= pd.Timestamp(end_date)).fillna(False)
+
+        if asset_values is not None:
+            if asset_column is None:
+                raise ValueError("asset_values 过滤需要 asset_column")
+            if asset_column not in df.columns:
+                raise ValueError(f"CSV 缺少过滤列: {asset_column!r}")
+            values = {str(v) for v in asset_values}
+            mask &= df[asset_column].astype(str).isin(values)
 
         return df.loc[mask].reset_index(drop=True)
 
