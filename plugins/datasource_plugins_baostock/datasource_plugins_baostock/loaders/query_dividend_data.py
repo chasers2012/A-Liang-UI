@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
+from tqdm import tqdm
 
-from ._utils import as_dataframe, extract_code_dates
+from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_dividend_data"
 FIXED_COLUMNS = [
@@ -49,8 +50,8 @@ def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None
     frames: list[pd.DataFrame] = []
-    target_codes = selected_codes or [""]
-    for code in target_codes:
+    target_codes = resolve_target_codes(selected_codes, start_date=start_date)
+    for code in tqdm(target_codes, desc="BaoStock 除权除息", unit="只"):
         for year in query_years:
             rs = bs.query_dividend_data(code=code, year=year, yearType="report")
             if str(rs.error_code) != "0":

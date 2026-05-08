@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
+from tqdm import tqdm
 
-from ._utils import as_dataframe, extract_code_dates
+from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_adjust_factor"
 FIXED_COLUMNS = ["code", "dividOperateDate", "foreAdjustFactor", "backAdjustFactor", "adjustFactor"]
@@ -19,8 +20,8 @@ def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None
     frames: list[pd.DataFrame] = []
-    target_codes = selected_codes or [""]
-    for code in target_codes:
+    target_codes = resolve_target_codes(selected_codes, start_date=start_date)
+    for code in tqdm(target_codes, desc="BaoStock 复权因子", unit="只"):
         rs = bs.query_adjust_factor(code=code, start_date=start_date, end_date=end_date)
         if str(rs.error_code) != "0":
             raise ValueError(f"BaoStock 查询复权因子失败({code}): {rs.error_msg}")

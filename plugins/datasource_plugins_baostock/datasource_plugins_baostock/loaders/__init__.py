@@ -56,6 +56,14 @@ from .query_stock_industry import API_NAME as STOCK_INDUSTRY_API
 from .query_stock_industry import FIXED_COLUMNS as stock_industry_columns
 from .query_stock_industry import json_schema as stock_industry_config
 from .query_stock_industry import load_frame as stock_industry_loader
+from .query_sz50_stocks import API_NAME as SZ50_API
+from .query_sz50_stocks import FIXED_COLUMNS as sz50_columns
+from .query_sz50_stocks import json_schema as sz50_config
+from .query_sz50_stocks import load_frame as sz50_loader
+from .query_zz500_stocks import API_NAME as ZZ500_API
+from .query_zz500_stocks import FIXED_COLUMNS as zz500_columns
+from .query_zz500_stocks import json_schema as zz500_config
+from .query_zz500_stocks import load_frame as zz500_loader
 
 SUPPORTED_APIS = [
     {
@@ -150,10 +158,24 @@ SUPPORTED_APIS = [
         "columns": stock_industry_columns,
     },
     {
+        "key": SZ50_API,
+        "label": "上证50成分股",
+        "loader": sz50_loader,
+        "config": sz50_config,
+        "columns": sz50_columns,
+    },
+    {
         "key": HS300_API,
-        "label": "HS300成分股",
+        "label": "沪深300成分股",
         "loader": hs300_loader,
         "config": hs300_config,
         "columns": hs300_columns,
+    },
+    {
+        "key": ZZ500_API,
+        "label": "中证500成分股",
+        "loader": zz500_loader,
+        "config": zz500_config,
+        "columns": zz500_columns,
     },
 ]

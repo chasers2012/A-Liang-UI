@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
+from tqdm import tqdm
 
-from ._utils import as_dataframe, extract_code_dates, quarter_range
+from ._utils import as_dataframe, extract_code_dates, quarter_range, resolve_target_codes
 
 API_NAME = "query_profit_data"
 FIXED_COLUMNS = [
@@ -33,8 +34,8 @@ def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None
     frames: list[pd.DataFrame] = []
-    target_codes = selected_codes or [""]
-    for code in target_codes:
+    target_codes = resolve_target_codes(selected_codes, start_date=start_date)
+    for code in tqdm(target_codes, desc="BaoStock 盈利能力", unit="只"):
         if quarters:
             for year, quarter in quarters:
                 rs = bs.query_profit_data(code=code, year=year, quarter=quarter)

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
+from tqdm import tqdm
 
-from ._utils import as_dataframe, extract_code_dates
+from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_forecast_report"
 FIXED_COLUMNS = [
@@ -23,7 +24,8 @@ def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None
     frames: list[pd.DataFrame] = []
-    for code in selected_codes or [""]:
+    target_codes = resolve_target_codes(selected_codes, start_date=start_date)
+    for code in tqdm(target_codes, desc="BaoStock 业绩预告", unit="只"):
         rs = bs.query_forecast_report(code=code, start_date=start_date, end_date=end_date)
         if str(rs.error_code) != "0":
             raise ValueError(f"BaoStock 查询季频公司业绩预告失败({code}): {rs.error_msg}")

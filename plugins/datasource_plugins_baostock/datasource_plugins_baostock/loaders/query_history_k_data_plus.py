@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import baostock as bs
 import pandas as pd
-from factor.datasource import BetweenFilter, InFilter, LoadFilter
 from tqdm import tqdm
+
+from ._utils import extract_code_dates, resolve_target_codes
 
 API_NAME = "query_history_k_data_plus"
 K_DATA_FIELD_OPTIONS = [
@@ -92,40 +93,11 @@ def _normalize_fields(fields: list[str]) -> list[str]:
     return [f for f in normalized if f in K_DATA_FIELDS]
 
 
-def _extract_filters(
-    filters: list[LoadFilter] | None,
-) -> tuple[str | None, str | None, list[str] | None]:
-    start_date: str | None = None
-    end_date: str | None = None
-    selected_codes: list[str] | None = None
-    for flt in filters or []:
-        if isinstance(flt, BetweenFilter):
-            start_date = str(pd.Timestamp(flt.start).date())
-            end_date = str(pd.Timestamp(flt.end).date())
-        elif isinstance(flt, InFilter):
-            if flt.column != "code":
-                continue
-            selected_codes = [str(v).strip() for v in (flt.values or []) if str(v).strip()]
-        else:
-            raise TypeError(f"Unsupported filter: {type(flt)!r}")
-    return start_date, end_date, selected_codes
-
-
-def _query_all_codes() -> list[str]:
-    rs = bs.query_stock_basic()
-    if str(rs.error_code) != "0":
-        raise ValueError(f"BaoStock 查询股票列表失败: {rs.error_msg}")
-    df = rs.get_data()
-    if df.empty or "code" not in df.columns:
-        return []
-    return [str(v).strip() for v in df["code"].tolist() if str(v).strip()]
-
-
 def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
 
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     selected_fields = _normalize_fields(config.get("fields", []))
-    start_date, end_date, selected_codes = _extract_filters(filters)
+    start_date, end_date, selected_codes = extract_code_dates(filters)
 
     api_fn = getattr(bs, API_NAME, None)
     if api_fn is None or not callable(api_fn):
@@ -133,7 +105,7 @@ def load_frame(*, columns: list[str], filters, config: dict) -> pd.DataFrame:
 
     if not selected_fields:
         selected_fields = list(K_DATA_FIELDS)
-    target_codes = selected_codes or _query_all_codes()
+    target_codes = resolve_target_codes(selected_codes, start_date=start_date)
     effective_cols = sorted(set(requested_cols) | set(selected_fields) | {"code", "date"})
     frames: list[pd.DataFrame] = []
 

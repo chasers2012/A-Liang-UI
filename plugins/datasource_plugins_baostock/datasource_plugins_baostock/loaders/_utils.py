@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import baostock as bs
 import pandas as pd
 from factor.datasource import BetweenFilter, InFilter, LoadFilter
 
@@ -41,3 +42,33 @@ def quarter_range(start_date: str | None, end_date: str | None) -> list[tuple[in
     end = pd.Timestamp(end_date)
     periods = pd.period_range(start=start, end=end, freq="Q")
     return [(p.year, p.quarter) for p in periods]
+
+
+def resolve_target_codes(selected_codes: list[str] | None, *, start_date: str | None) -> list[str]:
+    if selected_codes:
+        return selected_codes
+
+    day = _resolve_first_trading_day_on_or_after(start_date)
+    rs = bs.query_all_stock(day=day)
+    if str(rs.error_code) != "0":
+        raise ValueError(f"BaoStock 查询全市场股票列表失败: {rs.error_msg}")
+    df = rs.get_data()
+    if df.empty or "code" not in df.columns:
+        return []
+    return [str(v).strip() for v in df["code"].tolist() if str(v).strip()]
+
+
+def _resolve_first_trading_day_on_or_after(start_date: str | None) -> str:
+    if not start_date:
+        return ""
+
+    rs = bs.query_trade_dates(start_date=start_date, end_date=None)
+    if str(rs.error_code) != "0":
+        raise ValueError(f"BaoStock 查询交易日失败: {rs.error_msg}")
+    df = rs.get_data()
+    if df.empty or "is_trading_day" not in df.columns or "calendar_date" not in df.columns:
+        raise ValueError("BaoStock 查询交易日失败: missing expected columns")
+    trading_days = df.loc[df["is_trading_day"].astype(str) == "1", "calendar_date"].tolist()
+    if not trading_days:
+        raise ValueError(f"BaoStock 查询交易日失败: {start_date} 之后无可用交易日")
+    return str(trading_days[0]).strip()
