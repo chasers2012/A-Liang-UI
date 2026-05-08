@@ -30,7 +30,6 @@ technical-nodes = { workspace = true }
 example-factors = { workspace = true }
 example-strategies = { workspace = true }
 example-evaluation-profiles = { workspace = true }
-datasources = { workspace = true }
 factor = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
@@ -43,7 +42,6 @@ members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/l
 dev = [
     "httpx>=0.27.0",
     "pytest>=8.0.0",
-    "datasources",
     "factor",
     "workspace",
     "custom-code",

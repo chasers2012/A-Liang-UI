@@ -17,7 +17,6 @@ dependencies = [
   "pymysql>=1.1.0",
   "workspace",
   "factor",
-  "datasources",
   "pandas>=2.3.0",
   "numpy>=1.26.0",
   "croniter>=6.0.0",
@@ -42,7 +41,6 @@ dependencies = [
 custom-code = { workspace = true }
 workspace = { workspace = true }
 factor = { workspace = true }
-datasources = { workspace = true }
 workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

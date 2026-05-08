@@ -22,7 +22,6 @@ members = [
     "common-nodes",
     "custom-code",
     "datasource-plugins-builtin",
-    "datasources",
     "echarts-nodes",
     "example-evaluation-profiles",
     "example-factors",
@@ -931,25 +930,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
-
-[[package]]
-name = "datasources"
-version = "0.1.0"
-source = { editable = "lib/datasources" }
-dependencies = [
-    { name = "factor" },
-    { name = "pandas" },
-    { name = "sqlalchemy" },
-    { name = "workspace" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "factor", editable = "lib/factor" },
-    { name = "pandas", specifier = ">=2.0.0" },
-    { name = "sqlalchemy", specifier = ">=2.0.0" },
-    { name = "workspace", editable = "lib/workspace" },
-]
 
 [[package]]
 name = "dateparser"
@@ -4857,7 +4837,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "custom-code" },
-    { name = "datasources" },
     { name = "factor" },
     { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
@@ -4885,7 +4864,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "custom-code", editable = "lib/custom_code" },
-    { name = "datasources", editable = "lib/datasources" },
     { name = "factor", editable = "lib/factor" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1" },
@@ -4902,7 +4880,6 @@ dependencies = [
     { name = "chromadb" },
     { name = "croniter" },
     { name = "custom-code" },
-    { name = "datasources" },
     { name = "deepagents" },
     { name = "diskcache" },
     { name = "docling" },
@@ -4934,7 +4911,6 @@ requires-dist = [
     { name = "chromadb", specifier = ">=0.5.0" },
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "custom-code", editable = "lib/custom_code" },
-    { name = "datasources", editable = "lib/datasources" },
     { name = "deepagents", specifier = ">=0.5.3" },
     { name = "diskcache", specifier = ">=5.6.3" },
     { name = "docling", specifier = ">=2.92.0" },
