@@ -102,7 +102,8 @@ class InspectColumnsRequest(BaseModel):
     Generic column inspection request.
 
     - Provide `type` + `config` to inspect without saving.
-    - Or provide `datasource_id` and optionally overlay `config` (replace semantics) to inspect a saved datasource.
+    - Or provide `datasource_id` and optionally overlay `config` to inspect a saved datasource; secret fields
+      from the client that are blank or redacted (``***``) keep the stored values.
     """
 
     datasource_id: str | None = None

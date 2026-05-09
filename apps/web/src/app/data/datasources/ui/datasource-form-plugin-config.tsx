@@ -23,6 +23,8 @@ type Props = {
   setForm: Dispatch<SetStateAction<FormState>>;
   plugin: DatasourcePluginPublic | null;
   onValidityChange?: (valid: boolean) => void;
+  /** 编辑已保存的数据源时传入，列探测会与服务端合并密钥（避免仅拿到脱敏后的密码）。 */
+  editingDatasourceId?: string | null;
   /** 展示模式：沿用同一套 schema 渲染为只读，不显示向导与探测操作。 */
   readOnly?: boolean;
 };
@@ -90,7 +92,7 @@ function DatasourceFormPluginReadOnly(props: {
   const noopChange = () => {
     /* read-only display */
   };
-  const { plugin, form, baseFormSchema, baseFormUiSchema, fieldsFormSchema, fieldsFormUiSchema } = props;
+  const { form, baseFormSchema, baseFormUiSchema, fieldsFormSchema, fieldsFormUiSchema } = props;
   return (
     <div className="max-w-xl space-y-6">
       <div className="space-y-3">
@@ -141,6 +143,7 @@ function DatasourceFormPluginEditable(props: {
   fieldsFormSchema: Record<string, unknown> | null;
   fieldsFormUiSchema: Record<string, unknown>;
   hasFieldsStep: boolean;
+  editingDatasourceId: string | null | undefined;
 }) {
   const {
     plugin,
@@ -152,27 +155,25 @@ function DatasourceFormPluginEditable(props: {
     fieldsFormSchema,
     fieldsFormUiSchema,
     hasFieldsStep,
+    editingDatasourceId,
   } = props;
   const [activeStep, setActiveStep] = useState(0);
   const [inspecting, setInspecting] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
-  const [inspectOkMessage, setInspectOkMessage] = useState<string | null>(null);
 
-  const onInspectColumns = async () => {
+  const onInspectColumns = async (): Promise<boolean> => {
     setInspectError(null);
-    setInspectOkMessage(null);
     setInspecting(true);
     try {
       const currentConfig = draftConfigRef.current;
       const resp = await inspectDatasourceColumns({
-        type: plugin.type,
+        ...(editingDatasourceId ? { datasource_id: editingDatasourceId } : { type: plugin.type }),
         config: currentConfig,
       });
       const cols = Array.from(new Set((resp.columns ?? []).map((x) => String(x).trim()).filter((x) => x.length > 0)));
       if (cols.length === 0) {
         throw new Error('连接成功，但未获取到可用列名');
       }
-      setInspectOkMessage('连接测试成功');
       setForm((f) => {
         const nextConfig = {
           ...currentConfig,
@@ -186,9 +187,11 @@ function DatasourceFormPluginEditable(props: {
           config: nextConfig,
         };
       });
+      return true;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err);
       setInspectError(msg);
+      return false;
     } finally {
       setInspecting(false);
     }
@@ -200,8 +203,8 @@ function DatasourceFormPluginEditable(props: {
       setActiveStep(1);
       return;
     }
-    await onInspectColumns();
-    if ((draftConfigRef.current.columns as unknown[] | undefined)?.length) {
+    const ok = await onInspectColumns();
+    if (ok) {
       setActiveStep(1);
     }
   };
@@ -221,11 +224,6 @@ function DatasourceFormPluginEditable(props: {
             <StepperItem index={1} title="字段映射" description="选择日期列和资产列" active={activeStep === 1} />
           ) : null}
         </Stepper>
-        {inspectOkMessage ? (
-          <Alert>
-            <AlertDescription>{inspectOkMessage}</AlertDescription>
-          </Alert>
-        ) : null}
         {inspectError ? (
           <Alert variant="destructive">
             <AlertDescription>{inspectError}</AlertDescription>
@@ -305,7 +303,14 @@ function DatasourceFormPluginEditable(props: {
   );
 }
 
-export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityChange, readOnly = false }: Props) {
+export function DatasourceFormPluginConfig({
+  form,
+  setForm,
+  plugin,
+  onValidityChange,
+  editingDatasourceId = null,
+  readOnly = false,
+}: Props) {
   const connectionSchema = useMemo(
     () => (plugin?.connection_json_schema ?? {}) as Record<string, unknown>,
     [plugin?.connection_json_schema],
@@ -407,6 +412,7 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityCh
       fieldsFormSchema={fieldsFormSchema}
       fieldsFormUiSchema={fieldsFormUiSchema}
       hasFieldsStep={hasFieldsStep}
+      editingDatasourceId={editingDatasourceId}
     />
   );
 }

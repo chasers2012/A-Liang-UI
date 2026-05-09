@@ -5,7 +5,7 @@ from typing import Any
 from factor import FactorDataSource
 
 from app.datasource.models import DataSourceRow
-from app.datasource.plugins import get_datasource_plugin
+from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -25,6 +25,41 @@ from app.plugin import PluginRegistry
 
 def _normalize_name(name: str) -> str:
     return str(name).strip()
+
+
+def _client_sent_unchanged_secret(val: Any) -> bool:
+    """True when the client did not supply a new secret (redacted, empty, or omitted meaning)."""
+
+    return val is None or (isinstance(val, str) and str(val).strip() in ("", "***"))
+
+
+def _merge_config_overlay_with_saved_secrets(
+    saved: dict[str, Any],
+    overlay: dict[str, Any],
+    ds_type: str,
+) -> dict[str, Any]:
+    """
+    Apply ``overlay`` on top of ``saved``, but keep stored values for plugin ``secret_keys``
+    when the client sends placeholders (API redaction ``***`` or blank = keep password).
+    """
+
+    try:
+        plugin = get_datasource_plugin(str(ds_type))
+        schema = merge_datasource_config_schemas(
+            plugin.get_connection_config_schema(),
+            plugin.get_columns_config_schema(),
+        )
+        secret_keys = frozenset(schema.secret_keys or [] if schema else [])
+    except Exception:
+        secret_keys = frozenset()
+
+    merged = dict(saved)
+    for key, val in overlay.items():
+        sk = str(key)
+        if sk in secret_keys and _client_sent_unchanged_secret(val):
+            continue
+        merged[sk] = val
+    return merged
 
 
 def _pick_inspect_date_column(
@@ -189,9 +224,11 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
         if rec is None:
             raise LookupError("数据源不存在")
         ds_type = str(rec.type)
-        config = dict(rec.config or {})
+        saved = dict(rec.config or {})
         if body.config is not None:
-            config = dict(body.config)
+            config = _merge_config_overlay_with_saved_secrets(saved, dict(body.config), ds_type)
+        else:
+            config = saved
     else:
         if not ds_type:
             raise ValueError("type is required when datasource_id is not provided")
@@ -239,7 +276,12 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
             row.name = data["name"]
         if "config" in data:
             plugin = get_datasource_plugin(str(row.type))
-            row.config = plugin.validate_config(dict(data["config"] or {}))
+            merged = _merge_config_overlay_with_saved_secrets(
+                dict(row.config or {}),
+                dict(data["config"] or {}),
+                str(row.type),
+            )
+            row.config = plugin.validate_config(merged)
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(ds_id, _apply)

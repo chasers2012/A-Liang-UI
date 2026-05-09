@@ -343,18 +343,9 @@ export function DatasourceDetailPanel({
           </div>
         </div>
 
-        <div
-          className={cn(
-            'h-full max-h-[calc(100vh-10rem)] px-6 pb-6 pt-2',
-            'flex min-h-0 flex-1 flex-col overflow-hidden',
-          )}
-        >
+        <div className={cn('h-full max-h-[calc(100vh-10rem)] p-6', 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
           <div className="space-y-4 overflow-auto">
             {alerts}
-            <div className="text-xs text-muted-foreground">
-              {mode === 'create' ? '连接信息保存在服务端 workspace；接口不会返回密码明文。' : '密码留空表示保留原值。'}
-            </div>
-
             <form id="datasource-panel-form" className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
               {mode === 'create' && (
                 <div className="grid gap-2">
@@ -387,6 +378,7 @@ export function DatasourceDetailPanel({
                 setForm={setForm}
                 plugin={selectedPlugin}
                 onValidityChange={setPluginConfigValid}
+                editingDatasourceId={mode === 'edit' ? selectedId : null}
               />
 
               {formError && (
