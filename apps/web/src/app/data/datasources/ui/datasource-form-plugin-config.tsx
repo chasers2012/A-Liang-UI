@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 
 import validator from '@rjsf/validator-ajv8';
 
@@ -23,6 +23,8 @@ type Props = {
   setForm: Dispatch<SetStateAction<FormState>>;
   plugin: DatasourcePluginPublic | null;
   onValidityChange?: (valid: boolean) => void;
+  /** 展示模式：沿用同一套 schema 渲染为只读，不显示向导与探测操作。 */
+  readOnly?: boolean;
 };
 
 function toUploadErrorMessage(err: unknown): string {
@@ -77,88 +79,84 @@ function areRequiredFieldsFilled(schema: Record<string, unknown>, data: Record<s
   });
 }
 
-export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityChange }: Props) {
+function DatasourceFormPluginReadOnly(props: {
+  plugin: DatasourcePluginPublic;
+  form: FormState;
+  baseFormSchema: Record<string, unknown>;
+  baseFormUiSchema: Record<string, unknown>;
+  fieldsFormSchema: Record<string, unknown> | null;
+  fieldsFormUiSchema: Record<string, unknown>;
+}) {
+  const noopChange = () => {
+    /* read-only display */
+  };
+  const { plugin, form, baseFormSchema, baseFormUiSchema, fieldsFormSchema, fieldsFormUiSchema } = props;
+  return (
+    <div className="max-w-xl space-y-6">
+      <div className="space-y-3">
+        <div className="text-sm font-medium text-foreground">基础配置</div>
+        <RjsfStyledForm
+          schema={baseFormSchema}
+          uiSchema={baseFormUiSchema}
+          validator={validator}
+          formData={form.config}
+          widgets={{ file: UploadPathWidget }}
+          onChange={noopChange}
+          liveValidate={false}
+          noHtml5Validate
+          readonly
+        >
+          <></>
+        </RjsfStyledForm>
+      </div>
+      {fieldsFormSchema ? (
+        <div className="space-y-3">
+          <div className="text-sm font-medium text-foreground">字段映射</div>
+          <RjsfStyledForm
+            schema={fieldsFormSchema}
+            uiSchema={fieldsFormUiSchema}
+            validator={validator}
+            formData={form.config}
+            widgets={{ file: UploadPathWidget }}
+            onChange={noopChange}
+            liveValidate={false}
+            noHtml5Validate
+            readonly
+          >
+            <></>
+          </RjsfStyledForm>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DatasourceFormPluginEditable(props: {
+  plugin: DatasourcePluginPublic;
+  form: FormState;
+  setForm: Dispatch<SetStateAction<FormState>>;
+  draftConfigRef: MutableRefObject<Record<string, unknown>>;
+  baseFormSchema: Record<string, unknown>;
+  baseFormUiSchema: Record<string, unknown>;
+  fieldsFormSchema: Record<string, unknown> | null;
+  fieldsFormUiSchema: Record<string, unknown>;
+  hasFieldsStep: boolean;
+}) {
+  const {
+    plugin,
+    form,
+    setForm,
+    draftConfigRef,
+    baseFormSchema,
+    baseFormUiSchema,
+    fieldsFormSchema,
+    fieldsFormUiSchema,
+    hasFieldsStep,
+  } = props;
   const [activeStep, setActiveStep] = useState(0);
   const [inspecting, setInspecting] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
   const [inspectOkMessage, setInspectOkMessage] = useState<string | null>(null);
-
-  const connectionSchema = useMemo(
-    () => (plugin?.connection_json_schema ?? {}) as Record<string, unknown>,
-    [plugin?.connection_json_schema],
-  );
-  const connectionUiSchema = useMemo(
-    () => (plugin?.connection_ui_schema ?? {}) as Record<string, unknown>,
-    [plugin?.connection_ui_schema],
-  );
-  const rawColumnsSchema = useMemo(
-    () => (plugin?.columns_json_schema ?? {}) as Record<string, unknown>,
-    [plugin?.columns_json_schema],
-  );
-  const rawColumnsUiSchema = useMemo(
-    () => (plugin?.columns_ui_schema ?? {}) as Record<string, unknown>,
-    [plugin?.columns_ui_schema],
-  );
-  const hasSplitColumnsConfig = Object.keys(rawColumnsSchema).length > 0;
-  const persistedColumns = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          (Array.isArray(form.config.columns) ? form.config.columns : [])
-            .map((x) => String(x).trim())
-            .filter((x) => x.length > 0),
-        ),
-      ),
-    [form.config.columns],
-  );
-  const draftConfigRef = useRef<Record<string, unknown>>(form.config);
-
-  useEffect(() => {
-    draftConfigRef.current = form.config;
-  }, [form.config]);
-
-  const fieldsFormSchema = useMemo<Record<string, unknown> | null>(() => {
-    if (!hasSplitColumnsConfig) return null;
-    const base = { ...rawColumnsSchema };
-    const properties = {
-      ...((base.properties as Record<string, unknown> | undefined) ?? {}),
-    };
-    if (persistedColumns.length > 0) {
-      if (properties.date_column && typeof properties.date_column === 'object') {
-        properties.date_column = {
-          ...(properties.date_column as Record<string, unknown>),
-          enum: persistedColumns,
-        };
-      }
-      if (properties.asset_column && typeof properties.asset_column === 'object') {
-        properties.asset_column = {
-          ...(properties.asset_column as Record<string, unknown>),
-          enum: persistedColumns,
-        };
-      }
-    }
-    return {
-      ...base,
-      properties,
-    };
-  }, [hasSplitColumnsConfig, persistedColumns, rawColumnsSchema]);
-  const hasFieldsStep = Boolean(fieldsFormSchema);
-  const baseFormSchema = connectionSchema;
-  const baseFormUiSchema = connectionUiSchema;
-  const fieldsFormUiSchema = rawColumnsUiSchema;
-
-  const pluginConfigValid = useMemo(() => {
-    if (!plugin) return false;
-    const baseValid = areRequiredFieldsFilled(baseFormSchema, form.config);
-    const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, form.config);
-    return baseValid && fieldsValid;
-  }, [plugin, baseFormSchema, fieldsFormSchema, form.config]);
-
-  useEffect(() => {
-    onValidityChange?.(pluginConfigValid);
-  }, [onValidityChange, pluginConfigValid]);
-
-  if (!plugin) return null;
 
   const onInspectColumns = async () => {
     setInspectError(null);
@@ -257,8 +255,8 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityCh
           </RjsfStyledForm>
         ) : null}
         {activeStep === 1 && fieldsFormSchema ? (
-          <div className="rounded-md border border-border/60 p-3">
-            <div className="mb-2 text-xs text-muted-foreground">字段映射</div>
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-foreground">字段映射</div>
             <RjsfStyledForm
               schema={fieldsFormSchema}
               uiSchema={fieldsFormUiSchema}
@@ -304,5 +302,111 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityCh
         </div>
       </div>
     </FormSection>
+  );
+}
+
+export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityChange, readOnly = false }: Props) {
+  const connectionSchema = useMemo(
+    () => (plugin?.connection_json_schema ?? {}) as Record<string, unknown>,
+    [plugin?.connection_json_schema],
+  );
+  const connectionUiSchema = useMemo(
+    () => (plugin?.connection_ui_schema ?? {}) as Record<string, unknown>,
+    [plugin?.connection_ui_schema],
+  );
+  const rawColumnsSchema = useMemo(
+    () => (plugin?.columns_json_schema ?? {}) as Record<string, unknown>,
+    [plugin?.columns_json_schema],
+  );
+  const rawColumnsUiSchema = useMemo(
+    () => (plugin?.columns_ui_schema ?? {}) as Record<string, unknown>,
+    [plugin?.columns_ui_schema],
+  );
+  const hasSplitColumnsConfig = Object.keys(rawColumnsSchema).length > 0;
+  const persistedColumns = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (Array.isArray(form.config.columns) ? form.config.columns : [])
+            .map((x) => String(x).trim())
+            .filter((x) => x.length > 0),
+        ),
+      ),
+    [form.config.columns],
+  );
+  const draftConfigRef = useRef<Record<string, unknown>>(form.config);
+
+  useEffect(() => {
+    draftConfigRef.current = form.config;
+  }, [form.config]);
+
+  const fieldsFormSchema = useMemo<Record<string, unknown> | null>(() => {
+    if (!hasSplitColumnsConfig) return null;
+    const base = { ...rawColumnsSchema };
+    const properties = {
+      ...((base.properties as Record<string, unknown> | undefined) ?? {}),
+    };
+    if (persistedColumns.length > 0) {
+      if (properties.date_column && typeof properties.date_column === 'object') {
+        properties.date_column = {
+          ...(properties.date_column as Record<string, unknown>),
+          enum: persistedColumns,
+        };
+      }
+      if (properties.asset_column && typeof properties.asset_column === 'object') {
+        properties.asset_column = {
+          ...(properties.asset_column as Record<string, unknown>),
+          enum: persistedColumns,
+        };
+      }
+    }
+    return {
+      ...base,
+      properties,
+    };
+  }, [hasSplitColumnsConfig, persistedColumns, rawColumnsSchema]);
+  const hasFieldsStep = Boolean(fieldsFormSchema);
+  const baseFormSchema = connectionSchema;
+  const baseFormUiSchema = connectionUiSchema;
+  const fieldsFormUiSchema = rawColumnsUiSchema;
+
+  const pluginConfigValid = useMemo(() => {
+    if (!plugin) return false;
+    const baseValid = areRequiredFieldsFilled(baseFormSchema, form.config);
+    const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, form.config);
+    return baseValid && fieldsValid;
+  }, [plugin, baseFormSchema, fieldsFormSchema, form.config]);
+
+  useEffect(() => {
+    onValidityChange?.(pluginConfigValid);
+  }, [onValidityChange, pluginConfigValid]);
+
+  if (!plugin) return null;
+
+  if (readOnly) {
+    return (
+      <DatasourceFormPluginReadOnly
+        plugin={plugin}
+        form={form}
+        baseFormSchema={baseFormSchema}
+        baseFormUiSchema={baseFormUiSchema}
+        fieldsFormSchema={fieldsFormSchema}
+        fieldsFormUiSchema={fieldsFormUiSchema}
+      />
+    );
+  }
+
+  return (
+    <DatasourceFormPluginEditable
+      plugin={plugin}
+      form={form}
+      setForm={setForm}
+      draftConfigRef={draftConfigRef}
+      baseFormSchema={baseFormSchema}
+      baseFormUiSchema={baseFormUiSchema}
+      fieldsFormSchema={fieldsFormSchema}
+      fieldsFormUiSchema={fieldsFormUiSchema}
+      hasFieldsStep={hasFieldsStep}
+    />
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,11 @@ export function DatasourceDetailPanel({
       cancelled = true;
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (mode !== 'view' || !selectedItem) return;
+    setForm(hydrateFormFromDataSource(selectedItem));
+  }, [mode, selectedItem]);
 
   useEffect(() => {
     if (mode === 'view') {
@@ -205,23 +210,34 @@ export function DatasourceDetailPanel({
       );
     }
 
-    const configPretty = JSON.stringify(selectedItem.config ?? {}, null, 2);
     const isBusy = busyId === selectedItem.id;
+    const viewPlugin = plugins.find((p) => p.type === selectedItem.type) ?? null;
 
     return (
       <>
         <CardHeader className="shrink-0 space-y-2">
           <CardTitle className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="truncate">{selectedItem.name}</span>
-              <span className="inline-flex rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="min-w-0">
+                <EditablePageTitle
+                  value={form.name}
+                  onChange={() => {
+                    /* 查看模式不允许改名 */
+                  }}
+                  showEdit={false}
+                  inputAriaLabel="数据源显示名称"
+                  placeholder="数据源"
+                  editButtonAriaLabel="编辑名称"
+                />
+              </span>
+              <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
                 {selectedItem.type}
               </span>
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-          <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0 h-[48px]">
+          <div className="flex h-[48px] w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0">
             <div />
             <div className="flex items-center gap-2">
               <Button
@@ -249,30 +265,7 @@ export function DatasourceDetailPanel({
           >
             <div className="space-y-4 overflow-auto">
               {alerts}
-              <div className="space-y-2">
-                <div className="text-sm font-medium">标识与时间戳</div>
-                <dl className="grid gap-3 text-sm">
-                  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                    <dt className="text-muted-foreground">id</dt>
-                    <dd className="break-all font-mono text-xs">{selectedItem.id}</dd>
-                  </div>
-                  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                    <dt className="text-muted-foreground">created_at</dt>
-                    <dd className="font-mono text-xs tabular-nums">{String(selectedItem.created_at)}</dd>
-                  </div>
-                  <div className="grid gap-1 sm:grid-cols-[10rem_1fr] sm:gap-x-4">
-                    <dt className="text-muted-foreground">updated_at</dt>
-                    <dd className="font-mono text-xs tabular-nums">{String(selectedItem.updated_at)}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-sm font-medium">插件配置（config）</div>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-muted p-3 font-mono text-xs">
-                  {configPretty}
-                </pre>
-              </div>
+              <DatasourceFormPluginConfig form={form} setForm={setForm} plugin={viewPlugin} readOnly />
             </div>
           </div>
         </CardContent>
@@ -304,7 +297,24 @@ export function DatasourceDetailPanel({
   return (
     <>
       <CardHeader className="shrink-0 space-y-2">
-        <CardTitle className="space-y-2">{mode === 'create' ? '新建数据源' : '编辑数据源'}</CardTitle>
+        <CardTitle className="space-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="min-w-0">
+              <EditablePageTitle
+                value={form.name}
+                onChange={(n) => setForm((f) => ({ ...f, name: n }))}
+                inputAriaLabel="数据源显示名称"
+                editButtonAriaLabel="编辑名称"
+                placeholder={mode === 'create' ? '新数据源' : '数据源'}
+              />
+            </span>
+            {form.type.trim() ? (
+              <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+                {form.type}
+              </span>
+            ) : null}
+          </div>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0 h-[48px]">
@@ -341,19 +351,8 @@ export function DatasourceDetailPanel({
         >
           <div className="space-y-4 overflow-auto">
             {alerts}
-            <div className="space-y-2">
-              <EditablePageTitle
-                value={form.name}
-                onChange={(n) => setForm((f) => ({ ...f, name: n }))}
-                inputAriaLabel="数据源显示名称"
-                editButtonAriaLabel="编辑名称"
-                placeholder={mode === 'create' ? '新数据源' : '数据源'}
-              />
-              <div className="text-xs text-muted-foreground">
-                {mode === 'create'
-                  ? '连接信息保存在服务端 workspace；接口不会返回密码明文。'
-                  : '密码留空表示保留原值。'}
-              </div>
+            <div className="text-xs text-muted-foreground">
+              {mode === 'create' ? '连接信息保存在服务端 workspace；接口不会返回密码明文。' : '密码留空表示保留原值。'}
             </div>
 
             <form id="datasource-panel-form" className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
