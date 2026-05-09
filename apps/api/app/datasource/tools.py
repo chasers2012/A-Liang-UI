@@ -5,7 +5,7 @@ from typing import Any
 from app.common.datetime_utils import utc_now_iso
 from app.datasource.api import list_datasources
 from app.datasource.models import DataSourceRow
-from app.datasource.plugins import get_datasource_plugin
+from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -14,6 +14,7 @@ from app.datasource.schemas import (
     row_to_public,
 )
 from app.datasource.verify import verify_datasource
+from app.security.datasource_secrets import decrypt_secret_fields, encrypt_secret_fields
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
@@ -32,9 +33,13 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
         创建后的数据源公开信息（敏感字段已脱敏）。
     """
     plugin = get_datasource_plugin(str(body.type))
+    schema = merge_datasource_config_schemas(
+        plugin.get_connection_config_schema(),
+        plugin.get_columns_config_schema(),
+    )
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
-    new_row.config = validated
+    new_row.config = encrypt_secret_fields(validated, schema)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row).model_dump()
 
@@ -88,7 +93,21 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
             row.name = data["name"]
         if "config" in data:
             plugin = get_datasource_plugin(str(row.type))
-            row.config = plugin.validate_config(dict(data["config"] or {}))
+            schema = merge_datasource_config_schemas(
+                plugin.get_connection_config_schema(),
+                plugin.get_columns_config_schema(),
+            )
+            saved_plain = decrypt_secret_fields(dict(row.config or {}), schema)
+            incoming = dict(data["config"] or {})
+            # mimic UI semantics: empty / redacted secret means "keep"
+            for k in schema.resolved_secret_keys():
+                vv = incoming.get(k)
+                if (
+                    vv is None or (isinstance(vv, str) and vv.strip() in ("", "***"))
+                ) and k in saved_plain:
+                    incoming[k] = saved_plain[k]
+            validated = plugin.validate_config(incoming)
+            row.config = encrypt_secret_fields(validated, schema)
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(datasource_id, _apply)

@@ -41,7 +41,6 @@ class AnthropicLlmPlugin(LlmPlugin):
         ui_schema={
             "api_key": {"ui:widget": "password", "ui:placeholder": "sk-ant-..."},
         },
-        secret_keys=["api_key"],
     )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:

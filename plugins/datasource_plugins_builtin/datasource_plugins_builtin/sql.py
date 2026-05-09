@@ -217,7 +217,6 @@ class SqlDataSourcePlugin(DataSourcePlugin):
                 "ui:help": "编辑时留空表示保持原密码。",
             },
         },
-        secret_keys=["db_password"],
     )
     columns_config = PluginConfigSchema(
         title="SQL 字段配置",

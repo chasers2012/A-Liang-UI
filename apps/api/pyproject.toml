@@ -15,6 +15,7 @@ dependencies = [
   "sqlmodel>=0.0.24",
   "psycopg[binary]>=3.1.0",
   "pymysql>=1.1.0",
+  "cryptography>=42.0.0",
   "workspace",
   "factor",
   "pandas>=2.3.0",

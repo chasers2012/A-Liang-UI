@@ -21,6 +21,7 @@ from app.datasource.schemas import (
 )
 from app.datasource.verify import verify_datasource
 from app.plugin import PluginRegistry
+from app.security.datasource_secrets import decrypt_secret_fields, encrypt_secret_fields
 
 
 def _normalize_name(name: str) -> str:
@@ -43,23 +44,38 @@ def _merge_config_overlay_with_saved_secrets(
     when the client sends placeholders (API redaction ``***`` or blank = keep password).
     """
 
+    schema = None
+    secret_keys: frozenset[str] = frozenset()
     try:
         plugin = get_datasource_plugin(str(ds_type))
         schema = merge_datasource_config_schemas(
             plugin.get_connection_config_schema(),
             plugin.get_columns_config_schema(),
         )
-        secret_keys = frozenset(schema.secret_keys or [] if schema else [])
+        secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
     except Exception:
+        schema = None
         secret_keys = frozenset()
 
-    merged = dict(saved)
+    # decrypt saved secrets so internal validation/inspection works with plaintext
+    merged = decrypt_secret_fields(dict(saved), schema)
     for key, val in overlay.items():
         sk = str(key)
         if sk in secret_keys and _client_sent_unchanged_secret(val):
             continue
         merged[sk] = val
     return merged
+
+
+def _schema_for_type(ds_type: str) -> Any:  # PluginConfigSchema | None
+    try:
+        plugin = get_datasource_plugin(str(ds_type))
+        return merge_datasource_config_schemas(
+            plugin.get_connection_config_schema(),
+            plugin.get_columns_config_schema(),
+        )
+    except Exception:
+        return None
 
 
 def _pick_inspect_date_column(
@@ -174,7 +190,9 @@ def get_datasource(id: str) -> FactorDataSource | None:
     if rec is None:
         return None
     plugin = get_datasource_plugin(rec.type)
-    ds = plugin.to_factor_datasource(dict(rec.config or {}))
+    schema = _schema_for_type(str(rec.type))
+    plain = decrypt_secret_fields(dict(rec.config or {}), schema)
+    ds = plugin.to_factor_datasource(plain)
     return BoundFactorDataSource(id, ds)
 
 
@@ -261,9 +279,10 @@ def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
     plugin = get_datasource_plugin(str(body.type))
+    schema = _schema_for_type(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
-    new_row.config = validated
+    new_row.config = encrypt_secret_fields(validated, schema)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row)
 
@@ -276,12 +295,14 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
             row.name = data["name"]
         if "config" in data:
             plugin = get_datasource_plugin(str(row.type))
+            schema = _schema_for_type(str(row.type))
             merged = _merge_config_overlay_with_saved_secrets(
                 dict(row.config or {}),
                 dict(data["config"] or {}),
                 str(row.type),
             )
-            row.config = plugin.validate_config(merged)
+            validated = plugin.validate_config(merged)
+            row.config = encrypt_secret_fields(validated, schema)
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(ds_id, _apply)

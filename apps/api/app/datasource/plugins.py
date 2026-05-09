@@ -97,7 +97,9 @@ def merge_datasource_config_schemas(
             "required": list(dict.fromkeys([*conn_req, *cols_req])),
         },
         ui_schema={**dict(conn.ui_schema or {}), **dict(cols.ui_schema or {})},
-        secret_keys=list(dict.fromkeys([*conn.secret_keys, *cols.secret_keys])),
+        secret_keys=list(
+            dict.fromkeys([*conn.resolved_secret_keys(), *cols.resolved_secret_keys()])
+        ),
     )
 
 
