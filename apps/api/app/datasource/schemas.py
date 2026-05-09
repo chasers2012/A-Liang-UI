@@ -7,7 +7,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
 from app.datasource.models import DataSourceRow
-from app.datasource.plugins import UnknownDataSourceTypeError, get_datasource_plugin
+from app.datasource.plugins import (
+    UnknownDataSourceTypeError,
+    get_datasource_plugin,
+    merge_datasource_config_schemas,
+)
 from app.plugin import redact_config
 
 DataSourceType = str
@@ -72,7 +76,10 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
     schema = None
     try:
         plugin = get_datasource_plugin(str(row.type))
-        schema = plugin.get_config_schema()
+        schema = merge_datasource_config_schemas(
+            plugin.get_connection_config_schema(),
+            plugin.get_columns_config_schema(),
+        )
     except UnknownDataSourceTypeError:
         schema = None
     return DataSourcePublic(
@@ -104,7 +111,11 @@ class InspectColumnsRequest(BaseModel):
 
 
 class InspectColumnsResponse(BaseModel):
+    """列探测结果：可用列名与建议的字段映射（与数据源 ``config`` 同级字段）。"""
+
     columns: list[str]
+    date_column: str
+    asset_column: str | None = None
 
 
 class DatasourceDependencyFieldsResponse(BaseModel):
@@ -117,5 +128,7 @@ class DatasourcePluginPublic(BaseModel):
     type: str
     title: str
     description: str | None = None
-    json_schema: dict[str, Any] = Field(default_factory=dict)
-    ui_schema: dict[str, Any] = Field(default_factory=dict)
+    connection_json_schema: dict[str, Any] = Field(default_factory=dict)
+    connection_ui_schema: dict[str, Any] = Field(default_factory=dict)
+    columns_json_schema: dict[str, Any] = Field(default_factory=dict)
+    columns_ui_schema: dict[str, Any] = Field(default_factory=dict)

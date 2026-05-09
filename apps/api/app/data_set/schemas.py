@@ -73,15 +73,11 @@ class DataSetDatasourceBindingStored(SQLModel):
 
     datasource_id: str
     columns: list[str] = Field(default_factory=list)
-    date_column: str = ""
-    asset_column: str = ""
 
 
 class DataSetDatasourceBindingInput(SQLModel):
     datasource_id: str
     columns: list[str] = Field(default_factory=list)
-    date_column: str = ""
-    asset_column: str = ""
 
     @field_validator("columns", mode="before")
     @classmethod
@@ -91,13 +87,6 @@ class DataSetDatasourceBindingInput(SQLModel):
         if not isinstance(v, list):
             raise TypeError("columns must be a list")
         return [str(x).strip() for x in v if str(x).strip()]
-
-    @field_validator("date_column", "asset_column", mode="before")
-    @classmethod
-    def _strip_index_cols(cls, v: object) -> str:
-        if v is None:
-            return ""
-        return str(v).strip()
 
 
 class DataSetCreate(SQLModel):
@@ -162,8 +151,6 @@ def _binding_to_stored_dict(
     return {
         "datasource_id": binding.datasource_id.strip(),
         "columns": [x.strip() for x in binding.columns if str(x).strip()],
-        "date_column": binding.date_column.strip(),
-        "asset_column": binding.asset_column.strip(),
     }
 
 
@@ -184,8 +171,6 @@ class DataSetDatasourceBindingPublic(SQLModel):
     datasource_name: str = Field(description="数据源名称。")
     datasource_type: str = Field(description="数据源类型。")
     columns: list[str] = Field(description="从该数据源读取的字段列表。留空选取全部")
-    date_column: str = Field(description="日期字段名称。字段的原始名称，将被重命名为date")
-    asset_column: str = Field(description="资产标识字段名称。字段的原始名称，将被重命名为asset")
 
 
 class DataSetPublic(SQLModel):

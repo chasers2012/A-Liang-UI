@@ -21,12 +21,23 @@ def resolve_csv_path(path_str: str) -> Path:
 
 class CsvConfig(BaseModel):
     path: str
+    date_column: str = "date"
+    asset_column: str | None = "asset"
+    columns: list[str] = Field(default_factory=list)
     read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate(self) -> CsvConfig:
         if not str(self.path).strip():
             raise ValueError("path 不能为空")
+        date_col = str(self.date_column).strip()
+        if not date_col:
+            raise ValueError("date_column 不能为空")
+        self.date_column = date_col
+        if self.asset_column is not None:
+            asset_col = str(self.asset_column).strip()
+            self.asset_column = asset_col or None
+        self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
         return self
 
 
@@ -38,9 +49,25 @@ class CsvDataSource(FactorDataSource):
         path: str | Path,
         *,
         read_csv_kwargs: dict | None = None,
+        date_column: str = "date",
+        asset_column: str | None = "asset",
     ) -> None:
         self._path = Path(path)
         self._read_csv_kwargs = dict(read_csv_kwargs) if read_csv_kwargs else {}
+        self._date_column = str(date_column).strip()
+        self._asset_column = (
+            str(asset_column).strip()
+            if asset_column is not None and str(asset_column).strip()
+            else None
+        )
+
+    @property
+    def date_column(self) -> str:
+        return self._date_column
+
+    @property
+    def asset_column(self) -> str | None:
+        return self._asset_column
 
     def _resolved_file_path(self) -> Path:
         if self._path.is_absolute():
@@ -66,10 +93,8 @@ class CsvDataSource(FactorDataSource):
         self,
         *,
         columns: list[str],
-        date_column: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        asset_column: str | None = None,
         asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         read_kw = self._read_csv_kwargs_effective()
@@ -88,7 +113,8 @@ class CsvDataSource(FactorDataSource):
             **read_kw,
         )
         mask = pd.Series(True, index=df.index)
-        if date_column is not None:
+        if self._date_column:
+            date_column = self._date_column
             if date_column not in df.columns:
                 raise ValueError(f"CSV 缺少过滤列: {date_column!r}")
             ser = df[date_column]
@@ -102,6 +128,7 @@ class CsvDataSource(FactorDataSource):
                 mask &= (ser <= pd.Timestamp(end_date)).fillna(False)
 
         if asset_values is not None:
+            asset_column = self._asset_column
             if asset_column is None:
                 raise ValueError("asset_values 过滤需要 asset_column")
             if asset_column not in df.columns:
@@ -115,7 +142,7 @@ class CsvDataSource(FactorDataSource):
 class CsvDataSourcePlugin(DataSourcePlugin):
     name: Literal["csv"] = "csv"
 
-    config = PluginConfigSchema(
+    connection_config = PluginConfigSchema(
         title="CSV 数据源",
         description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
         json_schema={
@@ -143,6 +170,31 @@ class CsvDataSourcePlugin(DataSourcePlugin):
             },
         },
     )
+    columns_config = PluginConfigSchema(
+        title="CSV 字段配置",
+        description="根据连接探测到的列，选择日期列和资产列。",
+        json_schema={
+            "type": "object",
+            "properties": {
+                "date_column": {"type": "string", "title": "日期列", "default": "date"},
+                "asset_column": {
+                    "type": ["string", "null"],
+                    "title": "资产列",
+                    "default": "asset",
+                },
+                "columns": {
+                    "type": "array",
+                    "title": "可选列缓存",
+                    "items": {"type": "string"},
+                    "default": [],
+                },
+            },
+            "required": ["date_column"],
+        },
+        ui_schema={
+            "columns": {"ui:widget": "hidden"},
+        },
+    )
 
     @staticmethod
     def _validate_csv_config(config: dict[str, Any]) -> CsvConfig:
@@ -157,7 +209,12 @@ class CsvDataSourcePlugin(DataSourcePlugin):
 
     def to_factor_datasource(self, config: dict[str, Any]):
         cfg = self._validate_csv_config(config)
-        return CsvDataSource(path=cfg.path, read_csv_kwargs=dict(cfg.read_csv_kwargs))
+        return CsvDataSource(
+            path=cfg.path,
+            read_csv_kwargs=dict(cfg.read_csv_kwargs),
+            date_column=cfg.date_column,
+            asset_column=cfg.asset_column,
+        )
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
         try:
@@ -173,6 +230,16 @@ class CsvDataSourcePlugin(DataSourcePlugin):
         except OSError as e:
             return VerifyResult(ok=False, message=f"无法访问路径: {e}")
         return VerifyResult(ok=True, message=f"CSV 可读: {p}")
+
+    def list_table_columns(self, config: dict[str, Any]) -> list[str]:
+        cfg = self._validate_csv_config(config)
+        ds = CsvDataSource(
+            path=cfg.path,
+            read_csv_kwargs=dict(cfg.read_csv_kwargs),
+            date_column=cfg.date_column,
+            asset_column=cfg.asset_column,
+        )
+        return ds.list_columns()
 
 
 CSV_PLUGIN = CsvDataSourcePlugin()

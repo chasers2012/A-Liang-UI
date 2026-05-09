@@ -7,6 +7,8 @@ from tqdm import tqdm
 from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_dividend_data"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "dividOperateDate"
 FIXED_COLUMNS = [
     "code",
     "dividPreNoticeDate",

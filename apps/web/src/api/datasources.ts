@@ -1,6 +1,7 @@
 import type {
   DataSourcePublic,
   DatasourcePluginPublic,
+  InspectColumnsResponseBody,
   SqlTableColumnsRequestBody,
   SqlTableColumnsResponseBody,
   TestResult,
@@ -46,6 +47,21 @@ export function deleteDatasource(id: string): Promise<void> {
 
 export function testDatasource(id: string): Promise<TestResult> {
   return apiFetchJson<TestResult>(`/datasources/${encodeURIComponent(id)}/test`, { method: 'POST' });
+}
+
+export function inspectDatasourceColumns(body: {
+  datasource_id?: string | null;
+  type?: string;
+  config?: Record<string, unknown>;
+}): Promise<InspectColumnsResponseBody> {
+  return apiFetchJson<InspectColumnsResponseBody>('/datasources/inspect-columns', {
+    method: 'POST',
+    body: JSON.stringify({
+      ...(body.datasource_id ? { datasource_id: body.datasource_id } : {}),
+      ...(body.type ? { type: body.type } : {}),
+      ...(body.config ? { config: body.config } : {}),
+    }),
+  });
 }
 
 export function fetchSqlTableColumns(body: SqlTableColumnsRequestBody): Promise<SqlTableColumnsResponseBody> {

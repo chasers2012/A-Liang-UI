@@ -12,22 +12,14 @@ class DataSourceBinding:
     datasource: FactorDataSource
     # 物理列选择：为空表示加载 datasource 的所有列
     columns: list[str]
-    date_column: str
-    asset_column: str | None
 
     def __init__(
         self,
         datasource: FactorDataSource,
         columns: list[str] | None = None,
-        *,
-        date_column: str,
-        asset_column: str | None = None,
     ):
         self.datasource = datasource
         self.columns = [str(c).strip() for c in (columns or []) if str(c).strip()]
-        self.date_column = str(date_column)
-        # 不传时认为 datasource 输出里“没有 asset 列”
-        self.asset_column = str(asset_column).strip() if asset_column is not None else None
 
 
 def _norm_opt_date(value: str | None) -> str | None:
@@ -130,9 +122,11 @@ class DataSet:
     def _physical_plan_for_binding(self, binding: DataSourceBinding) -> list[str]:
         # must include index date column for standardization
         phys_cols = binding.columns if binding.columns else binding.datasource.list_columns()
-        needed_cols: list[str] = [binding.date_column]
-        if binding.asset_column is not None:
-            needed_cols.append(binding.asset_column)
+        date_column = binding.datasource.date_column
+        asset_column = binding.datasource.asset_column
+        needed_cols: list[str] = [date_column]
+        if asset_column is not None:
+            needed_cols.append(asset_column)
         needed_cols.extend(phys_cols)
         return list(dict.fromkeys([str(c) for c in needed_cols]))
 
@@ -144,14 +138,16 @@ class DataSet:
         self, *, binding: DataSourceBinding, frame: pd.DataFrame
     ) -> pd.DataFrame:
         renamed = frame
-        if binding.date_column in renamed.columns and "date" not in renamed.columns:
-            renamed = renamed.rename(columns={binding.date_column: "date"})
+        date_column = binding.datasource.date_column
+        asset_column = binding.datasource.asset_column
+        if date_column in renamed.columns and "date" not in renamed.columns:
+            renamed = renamed.rename(columns={date_column: "date"})
         if (
-            binding.asset_column is not None
-            and binding.asset_column in renamed.columns
+            asset_column is not None
+            and asset_column in renamed.columns
             and "asset" not in renamed.columns
         ):
-            renamed = renamed.rename(columns={binding.asset_column: "asset"})
+            renamed = renamed.rename(columns={asset_column: "asset"})
         return renamed
 
     def _load_binding_panel(
@@ -160,10 +156,8 @@ class DataSet:
         *,
         requested: list[str],
         cols: list[str],
-        date_column: str,
         start_date: str,
         end_date: str,
-        asset_column: str | None,
         asset_values: list[str] | None,
         raw_override: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
@@ -172,10 +166,8 @@ class DataSet:
             if raw_override is not None
             else binding.datasource.load_frame(
                 columns=cols,
-                date_column=date_column,
                 start_date=start_date,
                 end_date=end_date,
-                asset_column=asset_column,
                 asset_values=asset_values,
             )
         )
@@ -213,18 +205,17 @@ class DataSet:
         instrument_codes: list[str] | None,
     ) -> tuple[
         dict[str, pd.DataFrame],
-        dict[str, tuple[DataSourceBinding, list[str], str, str, str, str | None, list[str] | None]],
+        dict[str, tuple[DataSourceBinding, list[str], str, str, str | None, list[str] | None]],
     ]:
         raw_frames: dict[str, pd.DataFrame] = {}
         binding_meta: dict[
-            str, tuple[DataSourceBinding, list[str], str, str, str, str | None, list[str] | None]
+            str, tuple[DataSourceBinding, list[str], str, str, str | None, list[str] | None]
         ] = {}
 
         for b in self.data_source_bindings:
             cols = self._physical_plan_for_binding(b)
-            date_column = b.date_column
             start_date = load_start
-            asset_column = b.asset_column
+            asset_column = b.datasource.asset_column
             asset_values = None
             if instrument_codes is not None:
                 if asset_column is None:
@@ -237,17 +228,14 @@ class DataSet:
             ds_key = str(key) if key is not None else str(id(b.datasource))
             raw = b.datasource.load_frame(
                 columns=cols,
-                date_column=date_column,
                 start_date=start_date,
                 end_date=end_date,
-                asset_column=asset_column,
                 asset_values=asset_values,
             )
             raw_frames[ds_key] = self._standardize_binding_index_columns(binding=b, frame=raw)
             binding_meta[ds_key] = (
                 b,
                 cols,
-                date_column,
                 start_date,
                 end_date,
                 asset_column,

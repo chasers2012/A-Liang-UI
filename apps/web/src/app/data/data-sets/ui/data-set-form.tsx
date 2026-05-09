@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Combobox,
@@ -45,8 +44,6 @@ import { PreprocessingWorkflowEditorBlock } from './preprocessing-workflow-edito
 
 export type DataSetBindingFormRow = {
   datasource_id: string;
-  date_column: string;
-  asset_column: string;
   columns: string[];
 };
 
@@ -69,8 +66,6 @@ export function emptyDataSetForm(template?: WorkflowGraphPersisted): DataSetForm
     bindings: [
       {
         datasource_id: '',
-        date_column: '',
-        asset_column: '',
         columns: [],
       },
     ],
@@ -96,15 +91,11 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
     row.datasource_bindings.length > 0
       ? row.datasource_bindings.map((b) => ({
           datasource_id: b.datasource_id,
-          date_column: b.date_column ?? '',
-          asset_column: b.asset_column ?? '',
           columns: b.columns ?? [],
         }))
       : [
           {
             datasource_id: '',
-            date_column: '',
-            asset_column: '',
             columns: [],
           },
         ];
@@ -147,9 +138,6 @@ function validateDataSetBindings(bindings: DataSetBindingFormRow[]): string | nu
   if (bindings.length > 1) return '不支持多数据源绑定（请仅配置一条绑定）';
   for (const b of bindings) {
     if (!b.datasource_id.trim()) return '每条绑定须选择数据源';
-    if (!b.date_column.trim() || !b.asset_column.trim()) {
-      return '每条绑定须选择 date 列与 asset 列';
-    }
   }
   return null;
 }
@@ -203,26 +191,10 @@ function DataSetBindingRowBlock({
       const t = String(c).trim();
       if (t) set.add(t);
     }
-    const d = row.date_column.trim();
-    const a = row.asset_column.trim();
-    if (d) set.add(d);
-    if (a) set.add(a);
     return [...set].sort((x, y) => x.localeCompare(y));
   })();
   const useColumnSelects = columnOptions.length > 0;
   const columnsAnchor = useComboboxAnchor();
-  const dateCol = row.date_column.trim();
-  const assetCol = row.asset_column.trim();
-  const loadColumnOptions = (() => {
-    const set = new Set<string>();
-    for (const c of physicalColumns) {
-      const t = String(c).trim();
-      if (!t) continue;
-      if (t === dateCol || t === assetCol) continue;
-      set.add(t);
-    }
-    return [...set].sort((x, y) => x.localeCompare(y));
-  })();
 
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4">
@@ -251,8 +223,6 @@ function DataSetBindingRowBlock({
             v &&
             updateBinding(index, {
               datasource_id: v,
-              date_column: '',
-              asset_column: '',
               columns: [],
             })
           }
@@ -272,78 +242,12 @@ function DataSetBindingRowBlock({
       </div>
 
       <div className="space-y-2">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>
-              日期列<span className="text-xs text-muted-foreground">将被重命名为date</span>
-            </Label>
-            {useColumnSelects ? (
-              <Select
-                modal={false}
-                value={row.date_column.trim() || undefined}
-                onValueChange={(v) => v && updateBinding(index, { date_column: v })}
-              >
-                <SelectTrigger className="w-full font-mono text-xs">
-                  <SelectValue placeholder="选择列" />
-                </SelectTrigger>
-                <SelectContent>
-                  {columnOptions.map((c) => (
-                    <SelectItem key={`d-${c}`} value={c} className="font-mono text-xs">
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={row.date_column}
-                onChange={(e) => updateBinding(index, { date_column: e.target.value })}
-                placeholder="先选择数据源并等待列名加载"
-                className="font-mono text-xs"
-              />
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>
-              资产列<span className="text-xs text-muted-foreground">将被重命名为asset</span>
-            </Label>
-
-            {useColumnSelects ? (
-              <Select
-                modal={false}
-                value={row.asset_column.trim() || undefined}
-                onValueChange={(v) => v && updateBinding(index, { asset_column: v })}
-              >
-                <SelectTrigger className="w-full font-mono text-xs">
-                  <SelectValue placeholder="选择列" />
-                </SelectTrigger>
-                <SelectContent>
-                  {columnOptions.map((c) => (
-                    <SelectItem key={`a-${c}`} value={c} className="font-mono text-xs">
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={row.asset_column}
-                onChange={(e) => updateBinding(index, { asset_column: e.target.value })}
-                placeholder="先选择数据源并等待列名加载"
-                className="font-mono text-xs"
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
         <Label>
           筛选数据列<span className="text-xs text-muted-foreground">留空启用全部</span>
         </Label>
         {useColumnSelects ? (
           <Combobox
-            items={loadColumnOptions}
+            items={columnOptions}
             multiple
             value={row.columns}
             onValueChange={(v) => updateBinding(index, { columns: v ?? [] })}
@@ -429,8 +333,6 @@ export function DataSetForm({ mode, dataSetId }: Props) {
         ...f.bindings,
         {
           datasource_id: '',
-          date_column: '',
-          asset_column: '',
           columns: [],
         },
       ],
@@ -479,8 +381,6 @@ export function DataSetForm({ mode, dataSetId }: Props) {
               bindings: [
                 {
                   datasource_id: ds[0].id,
-                  date_column: '',
-                  asset_column: '',
                   columns: [],
                 },
               ],
@@ -581,20 +481,10 @@ export function DataSetForm({ mode, dataSetId }: Props) {
       return;
     }
     const instrument_codes = parseInstrumentCodesFromText(form.instrument_codes_text);
-    const datasource_bindings = form.bindings.map((b) => {
-      const dateCol = b.date_column.trim();
-      const assetCol = b.asset_column.trim();
-      const columns = (b.columns ?? [])
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .filter((c) => c !== dateCol && c !== assetCol);
-      return {
-        datasource_id: b.datasource_id.trim(),
-        columns,
-        date_column: b.date_column.trim(),
-        asset_column: b.asset_column.trim(),
-      };
-    });
+    const datasource_bindings = form.bindings.map((b) => ({
+      datasource_id: b.datasource_id.trim(),
+      columns: (b.columns ?? []).map((c) => c.trim()).filter(Boolean),
+    }));
     const payload = {
       name,
       description: form.description.trim(),

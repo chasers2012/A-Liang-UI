@@ -27,6 +27,9 @@ class BaoStockConfig(BaseModel):
     cache_enabled: bool = True
     cache_ttl_seconds: int = 86400
     cache_dir: str = ".cache/baostock"
+    date_column: str = "date"
+    asset_column: str | None = "code"
+    columns: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate(self) -> BaoStockConfig:
@@ -38,6 +41,13 @@ class BaoStockConfig(BaseModel):
             raise ValueError("cache_ttl_seconds 不能小于 0")
         if not str(self.cache_dir).strip():
             raise ValueError("cache_dir 不能为空")
+        self.date_column = str(self.date_column).strip()
+        if not self.date_column:
+            raise ValueError("date_column 不能为空")
+        if self.asset_column is not None:
+            asset_col = str(self.asset_column).strip()
+            self.asset_column = asset_col or None
+        self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
         return self
 
 

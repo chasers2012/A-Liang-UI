@@ -7,6 +7,8 @@ from tqdm import tqdm
 from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_stock_basic"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "ipoDate"
 FIXED_COLUMNS = ["code", "code_name", "ipoDate", "outDate", "type", "status"]
 json_schema = {"type": "object", "properties": {}, "required": []}
 

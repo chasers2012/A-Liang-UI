@@ -7,10 +7,6 @@ export interface DataSetDatasourceBindingPublic {
   datasource_name: string;
   datasource_type: string;
   columns: string[];
-  /** 日期列（物理列名） */
-  date_column: string;
-  /** 资产列（物理列名） */
-  asset_column: string;
 }
 
 export interface DataSetPublic {

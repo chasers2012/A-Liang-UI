@@ -7,6 +7,8 @@ from tqdm import tqdm
 from ._utils import extract_code_dates, resolve_target_codes
 
 API_NAME = "query_history_k_data_plus"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "date"
 K_DATA_FIELD_OPTIONS = [
     ("open", "开盘价"),
     ("high", "最高价"),

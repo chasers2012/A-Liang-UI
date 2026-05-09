@@ -20,6 +20,9 @@ class SqlConfig(BaseModel):
     db_password: str = ""
     db_name: str = ""
     table: str = ""
+    date_column: str = "date"
+    asset_column: str | None = "asset"
+    columns: list[str] = Field(default_factory=list)
     column_map: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -28,6 +31,14 @@ class SqlConfig(BaseModel):
             raise ValueError("主机（IP）与数据库名不能为空")
         if not self.table.strip():
             raise ValueError("表名不能为空")
+        date_col = str(self.date_column).strip()
+        if not date_col:
+            raise ValueError("date_column 不能为空")
+        self.date_column = date_col
+        if self.asset_column is not None:
+            asset_col = str(self.asset_column).strip()
+            self.asset_column = asset_col or None
+        self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
         d = (self.db_driver or "").lower()
         if d not in ("postgres", "postgresql", "mysql", "mariadb"):
             raise ValueError("db_driver 须为 postgresql 或 mysql")
@@ -88,10 +99,26 @@ class SqlDataSource(FactorDataSource):
         engine: str | Engine,
         *,
         table: str,
+        date_column: str = "date",
+        asset_column: str | None = "asset",
     ) -> None:
         self._engine = _as_engine(engine)
         self._table = str(table)
         self._table_sql = _quote_ident(self._engine, self._table)
+        self._date_column = str(date_column).strip()
+        self._asset_column = (
+            str(asset_column).strip()
+            if asset_column is not None and str(asset_column).strip()
+            else None
+        )
+
+    @property
+    def date_column(self) -> str:
+        return self._date_column
+
+    @property
+    def asset_column(self) -> str | None:
+        return self._asset_column
 
     def list_columns(self) -> list[str]:
         insp = inspect(self._engine)
@@ -107,10 +134,8 @@ class SqlDataSource(FactorDataSource):
         self,
         *,
         columns: list[str],
-        date_column: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        asset_column: str | None = None,
         asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         prep = self._engine.dialect.identifier_preparer
@@ -128,7 +153,8 @@ class SqlDataSource(FactorDataSource):
         stmt = None
 
         codes_needed = False
-        if date_column is not None:
+        if self._date_column:
+            date_column = self._date_column
             col_sql = _quote_ident(self._engine, date_column)
             if start_date is not None:
                 where_parts.append(f"{col_sql} >= :date_start")
@@ -138,6 +164,7 @@ class SqlDataSource(FactorDataSource):
                 params["date_end"] = str(end_date)
 
         if asset_values is not None:
+            asset_column = self._asset_column
             if asset_column is None:
                 raise ValueError("asset_values 过滤需要 asset_column")
             col_sql = _quote_ident(self._engine, asset_column)
@@ -158,7 +185,7 @@ class SqlDataSource(FactorDataSource):
 class SqlDataSourcePlugin(DataSourcePlugin):
     name: Literal["sql"] = "sql"
 
-    config = PluginConfigSchema(
+    connection_config = PluginConfigSchema(
         title="SQL 数据源",
         description="配置数据库连接和数据表信息。",
         json_schema={
@@ -192,6 +219,31 @@ class SqlDataSourcePlugin(DataSourcePlugin):
         },
         secret_keys=["db_password"],
     )
+    columns_config = PluginConfigSchema(
+        title="SQL 字段配置",
+        description="根据连接探测到的列，选择日期列和资产列。",
+        json_schema={
+            "type": "object",
+            "properties": {
+                "date_column": {"type": "string", "title": "日期列", "default": "date"},
+                "asset_column": {
+                    "type": ["string", "null"],
+                    "title": "资产列",
+                    "default": "asset",
+                },
+                "columns": {
+                    "type": "array",
+                    "title": "可选列缓存",
+                    "items": {"type": "string"},
+                    "default": [],
+                },
+            },
+            "required": ["date_column"],
+        },
+        ui_schema={
+            "columns": {"ui:widget": "hidden"},
+        },
+    )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         cfg = SqlConfig.model_validate(config)
@@ -200,7 +252,12 @@ class SqlDataSourcePlugin(DataSourcePlugin):
     def to_factor_datasource(self, config: dict[str, Any]):
         cfg = SqlConfig.model_validate(config)
         url = build_sqlalchemy_url(cfg)
-        return SqlDataSource(engine=url, table=cfg.table.strip())
+        return SqlDataSource(
+            engine=url,
+            table=cfg.table.strip(),
+            date_column=cfg.date_column,
+            asset_column=cfg.asset_column,
+        )
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
         try:

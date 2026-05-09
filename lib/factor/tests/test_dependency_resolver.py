@@ -18,35 +18,49 @@ def _panel(rows: list[tuple], cols: list[str]) -> pd.DataFrame:
 
 
 class _FixedSource(FactorDataSource):
-    def __init__(self, df: pd.DataFrame) -> None:
+    def __init__(
+        self, df: pd.DataFrame, *, date_column: str = "date", asset_column: str | None = "asset"
+    ) -> None:
         self._df = df
+        self._date_column = date_column
+        self._asset_column = asset_column
 
     def list_columns(self) -> list[str]:
         return sorted([str(c) for c in self._df.columns], key=lambda x: (x.lower(), x))
+
+    @property
+    def date_column(self) -> str:
+        return self._date_column
+
+    @property
+    def asset_column(self) -> str | None:
+        return self._asset_column
 
     def load_frame(
         self,
         *,
         columns: list[str],
-        date_column: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        asset_column: str | None = None,
         asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         missing = [c for c in columns if c not in self._df.columns]
         if missing:
             raise KeyError(missing)
         out = self._df[list(columns)].copy()
-        if date_column is not None and date_column in out.columns:
-            ser = pd.to_datetime(out[date_column], errors="coerce")
+        if self._date_column in out.columns:
+            ser = pd.to_datetime(out[self._date_column], errors="coerce")
             if start_date is not None:
                 out = out.loc[ser >= pd.Timestamp(start_date)]
                 ser = ser.loc[out.index]
             if end_date is not None:
                 out = out.loc[ser <= pd.Timestamp(end_date)]
-        if asset_column is not None and asset_values is not None and asset_column in out.columns:
-            out = out.loc[out[asset_column].astype(str).isin([str(v) for v in asset_values])]
+        if (
+            self._asset_column is not None
+            and asset_values is not None
+            and self._asset_column in out.columns
+        ):
+            out = out.loc[out[self._asset_column].astype(str).isin([str(v) for v in asset_values])]
         return out
 
 
@@ -64,12 +78,8 @@ def test_resolver_merges_two_sources_inner_join() -> None:
 
     ds = DataSet(
         [
-            DataSourceBinding(
-                _FixedSource(ohlc), ["close", "volume"], date_column="date", asset_column="asset"
-            ),
-            DataSourceBinding(
-                _FixedSource(basic), ["pe"], date_column="date", asset_column="asset"
-            ),
+            DataSourceBinding(_FixedSource(ohlc), ["close", "volume"]),
+            DataSourceBinding(_FixedSource(basic), ["pe"]),
         ]
     )
     r = DependencyResolver(ds)
@@ -98,9 +108,7 @@ def test_dependency_columns_read_as_strings_are_coerced_to_numeric() -> None:
     )
     ds = DataSet(
         [
-            DataSourceBinding(
-                _FixedSource(df), ["close"], date_column="date", asset_column="asset"
-            ),
+            DataSourceBinding(_FixedSource(df), ["close"]),
         ]
     )
     r = DependencyResolver(ds)
@@ -123,8 +131,6 @@ def test_register_datasource_alias_maps_physical_columns() -> None:
             DataSourceBinding(
                 _FixedSource(df),
                 ["close"],
-                date_column="date",
-                asset_column="asset",
             )
         ]
     )
@@ -147,8 +153,6 @@ def test_dependency_columns_multiple_fields() -> None:
             DataSourceBinding(
                 _FixedSource(df),
                 ["close", "open"],
-                date_column="date",
-                asset_column="asset",
             )
         ]
     )
@@ -169,9 +173,7 @@ def test_dependency_columns_multiple_fields() -> None:
 def test_unknown_field_raises() -> None:
     ds = DataSet(
         [
-            DataSourceBinding(
-                _FixedSource(_panel([], [])), ["close"], date_column="date", asset_column="asset"
-            ),
+            DataSourceBinding(_FixedSource(_panel([], [])), ["close"]),
         ]
     )
     r = DependencyResolver(ds)

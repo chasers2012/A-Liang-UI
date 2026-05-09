@@ -6,6 +6,8 @@ import pandas as pd
 from ._utils import as_dataframe
 
 API_NAME = "query_stock_industry"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "date"
 FIXED_COLUMNS = ["date", "code", "code_name", "industry", "industryClassification"]
 json_schema = {
     "type": "object",

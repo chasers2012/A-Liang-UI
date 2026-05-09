@@ -39,15 +39,25 @@ class FactorDataSource(ABC):
         """返回数据源可见的物理列名（用于绑定/校验）。"""
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def date_column(self) -> str:
+        """数据源中用于时间过滤与索引标准化的物理列名。"""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def asset_column(self) -> str | None:
+        """数据源中用于资产过滤与索引标准化的物理列名。"""
+        raise NotImplementedError
+
     @abstractmethod
     def load_frame(
         self,
         *,
         columns: list[str],
-        date_column: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        asset_column: str | None = None,
         asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
         """读取一个普通 DataFrame（不设 index，不做列重命名）。"""

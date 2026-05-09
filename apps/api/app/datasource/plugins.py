@@ -15,6 +15,7 @@ __all__ = [
     "UnknownDataSourceTypeError",
     "VerifyResult",
     "get_datasource_plugin",
+    "merge_datasource_config_schemas",
 ]
 
 
@@ -36,15 +37,18 @@ class DataSourcePlugin(Plugin):
     """
 
     category = "datasource"
-    config: ClassVar[PluginConfigSchema | None] = None
+    connection_config: ClassVar[PluginConfigSchema | None] = None
+    columns_config: ClassVar[PluginConfigSchema | None] = None
 
     @abstractmethod
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """Validate and normalize config. Must return a JSON-serializable dict."""
 
-    def get_config_schema(self) -> PluginConfigSchema | None:
-        """Optional UI schema for rendering a config form (from class ``config``)."""
-        return self.config
+    def get_connection_config_schema(self) -> PluginConfigSchema | None:
+        return self.connection_config
+
+    def get_columns_config_schema(self) -> PluginConfigSchema | None:
+        return self.columns_config
 
     @abstractmethod
     def verify(self, config: dict[str, Any]) -> VerifyResult:
@@ -53,6 +57,48 @@ class DataSourcePlugin(Plugin):
     @abstractmethod
     def to_factor_datasource(self, config: dict[str, Any]) -> FactorDataSource:
         """Build a FactorDataSource instance from validated config."""
+
+
+def merge_datasource_config_schemas(
+    connection_config: PluginConfigSchema | None,
+    columns_config: PluginConfigSchema | None,
+) -> PluginConfigSchema | None:
+    """
+    Merge connection and columns :class:`PluginConfigSchema` for API responses
+    and config redaction (e.g. combined ``secret_keys``).
+    """
+    if connection_config is None and columns_config is None:
+        return None
+    if connection_config is None:
+        return columns_config
+    if columns_config is None:
+        return connection_config
+
+    conn = connection_config
+    cols = columns_config
+    conn_props = (
+        dict(conn.json_schema.get("properties", {})) if isinstance(conn.json_schema, dict) else {}
+    )
+    cols_props = (
+        dict(cols.json_schema.get("properties", {})) if isinstance(cols.json_schema, dict) else {}
+    )
+    conn_req = (
+        list(conn.json_schema.get("required", [])) if isinstance(conn.json_schema, dict) else []
+    )
+    cols_req = (
+        list(cols.json_schema.get("required", [])) if isinstance(cols.json_schema, dict) else []
+    )
+    return PluginConfigSchema(
+        title=conn.title,
+        description=conn.description,
+        json_schema={
+            "type": "object",
+            "properties": {**conn_props, **cols_props},
+            "required": list(dict.fromkeys([*conn_req, *cols_req])),
+        },
+        ui_schema={**dict(conn.ui_schema or {}), **dict(cols.ui_schema or {})},
+        secret_keys=list(dict.fromkeys([*conn.secret_keys, *cols.secret_keys])),
+    )
 
 
 def get_datasource_plugin(type_id: str) -> DataSourcePlugin:

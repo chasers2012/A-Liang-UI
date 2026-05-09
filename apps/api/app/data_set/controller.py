@@ -73,15 +73,11 @@ def get_data_set(id: str) -> DataSet | None:
         ds = get_datasource(b.datasource_id)
         if ds is None:
             continue
-        date_col = b.date_column.strip()
-        asset_col = b.asset_column.strip()
 
         bindings.append(
             DataSourceBinding(
                 datasource=ds,
                 columns=b.columns,
-                date_column=date_col,
-                asset_column=asset_col,
             )
         )
 
@@ -116,8 +112,6 @@ def _bindings_to_public(
                 datasource_name=name,
                 datasource_type=typ,
                 columns=list(b.columns),
-                date_column=b.date_column.strip(),
-                asset_column=b.asset_column.strip(),
             )
         )
     return out
@@ -183,10 +177,6 @@ def _validate_bindings_inputs(
         ds = b.datasource_id.strip()
         if not ds:
             raise HTTPException(status_code=400, detail="数据源 id 不能为空")
-        if not b.date_column.strip() or not b.asset_column.strip():
-            raise HTTPException(
-                status_code=400, detail="每条绑定必须填写 date_column 与 asset_column"
-            )
         cols = _strip_columns(b.columns)
         _validate_binding_columns(
             columns=cols,
@@ -261,8 +251,6 @@ def update_data_set(data_set_id: str, body: DataSetPatch) -> DataSetPublic | Non
                 DataSetDatasourceBindingInput(
                     datasource_id=b.datasource_id,
                     columns=list(b.columns),
-                    date_column=b.date_column,
-                    asset_column=b.asset_column,
                 )
                 for b in _row_bindings(row)
             ]

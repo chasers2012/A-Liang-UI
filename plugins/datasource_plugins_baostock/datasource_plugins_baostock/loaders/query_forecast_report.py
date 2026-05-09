@@ -7,6 +7,8 @@ from tqdm import tqdm
 from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 
 API_NAME = "query_forecast_report"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "profitForcastExpPubDate"
 FIXED_COLUMNS = [
     "code",
     "profitForcastExpPubDate",

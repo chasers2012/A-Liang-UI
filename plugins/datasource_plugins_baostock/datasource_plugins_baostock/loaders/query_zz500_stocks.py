@@ -6,6 +6,8 @@ import pandas as pd
 from ._utils import extract_code_dates
 
 API_NAME = "query_zz500_stocks"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "date"
 FIXED_COLUMNS = ["date", "code", "code_name"]
 json_schema = {
     "type": "object",

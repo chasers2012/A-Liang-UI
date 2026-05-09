@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from factor import FactorDataSource
 
 from app.datasource.models import DataSourceRow
@@ -25,6 +27,70 @@ def _normalize_name(name: str) -> str:
     return str(name).strip()
 
 
+def _pick_inspect_date_column(
+    validated: dict[str, Any], normalized: list[str], col_set: set[str]
+) -> str:
+    dc = validated.get("date_column")
+    if isinstance(dc, str) and dc.strip() in col_set:
+        return dc.strip()
+    for cand in ("date", "calendar_date", "statDate", "pubDate"):
+        if cand in col_set:
+            return cand
+    for c in normalized:
+        if str(c).lower().endswith("date"):
+            return c
+    return normalized[0]
+
+
+def _pick_inspect_asset_column(
+    validated: dict[str, Any],
+    normalized: list[str],
+    col_set: set[str],
+    date_column: str,
+) -> str | None:
+    ac = validated.get("asset_column")
+    if ac is not None:
+        s = str(ac).strip()
+        if s and s in col_set:
+            return s
+    for cand in ("code", "asset", "symbol"):
+        if cand in col_set:
+            return cand
+    for c in normalized:
+        if c != date_column:
+            return c
+    return None
+
+
+def _build_inspect_columns_response(
+    validated: dict[str, Any], cols: list[str]
+) -> InspectColumnsResponse:
+    normalized = [str(c).strip() for c in cols if str(c).strip()]
+    col_set = set(normalized)
+
+    if not normalized:
+        dc = validated.get("date_column")
+        date_fallback = str(dc).strip() if isinstance(dc, str) and str(dc).strip() else "date"
+        ac = validated.get("asset_column")
+        asset_fallback: str | None = None
+        if ac is not None and str(ac).strip():
+            asset_fallback = str(ac).strip()
+        return InspectColumnsResponse(
+            columns=[],
+            date_column=date_fallback,
+            asset_column=asset_fallback,
+        )
+
+    date_column = _pick_inspect_date_column(validated, normalized, col_set)
+    asset_column = _pick_inspect_asset_column(validated, normalized, col_set, date_column)
+
+    return InspectColumnsResponse(
+        columns=normalized,
+        date_column=date_column,
+        asset_column=asset_column,
+    )
+
+
 def _ensure_unique_name(name: str, *, exclude_id: str | None = None) -> None:
     target = _normalize_name(name)
     for item in DataSourceItemsRegistry.list_items():
@@ -44,22 +110,26 @@ class BoundFactorDataSource(FactorDataSource):
     def list_columns(self) -> list[str]:
         return self._inner.list_columns()
 
+    @property
+    def date_column(self) -> str:
+        return self._inner.date_column
+
+    @property
+    def asset_column(self) -> str | None:
+        return self._inner.asset_column
+
     def load_frame(
         self,
         *,
         columns: list[str],
-        date_column: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        asset_column: str | None = None,
         asset_values: list[str] | None = None,
     ):  # type: ignore[no-untyped-def]
         return self._inner.load_frame(
             columns=columns,
-            date_column=date_column,
             start_date=start_date,
             end_date=end_date,
-            asset_column=asset_column,
             asset_values=asset_values,
         )
 
@@ -81,14 +151,31 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     reg = PluginRegistry.instance()
     out: list[DatasourcePluginPublic] = []
     for ds_type, plugin in reg.list_registered_by_category("datasource"):
-        schema = plugin.get_config_schema()
+        connection_schema = plugin.get_connection_config_schema()
+        columns_schema = plugin.get_columns_config_schema()
+        title = (
+            (connection_schema.title if connection_schema else None)
+            or (columns_schema.title if columns_schema else None)
+            or str(ds_type).upper()
+        )
+        description = (connection_schema.description if connection_schema else None) or (
+            columns_schema.description if columns_schema else None
+        )
         out.append(
             DatasourcePluginPublic(
                 type=ds_type,
-                title=schema.title if schema else ds_type.upper(),
-                description=schema.description if schema else None,
-                json_schema=dict(schema.json_schema or {}) if schema else {},
-                ui_schema=dict(schema.ui_schema or {}) if schema else {},
+                title=title,
+                description=description,
+                connection_json_schema=(
+                    dict(connection_schema.json_schema or {}) if connection_schema else {}
+                ),
+                connection_ui_schema=(
+                    dict(connection_schema.ui_schema or {}) if connection_schema else {}
+                ),
+                columns_json_schema=dict(columns_schema.json_schema or {})
+                if columns_schema
+                else {},
+                columns_ui_schema=dict(columns_schema.ui_schema or {}) if columns_schema else {},
             )
         )
     return out
@@ -115,7 +202,8 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
     if not hasattr(plugin, "list_table_columns"):
         raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
     cols = plugin.list_table_columns(validated)
-    return InspectColumnsResponse(columns=[str(c) for c in cols])
+    str_cols = [str(c) for c in cols]
+    return _build_inspect_columns_response(validated, str_cols)
 
 
 def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:

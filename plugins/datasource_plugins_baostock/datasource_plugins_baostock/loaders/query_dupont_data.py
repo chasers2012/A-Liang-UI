@@ -7,6 +7,8 @@ from tqdm import tqdm
 from ._utils import as_dataframe, extract_code_dates, quarter_range, resolve_target_codes
 
 API_NAME = "query_dupont_data"
+ASSET_COLUMN: str | None = "code"
+TIME_COLUMN: str = "pubDate"
 FIXED_COLUMNS = [
     "code",
     "pubDate",

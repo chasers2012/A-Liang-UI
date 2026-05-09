@@ -31,12 +31,21 @@ export interface SqlTableColumnsResponseBody {
   columns: string[];
 }
 
+/** `/datasources/inspect-columns` 响应（列名 + 建议的日期列/资产列）。 */
+export interface InspectColumnsResponseBody {
+  columns: string[];
+  date_column: string;
+  asset_column: string | null;
+}
+
 export interface DatasourcePluginPublic {
   type: string;
   title: string;
   description: string | null;
-  json_schema: Record<string, unknown>;
-  ui_schema: Record<string, unknown>;
+  connection_json_schema: Record<string, unknown>;
+  connection_ui_schema: Record<string, unknown>;
+  columns_json_schema: Record<string, unknown>;
+  columns_ui_schema: Record<string, unknown>;
 }
 
 /** `/uploads/file` 响应。 */
