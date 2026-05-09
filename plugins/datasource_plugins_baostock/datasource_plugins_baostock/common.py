@@ -6,6 +6,8 @@ from typing import Any
 import baostock as bs
 from pydantic import BaseModel, Field, model_validator
 
+from .loaders import API_DEFAULT_ASSET_COLUMNS, API_DEFAULT_DATE_COLUMNS, DEFAULT_API_NAME
+
 _bs_logged_in = False
 
 
@@ -22,25 +24,18 @@ def bs_session():
 class BaoStockConfig(BaseModel):
     model_config = {"extra": "allow"}
 
-    api_name: str = ""
-    fields: list[str] = Field(default_factory=list)
-    cache_enabled: bool = True
-    cache_ttl_seconds: int = 86400
-    cache_dir: str = ".cache/baostock"
-    date_column: str = "date"
-    asset_column: str | None = "code"
+    api_name: str = DEFAULT_API_NAME
+    date_column: str = API_DEFAULT_DATE_COLUMNS.get(DEFAULT_API_NAME, "date")
+    asset_column: str | None = API_DEFAULT_ASSET_COLUMNS.get(DEFAULT_API_NAME)
     columns: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate(self) -> BaoStockConfig:
         self.api_name = str(self.api_name).strip()
-        if not self.api_name.startswith("query_"):
-            raise ValueError("api_name 必须是 baostock 的 query_* 方法名")
-        self.fields = [str(f).strip() for f in self.fields if str(f).strip()]
-        if self.cache_ttl_seconds < 0:
-            raise ValueError("cache_ttl_seconds 不能小于 0")
-        if not str(self.cache_dir).strip():
-            raise ValueError("cache_dir 不能为空")
+        if not self.api_name:
+            raise ValueError("api_name 不能为空")
+        if self.api_name not in API_DEFAULT_DATE_COLUMNS:
+            raise ValueError(f"api_name 不在支持列表中: {self.api_name}")
         self.date_column = str(self.date_column).strip()
         if not self.date_column:
             raise ValueError("date_column 不能为空")

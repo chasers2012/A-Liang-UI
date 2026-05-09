@@ -3,9 +3,10 @@
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import Form from '@rjsf/shadcn';
-import type { FieldTemplateProps, RJSFSchema, UiSchema } from '@rjsf/utils';
+import type { FieldTemplateProps, RJSFSchema, UiSchema, WidgetProps } from '@rjsf/utils';
 import { useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { HelpCircle } from 'lucide-react';
@@ -28,12 +29,101 @@ type RjsfStyledFormProps = ComponentProps<typeof Form> & {
 type RjsfOnChangeArg = Parameters<NonNullable<RjsfStyledFormProps['onChange']>>[0];
 
 type SubmitButtonOptions = { norender?: boolean };
+type EnumOption = { label: string; value: unknown };
+
+function isEnumValueMatched(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (left == null || right == null) return false;
+  if (typeof left === 'object' || typeof right === 'object') return false;
+  return String(left) === String(right);
+}
 
 function resolveSubmitButtonNorender(uiSchema: UiSchema | undefined): boolean {
   const opts = (uiSchema as Record<string, unknown> | undefined)?.['ui:submitButtonOptions'] as
     | SubmitButtonOptions
     | undefined;
   return Boolean(opts?.norender);
+}
+
+function RjsfPortalSelectWidget(props: WidgetProps) {
+  const enumOptions = Array.isArray(props.options.enumOptions)
+    ? (props.options.enumOptions as EnumOption[])
+    : ([] as EnumOption[]);
+  if (props.multiple) {
+    const selected = Array.isArray(props.value) ? (props.value as unknown[]) : [];
+    const selectedIndexValues = enumOptions
+      .map((option, index) =>
+        selected.some((selectedValue) => isEnumValueMatched(selectedValue, option.value)) ? String(index) : null,
+      )
+      .filter((value): value is string => value !== null);
+    return (
+      <select
+        id={props.id}
+        multiple
+        className="form-select h-7 w-full rounded-md px-2 text-xs shadow-sm"
+        value={selectedIndexValues}
+        disabled={props.disabled || props.readonly}
+        required={props.required}
+        onChange={(e) => {
+          const next = Array.from(e.currentTarget.selectedOptions)
+            .map((option) => Number(option.value))
+            .filter((idx) => Number.isFinite(idx) && idx >= 0 && idx < enumOptions.length)
+            .map((idx) => enumOptions[idx]?.value);
+          props.onChange(next);
+        }}
+        onBlur={() => props.onBlur?.(props.id, props.value)}
+        onFocus={() => props.onFocus?.(props.id, props.value)}
+      >
+        {enumOptions.map((option, index) => (
+          <option key={`${props.id}-multi-${String(option.value)}-${index}`} value={String(option.value)}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  const selectedIndex = enumOptions.findIndex((option) => isEnumValueMatched(option.value, props.value));
+  const selectedValue = selectedIndex >= 0 ? String(selectedIndex) : undefined;
+  const selectedLabel = selectedIndex >= 0 ? enumOptions[selectedIndex]?.label : undefined;
+  const placeholder = typeof props.placeholder === 'string' && props.placeholder.trim() ? props.placeholder : '请选择';
+  const emptyOptionValue = '__rjsf_empty__';
+
+  return (
+    <Select
+      value={selectedValue}
+      disabled={props.disabled || props.readonly}
+      required={props.required}
+      onValueChange={(next) => {
+        if (next === emptyOptionValue) {
+          props.onChange(props.options.emptyValue);
+          return;
+        }
+        const idx = Number(next);
+        if (!Number.isFinite(idx) || idx < 0 || idx >= enumOptions.length) return;
+        props.onChange(enumOptions[idx]?.value);
+      }}
+      onOpenChange={(open) => {
+        if (!open) {
+          props.onBlur?.(props.id, props.value);
+          return;
+        }
+        props.onFocus?.(props.id, props.value);
+      }}
+    >
+      <SelectTrigger id={props.id} className="h-7 w-full rounded-md px-2 text-xs shadow-sm">
+        <SelectValue placeholder={placeholder}>{selectedLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {!props.required ? <SelectItem value={emptyOptionValue}>{placeholder}</SelectItem> : null}
+        {enumOptions.map((option, index) => (
+          <SelectItem key={`${props.id}-${String(option.value)}-${index}`} value={String(index)}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 function HoverDescriptionFieldTemplate(props: FieldTemplateProps) {
@@ -186,7 +276,7 @@ function buildTabPagination(schema: RJSFSchema, uiSchema: NavDrivenUiSchema): Ta
   const fields = [...fieldsSet];
   const navConf = uiSchema.navConf ?? {};
   const navLabelByKey = new Map<string, string>();
-  (navConf.navs ?? []).forEach((n) => navLabelByKey.set(n.nav, n.name ?? n.nav));
+  (navConf.navs ?? []).forEach((n: { nav: string; name?: string }) => navLabelByKey.set(n.nav, n.name ?? n.nav));
 
   const fieldsByTab = new Map<string, string[]>();
   const ungrouped: string[] = [];
@@ -203,7 +293,7 @@ function buildTabPagination(schema: RJSFSchema, uiSchema: NavDrivenUiSchema): Ta
   });
 
   const orderedTabs: string[] = [];
-  (navConf.order ?? []).forEach((k) => {
+  (navConf.order ?? []).forEach((k: string) => {
     if (fieldsByTab.has(k)) orderedTabs.push(k);
   });
   fieldsByTab.forEach((_v, k) => {
@@ -371,9 +461,10 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
   );
   const handleChange = (next: RjsfOnChangeArg) => {
     if (tabSchemaAndUi) {
-      const nextData = (next.formData as Record<string, unknown>) ?? {};
+      const nextEvent = (typeof next === 'object' && next ? next : {}) as Record<string, unknown>;
+      const nextData = (nextEvent.formData as Record<string, unknown> | undefined) ?? {};
       const mergedEvent = {
-        ...next,
+        ...nextEvent,
         formData: {
           ...formData,
           ...nextData,
@@ -412,6 +503,10 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
         schema={tabSchemaAndUi?.schema ?? props.schema}
         uiSchema={tabSchemaAndUi?.uiSchema ?? props.uiSchema}
         onChange={handleChange}
+        widgets={{
+          SelectWidget: RjsfPortalSelectWidget,
+          ...(props.widgets ?? {}),
+        }}
         templates={{
           ...(props.templates ?? {}),
           FieldTemplate: HoverDescriptionFieldTemplate,

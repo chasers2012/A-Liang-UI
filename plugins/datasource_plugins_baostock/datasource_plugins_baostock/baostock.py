@@ -112,10 +112,7 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
             ],
         },
         ui_schema={
-            "fields": {
-                "ui:options": {"orderable": False, "addable": True, "removable": True},
-                "items": {"ui:placeholder": "例如 volume"},
-            }
+            # Per-api connection widgets are defined by each loader's config schema.
         },
     )
     columns_config = PluginConfigSchema(
