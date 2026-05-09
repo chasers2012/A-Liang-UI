@@ -1,7 +1,7 @@
 'use client';
 
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,10 @@ export function DatasourceForm({
     [plugins],
   );
   const selectedPlugin = plugins.find((p) => p.type === form.type) ?? null;
+  const [pluginConfigValid, setPluginConfigValid] = useState(false);
+
+  const mainFormValid = !!form.name.trim() && (editorMode !== 'create' || !!form.type.trim());
+  const pluginFormValid = !!selectedPlugin && pluginConfigValid;
 
   return (
     <Page
@@ -63,7 +67,7 @@ export function DatasourceForm({
         <PageFormHeaderActions
           formId={DATASOURCE_MAIN_FORM_ID}
           submitting={submitting}
-          submitDisabled={!form.name.trim() || (editorMode === 'create' && !form.type.trim())}
+          submitDisabled={!mainFormValid || !pluginFormValid}
           cancelHref={cancelHref}
         />
       }
@@ -96,7 +100,12 @@ export function DatasourceForm({
             </div>
           )}
 
-          <DatasourceFormPluginConfig form={form} setForm={setForm} plugin={selectedPlugin} />
+          <DatasourceFormPluginConfig
+            form={form}
+            setForm={setForm}
+            plugin={selectedPlugin}
+            onValidityChange={setPluginConfigValid}
+          />
 
           {formError && (
             <Alert variant="destructive">

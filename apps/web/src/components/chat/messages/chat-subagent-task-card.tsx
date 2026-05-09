@@ -5,28 +5,10 @@ import { Bot, CheckCircle2, ChevronRight, Loader2, XCircle } from 'lucide-react'
 
 import type { AssistantBlock, ChatToolCallDisplay } from '@/models/chat/types';
 import { cn } from '@/lib/utils';
-import { unescapeUnicode } from 'unescape-unicode';
 
 import { ChatAssistantSingleBlock } from './chat-assistant-single-block';
 import { AuthorizationPanel, getPersistedAuthorization } from './chat-tool-call-card';
 import { buildAssistantRenderSequence, isSubagentTaskShell, parseTaskToolArgs } from './chat-subagent-task-blocks';
-
-function formatJson(v: unknown): string {
-  if (v === undefined) return '';
-  try {
-    let str = '';
-    if (typeof v === 'string') {
-      str = JSON.stringify(JSON.parse(v), null, 2);
-    } else if (typeof v === 'number') {
-      str = String(v);
-    } else {
-      str = JSON.stringify(v, null, 2);
-    }
-    return unescapeUnicode(str);
-  } catch {
-    return unescapeUnicode(String(v));
-  }
-}
 
 const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDisplay['status'] }) {
   return status === 'running' ? (

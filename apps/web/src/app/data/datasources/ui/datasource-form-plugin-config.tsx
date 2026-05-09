@@ -22,6 +22,7 @@ type Props = {
   form: FormState;
   setForm: Dispatch<SetStateAction<FormState>>;
   plugin: DatasourcePluginPublic | null;
+  onValidityChange?: (valid: boolean) => void;
 };
 
 function toUploadErrorMessage(err: unknown): string {
@@ -60,7 +61,23 @@ function UploadPathWidget(props: {
   );
 }
 
-export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
+function isValueFilled(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+function areRequiredFieldsFilled(schema: Record<string, unknown>, data: Record<string, unknown>): boolean {
+  const required = Array.isArray(schema.required) ? schema.required : [];
+  if (required.length === 0) return true;
+  return required.every((key) => {
+    if (typeof key !== 'string' || key.length === 0) return true;
+    return isValueFilled(data[key]);
+  });
+}
+
+export function DatasourceFormPluginConfig({ form, setForm, plugin, onValidityChange }: Props) {
   const [activeStep, setActiveStep] = useState(0);
   const [inspecting, setInspecting] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
@@ -130,6 +147,17 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
   const baseFormUiSchema = connectionUiSchema;
   const fieldsFormUiSchema = rawColumnsUiSchema;
 
+  const pluginConfigValid = useMemo(() => {
+    if (!plugin) return false;
+    const baseValid = areRequiredFieldsFilled(baseFormSchema, form.config);
+    const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, form.config);
+    return baseValid && fieldsValid;
+  }, [plugin, baseFormSchema, fieldsFormSchema, form.config]);
+
+  useEffect(() => {
+    onValidityChange?.(pluginConfigValid);
+  }, [onValidityChange, pluginConfigValid]);
+
   if (!plugin) return null;
 
   const onInspectColumns = async () => {
@@ -190,16 +218,9 @@ export function DatasourceFormPluginConfig({ form, setForm, plugin }: Props) {
             description="连接参数与列名探测"
             active={activeStep === 0}
             completed={activeStep > 0}
-            onClick={() => setActiveStep(0)}
           />
           {hasFieldsStep ? (
-            <StepperItem
-              index={1}
-              title="字段映射"
-              description="选择日期列和资产列"
-              active={activeStep === 1}
-              onClick={() => setActiveStep(1)}
-            />
+            <StepperItem index={1} title="字段映射" description="选择日期列和资产列" active={activeStep === 1} />
           ) : null}
         </Stepper>
         {inspectOkMessage ? (
