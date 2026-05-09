@@ -40,3 +40,14 @@ def load_frame(
     if frames:
         return pd.concat(frames, ignore_index=True)
     return pd.DataFrame(columns=effective_cols) if effective_cols else pd.DataFrame()
+
+
+LOADER_SPEC: dict[str, object] = {
+    "key": API_NAME,
+    "label": "证券行业信息",
+    "loader": load_frame,
+    "config": json_schema,
+    "columns": FIXED_COLUMNS,
+    "asset_column": ASSET_COLUMN,
+    "date_column": TIME_COLUMN,
+}

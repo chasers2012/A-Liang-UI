@@ -33,3 +33,14 @@ def load_frame(
     if str(rs.error_code) != "0":
         raise ValueError(f"BaoStock 获取上证50成分股失败: {rs.error_msg}")
     return rs.get_data()
+
+
+LOADER_SPEC: dict[str, object] = {
+    "key": API_NAME,
+    "label": "上证50成分股",
+    "loader": load_frame,
+    "config": json_schema,
+    "columns": FIXED_COLUMNS,
+    "asset_column": ASSET_COLUMN,
+    "date_column": TIME_COLUMN,
+}

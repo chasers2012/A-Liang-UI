@@ -145,3 +145,14 @@ def load_frame(
         )
     out = pd.concat(frames, ignore_index=True)
     return out.loc[:, requested_cols] if requested_cols else out
+
+
+LOADER_SPEC: dict[str, object] = {
+    "key": API_NAME,
+    "label": "K线数据",
+    "loader": load_frame,
+    "config": json_schema,
+    "columns": FIXED_COLUMNS,
+    "asset_column": ASSET_COLUMN,
+    "date_column": TIME_COLUMN,
+}
