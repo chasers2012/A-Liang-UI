@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.form import FormSchema
 from app.llm.plugins import LlmPlugin
-from app.plugin.schema import PluginConfigSchema
 from pydantic import BaseModel, ConfigDict, model_validator
 
 
@@ -23,7 +23,7 @@ class _AnthropicConfig(BaseModel):
 class AnthropicLlmPlugin(LlmPlugin):
     name: Literal["anthropic"] = "anthropic"
 
-    config = PluginConfigSchema(
+    config = FormSchema(
         title="Anthropic",
         description="配置 Anthropic Claude API。",
         json_schema={

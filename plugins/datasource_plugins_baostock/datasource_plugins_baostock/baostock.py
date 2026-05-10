@@ -6,7 +6,7 @@ from typing import Any, Literal
 import baostock as bs
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
-from app.plugin import PluginConfigSchema
+from app.form import FormSchema
 from factor.datasource import FactorDataSource
 
 from .common import (
@@ -89,7 +89,7 @@ class BaoStockDataSource(FactorDataSource):
 class BaoStockDataSourcePlugin(DataSourcePlugin):
     name: Literal["baostock"] = "baostock"
 
-    connection_config = PluginConfigSchema(
+    connection_config = FormSchema(
         title="BaoStock 数据源",
         description="通过 baostock 拉取 A 股数据（参数由数据集时间和资产过滤驱动）。",
         json_schema={
@@ -115,7 +115,7 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
             # Per-api connection widgets are defined by each loader's config schema.
         },
     )
-    columns_config = PluginConfigSchema(
+    columns_config = FormSchema(
         title="BaoStock 字段配置",
         description="配置日期列和资产列。",
         json_schema={

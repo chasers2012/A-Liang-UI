@@ -40,7 +40,8 @@ def _merge_config_overlay_with_saved_secrets(
     ds_type: str,
 ) -> dict[str, Any]:
     """
-    Apply ``overlay`` on top of ``saved``, but keep stored values for plugin ``secret_keys``
+    Apply ``overlay`` on top of ``saved``, but keep stored values for fields listed as
+    secret fields on the merged form schema (``secret_keys`` / password widgets)
     when the client sends placeholders (API redaction ``***`` or blank = keep password).
     """
 
@@ -67,7 +68,7 @@ def _merge_config_overlay_with_saved_secrets(
     return merged
 
 
-def _schema_for_type(ds_type: str) -> Any:  # PluginConfigSchema | None
+def _schema_for_type(ds_type: str) -> Any:  # FormSchema | None
     try:
         plugin = get_datasource_plugin(str(ds_type))
         return merge_datasource_config_schemas(

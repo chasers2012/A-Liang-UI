@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.plugin.schema import PluginConfigSchema
+from app.form.schema import FormSchema
 
 
-def redact_config(
-    config: dict[str, Any],
-    schema: PluginConfigSchema | None = None,
+def redact_form(
+    data: dict[str, Any],
+    schema: FormSchema | None = None,
 ) -> dict[str, Any]:
     """
-    Deep-copy ``config`` and replace top-level values whose keys are marked
-    ``secret`` on ``PluginConfigField`` in ``schema`` with ``"***"``.
+    Deep-copy ``data`` and replace top-level values for keys resolved as secret by
+    ``schema`` (see :meth:`FormSchema.resolved_secret_keys`) with ``"***"``.
 
-    If ``schema`` is None or has no secret fields, returns a deep copy unchanged.
+    If ``schema`` is None or resolves no secret keys, returns a deep copy unchanged.
     """
 
     secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
@@ -23,7 +23,7 @@ def redact_config(
         for k, vv in d.items():
             sk = str(k)
             if at_root and sk in secret_keys:
-                out[sk] = "***"
+                out[sk] = ""
             elif isinstance(vv, dict):
                 out[sk] = _walk(vv, at_root=False)
             elif isinstance(vv, list):
@@ -39,4 +39,4 @@ def redact_config(
             return [_item(i) for i in x]
         return x
 
-    return _walk(dict(config), at_root=True)
+    return _walk(dict(data), at_root=True)

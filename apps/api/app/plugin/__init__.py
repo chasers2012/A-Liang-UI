@@ -1,20 +1,16 @@
-"""Shared building blocks for plugin-style extensions (config schema, redact)."""
+"""Shared building blocks for plugin-style extensions (registry)."""
 
 from app.plugin.base import Plugin
-from app.plugin.redact import redact_config
 from app.plugin.registry import (
     PluginRegistry,
     load_plugins_from_entry_points,
 )
-from app.plugin.schema import PluginConfigSchema
 from app.startup_jobs import register_startup_job
 
 __all__ = [
     "Plugin",
-    "PluginConfigSchema",
     "PluginRegistry",
     "load_plugins_from_entry_points",
-    "redact_config",
 ]
 
 

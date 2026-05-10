@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.form import FormSchema
 from app.llm.plugins import LlmPlugin
-from app.plugin.schema import PluginConfigSchema
 from pydantic import BaseModel, ConfigDict
 
 
@@ -18,7 +18,7 @@ class _OllamaConfig(BaseModel):
 class OllamaLlmPlugin(LlmPlugin):
     name: Literal["ollama"] = "ollama"
 
-    config = PluginConfigSchema(
+    config = FormSchema(
         title="Ollama",
         description="使用本地 Ollama 服务。",
         json_schema={

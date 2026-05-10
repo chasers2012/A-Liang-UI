@@ -6,9 +6,9 @@ from typing import Any, ClassVar
 
 from factor import FactorDataSource
 
+from app.form import FormSchema
 from app.plugin.base import Plugin
 from app.plugin.registry import PluginRegistry
-from app.plugin.schema import PluginConfigSchema
 
 __all__ = [
     "DataSourcePlugin",
@@ -37,17 +37,17 @@ class DataSourcePlugin(Plugin):
     """
 
     category = "datasource"
-    connection_config: ClassVar[PluginConfigSchema | None] = None
-    columns_config: ClassVar[PluginConfigSchema | None] = None
+    connection_config: ClassVar[FormSchema | None] = None
+    columns_config: ClassVar[FormSchema | None] = None
 
     @abstractmethod
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """Validate and normalize config. Must return a JSON-serializable dict."""
 
-    def get_connection_config_schema(self) -> PluginConfigSchema | None:
+    def get_connection_config_schema(self) -> FormSchema | None:
         return self.connection_config
 
-    def get_columns_config_schema(self) -> PluginConfigSchema | None:
+    def get_columns_config_schema(self) -> FormSchema | None:
         return self.columns_config
 
     @abstractmethod
@@ -60,12 +60,12 @@ class DataSourcePlugin(Plugin):
 
 
 def merge_datasource_config_schemas(
-    connection_config: PluginConfigSchema | None,
-    columns_config: PluginConfigSchema | None,
-) -> PluginConfigSchema | None:
+    connection_config: FormSchema | None,
+    columns_config: FormSchema | None,
+) -> FormSchema | None:
     """
-    Merge connection and columns :class:`PluginConfigSchema` for API responses
-    and config redaction (e.g. combined ``secret_keys``).
+    Merge connection and columns :class:`FormSchema` for API responses
+    and field redaction (e.g. combined ``secret_keys``).
     """
     if connection_config is None and columns_config is None:
         return None
@@ -88,7 +88,7 @@ def merge_datasource_config_schemas(
     cols_req = (
         list(cols.json_schema.get("required", [])) if isinstance(cols.json_schema, dict) else []
     )
-    return PluginConfigSchema(
+    return FormSchema(
         title=conn.title,
         description=conn.description,
         json_schema={

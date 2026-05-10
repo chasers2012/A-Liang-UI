@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin, VerifyResult
-from app.plugin import PluginConfigSchema
+from app.form import FormSchema
 from factor.datasource import FactorDataSource
 from pydantic import BaseModel, Field, model_validator
 from workspace import get_workspace_root
@@ -142,7 +142,7 @@ class CsvDataSource(FactorDataSource):
 class CsvDataSourcePlugin(DataSourcePlugin):
     name: Literal["csv"] = "csv"
 
-    connection_config = PluginConfigSchema(
+    connection_config = FormSchema(
         title="CSV 数据源",
         description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
         json_schema={
@@ -170,7 +170,7 @@ class CsvDataSourcePlugin(DataSourcePlugin):
             },
         },
     )
-    columns_config = PluginConfigSchema(
+    columns_config = FormSchema(
         title="CSV 字段配置",
         description="根据连接探测到的列，选择日期列和资产列。",
         json_schema={

@@ -4,9 +4,9 @@ from abc import abstractmethod
 from contextlib import suppress
 from typing import Any, ClassVar
 
+from app.form import FormSchema
 from app.plugin.base import Plugin
 from app.plugin.registry import PluginRegistry, load_plugins_from_entry_points
-from app.plugin.schema import PluginConfigSchema
 
 __all__ = [
     "LlmPlugin",
@@ -49,9 +49,9 @@ class LlmPlugin(Plugin):
     """
 
     category = "llm"
-    config: ClassVar[PluginConfigSchema | None] = None
+    config: ClassVar[FormSchema | None] = None
 
-    def get_config_schema(self) -> PluginConfigSchema | None:
+    def get_config_schema(self) -> FormSchema | None:
         return self.config
 
     @abstractmethod

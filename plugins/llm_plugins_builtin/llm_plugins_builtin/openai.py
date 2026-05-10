@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.form import FormSchema
 from app.llm.plugins import LlmPlugin
-from app.plugin.schema import PluginConfigSchema
 from pydantic import BaseModel, ConfigDict, model_validator
 
 
@@ -24,7 +24,7 @@ class _OpenAiConfig(BaseModel):
 class OpenAiLlmPlugin(LlmPlugin):
     name: Literal["openai"] = "openai"
 
-    config = PluginConfigSchema(
+    config = FormSchema(
         title="OpenAI",
         description="配置 OpenAI 的 API。",
         json_schema={

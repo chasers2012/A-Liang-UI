@@ -12,7 +12,7 @@ from app.datasource.plugins import (
     get_datasource_plugin,
     merge_datasource_config_schemas,
 )
-from app.plugin import redact_config
+from app.form import redact_form
 
 DataSourceType = str
 
@@ -86,7 +86,7 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
         id=row.id,
         name=row.name,
         type=str(row.type),
-        config=redact_config(dict(row.config or {}), schema),
+        config=redact_form(dict(row.config or {}), schema),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )

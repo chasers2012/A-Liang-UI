@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.form import FormSchema
 from app.llm.plugins import LlmPlugin
-from app.plugin.schema import PluginConfigSchema
 from pydantic import BaseModel, ConfigDict, model_validator
 
 
@@ -24,7 +24,7 @@ class _DeepSeekConfig(BaseModel):
 class DeepSeekLlmPlugin(LlmPlugin):
     name: Literal["deepseek"] = "deepseek"
 
-    config = PluginConfigSchema(
+    config = FormSchema(
         title="DeepSeek",
         description="配置 DeepSeek / 兼容 OpenAI 的 API。",
         json_schema={

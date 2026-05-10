@@ -5,13 +5,13 @@ from typing import Any
 
 
 @dataclass(frozen=True)
-class PluginConfigSchema:
+class FormSchema:
     """
-    Schema for rendering plugin config forms in the frontend via react-jsonschema-form (RJSF).
+    Describe a react-jsonschema-form (RJSF) form for the frontend.
 
     - `json_schema`: RJSF JSON Schema (draft-07-ish object schema).
     - `ui_schema`: RJSF UI Schema (widgets, placeholders, help text, ordering, etc.).
-    - `secret_keys`: top-level config keys that should be redacted when returning config to clients.
+    - `secret_keys`: top-level property names whose values should be redacted when returning submitted data to clients.
     """
 
     title: str
@@ -22,10 +22,10 @@ class PluginConfigSchema:
 
     def resolved_secret_keys(self) -> list[str]:
         """
-        Secret keys used for config redaction / encryption.
+        Field names treated as secret for redaction or encryption.
 
         If `secret_keys` is explicitly provided, it wins.
-        Otherwise infer top-level secret keys from RJSF ui_schema entries whose
+        Otherwise infer top-level keys from RJSF ui_schema entries whose
         `ui:widget` is set to "password".
         """
 
