@@ -34,11 +34,79 @@ class DataSourceSpec(ABC):
         self.connection_config = connection_config
         self.columns_config = columns_config
 
-    def get_connection_config_schema(self) -> FormSchema | None:
-        return self.connection_config
+    def resolved_connection_secret_keys(self) -> list[str]:
+        connection_schema = self.connection_config
+        return connection_schema.resolved_secret_keys() if connection_schema is not None else []
 
-    def get_columns_config_schema(self) -> FormSchema | None:
-        return self.columns_config
+    def resolved_columns_secret_keys(self) -> list[str]:
+        columns_schema = self.columns_config
+        return columns_schema.resolved_secret_keys() if columns_schema is not None else []
+
+    def decrypt_storage_config(self, stored_config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(stored_config or {})
+        connection_schema = self.connection_config
+        columns_schema = self.columns_config
+        connection = dict(raw.get("connection") or {})
+        columns = dict(raw.get("columns") or {})
+        return {
+            "connection": (
+                connection_schema.decrypt_form(connection)
+                if connection_schema is not None
+                else connection
+            ),
+            "columns": (
+                columns_schema.decrypt_form(columns) if columns_schema is not None else columns
+            ),
+        }
+
+    def encrypt_storage_config(self, storage_config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(storage_config or {})
+        connection_schema = self.connection_config
+        columns_schema = self.columns_config
+        connection = dict(raw.get("connection") or {})
+        columns = dict(raw.get("columns") or {})
+        return {
+            "connection": (
+                connection_schema.encrypt_form(connection)
+                if connection_schema is not None
+                else connection
+            ),
+            "columns": (
+                columns_schema.encrypt_form(columns) if columns_schema is not None else columns
+            ),
+        }
+
+    def merge_overlay_with_saved_secrets(
+        self,
+        saved: dict[str, Any],
+        overlay: dict[str, Any],
+    ) -> dict[str, Any]:
+        saved_plain = self.decrypt_storage_config(dict(saved or {}))
+        overlay_raw = dict(overlay or {})
+        connection_overlay = dict(overlay_raw.get("connection") or {})
+        columns_overlay = dict(overlay_raw.get("columns") or {})
+
+        def _merge_part(
+            schema: FormSchema | None,
+            saved_part: dict[str, Any],
+            overlay_part: dict[str, Any],
+        ) -> dict[str, Any]:
+            if schema is None:
+                return {**saved_part, **overlay_part}
+            return schema.merge_overlay_keep_secrets(saved_part, overlay_part)
+
+        return {
+            "connection": _merge_part(
+                self.connection_config,
+                dict(saved_plain.get("connection") or {}),
+                connection_overlay,
+            ),
+            "columns": _merge_part(
+                self.columns_config,
+                dict(saved_plain.get("columns") or {}),
+                columns_overlay,
+            ),
+        }
 
     @abstractmethod
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -66,14 +134,17 @@ class DataSourceCreate(BaseModel):
 
     name: str
     type: DataSourceType
-    config: dict[str, Any] = Field(default_factory=dict)
+    connection_config: dict[str, Any] = Field(default_factory=dict)
+    columns_config: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate_type_and_config(self) -> DataSourceCreate:
         if not str(self.type).strip():
             raise ValueError("type is required")
-        if self.config is None:
-            raise ValueError("config is required")
+        if self.connection_config is None:
+            raise ValueError("connection_config is required")
+        if self.columns_config is None:
+            raise ValueError("columns_config is required")
         return self
 
     def to_row(self) -> DataSourceRow:
@@ -83,7 +154,10 @@ class DataSourceCreate(BaseModel):
             id=rid,
             name=self.name,
             type=str(self.type).strip(),
-            config=dict(self.config or {}),
+            config={
+                "connection": dict(self.connection_config or {}),
+                "columns": dict(self.columns_config or {}),
+            },
             created_at=now,
             updated_at=now,
         )
@@ -93,8 +167,8 @@ class DataSourcePatch(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     name: str | None = None
-    # replace semantics: when present, overwrite record.config
-    config: dict[str, Any] | None = None
+    connection_config: dict[str, Any] | None = None
+    columns_config: dict[str, Any] | None = None
 
 
 class DataSourcePublic(BaseModel):
@@ -107,15 +181,23 @@ class DataSourcePublic(BaseModel):
 
 
 def row_to_public(row: DataSourceRow) -> DataSourcePublic:
-    from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
+    from app.datasource.plugins import get_datasource_plugin
 
     plugin = get_datasource_plugin(str(row.type))
-    schema = merge_datasource_config_schemas(
-        plugin.spec.get_connection_config_schema(),
-        plugin.spec.get_columns_config_schema(),
-    )
+    connection_schema = plugin.spec.connection_config
+    columns_schema = plugin.spec.columns_config
     raw_config = dict(row.config or {})
-    public_config = deepcopy(raw_config) if schema is None else schema.redact(raw_config)
+    public_config = deepcopy(raw_config)
+    if not isinstance(public_config.get("connection"), dict):
+        public_config["connection"] = {}
+    if not isinstance(public_config.get("columns"), dict):
+        public_config["columns"] = {}
+    if connection_schema is not None:
+        public_config["connection"] = connection_schema.redact(
+            dict(public_config.get("connection") or {})
+        )
+    if columns_schema is not None:
+        public_config["columns"] = columns_schema.redact(dict(public_config.get("columns") or {}))
     return DataSourcePublic(
         id=row.id,
         name=row.name,

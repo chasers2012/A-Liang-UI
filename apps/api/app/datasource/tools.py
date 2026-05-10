@@ -2,18 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.common.datetime_utils import utc_now_iso
-from app.datasource.api import list_datasources
-from app.datasource.controller import test_datasource as controller_test_datasource
-from app.datasource.models import DataSourceRow
-from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
-from app.datasource.registry import DataSourceItemsRegistry
-from app.datasource.schemas import (
-    DataSourceCreate,
-    DataSourcePatch,
-    row_to_public,
-)
-from app.secret.secret_fields import decrypt_fields, encrypt_fields
+from app.datasource import controller as datasource_controller
+from app.datasource.schemas import DataSourceCreate, DataSourcePatch
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
@@ -23,7 +13,8 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     """
     创建并保存数据源。
 
-    入参 `body` 包含 name/type/config；config 会先按插件规则校验，返回脱敏后的公开视图。
+    入参 `body` 包含 name/type/connection_config/columns_config；
+    分段配置按原样校验并分段加密入库。
 
     Args:
         body: 数据源创建请求体。
@@ -31,16 +22,7 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     Returns:
         创建后的数据源公开信息（敏感字段已脱敏）。
     """
-    plugin = get_datasource_plugin(str(body.type))
-    schema = merge_datasource_config_schemas(
-        plugin.spec.get_connection_config_schema(),
-        plugin.spec.get_columns_config_schema(),
-    )
-    validated = plugin.spec.validate_config(dict(body.config or {}))
-    new_row = body.to_row()
-    new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
-    created_row = DataSourceItemsRegistry.add_item(new_row)
-    return row_to_public(created_row).model_dump()
+    return datasource_controller.create_datasource(body).model_dump()
 
 
 @safe_tool("get_datasource_detail", parse_docstring=True)
@@ -54,10 +36,10 @@ def get_datasource_detail(datasource_id: str) -> dict[str, Any]:
     Returns:
         数据源公开信息（敏感字段已脱敏）。
     """
-    row = DataSourceItemsRegistry.get_item(datasource_id)
-    if row is None:
+    rec = datasource_controller.get_datasource_public(datasource_id)
+    if rec is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return row_to_public(row).model_dump()
+    return rec.model_dump()
 
 
 @safe_tool("get_datasource_list", parse_docstring=True)
@@ -68,7 +50,7 @@ def get_datasource_list() -> list[dict[str, Any]]:
     Returns:
         数据源公开视图列表（敏感字段保持脱敏）。
     """
-    return [f.model_dump() for f in list_datasources()]
+    return [f.model_dump() for f in datasource_controller.list_datasources()]
 
 
 @safe_tool("update_datasource", parse_docstring=True)
@@ -76,7 +58,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
     """
     更新数据源配置。
 
-    仅更新传入字段；`config` 采用整体替换并重新校验。
+    仅更新传入字段；分段配置会按 ``connection_config`` / ``columns_config`` 覆盖并重新校验。
 
     Args:
         datasource_id: 数据源 ID。
@@ -86,38 +68,10 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
         更新后的数据源公开信息（敏感字段已脱敏）。
     """
 
-    def _apply(row: DataSourceRow) -> None:
-        data = body.model_dump(exclude_unset=True)
-        if "name" in data:
-            row.name = data["name"]
-        if "config" in data:
-            plugin = get_datasource_plugin(str(row.type))
-            schema = merge_datasource_config_schemas(
-                plugin.spec.get_connection_config_schema(),
-                plugin.spec.get_columns_config_schema(),
-            )
-            saved_plain = decrypt_fields(
-                dict(row.config or {}),
-                schema.resolved_secret_keys() if schema else None,
-            )
-            incoming = dict(data["config"] or {})
-            # mimic UI semantics: empty / redacted secret means "keep"
-            for k in schema.resolved_secret_keys():
-                vv = incoming.get(k)
-                if (
-                    vv is None or (isinstance(vv, str) and vv.strip() in ("", "***"))
-                ) and k in saved_plain:
-                    incoming[k] = saved_plain[k]
-            validated = plugin.spec.validate_config(incoming)
-            row.config = encrypt_fields(
-                validated, schema.resolved_secret_keys() if schema else None
-            )
-        row.updated_at = utc_now_iso()
-
-    row = DataSourceItemsRegistry.update_item(datasource_id, _apply)
-    if row is None:
+    rec = datasource_controller.patch_datasource(datasource_id, body)
+    if rec is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return row_to_public(row).model_dump()
+    return rec.model_dump()
 
 
 @safe_tool("delete_datasource", parse_docstring=True)
@@ -131,10 +85,12 @@ def delete_datasource(datasource_id: str) -> dict[str, Any]:
     Returns:
         删除前的公开信息（敏感字段已脱敏）。
     """
-    row = DataSourceItemsRegistry.delete_item(datasource_id)
-    if row is None:
+    rec = datasource_controller.get_datasource_public(datasource_id)
+    if rec is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    return row_to_public(row).model_dump()
+    if not datasource_controller.delete_datasource(datasource_id):
+        raise ValueError(f"数据源 {datasource_id} 不存在")
+    return rec.model_dump()
 
 
 @safe_tool("test_datasource_connection", parse_docstring=True)
@@ -148,12 +104,8 @@ def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     Returns:
         `{ok, message}` 用于诊断连接问题。
     """
-    row = DataSourceItemsRegistry.get_item(datasource_id)
-    if row is None:
-        raise ValueError(f"数据源 {datasource_id} 不存在")
-    res = controller_test_datasource(datasource_id)
+    res = datasource_controller.test_datasource(datasource_id)
     if res is None:
-        # Should not happen because we already checked existence, but keep it safe.
         raise ValueError(f"数据源 {datasource_id} 不存在")
     return res.model_dump()
 

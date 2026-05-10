@@ -4,23 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
-
-def _password_paths_from_ui(ui: Any, prefix: list[str]) -> list[str]:
-    """Collect dotted paths for every nested ``ui:widget: password`` field."""
-    if not isinstance(ui, dict):
-        return []
-    out: list[str] = []
-    for k, v in ui.items():
-        sk = str(k)
-        if sk.startswith("ui:"):
-            continue
-        if not isinstance(v, dict):
-            continue
-        if v.get("ui:widget") == "password":
-            out.append(".".join([*prefix, sk]))
-            continue
-        out.extend(_password_paths_from_ui(v, [*prefix, sk]))
-    return out
+from app.secret.secret_fields import decrypt_fields, encrypt_fields
 
 
 @dataclass(frozen=True)
@@ -38,6 +22,49 @@ class FormSchema:
     json_schema: dict[str, Any] = field(default_factory=dict)
     ui_schema: dict[str, Any] = field(default_factory=dict)
     secret_keys: list[str] = field(default_factory=list)
+
+    @staticmethod
+    def _password_paths_from_ui(ui: Any, prefix: list[str]) -> list[str]:
+        """Collect dotted paths for every nested ``ui:widget: password`` field."""
+        if not isinstance(ui, dict):
+            return []
+        out: list[str] = []
+        for k, v in ui.items():
+            sk = str(k)
+            if sk.startswith("ui:"):
+                continue
+            if not isinstance(v, dict):
+                continue
+            if v.get("ui:widget") == "password":
+                out.append(".".join([*prefix, sk]))
+                continue
+            out.extend(FormSchema._password_paths_from_ui(v, [*prefix, sk]))
+        return out
+
+    @staticmethod
+    def is_unchanged_secret_value(val: Any) -> bool:
+        """True when client did not provide a new secret value."""
+
+        return val is None or (isinstance(val, str) and str(val).strip() in ("", "***"))
+
+    def merge_overlay_keep_secrets(
+        self,
+        saved_plain: dict[str, Any],
+        overlay: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Merge ``overlay`` onto plaintext ``saved_plain`` while preserving old
+        secret values when client sends placeholders (``None``, empty, ``***``).
+        """
+
+        keys = frozenset(str(k) for k in self.resolved_secret_keys())
+        merged = dict(saved_plain)
+        for key, val in overlay.items():
+            sk = str(key)
+            if sk in keys and FormSchema.is_unchanged_secret_value(val) and sk in merged:
+                continue
+            merged[sk] = val
+        return merged
 
     def resolved_secret_keys(self) -> list[str]:
         """
@@ -80,7 +107,7 @@ class FormSchema:
                 if p:
                     paths.append(p)
             return list(dict.fromkeys(paths))
-        return list(dict.fromkeys(_password_paths_from_ui(self.ui_schema, [])))
+        return list(dict.fromkeys(FormSchema._password_paths_from_ui(self.ui_schema, [])))
 
     @staticmethod
     def _apply_redact_paths(data: dict[str, Any], paths: list[str]) -> None:
@@ -113,3 +140,13 @@ class FormSchema:
         if paths:
             FormSchema._apply_redact_paths(out, paths)
         return out
+
+    def decrypt_form(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Decrypt top-level fields resolved as secrets in this form."""
+
+        return decrypt_fields(dict(data or {}), self.resolved_secret_keys())
+
+    def encrypt_form(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Encrypt top-level fields resolved as secrets in this form."""
+
+        return encrypt_fields(dict(data or {}), self.resolved_secret_keys())

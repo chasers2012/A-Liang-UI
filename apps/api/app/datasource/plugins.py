@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 from app.datasource.schemas import DataSourceSpec, VerifyResult
-from app.form import FormSchema
 from app.plugin.base import Plugin
 from app.plugin.registry import PluginRegistry
 
@@ -11,7 +10,6 @@ __all__ = [
     "DataSourcePlugin",
     "VerifyResult",
     "get_datasource_plugin",
-    "merge_datasource_config_schemas",
 ]
 
 
@@ -22,50 +20,6 @@ class DataSourcePlugin(Plugin):
 
     category = "datasource"
     spec: ClassVar[DataSourceSpec]
-
-
-def merge_datasource_config_schemas(
-    connection_config: FormSchema | None,
-    columns_config: FormSchema | None,
-) -> FormSchema | None:
-    """
-    Merge connection and columns :class:`FormSchema` for API responses
-    and field redaction (e.g. combined ``secret_keys``).
-    """
-    if connection_config is None and columns_config is None:
-        return None
-    if connection_config is None:
-        return columns_config
-    if columns_config is None:
-        return connection_config
-
-    conn = connection_config
-    cols = columns_config
-    conn_props = (
-        dict(conn.json_schema.get("properties", {})) if isinstance(conn.json_schema, dict) else {}
-    )
-    cols_props = (
-        dict(cols.json_schema.get("properties", {})) if isinstance(cols.json_schema, dict) else {}
-    )
-    conn_req = (
-        list(conn.json_schema.get("required", [])) if isinstance(conn.json_schema, dict) else []
-    )
-    cols_req = (
-        list(cols.json_schema.get("required", [])) if isinstance(cols.json_schema, dict) else []
-    )
-    return FormSchema(
-        title=conn.title,
-        description=conn.description,
-        json_schema={
-            "type": "object",
-            "properties": {**conn_props, **cols_props},
-            "required": list(dict.fromkeys([*conn_req, *cols_req])),
-        },
-        ui_schema={**dict(conn.ui_schema or {}), **dict(cols.ui_schema or {})},
-        secret_keys=list(
-            dict.fromkeys([*conn.resolved_secret_keys(), *cols.resolved_secret_keys()])
-        ),
-    )
 
 
 def get_datasource_plugin(type_id: str) -> DataSourcePlugin:

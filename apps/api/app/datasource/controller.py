@@ -5,7 +5,7 @@ from typing import Any
 from factor import FactorDataSource
 
 from app.datasource.models import DataSourceRow
-from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
+from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
@@ -20,62 +20,10 @@ from app.datasource.schemas import (
     utc_now_iso,
 )
 from app.plugin import PluginRegistry
-from app.secret.secret_fields import decrypt_fields, encrypt_fields
 
 
 def _normalize_name(name: str) -> str:
     return str(name).strip()
-
-
-def _client_sent_unchanged_secret(val: Any) -> bool:
-    """True when the client did not supply a new secret (redacted, empty, or omitted meaning)."""
-
-    return val is None or (isinstance(val, str) and str(val).strip() in ("", "***"))
-
-
-def _merge_config_overlay_with_saved_secrets(
-    saved: dict[str, Any],
-    overlay: dict[str, Any],
-    ds_type: str,
-) -> dict[str, Any]:
-    """
-    Apply ``overlay`` on top of ``saved``, but keep stored values for fields listed as
-    secret fields on the merged form schema (``secret_keys`` / password widgets)
-    when the client sends placeholders (API redaction ``***`` or blank = keep password).
-    """
-
-    schema = None
-    secret_keys: frozenset[str] = frozenset()
-    try:
-        plugin = get_datasource_plugin(str(ds_type))
-        schema = merge_datasource_config_schemas(
-            plugin.spec.get_connection_config_schema(),
-            plugin.spec.get_columns_config_schema(),
-        )
-        secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
-    except Exception:
-        schema = None
-        secret_keys = frozenset()
-
-    # decrypt saved secrets so internal validation/inspection works with plaintext
-    merged = decrypt_fields(dict(saved), schema.resolved_secret_keys() if schema else None)
-    for key, val in overlay.items():
-        sk = str(key)
-        if sk in secret_keys and _client_sent_unchanged_secret(val):
-            continue
-        merged[sk] = val
-    return merged
-
-
-def _schema_for_type(ds_type: str) -> Any:  # FormSchema | None
-    try:
-        plugin = get_datasource_plugin(str(ds_type))
-        return merge_datasource_config_schemas(
-            plugin.spec.get_connection_config_schema(),
-            plugin.spec.get_columns_config_schema(),
-        )
-    except Exception:
-        return None
 
 
 def _pick_inspect_date_column(
@@ -190,10 +138,7 @@ def get_datasource(id: str) -> FactorDataSource | None:
     if rec is None:
         return None
     plugin = get_datasource_plugin(rec.type)
-    schema = _schema_for_type(str(rec.type))
-    plain = decrypt_fields(
-        dict(rec.config or {}), schema.resolved_secret_keys() if schema else None
-    )
+    plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
     ds = plugin.spec.to_factor_datasource(plain)
     return BoundFactorDataSource(id, ds)
 
@@ -206,8 +151,8 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     reg = PluginRegistry.instance()
     out: list[DatasourcePluginPublic] = []
     for ds_type, plugin in reg.list_registered_by_category("datasource"):
-        connection_schema = plugin.spec.get_connection_config_schema()
-        columns_schema = plugin.spec.get_columns_config_schema()
+        connection_schema = plugin.spec.connection_config
+        columns_schema = plugin.spec.columns_config
         title = (
             (connection_schema.title if connection_schema else None)
             or (columns_schema.title if columns_schema else None)
@@ -244,11 +189,15 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
         if rec is None:
             raise LookupError("数据源不存在")
         ds_type = str(rec.type)
+        plugin = get_datasource_plugin(ds_type)
         saved = dict(rec.config or {})
         if body.config is not None:
-            config = _merge_config_overlay_with_saved_secrets(saved, dict(body.config), ds_type)
+            config = plugin.spec.merge_overlay_with_saved_secrets(
+                saved,
+                dict(body.config),
+            )
         else:
-            config = saved
+            config = plugin.spec.decrypt_storage_config(dict(saved or {}))
     else:
         if not ds_type:
             raise ValueError("type is required when datasource_id is not provided")
@@ -281,10 +230,14 @@ def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
     plugin = get_datasource_plugin(str(body.type))
-    schema = _schema_for_type(str(body.type))
-    validated = plugin.spec.validate_config(dict(body.config or {}))
+    validated = plugin.spec.validate_config(
+        {
+            "connection": dict(body.connection_config or {}),
+            "columns": dict(body.columns_config or {}),
+        }
+    )
     new_row = body.to_row()
-    new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
+    new_row.config = plugin.spec.encrypt_storage_config(validated)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row)
 
@@ -295,18 +248,18 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
         if "name" in data:
             _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
             row.name = data["name"]
-        if "config" in data:
+        if "connection_config" in data or "columns_config" in data:
             plugin = get_datasource_plugin(str(row.type))
-            schema = _schema_for_type(str(row.type))
-            merged = _merge_config_overlay_with_saved_secrets(
+            overlay = {
+                "connection": dict(data.get("connection_config") or {}),
+                "columns": dict(data.get("columns_config") or {}),
+            }
+            merged = plugin.spec.merge_overlay_with_saved_secrets(
                 dict(row.config or {}),
-                dict(data["config"] or {}),
-                str(row.type),
+                overlay,
             )
             validated = plugin.spec.validate_config(merged)
-            row.config = encrypt_fields(
-                validated, schema.resolved_secret_keys() if schema else None
-            )
+            row.config = plugin.spec.encrypt_storage_config(validated)
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(ds_id, _apply)
@@ -324,11 +277,5 @@ def test_datasource(ds_id: str) -> VerifyResult | None:
     if rec is None:
         return None
     plugin = get_datasource_plugin(rec.type)
-    schema = merge_datasource_config_schemas(
-        plugin.spec.get_connection_config_schema(),
-        plugin.spec.get_columns_config_schema(),
-    )
-    plain = decrypt_fields(
-        dict(rec.config or {}), schema.resolved_secret_keys() if schema else None
-    )
+    plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
     return plugin.spec.verify(plain)
