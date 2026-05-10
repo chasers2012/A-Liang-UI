@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import DataSourcePlugin
+from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
 from factor.datasource import FactorDataSource
 from pydantic import BaseModel, Field, model_validator
@@ -139,62 +140,63 @@ class CsvDataSource(FactorDataSource):
         return df.loc[mask].reset_index(drop=True)
 
 
-class CsvDataSourcePlugin(DataSourcePlugin):
-    name: Literal["csv"] = "csv"
-
-    connection_config = FormSchema(
-        title="CSV 数据源",
-        description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "title": "文件路径"},
-                "read_csv_kwargs": {
+class CsvDataSourceSpec(DataSourceSpec):
+    def __init__(self) -> None:
+        super().__init__(
+            connection_config=FormSchema(
+                title="CSV 数据源",
+                description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
+                json_schema={
                     "type": "object",
-                    "title": "read_csv_kwargs（JSON）",
-                    "default": {},
+                    "properties": {
+                        "path": {"type": "string", "title": "文件路径"},
+                        "read_csv_kwargs": {
+                            "type": "object",
+                            "title": "read_csv_kwargs（JSON）",
+                            "default": {},
+                        },
+                    },
+                    "required": ["path"],
                 },
-            },
-            "required": ["path"],
-        },
-        ui_schema={
-            "path": {
-                "ui:widget": "file",
-                "ui:options": {"accept": ".csv,text/csv"},
-                "ui:help": "可填写绝对路径，或相对于 workspace 根目录的相对路径。",
-            },
-            "read_csv_kwargs": {
-                "ui:widget": "textarea",
-                "ui:options": {"rows": 6},
-                "ui:placeholder": "{}",
-            },
-        },
-    )
-    columns_config = FormSchema(
-        title="CSV 字段配置",
-        description="根据连接探测到的列，选择日期列和资产列。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "date_column": {"type": "string", "title": "日期列", "default": "date"},
-                "asset_column": {
-                    "type": ["string", "null"],
-                    "title": "资产列",
-                    "default": "asset",
+                ui_schema={
+                    "path": {
+                        "ui:widget": "file",
+                        "ui:options": {"accept": ".csv,text/csv"},
+                        "ui:help": "可填写绝对路径，或相对于 workspace 根目录的相对路径。",
+                    },
+                    "read_csv_kwargs": {
+                        "ui:widget": "textarea",
+                        "ui:options": {"rows": 6},
+                        "ui:placeholder": "{}",
+                    },
                 },
-                "columns": {
-                    "type": "array",
-                    "title": "可选列缓存",
-                    "items": {"type": "string"},
-                    "default": [],
+            ),
+            columns_config=FormSchema(
+                title="CSV 字段配置",
+                description="根据连接探测到的列，选择日期列和资产列。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "date_column": {"type": "string", "title": "日期列", "default": "date"},
+                        "asset_column": {
+                            "type": ["string", "null"],
+                            "title": "资产列",
+                            "default": "asset",
+                        },
+                        "columns": {
+                            "type": "array",
+                            "title": "可选列缓存",
+                            "items": {"type": "string"},
+                            "default": [],
+                        },
+                    },
+                    "required": ["date_column"],
                 },
-            },
-            "required": ["date_column"],
-        },
-        ui_schema={
-            "columns": {"ui:widget": "hidden"},
-        },
-    )
+                ui_schema={
+                    "columns": {"ui:widget": "hidden"},
+                },
+            ),
+        )
 
     @staticmethod
     def _validate_csv_config(config: dict[str, Any]) -> CsvConfig:
@@ -231,8 +233,14 @@ class CsvDataSourcePlugin(DataSourcePlugin):
             return VerifyResult(ok=False, message=f"无法访问路径: {e}")
         return VerifyResult(ok=True, message=f"CSV 可读: {p}")
 
+
+class CsvDataSourcePlugin(DataSourcePlugin):
+    name: Literal["csv"] = "csv"
+
+    spec = CsvDataSourceSpec()
+
     def list_table_columns(self, config: dict[str, Any]) -> list[str]:
-        cfg = self._validate_csv_config(config)
+        cfg = CsvDataSourceSpec._validate_csv_config(config)
         ds = CsvDataSource(
             path=cfg.path,
             read_csv_kwargs=dict(cfg.read_csv_kwargs),

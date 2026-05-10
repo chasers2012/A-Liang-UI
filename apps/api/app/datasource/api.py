@@ -11,7 +11,7 @@ from app.datasource.schemas import (
     DataSourcePublic,
     InspectColumnsRequest,
     InspectColumnsResponse,
-    TestResult,
+    VerifyResult,
 )
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])
@@ -89,8 +89,8 @@ def delete_datasource(ds_id: str) -> None:
         raise HTTPException(status_code=404, detail="数据源不存在")
 
 
-@router.post("/{ds_id}/test", response_model=TestResult)
-def test_datasource_endpoint(ds_id: str) -> TestResult:
+@router.post("/{ds_id}/test", response_model=VerifyResult)
+def test_datasource_endpoint(ds_id: str) -> VerifyResult:
     rec = datasource_controller.test_datasource(ds_id)
     if rec is None:
         raise HTTPException(status_code=404, detail="数据源不存在")

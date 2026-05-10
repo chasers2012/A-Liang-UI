@@ -5,7 +5,8 @@ from typing import Any, Literal
 
 import baostock as bs
 import pandas as pd
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import DataSourcePlugin
+from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
 from factor.datasource import FactorDataSource
 
@@ -86,98 +87,101 @@ class BaoStockDataSource(FactorDataSource):
         )
 
 
-class BaoStockDataSourcePlugin(DataSourcePlugin):
-    name: Literal["baostock"] = "baostock"
-
-    connection_config = FormSchema(
-        title="BaoStock 数据源",
-        description="通过 baostock 拉取 A 股数据（参数由数据集时间和资产过滤驱动）。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "api_name": {
-                    "type": "string",
-                    "title": "Baostock 接口",
-                    "default": API_KEYS[0] if API_KEYS else "",
-                    "oneOf": API_OPTIONS,
-                },
-            },
-            "required": ["api_name"],
-            "allOf": [
-                {
-                    "if": {"properties": {"api_name": {"const": api_name}}},
-                    "then": API_CONFIG_SCHEMAS.get(api_name, {}),
-                }
-                for api_name in API_KEYS
-            ],
-        },
-        ui_schema={
-            # Per-api connection widgets are defined by each loader's config schema.
-        },
-    )
-    columns_config = FormSchema(
-        title="BaoStock 字段配置",
-        description="配置日期列和资产列。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "api_name": {
-                    "type": "string",
-                    "title": "Baostock 接口",
-                    "default": API_KEYS[0] if API_KEYS else "",
-                    "oneOf": API_OPTIONS,
-                },
-                "date_column": {
-                    "type": "string",
-                    "title": "日期列",
-                    "default": API_DEFAULT_DATE_COLUMNS.get(API_KEYS[0], DEFAULT_DATE_COLUMN)
-                    if API_KEYS
-                    else DEFAULT_DATE_COLUMN,
-                },
-                "asset_column": {
-                    "type": ["string", "null"],
-                    "title": "资产列",
-                    "default": (
-                        API_DEFAULT_ASSET_COLUMNS.get(API_KEYS[0])
-                        if API_KEYS
-                        else DEFAULT_ASSET_COLUMN
-                    ),
-                },
-                "columns": {
-                    "type": "array",
-                    "title": "可选列缓存",
-                    "items": {"type": "string"},
-                    "default": [],
-                },
-            },
-            "required": ["api_name", "date_column"],
-            "allOf": [
-                {
-                    "if": {
-                        "required": ["api_name"],
-                        "properties": {"api_name": {"const": api_name}},
+class BaoStockDataSourceSpec(DataSourceSpec):
+    def __init__(self) -> None:
+        super().__init__(
+            connection_config=FormSchema(
+                title="BaoStock 数据源",
+                description="通过 baostock 拉取 A 股数据（参数由数据集时间和资产过滤驱动）。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "api_name": {
+                            "type": "string",
+                            "title": "Baostock 接口",
+                            "default": API_KEYS[0] if API_KEYS else "",
+                            "oneOf": API_OPTIONS,
+                        },
                     },
-                    "then": {
-                        "properties": {
-                            "date_column": {
-                                "default": API_DEFAULT_DATE_COLUMNS.get(
-                                    api_name, DEFAULT_DATE_COLUMN
-                                ),
+                    "required": ["api_name"],
+                    "allOf": [
+                        {
+                            "if": {"properties": {"api_name": {"const": api_name}}},
+                            "then": API_CONFIG_SCHEMAS.get(api_name, {}),
+                        }
+                        for api_name in API_KEYS
+                    ],
+                },
+                ui_schema={
+                    # Per-api connection widgets are defined by each loader's config schema.
+                },
+            ),
+            columns_config=FormSchema(
+                title="BaoStock 字段配置",
+                description="配置日期列和资产列。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "api_name": {
+                            "type": "string",
+                            "title": "Baostock 接口",
+                            "default": API_KEYS[0] if API_KEYS else "",
+                            "oneOf": API_OPTIONS,
+                        },
+                        "date_column": {
+                            "type": "string",
+                            "title": "日期列",
+                            "default": API_DEFAULT_DATE_COLUMNS.get(
+                                API_KEYS[0], DEFAULT_DATE_COLUMN
+                            )
+                            if API_KEYS
+                            else DEFAULT_DATE_COLUMN,
+                        },
+                        "asset_column": {
+                            "type": ["string", "null"],
+                            "title": "资产列",
+                            "default": (
+                                API_DEFAULT_ASSET_COLUMNS.get(API_KEYS[0])
+                                if API_KEYS
+                                else DEFAULT_ASSET_COLUMN
+                            ),
+                        },
+                        "columns": {
+                            "type": "array",
+                            "title": "可选列缓存",
+                            "items": {"type": "string"},
+                            "default": [],
+                        },
+                    },
+                    "required": ["api_name", "date_column"],
+                    "allOf": [
+                        {
+                            "if": {
+                                "required": ["api_name"],
+                                "properties": {"api_name": {"const": api_name}},
                             },
-                            "asset_column": {
-                                "default": API_DEFAULT_ASSET_COLUMNS.get(api_name),
+                            "then": {
+                                "properties": {
+                                    "date_column": {
+                                        "default": API_DEFAULT_DATE_COLUMNS.get(
+                                            api_name, DEFAULT_DATE_COLUMN
+                                        ),
+                                    },
+                                    "asset_column": {
+                                        "default": API_DEFAULT_ASSET_COLUMNS.get(api_name),
+                                    },
+                                }
                             },
                         }
-                    },
-                }
-                for api_name in API_KEYS
-            ],
-        },
-        ui_schema={
-            "api_name": {"ui:widget": "hidden"},
-            "columns": {"ui:widget": "hidden"},
-        },
-    )
+                        for api_name in API_KEYS
+                    ],
+                },
+                ui_schema={
+                    "api_name": {"ui:widget": "hidden"},
+                    "columns": {"ui:widget": "hidden"},
+                },
+            ),
+        )
 
     @staticmethod
     def _validate_baostock_config(config: dict[str, Any]) -> BaoStockConfig:
@@ -206,7 +210,7 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
             asset_column=cfg.asset_column,
         )
 
-    def _get_verify_trade_dates(self) -> str:
+    def _get_verify_trade_dates(self) -> tuple[str, str]:
         rs = bs.query_trade_dates(
             start_date=(pd.Timestamp.today().normalize() - pd.DateOffset(months=1)).strftime(
                 "%Y-%m-%d"
@@ -278,8 +282,14 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
             return VerifyResult(ok=False, message=f"BaoStock 校验失败: {e}")
         return VerifyResult(ok=True, message="BaoStock 连接与查询成功。")
 
+
+class BaoStockDataSourcePlugin(DataSourcePlugin):
+    name: Literal["baostock"] = "baostock"
+
+    spec = BaoStockDataSourceSpec()
+
     def list_table_columns(self, config: dict[str, Any]) -> list[str]:
-        cfg = self._validate_baostock_config(config)
+        cfg = BaoStockDataSourceSpec._validate_baostock_config(config)
         probe = BaoStockDataSource(
             api_name=cfg.api_name,
             api_params={},

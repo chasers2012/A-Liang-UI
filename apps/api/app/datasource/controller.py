@@ -15,11 +15,10 @@ from app.datasource.schemas import (
     DataSourcePublic,
     InspectColumnsRequest,
     InspectColumnsResponse,
-    TestResult,
+    VerifyResult,
     row_to_public,
     utc_now_iso,
 )
-from app.datasource.verify import verify_datasource
 from app.plugin import PluginRegistry
 from app.secret.secret_fields import decrypt_fields, encrypt_fields
 
@@ -50,8 +49,8 @@ def _merge_config_overlay_with_saved_secrets(
     try:
         plugin = get_datasource_plugin(str(ds_type))
         schema = merge_datasource_config_schemas(
-            plugin.get_connection_config_schema(),
-            plugin.get_columns_config_schema(),
+            plugin.spec.get_connection_config_schema(),
+            plugin.spec.get_columns_config_schema(),
         )
         secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
     except Exception:
@@ -72,8 +71,8 @@ def _schema_for_type(ds_type: str) -> Any:  # FormSchema | None
     try:
         plugin = get_datasource_plugin(str(ds_type))
         return merge_datasource_config_schemas(
-            plugin.get_connection_config_schema(),
-            plugin.get_columns_config_schema(),
+            plugin.spec.get_connection_config_schema(),
+            plugin.spec.get_columns_config_schema(),
         )
     except Exception:
         return None
@@ -195,7 +194,7 @@ def get_datasource(id: str) -> FactorDataSource | None:
     plain = decrypt_fields(
         dict(rec.config or {}), schema.resolved_secret_keys() if schema else None
     )
-    ds = plugin.to_factor_datasource(plain)
+    ds = plugin.spec.to_factor_datasource(plain)
     return BoundFactorDataSource(id, ds)
 
 
@@ -207,8 +206,8 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     reg = PluginRegistry.instance()
     out: list[DatasourcePluginPublic] = []
     for ds_type, plugin in reg.list_registered_by_category("datasource"):
-        connection_schema = plugin.get_connection_config_schema()
-        columns_schema = plugin.get_columns_config_schema()
+        connection_schema = plugin.spec.get_connection_config_schema()
+        columns_schema = plugin.spec.get_columns_config_schema()
         title = (
             (connection_schema.title if connection_schema else None)
             or (columns_schema.title if columns_schema else None)
@@ -256,7 +255,7 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
         config = dict(body.config or {})
 
     plugin = get_datasource_plugin(str(ds_type))
-    validated = plugin.validate_config(config)
+    validated = plugin.spec.validate_config(config)
     if not hasattr(plugin, "list_table_columns"):
         raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
     cols = plugin.list_table_columns(validated)
@@ -283,7 +282,7 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
     plugin = get_datasource_plugin(str(body.type))
     schema = _schema_for_type(str(body.type))
-    validated = plugin.validate_config(dict(body.config or {}))
+    validated = plugin.spec.validate_config(dict(body.config or {}))
     new_row = body.to_row()
     new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
     created_row = DataSourceItemsRegistry.add_item(new_row)
@@ -304,7 +303,7 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
                 dict(data["config"] or {}),
                 str(row.type),
             )
-            validated = plugin.validate_config(merged)
+            validated = plugin.spec.validate_config(merged)
             row.config = encrypt_fields(
                 validated, schema.resolved_secret_keys() if schema else None
             )
@@ -320,9 +319,16 @@ def delete_datasource(ds_id: str) -> bool:
     return DataSourceItemsRegistry.delete_item(ds_id) is not None
 
 
-def test_datasource(ds_id: str) -> TestResult | None:
+def test_datasource(ds_id: str) -> VerifyResult | None:
     rec = DataSourceItemsRegistry.get_item(ds_id)
     if rec is None:
         return None
-    ok, msg = verify_datasource(rec)
-    return TestResult(ok=ok, message=msg)
+    plugin = get_datasource_plugin(rec.type)
+    schema = merge_datasource_config_schemas(
+        plugin.spec.get_connection_config_schema(),
+        plugin.spec.get_columns_config_schema(),
+    )
+    plain = decrypt_fields(
+        dict(rec.config or {}), schema.resolved_secret_keys() if schema else None
+    )
+    return plugin.spec.verify(plain)

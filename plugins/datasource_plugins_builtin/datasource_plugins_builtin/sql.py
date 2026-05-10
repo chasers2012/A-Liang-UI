@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Literal
 
 import pandas as pd
-from app.datasource.plugins import DataSourcePlugin, VerifyResult
+from app.datasource.plugins import DataSourcePlugin
+from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
 from factor.datasource import FactorDataSource
 from pydantic import BaseModel, Field, model_validator
@@ -182,67 +183,68 @@ class SqlDataSource(FactorDataSource):
         return pd.read_sql(stmt, self._engine, params=params)
 
 
-class SqlDataSourcePlugin(DataSourcePlugin):
-    name: Literal["sql"] = "sql"
-
-    connection_config = FormSchema(
-        title="SQL 数据源",
-        description="配置数据库连接和数据表信息。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "db_driver": {
-                    "title": "数据库类型",
-                    "type": "string",
-                    "default": "postgresql",
-                    "oneOf": [
-                        {"const": "postgresql", "title": "PostgreSQL"},
-                        {"const": "mysql", "title": "MySQL / MariaDB"},
-                    ],
+class SqlDataSourceSpec(DataSourceSpec):
+    def __init__(self) -> None:
+        super().__init__(
+            connection_config=FormSchema(
+                title="SQL 数据源",
+                description="配置数据库连接和数据表信息。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "db_driver": {
+                            "title": "数据库类型",
+                            "type": "string",
+                            "default": "postgresql",
+                            "oneOf": [
+                                {"const": "postgresql", "title": "PostgreSQL"},
+                                {"const": "mysql", "title": "MySQL / MariaDB"},
+                            ],
+                        },
+                        "db_host": {"type": "string", "title": "主机（IP）"},
+                        "db_port": {"type": ["integer", "null"], "title": "端口"},
+                        "db_username": {"type": "string", "title": "用户名"},
+                        "db_password": {"type": "string", "title": "密码"},
+                        "db_name": {"type": "string", "title": "数据库名"},
+                        "table": {"type": "string", "title": "表名"},
+                    },
+                    "required": ["db_driver", "db_host", "db_name", "table"],
                 },
-                "db_host": {"type": "string", "title": "主机（IP）"},
-                "db_port": {"type": ["integer", "null"], "title": "端口"},
-                "db_username": {"type": "string", "title": "用户名"},
-                "db_password": {"type": "string", "title": "密码"},
-                "db_name": {"type": "string", "title": "数据库名"},
-                "table": {"type": "string", "title": "表名"},
-            },
-            "required": ["db_driver", "db_host", "db_name", "table"],
-        },
-        ui_schema={
-            "db_host": {"ui:placeholder": "127.0.0.1"},
-            "db_port": {"ui:placeholder": "留空使用默认端口"},
-            "db_password": {
-                "ui:widget": "password",
-                "ui:help": "编辑时留空表示保持原密码。",
-            },
-        },
-    )
-    columns_config = FormSchema(
-        title="SQL 字段配置",
-        description="根据连接探测到的列，选择日期列和资产列。",
-        json_schema={
-            "type": "object",
-            "properties": {
-                "date_column": {"type": "string", "title": "日期列", "default": "date"},
-                "asset_column": {
-                    "type": ["string", "null"],
-                    "title": "资产列",
-                    "default": "asset",
+                ui_schema={
+                    "db_host": {"ui:placeholder": "127.0.0.1"},
+                    "db_port": {"ui:placeholder": "留空使用默认端口"},
+                    "db_password": {
+                        "ui:widget": "password",
+                        "ui:help": "编辑时留空表示保持原密码。",
+                    },
                 },
-                "columns": {
-                    "type": "array",
-                    "title": "可选列缓存",
-                    "items": {"type": "string"},
-                    "default": [],
+            ),
+            columns_config=FormSchema(
+                title="SQL 字段配置",
+                description="根据连接探测到的列，选择日期列和资产列。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "date_column": {"type": "string", "title": "日期列", "default": "date"},
+                        "asset_column": {
+                            "type": ["string", "null"],
+                            "title": "资产列",
+                            "default": "asset",
+                        },
+                        "columns": {
+                            "type": "array",
+                            "title": "可选列缓存",
+                            "items": {"type": "string"},
+                            "default": [],
+                        },
+                    },
+                    "required": ["date_column"],
                 },
-            },
-            "required": ["date_column"],
-        },
-        ui_schema={
-            "columns": {"ui:widget": "hidden"},
-        },
-    )
+                ui_schema={
+                    "columns": {"ui:widget": "hidden"},
+                },
+            ),
+        )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         cfg = SqlConfig.model_validate(config)
@@ -271,6 +273,12 @@ class SqlDataSourcePlugin(DataSourcePlugin):
         except Exception as e:
             return VerifyResult(ok=False, message=f"SQL 连接失败: {e}")
         return VerifyResult(ok=True, message="SQL 连接成功。")
+
+
+class SqlDataSourcePlugin(DataSourcePlugin):
+    name: Literal["sql"] = "sql"
+
+    spec = SqlDataSourceSpec()
 
     def list_table_columns(self, config: dict[str, Any]) -> list[str]:
         cfg = SqlConfig.model_validate(config)

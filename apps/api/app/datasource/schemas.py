@@ -1,21 +1,56 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Any
 
+from factor import FactorDataSource
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
 from app.datasource.models import DataSourceRow
-from app.datasource.plugins import (
-    get_datasource_plugin,
-    merge_datasource_config_schemas,
-)
+from app.form import FormSchema
 
 DataSourceType = str
 
 generate_id = create_id_generator("datasources")
+
+
+class VerifyResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    ok: bool
+    message: str
+
+
+class DataSourceSpec(ABC):
+    """Form schemas and config/datasource behavior for a datasource plugin."""
+
+    def __init__(
+        self,
+        connection_config: FormSchema | None = None,
+        columns_config: FormSchema | None = None,
+    ) -> None:
+        self.connection_config = connection_config
+        self.columns_config = columns_config
+
+    def get_connection_config_schema(self) -> FormSchema | None:
+        return self.connection_config
+
+    def get_columns_config_schema(self) -> FormSchema | None:
+        return self.columns_config
+
+    @abstractmethod
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Validate and normalize config. Must return a JSON-serializable dict."""
+
+    @abstractmethod
+    def verify(self, config: dict[str, Any]) -> VerifyResult:
+        """Check connectivity or readability for the given config."""
+
+    @abstractmethod
+    def to_factor_datasource(self, config: dict[str, Any]) -> FactorDataSource:
+        """Build a FactorDataSource instance from validated config."""
 
 
 class RegistryFile(BaseModel):
@@ -72,10 +107,12 @@ class DataSourcePublic(BaseModel):
 
 
 def row_to_public(row: DataSourceRow) -> DataSourcePublic:
+    from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
+
     plugin = get_datasource_plugin(str(row.type))
     schema = merge_datasource_config_schemas(
-        plugin.get_connection_config_schema(),
-        plugin.get_columns_config_schema(),
+        plugin.spec.get_connection_config_schema(),
+        plugin.spec.get_columns_config_schema(),
     )
     raw_config = dict(row.config or {})
     public_config = deepcopy(raw_config) if schema is None else schema.redact(raw_config)
@@ -87,11 +124,6 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
-
-
-class TestResult(BaseModel):
-    ok: bool
-    message: str
 
 
 class InspectColumnsRequest(BaseModel):

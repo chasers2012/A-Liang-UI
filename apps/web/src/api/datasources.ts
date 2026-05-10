@@ -4,7 +4,7 @@ import type {
   InspectColumnsResponseBody,
   SqlTableColumnsRequestBody,
   SqlTableColumnsResponseBody,
-  TestResult,
+  VerifyResult,
 } from '@/models/datasource/dto';
 import { apiFetchJson } from './client';
 
@@ -45,8 +45,8 @@ export function deleteDatasource(id: string): Promise<void> {
   });
 }
 
-export function testDatasource(id: string): Promise<TestResult> {
-  return apiFetchJson<TestResult>(`/datasources/${encodeURIComponent(id)}/test`, { method: 'POST' });
+export function testDatasource(id: string): Promise<VerifyResult> {
+  return apiFetchJson<VerifyResult>(`/datasources/${encodeURIComponent(id)}/test`, { method: 'POST' });
 }
 
 export function inspectDatasourceColumns(body: {

@@ -11,7 +11,7 @@ export interface DataSourcePublic {
   updated_at: string;
 }
 
-export interface TestResult {
+export interface VerifyResult {
   ok: boolean;
   message: string;
 }

@@ -4,16 +4,15 @@ from typing import Any
 
 from app.common.datetime_utils import utc_now_iso
 from app.datasource.api import list_datasources
+from app.datasource.controller import test_datasource as controller_test_datasource
 from app.datasource.models import DataSourceRow
 from app.datasource.plugins import get_datasource_plugin, merge_datasource_config_schemas
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import (
     DataSourceCreate,
     DataSourcePatch,
-    TestResult,
     row_to_public,
 )
-from app.datasource.verify import verify_datasource
 from app.secret.secret_fields import decrypt_fields, encrypt_fields
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
@@ -34,10 +33,10 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     """
     plugin = get_datasource_plugin(str(body.type))
     schema = merge_datasource_config_schemas(
-        plugin.get_connection_config_schema(),
-        plugin.get_columns_config_schema(),
+        plugin.spec.get_connection_config_schema(),
+        plugin.spec.get_columns_config_schema(),
     )
-    validated = plugin.validate_config(dict(body.config or {}))
+    validated = plugin.spec.validate_config(dict(body.config or {}))
     new_row = body.to_row()
     new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
     created_row = DataSourceItemsRegistry.add_item(new_row)
@@ -94,8 +93,8 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
         if "config" in data:
             plugin = get_datasource_plugin(str(row.type))
             schema = merge_datasource_config_schemas(
-                plugin.get_connection_config_schema(),
-                plugin.get_columns_config_schema(),
+                plugin.spec.get_connection_config_schema(),
+                plugin.spec.get_columns_config_schema(),
             )
             saved_plain = decrypt_fields(
                 dict(row.config or {}),
@@ -109,7 +108,7 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
                     vv is None or (isinstance(vv, str) and vv.strip() in ("", "***"))
                 ) and k in saved_plain:
                     incoming[k] = saved_plain[k]
-            validated = plugin.validate_config(incoming)
+            validated = plugin.spec.validate_config(incoming)
             row.config = encrypt_fields(
                 validated, schema.resolved_secret_keys() if schema else None
             )
@@ -152,8 +151,11 @@ def test_datasource_connection(datasource_id: str) -> dict[str, Any]:
     row = DataSourceItemsRegistry.get_item(datasource_id)
     if row is None:
         raise ValueError(f"数据源 {datasource_id} 不存在")
-    ok, msg = verify_datasource(row)
-    return TestResult(ok=ok, message=msg).model_dump()
+    res = controller_test_datasource(datasource_id)
+    if res is None:
+        # Should not happen because we already checked existence, but keep it safe.
+        raise ValueError(f"数据源 {datasource_id} 不存在")
+    return res.model_dump()
 
 
 TOOLS = {

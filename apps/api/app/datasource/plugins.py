@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from abc import abstractmethod
-from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import ClassVar
 
-from factor import FactorDataSource
-
+from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
 from app.plugin.base import Plugin
 from app.plugin.registry import PluginRegistry
@@ -18,38 +15,13 @@ __all__ = [
 ]
 
 
-@dataclass(frozen=True, slots=True)
-class VerifyResult:
-    ok: bool
-    message: str
-
-
 class DataSourcePlugin(Plugin):
     """
     Datasource plugin: validates config, verifies connectivity, builds a FactorDataSource.
     """
 
     category = "datasource"
-    connection_config: ClassVar[FormSchema | None] = None
-    columns_config: ClassVar[FormSchema | None] = None
-
-    @abstractmethod
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Validate and normalize config. Must return a JSON-serializable dict."""
-
-    def get_connection_config_schema(self) -> FormSchema | None:
-        return self.connection_config
-
-    def get_columns_config_schema(self) -> FormSchema | None:
-        return self.columns_config
-
-    @abstractmethod
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
-        """Check connectivity or readability for the given config."""
-
-    @abstractmethod
-    def to_factor_datasource(self, config: dict[str, Any]) -> FactorDataSource:
-        """Build a FactorDataSource instance from validated config."""
+    spec: ClassVar[DataSourceSpec]
 
 
 def merge_datasource_config_schemas(
