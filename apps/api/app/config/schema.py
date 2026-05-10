@@ -4,23 +4,31 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.form.schema import FormSchema
+
 
 class ConfigModuleSpec(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     key: str = Field(..., min_length=1)
-    title: str = Field(..., min_length=1)
-    description: str | None = None
     filename: str = Field(..., min_length=1)
-    json_schema: dict[str, Any] = Field(default_factory=dict)
-    ui_schema: dict[str, Any] = Field(default_factory=dict)
+    form: FormSchema
     default_values: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("key", "title", "filename", mode="before")
+    @field_validator("key", "filename", mode="before")
     @classmethod
     def _strip_module_text(cls, value: object) -> str:
         text = str(value or "").strip()
         if not text:
             raise ValueError("must be non-empty")
         return text
+
+    @field_validator("form")
+    @classmethod
+    def _form_title_nonempty(cls, value: FormSchema) -> FormSchema:
+        if not str(value.title or "").strip():
+            raise ValueError("form.title must be non-empty")
+        return value
 
 
 class ConfigModuleSpecPublic(BaseModel):

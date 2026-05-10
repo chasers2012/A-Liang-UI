@@ -1,7 +1,26 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
+
+
+def _password_paths_from_ui(ui: Any, prefix: list[str]) -> list[str]:
+    """Collect dotted paths for every nested ``ui:widget: password`` field."""
+    if not isinstance(ui, dict):
+        return []
+    out: list[str] = []
+    for k, v in ui.items():
+        sk = str(k)
+        if sk.startswith("ui:"):
+            continue
+        if not isinstance(v, dict):
+            continue
+        if v.get("ui:widget") == "password":
+            out.append(".".join([*prefix, sk]))
+            continue
+        out.extend(_password_paths_from_ui(v, [*prefix, sk]))
+    return out
 
 
 @dataclass(frozen=True)
@@ -42,3 +61,55 @@ class FormSchema:
                 out.append(k)
         # preserve insertion order, unique
         return list(dict.fromkeys(out))
+
+    def resolved_secret_key_paths(self) -> list[str]:
+        """
+        Dotted paths (e.g. ``providers.openai.api_key``) for redacting nested secrets.
+
+        If `secret_keys` is explicitly provided, each entry is a path: a single segment
+        denotes a **root** property; segments joined with ``.`` denote nesting.
+
+        Otherwise infer paths by walking `ui_schema` for ``ui:widget: password``
+        (including under dynamic object keys such as provider ids).
+        """
+
+        if self.secret_keys:
+            paths: list[str] = []
+            for raw in self.secret_keys:
+                p = str(raw or "").strip()
+                if p:
+                    paths.append(p)
+            return list(dict.fromkeys(paths))
+        return list(dict.fromkeys(_password_paths_from_ui(self.ui_schema, [])))
+
+    @staticmethod
+    def _apply_redact_paths(data: dict[str, Any], paths: list[str]) -> None:
+        for path in paths:
+            parts = [p for p in str(path).split(".") if p]
+            if not parts:
+                continue
+            cur: Any = data
+            for seg in parts[:-1]:
+                if not isinstance(cur, dict):
+                    cur = None
+                    break
+                cur = cur.get(seg)
+            if not isinstance(cur, dict):
+                continue
+            leaf = parts[-1]
+            if leaf in cur:
+                cur[leaf] = ""
+
+    def redact(self, data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Deep-copy ``data`` and clear values at dotted paths from
+        :meth:`resolved_secret_key_paths`.
+
+        If no paths resolve, returns a deep copy unchanged.
+        """
+
+        out = deepcopy(dict(data))
+        paths = self.resolved_secret_key_paths()
+        if paths:
+            FormSchema._apply_redact_paths(out, paths)
+        return out

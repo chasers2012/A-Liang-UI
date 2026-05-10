@@ -1,5 +1,7 @@
 from typing import Any
 
+from app.form.schema import FormSchema
+
 from .controller import get_module_config
 from .registry import register_config_spec
 from .schema import ConfigModuleSpec
@@ -17,12 +19,14 @@ class BaseConfig:
 
         spec = ConfigModuleSpec(
             key=cls.category,
-            title=cls.category_label,
-            description=cls.description,
             filename=f"{cls.category}.json",
             default_values=defaults,
-            json_schema=json_schema,
-            ui_schema=ui_schema,
+            form=FormSchema(
+                title=cls.category_label,
+                description=cls.description or None,
+                json_schema=json_schema,
+                ui_schema=ui_schema,
+            ),
         )
         register_config_spec(spec)
 

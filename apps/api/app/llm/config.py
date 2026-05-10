@@ -5,6 +5,7 @@ from typing import Any
 from app.config import BaseConfig
 from app.config.registry import register_config_spec
 from app.config.schema import ConfigModuleSpec
+from app.form.schema import FormSchema
 from app.llm.plugins import get_llm_plugin, list_llm_plugins
 
 
@@ -18,12 +19,14 @@ def register_llm_settings_module() -> None:
     default_provider = provider_enum[0] if isinstance(provider_enum, list) and provider_enum else ""
     spec = ConfigModuleSpec(
         key=LlmSettings.category,
-        title=LlmSettings.category_label,
-        description=LlmSettings.description,
         filename=f"{LlmSettings.category}.json",
         default_values={"provider": default_provider} if default_provider else {},
-        json_schema=json_schema,
-        ui_schema=ui_schema,
+        form=FormSchema(
+            title=LlmSettings.category_label,
+            description=LlmSettings.description or None,
+            json_schema=json_schema,
+            ui_schema=ui_schema,
+        ),
     )
     register_config_spec(spec)
 

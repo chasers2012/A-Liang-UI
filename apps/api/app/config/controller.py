@@ -32,27 +32,37 @@ def list_specs() -> list[ConfigModuleSpecPublic]:
     return [
         ConfigModuleSpecPublic(
             key=spec.key,
-            title=spec.title,
-            description=spec.description,
-            json_schema=spec.json_schema,
-            ui_schema=spec.ui_schema,
+            title=spec.form.title,
+            description=spec.form.description,
+            json_schema=spec.form.json_schema,
+            ui_schema=spec.form.ui_schema,
         )
         for spec in list_config_specs()
     ]
 
 
-def get_module_config(module_key: str) -> dict[str, Any]:
+def get_module_config(module_key: str, *, redact_secrets: bool = False) -> dict[str, Any]:
     spec = _require_spec(module_key)
     data_model = load_workspace_config(
         spec.filename,
         GenericConfigValues,
         default_factory=GenericConfigValues,
     )
-    return _merge_with_defaults(spec, data_model.model_dump())
+    merged = _merge_with_defaults(spec, data_model.model_dump())
+    if redact_secrets:
+        return spec.form.redact(merged)
+    return merged
 
 
-def put_module_config(module_key: str, incoming: dict[str, Any]) -> dict[str, Any]:
+def put_module_config(
+    module_key: str,
+    incoming: dict[str, Any],
+    *,
+    redact_response: bool = True,
+) -> dict[str, Any]:
     spec = _require_spec(module_key)
     cleaned = _merge_with_defaults(spec, incoming)
     save_workspace_config(spec.filename, GenericConfigValues.model_validate(cleaned))
+    if redact_response:
+        return spec.form.redact(cleaned)
     return cleaned

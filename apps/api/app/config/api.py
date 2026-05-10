@@ -17,7 +17,7 @@ def get_config_specs() -> ConfigSpecsResponse:
 
 @router.get("/{module_key}", response_model=ConfigValuesResponse)
 def get_config_values(module_key: str) -> ConfigValuesResponse:
-    values = controller.get_module_config(module_key)
+    values = controller.get_module_config(module_key, redact_secrets=True)
     return ConfigValuesResponse(module_key=module_key, values=values)
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -12,7 +13,6 @@ from app.datasource.plugins import (
     get_datasource_plugin,
     merge_datasource_config_schemas,
 )
-from app.form import redact_form
 
 DataSourceType = str
 
@@ -82,11 +82,13 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
         )
     except UnknownDataSourceTypeError:
         schema = None
+    raw_config = dict(row.config or {})
+    public_config = deepcopy(raw_config) if schema is None else schema.redact(raw_config)
     return DataSourcePublic(
         id=row.id,
         name=row.name,
         type=str(row.type),
-        config=redact_form(dict(row.config or {}), schema),
+        config=public_config,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )

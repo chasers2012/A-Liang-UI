@@ -19,5 +19,5 @@ def get_config_spec(module_key: str) -> ConfigModuleSpec | None:
 def list_config_specs() -> list[ConfigModuleSpec]:
     return sorted(
         _REGISTRY.values(),
-        key=lambda item: (item.title.lower(), item.key.lower()),
+        key=lambda item: (item.form.title.lower(), item.key.lower()),
     )
