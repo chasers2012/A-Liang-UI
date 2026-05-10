@@ -21,7 +21,7 @@ from app.datasource.schemas import (
 )
 from app.datasource.verify import verify_datasource
 from app.plugin import PluginRegistry
-from app.security.datasource_secrets import decrypt_secret_fields, encrypt_secret_fields
+from app.secret.secret_fields import decrypt_fields, encrypt_fields
 
 
 def _normalize_name(name: str) -> str:
@@ -58,7 +58,7 @@ def _merge_config_overlay_with_saved_secrets(
         secret_keys = frozenset()
 
     # decrypt saved secrets so internal validation/inspection works with plaintext
-    merged = decrypt_secret_fields(dict(saved), schema)
+    merged = decrypt_fields(dict(saved), schema.resolved_secret_keys() if schema else None)
     for key, val in overlay.items():
         sk = str(key)
         if sk in secret_keys and _client_sent_unchanged_secret(val):
@@ -191,7 +191,9 @@ def get_datasource(id: str) -> FactorDataSource | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     schema = _schema_for_type(str(rec.type))
-    plain = decrypt_secret_fields(dict(rec.config or {}), schema)
+    plain = decrypt_fields(
+        dict(rec.config or {}), schema.resolved_secret_keys() if schema else None
+    )
     ds = plugin.to_factor_datasource(plain)
     return BoundFactorDataSource(id, ds)
 
@@ -282,7 +284,7 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     schema = _schema_for_type(str(body.type))
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
-    new_row.config = encrypt_secret_fields(validated, schema)
+    new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row)
 
@@ -302,7 +304,9 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
                 str(row.type),
             )
             validated = plugin.validate_config(merged)
-            row.config = encrypt_secret_fields(validated, schema)
+            row.config = encrypt_fields(
+                validated, schema.resolved_secret_keys() if schema else None
+            )
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(ds_id, _apply)

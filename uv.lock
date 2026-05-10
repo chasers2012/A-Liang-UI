@@ -4909,6 +4909,7 @@ source = { editable = "apps/api" }
 dependencies = [
     { name = "chromadb" },
     { name = "croniter" },
+    { name = "cryptography" },
     { name = "custom-code" },
     { name = "deepagents" },
     { name = "diskcache" },
@@ -4940,6 +4941,7 @@ dependencies = [
 requires-dist = [
     { name = "chromadb", specifier = ">=0.5.0" },
     { name = "croniter", specifier = ">=6.0.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "custom-code", editable = "lib/custom_code" },
     { name = "deepagents", specifier = ">=0.5.3" },
     { name = "diskcache", specifier = ">=5.6.3" },

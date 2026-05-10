@@ -14,7 +14,7 @@ from app.datasource.schemas import (
     row_to_public,
 )
 from app.datasource.verify import verify_datasource
-from app.security.datasource_secrets import decrypt_secret_fields, encrypt_secret_fields
+from app.secret.secret_fields import decrypt_fields, encrypt_fields
 from app.tool.models import ToolAuthorization
 from app.tool.safe_tool import safe_tool
 
@@ -39,7 +39,7 @@ def create_datasource(body: DataSourceCreate) -> dict[str, Any]:
     )
     validated = plugin.validate_config(dict(body.config or {}))
     new_row = body.to_row()
-    new_row.config = encrypt_secret_fields(validated, schema)
+    new_row.config = encrypt_fields(validated, schema.resolved_secret_keys() if schema else None)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row).model_dump()
 
@@ -97,7 +97,10 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
                 plugin.get_connection_config_schema(),
                 plugin.get_columns_config_schema(),
             )
-            saved_plain = decrypt_secret_fields(dict(row.config or {}), schema)
+            saved_plain = decrypt_fields(
+                dict(row.config or {}),
+                schema.resolved_secret_keys() if schema else None,
+            )
             incoming = dict(data["config"] or {})
             # mimic UI semantics: empty / redacted secret means "keep"
             for k in schema.resolved_secret_keys():
@@ -107,7 +110,9 @@ def update_datasource(datasource_id: str, body: DataSourcePatch) -> dict[str, An
                 ) and k in saved_plain:
                     incoming[k] = saved_plain[k]
             validated = plugin.validate_config(incoming)
-            row.config = encrypt_secret_fields(validated, schema)
+            row.config = encrypt_fields(
+                validated, schema.resolved_secret_keys() if schema else None
+            )
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(datasource_id, _apply)

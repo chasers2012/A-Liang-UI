@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
-from app.plugin.schema import PluginConfigSchema
-from app.security.fernet import decrypt_str, encrypt_str
 from cryptography.fernet import InvalidToken
+
+from app.secret.fernet import decrypt_str, encrypt_str
 
 
 def _try_decrypt_token(v: str) -> str | None:
@@ -14,14 +15,21 @@ def _try_decrypt_token(v: str) -> str | None:
         return None
 
 
-def encrypt_secret_fields(
-    config: dict[str, Any], schema: PluginConfigSchema | None
+def _normalize_secret_keys(secret_keys: Iterable[str] | None) -> frozenset[str]:
+    if secret_keys is None:
+        return frozenset()
+    return frozenset(str(k) for k in secret_keys)
+
+
+def encrypt_fields(
+    config: dict[str, Any],
+    secret_keys: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
-    if not secret_keys:
+    keys = _normalize_secret_keys(secret_keys)
+    if not keys:
         return dict(config)
     out: dict[str, Any] = dict(config)
-    for k in secret_keys:
+    for k in keys:
         if k not in out:
             continue
         v = out.get(k)
@@ -37,14 +45,15 @@ def encrypt_secret_fields(
     return out
 
 
-def decrypt_secret_fields(
-    config: dict[str, Any], schema: PluginConfigSchema | None
+def decrypt_fields(
+    config: dict[str, Any],
+    secret_keys: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    secret_keys = frozenset(schema.resolved_secret_keys() if schema else [])
-    if not secret_keys:
+    keys = _normalize_secret_keys(secret_keys)
+    if not keys:
         return dict(config)
     out: dict[str, Any] = dict(config)
-    for k in secret_keys:
+    for k in keys:
         if k not in out:
             continue
         v = out.get(k)
