@@ -12,7 +12,6 @@ from app.plugin.registry import PluginRegistry
 
 __all__ = [
     "DataSourcePlugin",
-    "UnknownDataSourceTypeError",
     "VerifyResult",
     "get_datasource_plugin",
     "merge_datasource_config_schemas",
@@ -23,12 +22,6 @@ __all__ = [
 class VerifyResult:
     ok: bool
     message: str
-
-
-class UnknownDataSourceTypeError(RuntimeError):
-    def __init__(self, ds_type: str):
-        super().__init__(f"Unknown datasource type: {ds_type!r}")
-        self.ds_type = ds_type
 
 
 class DataSourcePlugin(Plugin):

@@ -9,7 +9,6 @@ from app.common.datetime_utils import utc_now_iso
 from app.common.id import create_id_generator
 from app.datasource.models import DataSourceRow
 from app.datasource.plugins import (
-    UnknownDataSourceTypeError,
     get_datasource_plugin,
     merge_datasource_config_schemas,
 )
@@ -73,15 +72,11 @@ class DataSourcePublic(BaseModel):
 
 
 def row_to_public(row: DataSourceRow) -> DataSourcePublic:
-    schema = None
-    try:
-        plugin = get_datasource_plugin(str(row.type))
-        schema = merge_datasource_config_schemas(
-            plugin.get_connection_config_schema(),
-            plugin.get_columns_config_schema(),
-        )
-    except UnknownDataSourceTypeError:
-        schema = None
+    plugin = get_datasource_plugin(str(row.type))
+    schema = merge_datasource_config_schemas(
+        plugin.get_connection_config_schema(),
+        plugin.get_columns_config_schema(),
+    )
     raw_config = dict(row.config or {})
     public_config = deepcopy(raw_config) if schema is None else schema.redact(raw_config)
     return DataSourcePublic(
