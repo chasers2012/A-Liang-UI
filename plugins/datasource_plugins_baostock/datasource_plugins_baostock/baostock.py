@@ -287,13 +287,3 @@ class BaoStockDataSourcePlugin(DataSourcePlugin):
     name: Literal["baostock"] = "baostock"
 
     spec = BaoStockDataSourceSpec()
-
-    def list_table_columns(self, config: dict[str, Any]) -> list[str]:
-        cfg = BaoStockDataSourceSpec._validate_baostock_config(config)
-        probe = BaoStockDataSource(
-            api_name=cfg.api_name,
-            api_params={},
-            date_column=cfg.date_column,
-            asset_column=cfg.asset_column,
-        )
-        return probe.list_columns()

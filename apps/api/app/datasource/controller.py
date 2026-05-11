@@ -205,9 +205,7 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
 
     plugin = get_datasource_plugin(str(ds_type))
     validated = plugin.spec.validate_config(config)
-    if not hasattr(plugin, "list_table_columns"):
-        raise ValueError(f"该数据源类型不支持列探测: {ds_type!r}")
-    cols = plugin.list_table_columns(validated)
+    cols = plugin.spec.to_factor_datasource(validated).list_columns()
     str_cols = [str(c) for c in cols]
     return _build_inspect_columns_response(validated, str_cols)
 

@@ -280,17 +280,5 @@ class SqlDataSourcePlugin(DataSourcePlugin):
 
     spec = SqlDataSourceSpec()
 
-    def list_table_columns(self, config: dict[str, Any]) -> list[str]:
-        cfg = SqlConfig.model_validate(config)
-        url = build_sqlalchemy_url(cfg)
-        engine = create_engine(url)
-        insp = inspect(engine)
-        schema = None
-        table = cfg.table.strip()
-        if "." in table:
-            schema, table = table.split(".", 1)
-        cols = insp.get_columns(table, schema=schema)
-        return [str(c["name"]) for c in cols]
-
 
 SQL_PLUGIN = SqlDataSourcePlugin()

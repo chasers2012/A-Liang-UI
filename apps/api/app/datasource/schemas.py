@@ -121,11 +121,6 @@ class DataSourceSpec(ABC):
         """Build a FactorDataSource instance from validated config."""
 
 
-class RegistryFile(BaseModel):
-    version: int = 1
-    items: list[DataSourceRow] = Field(default_factory=list)
-
-
 # --- API payloads ---
 
 

@@ -239,15 +239,5 @@ class CsvDataSourcePlugin(DataSourcePlugin):
 
     spec = CsvDataSourceSpec()
 
-    def list_table_columns(self, config: dict[str, Any]) -> list[str]:
-        cfg = CsvDataSourceSpec._validate_csv_config(config)
-        ds = CsvDataSource(
-            path=cfg.path,
-            read_csv_kwargs=dict(cfg.read_csv_kwargs),
-            date_column=cfg.date_column,
-            asset_column=cfg.asset_column,
-        )
-        return ds.list_columns()
-
 
 CSV_PLUGIN = CsvDataSourcePlugin()
