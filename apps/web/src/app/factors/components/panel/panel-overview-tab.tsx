@@ -4,7 +4,7 @@ import { useAtomValue } from 'jotai';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Item, ItemContent } from '@/components/ui/item';
-import { SectionHeader } from '@/components/section-header';
+import { SectionHeader } from '@/components/section';
 import { factorsEditingAtom, factorsSaveErrorAtom, factorsSelectedIdAtom } from '@/models/factor';
 import { FactorMetaFields } from '../../ui/factor-form-fields';
 import { FactorEvaluationTrigger } from '../../ui/factor-evaluation-trigger';

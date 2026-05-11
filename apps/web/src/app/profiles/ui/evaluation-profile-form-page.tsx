@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useContext, useLayoutEffect } from 'react';
 
-import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useEffectMicrotask } from '@/hooks/use-effect-microtask';
 import { defaultNewName } from '@/lib/default-new-name';
 import {
@@ -17,11 +19,13 @@ import {
 import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { Page } from '@/components/page';
+import { PageAppHeaderContext } from '@/components/page-app-header-context';
 import { ProfileWorkflowEditorBlock } from './profile-editor-main-section';
 import { EVALUATION_WORKFLOW_TEMPLATE_LOADING_TEXT } from './profile-form-shared';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { EMPTY_WORKFLOW, parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
+import { cn } from '@/lib/utils';
 
 type Props = {
   id?: string;
@@ -29,6 +33,7 @@ type Props = {
 
 export function EvaluationProfileFormPage(props: Props) {
   const router = useRouter();
+  const chrome = useContext(PageAppHeaderContext);
 
   const id = props.id ?? null;
   const isEdit = Boolean(id);
@@ -48,6 +53,14 @@ export function EvaluationProfileFormPage(props: Props) {
   const [loading, setLoading] = useState(isEdit);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useLayoutEffect(() => {
+    if (chrome == null) return;
+    chrome.suppressBackLink(true);
+    return () => {
+      chrome.suppressBackLink(false);
+    };
+  }, [chrome]);
 
   const load = useCallback(async () => {
     if (!isEdit) return;
@@ -163,14 +176,14 @@ export function EvaluationProfileFormPage(props: Props) {
       className={'max-w-full flex-1 min-h-0 h-full overflow-hidden'}
       gap="sm"
       action={
-        <PageFormHeaderActions
-          formId={formId}
-          submitting={submitting}
-          submitDisabled={!name.trim()}
-          submitLabel={isEdit ? undefined : '创建'}
-          submittingLabel={isEdit ? undefined : '创建中…'}
-          cancelHref={cancelHref}
-        />
+        <>
+          <Link href={cancelHref} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+            取消
+          </Link>
+          <Button type="submit" form={formId} size="sm" disabled={submitting || !name.trim()}>
+            {submitting ? (isEdit ? '保存中…' : '创建中…') : isEdit ? '保存' : '创建'}
+          </Button>
+        </>
       }
     >
       <form id={formId} className="flex min-h-0 flex-1 flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>

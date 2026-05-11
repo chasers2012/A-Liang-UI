@@ -1,0 +1,99 @@
+'use client';
+
+import { useAtomValue, useSetAtom } from 'jotai';
+import { Plus } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
+
+import { Page } from '@/components/page';
+import { SearchList } from '@/components/search-list';
+import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  dataSetsBrowseStateAtom,
+  filteredDataSetsAtom,
+  setDataSetsSearchQueryAtom,
+} from '@/models/data-set/browse.atom';
+import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
+import { dataSetsEnterCreateAtom, dataSetsSelectAndDetailAtom } from '@/models/data-set/panel-ui.atom';
+import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
+
+import { DataSetDetailPanel } from './panel/data-set-detail-panel';
+
+/** 与 `apps/web/src/app/nodes/page.tsx` 对齐：左列表 + 右卡片，状态全部走 jotai */
+export function DataSetsPage() {
+  const items = useAtomValue(dataSetAtoms.valueAtom);
+  const filteredItems = useAtomValue(filteredDataSetsAtom);
+  const { searchQuery } = useAtomValue(dataSetsBrowseStateAtom);
+  const setSearchQuery = useSetAtom(setDataSetsSearchQueryAtom);
+  const selectedId = useAtomValue(dataSetsSelectedIdAtom);
+
+  const selectDetail = useSetAtom(dataSetsSelectAndDetailAtom);
+  const enterCreate = useSetAtom(dataSetsEnterCreateAtom);
+  const refreshList = useSetAtom(dataSetAtoms.refreshAtom);
+  const listError = useAtomValue(dataSetAtoms.errorAtom);
+
+  useEffect(() => {
+    void refreshList();
+  }, [refreshList]);
+
+  const onSelectItem = useCallback(
+    (item: { id: string }) => {
+      selectDetail(item.id);
+    },
+    [selectDetail],
+  );
+
+  const emptyText =
+    (items?.length ?? 0) === 0 ? '暂无数据集。请使用上方「新增数据集」开始配置。' : '没有符合搜索条件的数据集。';
+
+  return (
+    <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
+      <div className="flex h-full min-h-0 w-[300px] flex-col gap-2 overflow-hidden">
+        {listError ? (
+          <Alert variant="destructive">
+            <AlertTitle>无法加载列表</AlertTitle>
+            <AlertDescription>{listError}</AlertDescription>
+          </Alert>
+        ) : null}
+        <SearchList
+          className="h-full min-h-0"
+          items={
+            filteredItems?.map((m) => ({
+              id: m.id,
+              label: m.name,
+              description: m.description,
+              category: m.datasource_bindings?.[0]?.datasource_type ?? '数据集',
+            })) ?? null
+          }
+          getGroupKey={(item) => item.category ?? '数据集'}
+          renderTitle={(item) => item.label}
+          renderDescription={(item) => item.description ?? ''}
+          getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
+          title="数据集列表"
+          searchPlaceholder="搜索数据集"
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
+          selectedId={selectedId}
+          emptyText={emptyText}
+          onItemSelected={onSelectItem}
+          toolbarRight={
+            <Button
+              type="button"
+              aria-label="新增数据集"
+              className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
+              onClick={() => enterCreate()}
+            >
+              <Plus />
+            </Button>
+          }
+        />
+      </div>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <DataSetDetailPanel />
+      </div>
+    </Page>
+  );
+}

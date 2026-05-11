@@ -13,8 +13,8 @@ export interface EditablePageDescriptionProps {
   textareaAriaLabel?: string;
   /** 空内容展示文案，默认「（无描述）」 */
   emptyText?: string;
-  /** 编辑按钮无障碍名称，默认「编辑描述」 */
-  editButtonAriaLabel?: string;
+  /** 是否展示编辑按钮，默认展示 */
+  showEdit?: boolean;
 }
 
 const bodyTypography = 'text-sm leading-relaxed wrap-break-word whitespace-pre-wrap px-0 py-1';
@@ -24,7 +24,7 @@ export function EditablePageDescription({
   onChange,
   textareaAriaLabel = '描述',
   emptyText = '（无描述）',
-  editButtonAriaLabel = '编辑描述',
+  showEdit = true,
 }: EditablePageDescriptionProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -89,19 +89,21 @@ export function EditablePageDescription({
       >
         {displayText}
       </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="ml-0.5 inline-flex size-8 shrink-0 align-top text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          setDraft(value);
-          setEditing(true);
-        }}
-        aria-label={editButtonAriaLabel}
-      >
-        <Pencil className="size-4" aria-hidden />
-      </Button>
+      {showEdit ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="ml-0.5 inline-flex size-8 shrink-0 align-top text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            setDraft(value);
+            setEditing(true);
+          }}
+          aria-label="编辑描述"
+        >
+          <Pencil className="size-4" aria-hidden />
+        </Button>
+      ) : null}
     </span>
   );
 }

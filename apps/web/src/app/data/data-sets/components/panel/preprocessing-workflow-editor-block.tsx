@@ -23,30 +23,23 @@ export function PreprocessingWorkflowEditorBlock(props: {
   canvasKey: number;
   canvasRef: RefObject<WorkflowGraphCanvasHandle | null>;
   className?: string;
+  readOnly?: boolean;
 }) {
-  const { workflow, canvasKey, canvasRef, className } = props;
+  const { workflow, canvasKey, canvasRef, className, readOnly = false } = props;
 
   const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
-  const [wfMetaLoading, setWfMetaLoading] = useState(true);
   const refreshPreprocessorNodes = useSetAtom(refreshNodesByDomainAtomFamily('preprocessors'));
 
   useEffect(() => {
-    listNodes('preprocessors')
-      .then(setCatalog)
-      .catch(() => {
-        // Ignore, UI falls back to empty sidebar.
-      })
-      .finally(() => setWfMetaLoading(false));
+    listNodes('preprocessors').then(setCatalog);
   }, []);
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
   return (
     <div className={cn('flex h-full min-h-0 flex-1 flex-col gap-3', className)}>
-      {wfMetaLoading ? (
-        <p className="text-sm text-muted-foreground">正在加载预处理器节点…</p>
-      ) : (
-        <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
+      <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
+        {!readOnly ? (
           <SearchList
             items={nodeTypes}
             className="w-[300px]"
@@ -62,20 +55,21 @@ export function PreprocessingWorkflowEditorBlock(props: {
               e.dataTransfer.effectAllowed = 'copy';
             }}
           />
-          <WorkflowGraphCanvas
-            key={canvasKey}
-            ref={canvasRef}
-            nodeTypes={nodeTypes}
-            initialGraph={workflow}
-            resolveNodeTypeDefinition={async (typeKey) => toWorkflowNodeType(await getNode(typeKey))}
-            resolveNodeTypeDefinitions={async (typeKeys) =>
-              (await getNodesDetailBatch(typeKeys)).map((detail) => toWorkflowNodeType(detail))
-            }
-            onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshPreprocessorNodes())}
-            className="h-full flex-1"
-          />
-        </div>
-      )}
+        ) : null}
+        <WorkflowGraphCanvas
+          key={canvasKey}
+          ref={canvasRef}
+          readOnly={readOnly}
+          nodeTypes={nodeTypes}
+          initialGraph={workflow}
+          resolveNodeTypeDefinition={async (typeKey) => toWorkflowNodeType(await getNode(typeKey))}
+          resolveNodeTypeDefinitions={async (typeKeys) =>
+            (await getNodesDetailBatch(typeKeys)).map((detail) => toWorkflowNodeType(detail))
+          }
+          onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshPreprocessorNodes())}
+          className="h-full flex-1"
+        />
+      </div>
     </div>
   );
 }

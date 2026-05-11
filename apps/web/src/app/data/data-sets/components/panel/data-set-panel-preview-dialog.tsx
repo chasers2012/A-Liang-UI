@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { previewDataSetPanel, type DataSetPanelPreviewCsvResponse } from '@/api/data-sets';
 
 type CsvTable = {
@@ -111,21 +110,13 @@ function parseCsvToTable(csv: string): CsvTable {
   return { headers, rows };
 }
 
-export function DataSetPanelPreviewDialog({
-  open,
-  onOpenChange,
-  dataSetId,
-}: {
-  open: boolean;
-  onOpenChange: (nextOpen: boolean) => void;
-  dataSetId: string;
-}) {
+export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string }) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [preview, setPreview] = useState<DataSetPanelPreviewCsvResponse | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!dataSetId) return;
     let cancelled = false;
 
     async function run() {
@@ -148,62 +139,59 @@ export function DataSetPanelPreviewDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, dataSetId]);
+  }, [dataSetId]);
 
   const table = useMemo(() => (preview ? parseCsvToTable(preview.csv) : null), [preview]);
 
+  if (!dataSetId) {
+    return <p className="text-sm text-muted-foreground">从左侧选择一个数据集后可查看预览。</p>;
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" className="flex flex-col gap-0 p-0">
-        <DialogHeader>
-          <DialogTitle>数据集预览</DialogTitle>
-        </DialogHeader>
-        <DialogBody variant="inset" className="space-y-4 overflow-y-hidden">
-          {previewLoading ? (
-            <p className="text-sm text-muted-foreground">加载预处理后的数据中…</p>
-          ) : previewError ? (
-            <Alert variant="destructive">
-              <AlertTitle>预览失败</AlertTitle>
-              <AlertDescription>{previewError}</AlertDescription>
-            </Alert>
-          ) : table && table.headers.length > 0 ? (
-            <div className="overflow-x-auto rounded-md border border-border/60">
-              <div className="max-h-[min(60vh,560px)] overflow-y-auto">
-                <table className="w-max min-w-full caption-bottom border-collapse text-sm text-card-foreground">
-                  <thead className="[&_tr]:border-b [&_tr]:border-border/80 [&_tr]:bg-muted/40 [&_tr]:transition-colors [&_tr:hover]:bg-muted/50">
-                    <tr className="border-b border-border/60 transition-colors">
-                      {table.headers.map((h) => (
-                        <th
-                          key={h}
-                          className="sticky top-0 z-10 h-10 min-w-24 max-w-56 truncate bg-muted/95 px-3 text-left align-middle font-mono text-xs font-medium whitespace-nowrap text-muted-foreground backdrop-blur-sm"
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="[&_tr:last-child]:border-0">
-                    {table.rows.map((r, idx) => (
-                      <tr key={idx} className="border-b border-border/60 transition-colors hover:bg-muted/30">
-                        {r.map((v, cellIdx) => (
-                          <td
-                            key={`${idx}:${cellIdx}`}
-                            className="max-w-56 truncate px-3 py-2 font-mono text-xs align-middle whitespace-nowrap"
-                          >
-                            {v}
-                          </td>
-                        ))}
-                      </tr>
+    <>
+      {previewLoading ? (
+        <p className="text-sm text-muted-foreground">加载预处理后的数据中…</p>
+      ) : previewError ? (
+        <Alert variant="destructive">
+          <AlertTitle>预览失败</AlertTitle>
+          <AlertDescription>{previewError}</AlertDescription>
+        </Alert>
+      ) : table && table.headers.length > 0 ? (
+        <div className="overflow-x-auto rounded-md border border-border/60">
+          <div className="max-h-[min(60vh,560px)] overflow-y-auto">
+            <table className="w-max min-w-full caption-bottom border-collapse text-sm text-card-foreground">
+              <thead className="[&_tr]:border-b [&_tr]:border-border/80 [&_tr]:bg-muted/40 [&_tr]:transition-colors [&_tr:hover]:bg-muted/50">
+                <tr className="border-b border-border/60 transition-colors">
+                  {table.headers.map((h) => (
+                    <th
+                      key={h}
+                      className="sticky top-0 z-10 h-10 min-w-24 max-w-56 truncate bg-muted/95 px-3 text-left align-middle font-mono text-xs font-medium whitespace-nowrap text-muted-foreground backdrop-blur-sm"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
+                {table.rows.map((r, idx) => (
+                  <tr key={idx} className="border-b border-border/60 transition-colors hover:bg-muted/30">
+                    {r.map((v, cellIdx) => (
+                      <td
+                        key={`${idx}:${cellIdx}`}
+                        className="max-w-56 truncate px-3 py-2 font-mono text-xs align-middle whitespace-nowrap"
+                      >
+                        {v}
+                      </td>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">暂无预览数据。</p>
-          )}
-        </DialogBody>
-      </DialogContent>
-    </Dialog>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">暂无预览数据。</p>
+      )}
+    </>
   );
 }

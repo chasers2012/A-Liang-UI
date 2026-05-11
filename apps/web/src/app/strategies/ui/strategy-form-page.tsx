@@ -1,17 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAtomValue, useSetAtom } from 'jotai';
+import { useContext, useLayoutEffect } from 'react';
 
-import { PageFormHeaderActions } from '@/components/page-form-header-actions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 import { Page } from '@/components/page';
+import { PageAppHeaderContext } from '@/components/page-app-header-context';
 import { StrategyWorkflowEditorBlock } from './strategy-editor-main-section';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
+import { cn } from '@/lib/utils';
 import {
   initStrategyFormAtomFamily,
   setStrategyFormDescriptionAtomFamily,
@@ -39,6 +43,15 @@ export function StrategyFormPage(props: Props) {
   const setName = useSetAtom(setStrategyFormNameAtomFamily(key));
   const setDescription = useSetAtom(setStrategyFormDescriptionAtomFamily(key));
   const submit = useSetAtom(submitStrategyFormAtomFamily(key));
+  const chrome = useContext(PageAppHeaderContext);
+
+  useLayoutEffect(() => {
+    if (chrome == null) return;
+    chrome.suppressBackLink(true);
+    return () => {
+      chrome.suppressBackLink(false);
+    };
+  }, [chrome]);
 
   useEffect(() => {
     void init(id).then(() => setCanvasKey((k) => k + 1));
@@ -106,7 +119,16 @@ export function StrategyFormPage(props: Props) {
       className="max-w-full h-full overflow-hidden"
       size="full"
       gap="sm"
-      action={<PageFormHeaderActions formId={formId} submitting={state.submitting} cancelHref={cancelHref} />}
+      action={
+        <>
+          <Link href={cancelHref} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+            取消
+          </Link>
+          <Button type="submit" form={formId} size="sm" disabled={state.submitting}>
+            {state.submitting ? '保存中…' : '保存'}
+          </Button>
+        </>
+      }
     >
       {state.formError && (
         <Alert variant="destructive" className="shrink-0">

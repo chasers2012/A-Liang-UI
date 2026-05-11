@@ -14,7 +14,7 @@ import {
   toolsListAtoms,
   updateToolAuthorizationAtom,
 } from '@/models/tools';
-import { SectionHeader } from '@/components/section-header';
+import { SectionHeader } from '@/components/section';
 
 const AUTH_OPTIONS: Array<{ value: ToolRecord['authorization']; label: string }> = [
   { value: 'disabled', label: '禁用' },

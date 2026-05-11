@@ -20,8 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { buttonVariants } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PanelDetailCard } from '@/components/panel-detail-card';
 import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
 import { cn } from '@/lib/utils';
 import {
@@ -37,6 +36,78 @@ function getEmptyText(error: string | null, itemCount: number): string {
   if (error) return '策略列表加载失败。';
   if (itemCount === 0) return '暂无策略。请使用右上角「新增策略」创建。';
   return '没有符合当前筛选条件的策略。';
+}
+
+function buildStrategyDetailPanels(args: {
+  error: string | null;
+  nodeCatalogError: string | null;
+  deleteError: string | null;
+  showEmpty: boolean;
+  description: string;
+  detailRow: { updated_at: string; workflow: unknown } | null;
+  nodeTypes: ReturnType<typeof toWorkflowNodeTypes>;
+}) {
+  const { error, nodeCatalogError, deleteError, showEmpty, description, detailRow, nodeTypes } = args;
+
+  const header = (
+    <>
+      <DetailStatusAlerts detailError={error} nodeCatalogError={nodeCatalogError} />
+      {deleteError ? (
+        <Alert variant="destructive">
+          <AlertTitle>删除失败</AlertTitle>
+          <AlertDescription>{deleteError}</AlertDescription>
+        </Alert>
+      ) : null}
+      {showEmpty ? (
+        <Alert>
+          <AlertDescription>请选择左侧策略后查看详情。</AlertDescription>
+        </Alert>
+      ) : null}
+    </>
+  );
+
+  return [
+    {
+      value: 'description',
+      label: '描述',
+      content: (
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+          {header}
+          {!showEmpty ? (
+            <div className="rounded-md border bg-card p-4 text-sm leading-6 text-foreground whitespace-pre-wrap">
+              {description || '无描述'}
+            </div>
+          ) : null}
+        </div>
+      ),
+      contentClassName: 'overflow-y-auto',
+    },
+    {
+      value: 'workflow',
+      label: '工作流',
+      content: (
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+          {header}
+          {!showEmpty ? (
+            detailRow && !nodeCatalogError ? (
+              <WorkflowGraphCanvas
+                key={detailRow.updated_at}
+                nodeTypes={nodeTypes}
+                initialGraph={detailRow.workflow as never}
+                readOnly
+                className="flex-1 w-full"
+              />
+            ) : (
+              <Alert>
+                <AlertDescription>暂无可展示的工作流。</AlertDescription>
+              </Alert>
+            )
+          ) : null}
+        </div>
+      ),
+      contentClassName: 'overflow-hidden',
+    },
+  ] as const;
 }
 
 function StrategyDetailPane(props: {
@@ -79,65 +150,27 @@ function StrategyDetailPane(props: {
   };
 
   return (
-    <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-      <CardHeader className="shrink-0 space-y-2">
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <Tabs defaultValue="description" className="flex min-h-0 flex-1 flex-col gap-0">
-          <div className="flex h-[48px] w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0">
-            <TabsList className="inline-flex h-9 w-fit flex-wrap items-center gap-1 rounded-lg bg-muted/80 p-1 text-muted-foreground">
-              <TabsTrigger value="description">描述</TabsTrigger>
-              <TabsTrigger value="workflow">工作流</TabsTrigger>
-            </TabsList>
-            <DetailActions
-              selectedId={selectedId}
-              deleting={deleting}
-              deleteOpen={deleteOpen}
-              onDeleteOpenChange={setDeleteOpen}
-              onConfirmDelete={handleDelete}
-            />
-          </div>
-          <div className="h-full max-h-[calc(100vh-10rem)] flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-6 pt-2">
-            <DetailStatusAlerts detailError={error} nodeCatalogError={nodeCatalogError} />
-            {deleteError ? (
-              <Alert variant="destructive">
-                <AlertTitle>删除失败</AlertTitle>
-                <AlertDescription>{deleteError}</AlertDescription>
-              </Alert>
-            ) : null}
-            {showEmpty ? (
-              <Alert>
-                <AlertDescription>请选择左侧策略后查看详情。</AlertDescription>
-              </Alert>
-            ) : (
-              <>
-                <TabsContent value="description" className="mt-0 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                  <div className="rounded-md border bg-card p-4 text-sm leading-6 text-foreground whitespace-pre-wrap">
-                    {description || '无描述'}
-                  </div>
-                </TabsContent>
-                <TabsContent value="workflow" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {detailRow && !nodeCatalogError ? (
-                    <WorkflowGraphCanvas
-                      key={detailRow.updated_at}
-                      nodeTypes={nodeTypes}
-                      initialGraph={detailRow.workflow}
-                      readOnly
-                      className="flex-1 w-full"
-                    />
-                  ) : (
-                    <Alert>
-                      <AlertDescription>暂无可展示的工作流。</AlertDescription>
-                    </Alert>
-                  )}
-                </TabsContent>
-              </>
-            )}
-          </div>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <PanelDetailCard
+      title={title}
+      actions={
+        <DetailActions
+          selectedId={selectedId}
+          deleting={deleting}
+          deleteOpen={deleteOpen}
+          onDeleteOpenChange={setDeleteOpen}
+          onConfirmDelete={handleDelete}
+        />
+      }
+      panels={buildStrategyDetailPanels({
+        error,
+        nodeCatalogError,
+        deleteError,
+        showEmpty,
+        description,
+        detailRow,
+        nodeTypes,
+      })}
+    />
   );
 }
 
@@ -270,9 +303,9 @@ export default function StrategiesPage() {
     <Suspense
       fallback={
         <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-          <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <CardContent className="p-6 text-sm text-muted-foreground">加载中…</CardContent>
-          </Card>
+          <PanelDetailCard title={null}>
+            <div className="p-6 text-sm text-muted-foreground">加载中…</div>
+          </PanelDetailCard>
         </Page>
       }
     >

@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState, type DragEvent, type ReactNode } from '
 
 import { Item, ItemContent, ItemDescription, ItemTitle } from '@/components/ui/item';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { SectionHeader } from '@/components/section-header';
+import { SectionHeader } from '@/components/section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { SearchInput } from '@/components/search-input';

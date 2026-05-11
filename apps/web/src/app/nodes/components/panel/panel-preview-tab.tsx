@@ -9,7 +9,7 @@ import { PreviewDescriptionSection } from '../preview-description-section';
 import { WorkflowStepNodePreview } from '../preview/workflow-step-node-preview';
 import type { WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
 import { isWireInputSpec } from '@/components/workflow-graph/workflow-node-input-spec';
-import { SectionHeader } from '@/components/section-header';
+import { SectionHeader } from '@/components/section';
 import { mergePreviewParamModels } from './shared';
 import { listNodeVisibilityConfigs, putNodeVisibilityConfig } from '@/api/nodes';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';

@@ -8,7 +8,6 @@ import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { filteredNodesAtom, nodesBrowseStateAtom, setNodesSearchQueryAtom } from '@/models/nodes/browse.atom';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
@@ -77,9 +76,9 @@ export default function NodesPage() {
         }
       />
 
-      <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <NodesNodeDetailPanel />
-      </Card>
+      </div>
     </Page>
   );
 }

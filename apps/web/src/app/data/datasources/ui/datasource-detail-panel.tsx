@@ -5,10 +5,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { defaultNewName } from '@/lib/default-new-name';
 import { getDatasource, listDatasourcePlugins } from '@/api/datasources';
 import type { DatasourcePluginPublic, DataSourcePublic } from '@/models/datasource/dto';
@@ -187,26 +186,32 @@ export function DatasourceDetailPanel({
   if (mode === 'view') {
     if (items === null) {
       return (
-        <CardContent className="flex flex-col gap-4 p-6">
-          {alerts}
-          <p className="text-sm text-muted-foreground">加载中…</p>
-        </CardContent>
+        <PanelDetailCard title="数据源">
+          <div className="flex flex-col gap-4 overflow-auto p-6">
+            {alerts}
+            <p className="text-sm text-muted-foreground">加载中…</p>
+          </div>
+        </PanelDetailCard>
       );
     }
     if (!selectedId) {
       return (
-        <CardContent className="flex flex-col gap-4 p-6">
-          {alerts}
-          <p className="text-sm text-muted-foreground">从左侧选择一个数据源，或点击「新增数据源」。</p>
-        </CardContent>
+        <PanelDetailCard title="数据源">
+          <div className="flex flex-col gap-4 overflow-auto p-6">
+            {alerts}
+            <p className="text-sm text-muted-foreground">从左侧选择一个数据源，或点击「新增数据源」。</p>
+          </div>
+        </PanelDetailCard>
       );
     }
     if (!selectedItem) {
       return (
-        <CardContent className="flex flex-col gap-4 p-6">
-          {alerts}
-          <p className="text-sm text-muted-foreground">未找到该数据源（可能已被删除）。</p>
-        </CardContent>
+        <PanelDetailCard title="数据源">
+          <div className="flex flex-col gap-4 overflow-auto p-6">
+            {alerts}
+            <p className="text-sm text-muted-foreground">未找到该数据源（可能已被删除）。</p>
+          </div>
+        </PanelDetailCard>
       );
     }
 
@@ -214,183 +219,169 @@ export function DatasourceDetailPanel({
     const viewPlugin = plugins.find((p) => p.type === selectedItem.type) ?? null;
 
     return (
-      <>
-        <CardHeader className="shrink-0 space-y-2">
-          <CardTitle className="space-y-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="min-w-0">
-                <EditablePageTitle
-                  value={form.name}
-                  onChange={() => {
-                    /* 查看模式不允许改名 */
-                  }}
-                  showEdit={false}
-                  inputAriaLabel="数据源显示名称"
-                  placeholder="数据源"
-                  editButtonAriaLabel="编辑名称"
-                />
-              </span>
-              <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                {selectedItem.type}
-              </span>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-          <div className="flex h-[48px] w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0">
-            <div />
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                disabled={isBusy}
-                onClick={() => void onRunTest(selectedItem)}
-              >
-                测试连接
-              </Button>
-              <Button type="button" variant="default" size="sm" onClick={() => onModeChange('edit')}>
-                编辑
-              </Button>
-              <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(selectedItem)}>
-                删除
-              </Button>
-            </div>
+      <PanelDetailCard
+        title={
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="min-w-0">
+              <EditablePageTitle
+                value={form.name}
+                onChange={() => {
+                  /* 查看模式不允许改名 */
+                }}
+                showEdit={false}
+                inputAriaLabel="数据源显示名称"
+                placeholder="数据源"
+                editButtonAriaLabel="编辑名称"
+              />
+            </span>
+            <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+              {selectedItem.type}
+            </span>
           </div>
-          <div
-            className={cn(
-              'h-full max-h-[calc(100vh-10rem)] px-6 pb-6 pt-2',
-              'flex min-h-0 flex-1 flex-col overflow-hidden',
-            )}
-          >
-            <div className="space-y-4 overflow-auto">
-              {alerts}
-              <DatasourceFormPluginConfig form={form} setForm={setForm} plugin={viewPlugin} readOnly />
-            </div>
-          </div>
-        </CardContent>
-      </>
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isBusy}
+              onClick={() => void onRunTest(selectedItem)}
+            >
+              测试连接
+            </Button>
+            <Button type="button" variant="default" size="sm" onClick={() => onModeChange('edit')}>
+              编辑
+            </Button>
+            <Button type="button" variant="destructive" size="sm" onClick={() => onDelete(selectedItem)}>
+              删除
+            </Button>
+          </>
+        }
+      >
+        <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+          {alerts}
+          <DatasourceFormPluginConfig form={form} setForm={setForm} plugin={viewPlugin} readOnly />
+        </div>
+      </PanelDetailCard>
     );
   }
 
   if (loading) {
     return (
-      <CardContent className="flex flex-col gap-4 p-6">
-        {alerts}
-        <p className="text-sm text-muted-foreground">加载中…</p>
-      </CardContent>
+      <PanelDetailCard title="数据源">
+        <div className="flex flex-col gap-4 overflow-auto p-6">
+          {alerts}
+          <p className="text-sm text-muted-foreground">加载中…</p>
+        </div>
+      </PanelDetailCard>
     );
   }
 
   if (loadError) {
     return (
-      <CardContent className="p-6">
-        <div className="mb-4">{alerts}</div>
-        <Alert variant="destructive">
-          <AlertTitle>无法加载数据源</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
-        </Alert>
-      </CardContent>
+      <PanelDetailCard title="数据源">
+        <div className="overflow-auto p-6">
+          <div className="mb-4">{alerts}</div>
+          <Alert variant="destructive">
+            <AlertTitle>无法加载数据源</AlertTitle>
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        </div>
+      </PanelDetailCard>
     );
   }
 
   return (
-    <>
-      <CardHeader className="shrink-0 space-y-2">
-        <CardTitle className="space-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="min-w-0">
-              <EditablePageTitle
-                value={form.name}
-                onChange={(n) => setForm((f) => ({ ...f, name: n }))}
-                inputAriaLabel="数据源显示名称"
-                editButtonAriaLabel="编辑名称"
-                placeholder={mode === 'create' ? '新数据源' : '数据源'}
-              />
+    <PanelDetailCard
+      title={
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="min-w-0">
+            <EditablePageTitle
+              value={form.name}
+              onChange={(n) => setForm((f) => ({ ...f, name: n }))}
+              inputAriaLabel="数据源显示名称"
+              editButtonAriaLabel="编辑名称"
+              placeholder={mode === 'create' ? '新数据源' : '数据源'}
+            />
+          </span>
+          {form.type.trim() ? (
+            <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+              {form.type}
             </span>
-            {form.type.trim() ? (
-              <span className="inline-flex shrink-0 rounded-md bg-muted/80 px-2 py-0.5 font-mono text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-                {form.type}
-              </span>
-            ) : null}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <div className="flex w-full shrink-0 flex-row items-center justify-between gap-2 border-b px-4 pb-3 pt-0 h-[48px]">
-          <div />
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={submitting}
-              onClick={() => {
-                setFormError(null);
-                onModeChange('view');
-              }}
-            >
-              取消
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              form="datasource-panel-form"
-              disabled={submitting || !mainFormValid || !pluginFormValid}
-            >
-              {submitting ? '保存中…' : '保存'}
-            </Button>
-          </div>
+          ) : null}
         </div>
+      }
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={submitting}
+            onClick={() => {
+              setFormError(null);
+              onModeChange('view');
+            }}
+          >
+            取消
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            form="datasource-panel-form"
+            disabled={submitting || !mainFormValid || !pluginFormValid}
+          >
+            {submitting ? '保存中…' : '保存'}
+          </Button>
+        </>
+      }
+    >
+      <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+        {alerts}
+        <form id="datasource-panel-form" className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
+          {mode === 'create' && (
+            <div className="grid gap-2">
+              <Label htmlFor="ds-type">类型</Label>
+              <Select
+                modal={false}
+                items={typeItems}
+                value={form.type}
+                onValueChange={(v) => {
+                  if (v == null || v === '') return;
+                  setForm((f) => ({ ...f, type: v, config: {} }));
+                }}
+              >
+                <SelectTrigger id="ds-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {plugins.map((p) => (
+                    <SelectItem key={p.type} value={p.type}>
+                      {p.title?.trim() || p.type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <div className={cn('h-full max-h-[calc(100vh-10rem)] p-6', 'flex min-h-0 flex-1 flex-col overflow-hidden')}>
-          <div className="space-y-4 overflow-auto">
-            {alerts}
-            <form id="datasource-panel-form" className="flex flex-col gap-6" onSubmit={(e) => void onSubmit(e)}>
-              {mode === 'create' && (
-                <div className="grid gap-2">
-                  <Label htmlFor="ds-type">类型</Label>
-                  <Select
-                    modal={false}
-                    items={typeItems}
-                    value={form.type}
-                    onValueChange={(v) => {
-                      if (v == null || v === '') return;
-                      setForm((f) => ({ ...f, type: v, config: {} }));
-                    }}
-                  >
-                    <SelectTrigger id="ds-type" className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {plugins.map((p) => (
-                        <SelectItem key={p.type} value={p.type}>
-                          {p.title?.trim() || p.type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+          <DatasourceFormPluginConfig
+            form={form}
+            setForm={setForm}
+            plugin={selectedPlugin}
+            onValidityChange={setPluginConfigValid}
+            editingDatasourceId={mode === 'edit' ? selectedId : null}
+          />
 
-              <DatasourceFormPluginConfig
-                form={form}
-                setForm={setForm}
-                plugin={selectedPlugin}
-                onValidityChange={setPluginConfigValid}
-                editingDatasourceId={mode === 'edit' ? selectedId : null}
-              />
-
-              {formError && (
-                <Alert variant="destructive">
-                  <AlertTitle>校验失败</AlertTitle>
-                  <AlertDescription>{formError}</AlertDescription>
-                </Alert>
-              )}
-            </form>
-          </div>
-        </div>
-      </CardContent>
-    </>
+          {formError && (
+            <Alert variant="destructive">
+              <AlertTitle>校验失败</AlertTitle>
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          )}
+        </form>
+      </div>
+    </PanelDetailCard>
   );
 }

@@ -5,7 +5,6 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { ApiError } from '@/api/client';
@@ -123,7 +122,7 @@ export function DatasourcesPanel({ initialSelectedId }: { initialSelectedId?: st
         }
       />
 
-      <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <DatasourceDetailPanel
           items={items}
           selectedId={selectedId}
@@ -138,7 +137,7 @@ export function DatasourcesPanel({ initialSelectedId }: { initialSelectedId?: st
           onRunTest={runTest}
           onDelete={(ds) => setDeleteTarget(ds)}
         />
-      </Card>
+      </div>
 
       <DeleteDatasourceDialog
         target={deleteTarget}

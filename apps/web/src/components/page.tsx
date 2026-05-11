@@ -33,7 +33,7 @@ export type PageProps = {
   /** 是否显示顶栏面包屑与返回（默认 true）。 */
   showAppHeader?: boolean;
   /**
-   * 顶栏「返回」：未传时由子树（如带 `cancelHref` 的 `PageFormHeaderActions`）自动抑制；
+   * 顶栏「返回」：未传时可由子树通过 `PageAppHeaderContext` 自动抑制；
    * `true` 强制显示，`false` 强制隐藏（仍须满足面包屑解析出的可返回页条件）。
    * 点击后为浏览器历史后退，不再跳转到固定 href。
    */
