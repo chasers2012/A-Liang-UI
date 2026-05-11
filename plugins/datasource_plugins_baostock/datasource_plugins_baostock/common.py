@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import inspect
-from typing import Any
-
 import baostock as bs
 from pydantic import BaseModel, Field, model_validator
 
@@ -44,33 +41,3 @@ class BaoStockConfig(BaseModel):
             self.asset_column = asset_col or None
         self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
         return self
-
-
-def infer_json_schema_type(param: inspect.Parameter) -> dict[str, Any]:
-    ann = param.annotation
-    default = param.default
-    annotation_map = {
-        str: "string",
-        int: "integer",
-        float: "number",
-        bool: "boolean",
-        list: "array",
-        dict: "object",
-    }
-    default_type_checks: list[tuple[type[Any], str]] = [
-        (bool, "boolean"),
-        (int, "integer"),
-        (float, "number"),
-        (str, "string"),
-        (list, "array"),
-        (dict, "object"),
-    ]
-
-    if ann in annotation_map:
-        return {"type": annotation_map[ann]}
-
-    if default is not inspect._empty:
-        for default_type, schema_type in default_type_checks:
-            if isinstance(default, default_type):
-                return {"type": schema_type}
-    return {"type": "string"}

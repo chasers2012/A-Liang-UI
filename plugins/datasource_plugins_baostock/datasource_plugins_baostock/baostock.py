@@ -195,9 +195,6 @@ class BaoStockDataSourceSpec(DataSourceSpec):
         cfg_dump = cfg.model_dump(mode="json")
         common_keys = {
             "api_name",
-            "cache_enabled",
-            "cache_ttl_seconds",
-            "cache_dir",
             "date_column",
             "asset_column",
             "columns",
@@ -253,9 +250,6 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             cfg_dump = cfg.model_dump(mode="json")
             common_keys = {
                 "api_name",
-                "cache_enabled",
-                "cache_ttl_seconds",
-                "cache_dir",
                 "date_column",
                 "asset_column",
                 "columns",
