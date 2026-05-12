@@ -114,3 +114,12 @@ export function computeDatasourcePluginConfigValid(form: FormState, plugin: Data
   const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, getDatasourceColumnsConfig(form));
   return baseValid && fieldsValid;
 }
+
+export function computeDatasourcePluginBaseConfigValid(
+  form: FormState,
+  plugin: DatasourcePluginPublic | null,
+): boolean {
+  if (!plugin) return false;
+  const { baseFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
+  return areRequiredFieldsFilled(baseFormSchema, getDatasourceConnectionConfig(form));
+}

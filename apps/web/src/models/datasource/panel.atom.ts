@@ -16,6 +16,7 @@ import type { DataSourcePublic, DatasourcePluginPublic } from './dto';
 import { commitDatasourceForm } from './commit-datasource';
 import { emptyForm, hydrateFormFromDataSource, type FormState } from './form-model';
 import {
+  computeDatasourcePluginBaseConfigValid,
   computeDatasourcePluginConfigValid,
   computeDatasourcePluginFormSchemas,
   nestDatasourceConfigForApi,
@@ -97,6 +98,13 @@ export const datasourcesPluginConfigValidAtom = atom((get) => {
   const plugins = get(datasourcesPluginsAtom);
   const plugin = plugins.find((p) => p.type === form.type) ?? null;
   return computeDatasourcePluginConfigValid(form, plugin);
+});
+
+export const datasourcesPluginBaseConfigValidAtom = atom((get) => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugins = get(datasourcesPluginsAtom);
+  const plugin = plugins.find((p) => p.type === form.type) ?? null;
+  return computeDatasourcePluginBaseConfigValid(form, plugin);
 });
 
 export const datasourcesEditorMainFormValidAtom = atom((get) => {

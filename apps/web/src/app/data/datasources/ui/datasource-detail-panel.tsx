@@ -20,6 +20,7 @@ import {
   datasourcesInspectColumnsBusyAtom,
   datasourcesInspectColumnsErrorAtom,
   datasourcesIsEditingAtom,
+  datasourcesPluginBaseConfigValidAtom,
   datasourcesPluginConfigValidAtom,
   datasourcesPluginsCatalogEffectAtom,
   datasourcesSelectedIdAtom,
@@ -43,6 +44,7 @@ function DatasourceDetailActions() {
   const selectedItem = useAtomValue(datasourcesSelectedListItemAtom);
   const submitting = useAtomValue(datasourcesEditorSubmittingAtom);
   const mainFormValid = useAtomValue(datasourcesEditorMainFormValidAtom);
+  const pluginBaseFormValid = useAtomValue(datasourcesPluginBaseConfigValidAtom);
   const pluginFormValid = useAtomValue(datasourcesPluginConfigValidAtom);
   const detailTab = useAtomValue(datasourcesDetailActiveTabAtom);
   const inspecting = useAtomValue(datasourcesInspectColumnsBusyAtom);
@@ -94,7 +96,7 @@ function DatasourceDetailActions() {
         <Button
           type="button"
           size="sm"
-          disabled={submitting || inspecting || !mainFormValid || !pluginFormValid}
+          disabled={submitting || inspecting || !mainFormValid || !pluginBaseFormValid}
           onClick={() => void proceedFromBase()}
         >
           {inspecting ? '探测中…' : '下一步'}
@@ -123,6 +125,8 @@ export function DatasourceDetailPanel() {
   useAtom(datasourcesEditorLoadEffectAtom);
 
   const isEditing = useAtomValue(datasourcesIsEditingAtom);
+  const mainFormValid = useAtomValue(datasourcesEditorMainFormValidAtom);
+  const pluginBaseFormValid = useAtomValue(datasourcesPluginBaseConfigValidAtom);
   const selectedId = useAtomValue(datasourcesSelectedIdAtom);
   const [deleteError] = useAtom(datasourcesDeleteErrorAtom);
   const [testHint] = useAtom(datasourcesTestHintAtom);
@@ -132,6 +136,7 @@ export function DatasourceDetailPanel() {
   const selectedItem = useAtomValue(datasourcesSelectedListItemAtom);
   const [detailTab, setDetailTab] = useAtom(datasourcesDetailActiveTabAtom);
   const [inspectColumnsError] = useAtom(datasourcesInspectColumnsErrorAtom);
+  const proceedFromBase = useSetAtom(datasourceEditorProceedFromBaseTabAtom);
 
   const detailPanels = useMemo(
     () =>
@@ -146,7 +151,17 @@ export function DatasourceDetailPanel() {
     <PanelDetailCard
       panelActiveTab={detailTab}
       onPanelActiveTabChange={(v) => {
-        if (v === 'base' || v === 'fields') setDetailTab(v);
+        if (v === 'base') {
+          setDetailTab(v);
+          return;
+        }
+        if (v !== 'fields') return;
+        if (!isEditing) {
+          setDetailTab(v);
+          return;
+        }
+        if (!mainFormValid || !pluginBaseFormValid) return;
+        void proceedFromBase();
       }}
       title={
         <div className="flex min-w-0 flex-wrap items-center gap-2">
