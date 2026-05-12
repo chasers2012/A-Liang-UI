@@ -5,7 +5,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import validator from '@rjsf/validator-ajv8';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   datasourcesEditorFormAtom,
@@ -44,9 +44,9 @@ export function DatasourceBasePanelContent() {
         </Alert>
       )}
       <div className="flex flex-col gap-6">
-        <div className="max-w-xl space-y-3">
-          <div className="grid gap-2">
-            <Label htmlFor="ds-type">类型</Label>
+        <FieldGroup className="max-w-xl gap-3">
+          <Field>
+            <FieldLabel htmlFor="ds-type">类型</FieldLabel>
             <Select
               modal={false}
               items={typeItems}
@@ -68,7 +68,7 @@ export function DatasourceBasePanelContent() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </Field>
           <RjsfStyledForm
             schema={baseFormSchema}
             uiSchema={baseFormUiSchema}
@@ -87,7 +87,7 @@ export function DatasourceBasePanelContent() {
           >
             <></>
           </RjsfStyledForm>
-        </div>
+        </FieldGroup>
       </div>
     </>
   );

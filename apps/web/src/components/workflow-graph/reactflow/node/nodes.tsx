@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { useReactFlow, type NodeProps } from 'reactflow';
 
+import { FieldGroup } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 import { ParamRow, nodeParamEffectiveValue } from './param-row';
 import { useWorkflowGraphContext } from '../../workflow-graph-context';
@@ -84,7 +85,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(props: NodeProps<
       </div>
 
       {inlineInputSpecs.length > 0 ? (
-        <div className="nodrag nopan border-t border-border/80 px-2.5 py-2.5 flex flex-col gap-2">
+        <FieldGroup className="nodrag nopan gap-2 border-t border-border/80 px-2.5 py-2.5">
           {inlineInputSpecs.map((raw) => {
             const spec = inputSpecToNodeParamModel(raw);
             return (
@@ -98,7 +99,7 @@ export const WorkflowStepNode = memo(function WorkflowStepNode(props: NodeProps<
               />
             );
           })}
-        </div>
+        </FieldGroup>
       ) : null}
     </div>
   );

@@ -5,7 +5,7 @@ import { useAtomValue } from 'jotai';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CodeJar } from '@/components/ui/code-jar';
-import { Label } from '@/components/ui/label';
+import { Field, FieldLabel } from '@/components/ui/field';
 import {
   nodesEditActiveAtom,
   nodesSaveErrorAtom,
@@ -35,8 +35,8 @@ export function PanelSourceTab() {
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="flex min-h-0 flex-1 flex-col gap-2">
-        <Label htmlFor={codeJarId}>源码</Label>
+      <Field className="flex min-h-0 flex-1 flex-col gap-2">
+        <FieldLabel htmlFor={codeJarId}>源码</FieldLabel>
         <div className="min-h-0 flex-1">
           <CodeJar
             key={detail.id}
@@ -48,7 +48,7 @@ export function PanelSourceTab() {
             aria-label="节点 Python 源码"
           />
         </div>
-      </div>
+      </Field>
     </div>
   );
 }

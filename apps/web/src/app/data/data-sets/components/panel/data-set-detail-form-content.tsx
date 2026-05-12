@@ -7,7 +7,7 @@ import { EditablePageDescription } from '@/components/editable-page-description'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Combobox,
@@ -67,44 +67,46 @@ export function DataSetDetailFormContent(props: {
         />
       </Section>
 
-      <Section title="参数" className="space-y-3">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor={readOnly ? 'ts-start-ro' : 'ts-start'}>开始日期</Label>
-            <DatePicker
-              id={readOnly ? 'ts-start-ro' : 'ts-start'}
-              value={form.start}
-              onChange={(v) => (readOnly ? undefined : patchForm({ start: v }))}
-              placeholder="选择开始日期"
-              required
-              disabled={readOnly}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={readOnly ? 'ts-end-ro' : 'ts-end'}>结束日期</Label>
-            <DatePicker
-              id={readOnly ? 'ts-end-ro' : 'ts-end'}
-              value={form.end}
-              onChange={(v) => (readOnly ? undefined : patchForm({ end: v }))}
-              placeholder="选择结束日期"
-              required
-              disabled={readOnly}
-            />
-          </div>
-        </div>
+      <Section title="参数">
+        <FieldGroup className="gap-3">
+          <FieldGroup className="grid gap-4 sm:grid-cols-2">
+            <Field className="gap-2">
+              <FieldLabel htmlFor="ts-start">开始日期</FieldLabel>
+              <DatePicker
+                id="ts-start"
+                value={form.start}
+                onChange={(v) => (readOnly ? undefined : patchForm({ start: v }))}
+                placeholder="选择开始日期"
+                required
+                disabled={readOnly}
+              />
+            </Field>
+            <Field className="gap-2">
+              <FieldLabel htmlFor="ts-end">结束日期</FieldLabel>
+              <DatePicker
+                id="ts-end"
+                value={form.end}
+                onChange={(v) => (readOnly ? undefined : patchForm({ end: v }))}
+                placeholder="选择结束日期"
+                required
+                disabled={readOnly}
+              />
+            </Field>
+          </FieldGroup>
 
-        <div className="space-y-2">
-          <Label htmlFor={readOnly ? 'ts-instruments-ro' : 'ts-instruments'}>标的代码（可选）</Label>
-          <Textarea
-            id={readOnly ? 'ts-instruments-ro' : 'ts-instruments'}
-            value={form.instrument_codes_text}
-            onChange={(e) => (readOnly ? undefined : patchForm({ instrument_codes_text: e.target.value }))}
-            placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
-            rows={4}
-            disabled={readOnly}
-            className="min-h-0 resize-y font-mono text-xs"
-          />
-        </div>
+          <Field className="gap-2">
+            <FieldLabel htmlFor="ts-instruments">标的代码（可选）</FieldLabel>
+            <Textarea
+              id="ts-instruments"
+              value={form.instrument_codes_text}
+              onChange={(e) => (readOnly ? undefined : patchForm({ instrument_codes_text: e.target.value }))}
+              placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
+              rows={4}
+              disabled={readOnly}
+              className="min-h-0 resize-y font-mono text-xs"
+            />
+          </Field>
+        </FieldGroup>
       </Section>
 
       <Section title="数据源绑定">
@@ -180,6 +182,8 @@ function DataSetBindingRowBlock({
   })();
   const columnsAnchor = useComboboxAnchor();
 
+  const dsTriggerId = `ds-binding-${index}-trigger`;
+
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4">
       <div className="flex items-center justify-between gap-2">
@@ -197,92 +201,94 @@ function DataSetBindingRowBlock({
           </Button>
         ) : null}
       </div>
-      <div className="space-y-2">
-        <Label>数据源</Label>
-        <Select
-          modal={false}
-          items={dsItems}
-          value={row.datasource_id}
-          onValueChange={(v) =>
-            v &&
-            updateBinding(index, {
-              datasource_id: v,
-              columns: [],
-            })
-          }
-          disabled={readOnly || bindingDatasources.length === 0}
-        >
-          <SelectTrigger className="w-full min-w-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {bindingDatasources.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.name} ({d.type})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="space-y-2">
-        <Label>
-          筛选数据列<span className="text-xs text-muted-foreground">留空启用全部</span>
-        </Label>
-        {readOnly ? (
-          <div className="flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 text-sm">
-            {row.columns.length ? (
-              row.columns.map((c) => (
-                <span
-                  key={c}
-                  className="flex h-5.25 w-fit items-center justify-center rounded-sm bg-muted px-1.5 font-mono text-xs font-medium whitespace-nowrap text-foreground opacity-70"
-                >
-                  {c}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">（未选择：启用全部）</span>
-            )}
-          </div>
-        ) : (
-          <Combobox
-            items={columnOptions}
-            multiple
-            value={row.columns}
-            onValueChange={(v) => updateBinding(index, { columns: v ?? [] })}
-            openOnInputClick
+      <FieldGroup className="gap-3">
+        <Field className="gap-2">
+          <FieldLabel htmlFor={dsTriggerId}>数据源</FieldLabel>
+          <Select
+            modal={false}
+            items={dsItems}
+            value={row.datasource_id}
+            onValueChange={(v) =>
+              v &&
+              updateBinding(index, {
+                datasource_id: v,
+                columns: [],
+              })
+            }
+            disabled={readOnly || bindingDatasources.length === 0}
           >
-            <ComboboxChips ref={columnsAnchor} className="w-full min-w-0">
-              <ComboboxValue>
-                {(value: string[]) => (
-                  <>
-                    {value.map((c) => (
-                      <ComboboxChip key={c} className="font-mono text-xs" aria-label={`移除 ${c}`}>
-                        {c}
-                      </ComboboxChip>
-                    ))}
-                  </>
-                )}
-              </ComboboxValue>
-            </ComboboxChips>
-            <ComboboxContent
-              anchor={columnsAnchor}
-              sideOffset={4}
-              align="start"
-              className="w-max max-w-[min(28rem,var(--available-width))]"
+            <SelectTrigger id={dsTriggerId} className="w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {bindingDatasources.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name} ({d.type})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field className="gap-2">
+          <FieldLabel>
+            筛选数据列<span className="text-xs text-muted-foreground">留空启用全部</span>
+          </FieldLabel>
+          {readOnly ? (
+            <div className="flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 text-sm">
+              {row.columns.length ? (
+                row.columns.map((c) => (
+                  <span
+                    key={c}
+                    className="flex h-5.25 w-fit items-center justify-center rounded-sm bg-muted px-1.5 font-mono text-xs font-medium whitespace-nowrap text-foreground opacity-70"
+                  >
+                    {c}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-muted-foreground">（未选择：启用全部）</span>
+              )}
+            </div>
+          ) : (
+            <Combobox
+              items={columnOptions}
+              multiple
+              value={row.columns}
+              onValueChange={(v) => updateBinding(index, { columns: v ?? [] })}
+              openOnInputClick
             >
-              <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配列</ComboboxEmpty>
-              <ComboboxList className="outline-none">
-                {(item: string) => (
-                  <ComboboxItem key={item} value={item} className="items-start text-sm">
-                    <span className="min-w-0 flex-1 whitespace-normal wrap-break-word font-mono text-xs">{item}</span>
-                  </ComboboxItem>
-                )}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        )}
-      </div>
+              <ComboboxChips ref={columnsAnchor} className="w-full min-w-0">
+                <ComboboxValue>
+                  {(value: string[]) => (
+                    <>
+                      {value.map((c) => (
+                        <ComboboxChip key={c} className="font-mono text-xs" aria-label={`移除 ${c}`}>
+                          {c}
+                        </ComboboxChip>
+                      ))}
+                    </>
+                  )}
+                </ComboboxValue>
+              </ComboboxChips>
+              <ComboboxContent
+                anchor={columnsAnchor}
+                sideOffset={4}
+                align="start"
+                className="w-max max-w-[min(28rem,var(--available-width))]"
+              >
+                <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配列</ComboboxEmpty>
+                <ComboboxList className="outline-none">
+                  {(item: string) => (
+                    <ComboboxItem key={item} value={item} className="items-start text-sm">
+                      <span className="min-w-0 flex-1 whitespace-normal wrap-break-word font-mono text-xs">{item}</span>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          )}
+        </Field>
+      </FieldGroup>
     </div>
   );
 }

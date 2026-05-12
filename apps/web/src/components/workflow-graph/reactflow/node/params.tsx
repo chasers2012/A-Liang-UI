@@ -1,6 +1,6 @@
 import { DatePicker } from '@/components/ui/date-picker';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -25,7 +25,7 @@ function ParamFieldLabel({ label, description }: { label: string; description?: 
   const d = description?.trim();
   return (
     <div className="flex min-w-0 items-center gap-1">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <FieldLabel className="w-auto text-xs font-normal text-muted-foreground">{label}</FieldLabel>
       {d ? <SocketDescriptionTooltip description={d} /> : null}
     </div>
   );
@@ -34,7 +34,7 @@ function ParamFieldLabel({ label, description }: { label: string; description?: 
 export function BooleanParamRow(props: IParamRowProps<boolean>) {
   const { label, description, readOnly, value, onChange } = props;
   return (
-    <div className="flex items-center justify-between gap-2 overflow-hidden">
+    <Field orientation="horizontal" className="items-center justify-between gap-2 overflow-hidden">
       <ParamFieldLabel label={label} description={description} />
       <Switch
         className={cn({ 'cursor-pointer': !readOnly })}
@@ -43,7 +43,7 @@ export function BooleanParamRow(props: IParamRowProps<boolean>) {
         checked={Boolean(value)}
         onCheckedChange={(checked) => onChange(checked)}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -51,7 +51,7 @@ export function StringParamRow(props: IParamRowProps<string>) {
   const { label, description, readOnly, value, onChange } = props;
   const s = value === null || value === undefined ? '' : String(value);
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <Input
         type="text"
@@ -60,7 +60,7 @@ export function StringParamRow(props: IParamRowProps<string>) {
         value={s}
         onChange={(e) => onChange(e.target.value)}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -69,7 +69,7 @@ export function TextareaParamRow(props: IParamRowProps<string> & { rows?: number
   const s = value === null || value === undefined ? '' : String(value);
   const rowCount = Math.max(2, Math.min(Number(rows) || 6, 40));
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <Textarea
         disabled={readOnly}
@@ -78,7 +78,7 @@ export function TextareaParamRow(props: IParamRowProps<string> & { rows?: number
         value={s}
         onChange={(e) => onChange(e.target.value)}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -116,7 +116,7 @@ export function SelectParamRow(props: IParamRowProps<unknown> & { options: unkno
   const current = value === null || value === undefined ? undefined : optionValueKey(value);
 
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <Select
         modal={false}
@@ -147,17 +147,17 @@ export function SelectParamRow(props: IParamRowProps<unknown> & { options: unkno
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </Field>
   );
 }
 
 export function DateParamRow(props: IParamRowProps<string>) {
   const { label, description, readOnly, value, onChange } = props;
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <DatePicker disabled={readOnly} value={value} onChange={(next) => onChange(next)} placeholder="选择日期" />
-    </div>
+    </Field>
   );
 }
 
@@ -165,10 +165,10 @@ export function DateTimeParamRow(props: IParamRowProps<string>) {
   const { label, description, readOnly, value, onChange } = props;
   const s = value === null || value === undefined ? '' : String(value);
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <DatePicker disabled={readOnly} value={s} onChange={(next) => onChange(next)} placeholder="选择日期时间" />
-    </div>
+    </Field>
   );
 }
 
@@ -176,7 +176,7 @@ export function NumberParamRow(props: IParamRowProps<number | undefined> & { max
   const { label, description, maximum, minimum, readOnly, value, onChange } = props;
   const numStr = value === null || value === undefined ? '' : String(value);
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <Input
         type="number"
@@ -192,7 +192,7 @@ export function NumberParamRow(props: IParamRowProps<number | undefined> & { max
           else onChange(Number(s));
         }}
       />
-    </div>
+    </Field>
   );
 }
 
@@ -241,7 +241,7 @@ export function RjsfParamRow(
   }, [schema]);
 
   return (
-    <div>
+    <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <RjsfStyledForm
         key={rjsfKey}
@@ -275,6 +275,6 @@ export function RjsfParamRow(
       >
         <></>
       </RjsfStyledForm>
-    </div>
+    </Field>
   );
 }

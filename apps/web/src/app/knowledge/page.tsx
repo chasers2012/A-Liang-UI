@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Item, ItemContent, ItemGroup, ItemHeader, ItemTitle } from '@/components/ui/item';
 
 import {
@@ -228,10 +228,10 @@ function SearchCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-end gap-2">
-          <div className="flex-1 space-y-2">
-            <Label htmlFor="knowledge-search">Query</Label>
+          <Field className="flex-1 gap-2">
+            <FieldLabel htmlFor="knowledge-search">Query</FieldLabel>
             <Input id="knowledge-search" value={query} onChange={(e) => actions.setSearchQuery(e.target.value)} />
-          </div>
+          </Field>
           <Button variant="outline" onClick={() => actions.search()} disabled={loading}>
             检索
           </Button>

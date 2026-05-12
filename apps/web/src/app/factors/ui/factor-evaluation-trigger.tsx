@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
 import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-detail.atom';
@@ -30,64 +30,66 @@ export function FactorEvaluationTrigger(props: { factorId: string }) {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-xs">
-        <Label
-          htmlFor="factor-eval-profile-card"
-          className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          评价方案
-        </Label>
-        <Select
-          modal={false}
-          items={profileSelectItems}
-          value={runProfileId ?? ''}
-          onValueChange={(v) => {
-            if (!v) return;
-            setRunProfileId(v);
-          }}
-          disabled={evaluationProfiles.length === 0}
-        >
-          <SelectTrigger id="factor-eval-profile-card" size="sm" className="w-full min-w-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {evaluationProfiles.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:max-w-xs">
-        <Label
-          htmlFor="factor-eval-dataset-card"
-          className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-        >
-          数据集
-        </Label>
-        <Select
-          modal={false}
-          items={dataSetSelectItems}
-          value={runDataSetId ?? ''}
-          onValueChange={(v) => {
-            if (!v) return;
-            setRunDataSetId(v);
-          }}
-          disabled={dataSets.length === 0}
-        >
-          <SelectTrigger id="factor-eval-dataset-card" size="sm" className="w-full min-w-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {dataSets.map((ds) => (
-              <SelectItem key={ds.id} value={ds.id}>
-                {ds.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <FieldGroup className="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
+        <Field className="min-w-0 flex-1 gap-1.5 sm:max-w-xs">
+          <FieldLabel
+            htmlFor="factor-eval-profile-card"
+            className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            评价方案
+          </FieldLabel>
+          <Select
+            modal={false}
+            items={profileSelectItems}
+            value={runProfileId ?? ''}
+            onValueChange={(v) => {
+              if (!v) return;
+              setRunProfileId(v);
+            }}
+            disabled={evaluationProfiles.length === 0}
+          >
+            <SelectTrigger id="factor-eval-profile-card" size="sm" className="w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {evaluationProfiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field className="min-w-0 flex-1 gap-1.5 sm:max-w-xs">
+          <FieldLabel
+            htmlFor="factor-eval-dataset-card"
+            className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+          >
+            数据集
+          </FieldLabel>
+          <Select
+            modal={false}
+            items={dataSetSelectItems}
+            value={runDataSetId ?? ''}
+            onValueChange={(v) => {
+              if (!v) return;
+              setRunDataSetId(v);
+            }}
+            disabled={dataSets.length === 0}
+          >
+            <SelectTrigger id="factor-eval-dataset-card" size="sm" className="w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {dataSets.map((ds) => (
+                <SelectItem key={ds.id} value={ds.id}>
+                  {ds.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      </FieldGroup>
       <Button
         type="button"
         variant="secondary"

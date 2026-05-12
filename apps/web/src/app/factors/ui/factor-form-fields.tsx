@@ -1,7 +1,7 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,10 +42,10 @@ function FactorParamsField({
   const setParamSpecs = useSetAtom(factorsEditParamSpecsAtom);
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={pid('params')}>参数 params</Label>
+    <Field className="gap-2">
+      <FieldLabel htmlFor={pid('params')}>参数 params</FieldLabel>
       {paramSpecs.length > 0 ? (
-        <div className="rounded-md bg-muted/30 px-3 py-2 text-sm">
+        <div id={pid('params')} className="rounded-md bg-muted/30 px-3 py-2 text-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
@@ -204,7 +204,9 @@ function FactorParamsField({
           </div>
         </div>
       ) : (
-        <div className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">-</div>
+        <div id={pid('params')} className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+          -
+        </div>
       )}
       {!readOnly ? (
         <Button
@@ -233,7 +235,7 @@ function FactorParamsField({
           新增参数
         </Button>
       ) : null}
-    </div>
+    </Field>
   );
 }
 
@@ -249,11 +251,11 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
   const dependencies = form.dependencies;
 
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <FieldGroup>
+      <FieldGroup className="grid gap-4 sm:grid-cols-2">
         {!hideNameField && (
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor={pid('name')}>标识 name</Label>
+          <Field className="gap-2 sm:col-span-2">
+            <FieldLabel htmlFor={pid('name')}>标识 name</FieldLabel>
             {readOnly ? (
               <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.name || '-'}</div>
             ) : (
@@ -267,19 +269,19 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
                 autoComplete="off"
               />
             )}
-          </div>
+          </Field>
         )}
-        <div className="min-w-0 space-y-2">
-          <Label htmlFor={pid('group')}>分组 group</Label>
+        <Field className="min-w-0 gap-2">
+          <FieldLabel htmlFor={pid('group')}>分组 group</FieldLabel>
           {readOnly ? (
             <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.group || '-'}</div>
           ) : (
             <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => setGroup(group)} />
           )}
-          <p className="text-xs text-muted-foreground">可选已有分组或输入新名称。</p>
-        </div>
-        <div className="min-w-0 space-y-2">
-          <Label htmlFor={pid('mw')}>window</Label>
+          <FieldDescription>可选已有分组或输入新名称。</FieldDescription>
+        </Field>
+        <Field className="min-w-0 gap-2">
+          <FieldLabel htmlFor={pid('mw')}>window</FieldLabel>
           {readOnly ? (
             <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.window || '-'}</div>
           ) : (
@@ -296,11 +298,11 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               }}
             />
           )}
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
       {!hideDescriptionField ? (
-        <div className="space-y-2">
-          <Label htmlFor={pid('desc')}>描述</Label>
+        <Field className="gap-2">
+          <FieldLabel htmlFor={pid('desc')}>描述</FieldLabel>
           {readOnly ? (
             <div className="min-h-16 rounded-md bg-muted/30 px-3 py-2 text-sm whitespace-pre-wrap">
               {form.description || '-'}
@@ -314,10 +316,10 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               onChange={(e) => setDescription(e.target.value)}
             />
           )}
-        </div>
+        </Field>
       ) : null}
-      <div className="space-y-2">
-        <Label htmlFor={pid('deps')}>依赖列 dependencies</Label>
+      <Field className="gap-2">
+        <FieldLabel htmlFor={pid('deps')}>依赖列 dependencies</FieldLabel>
         {readOnly ? (
           dependencies.length > 0 ? (
             <div className="flex flex-wrap gap-1 h-[32px] items-center">
@@ -337,9 +339,9 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
             onValueChange={(deps) => setDependencies(deps)}
           />
         )}
-      </div>
+      </Field>
       <FactorParamsField pid={pid} readOnly={readOnly} paramSpecs={form.param_specs ?? []} />
-    </>
+    </FieldGroup>
   );
 }
 
@@ -351,8 +353,8 @@ export function FactorSourceField(props: FactorSourceFieldProps) {
   const setSourceDraft = useSetAtom(factorsSourceDraftAtom);
   if (!form) return null;
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      <Label htmlFor={pid('source')}>Python 源码</Label>
+    <Field className="flex h-full min-h-0 flex-1 gap-2">
+      <FieldLabel htmlFor={pid('source')}>Python 源码</FieldLabel>
       <CodeJar
         id={pid('source')}
         value={form.source}
@@ -360,6 +362,6 @@ export function FactorSourceField(props: FactorSourceFieldProps) {
         onChange={setSourceDraft}
         className="h-full min-h-0 flex-1"
       />
-    </div>
+    </Field>
   );
 }
