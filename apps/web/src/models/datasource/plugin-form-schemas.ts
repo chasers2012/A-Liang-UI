@@ -73,9 +73,15 @@ export function computeDatasourcePluginFormSchemas(
 
   return {
     baseFormSchema: connectionSchema,
-    baseFormUiSchema: connectionUiSchema,
+    baseFormUiSchema: {
+      ...connectionUiSchema,
+      'ui:submitButtonOptions': { norender: true },
+    },
     fieldsFormSchema,
-    fieldsFormUiSchema: rawColumnsUiSchema,
+    fieldsFormUiSchema: {
+      ...rawColumnsUiSchema,
+      'ui:submitButtonOptions': { norender: true },
+    },
   };
 }
 
