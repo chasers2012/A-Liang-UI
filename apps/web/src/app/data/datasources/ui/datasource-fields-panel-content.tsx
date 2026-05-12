@@ -6,7 +6,6 @@ import {
   datasourcesEditorFormAtom,
   datasourcesEditorFormErrorAtom,
   datasourcesInspectColumnsBusyAtom,
-  datasourcesInspectColumnsErrorAtom,
   datasourcesIsEditingAtom,
   datasourcesPluginFormSchemasAtom,
   datasourcesPluginsAtom,
@@ -28,7 +27,6 @@ export function DatasourceFieldsPanelContent() {
   const [plugins] = useAtom(datasourcesPluginsAtom);
   const [formError] = useAtom(datasourcesEditorFormErrorAtom);
   const [inspecting] = useAtom(datasourcesInspectColumnsBusyAtom);
-  const [inspectError] = useAtom(datasourcesInspectColumnsErrorAtom);
   const inspectDatasourceColumns = useSetAtom(inspectDatasourceColumnsAtom);
   const { fieldsFormSchema, fieldsFormUiSchema } = useAtomValue(datasourcesPluginFormSchemasAtom);
 
@@ -49,11 +47,6 @@ export function DatasourceFieldsPanelContent() {
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
       )}
-      {inspectError ? (
-        <Alert variant="destructive">
-          <AlertDescription>{inspectError}</AlertDescription>
-        </Alert>
-      ) : null}
       {!fieldsFormSchema && <p className="text-sm text-muted-foreground">当前数据源没有可配置的字段映射。</p>}
 
       <div className="max-w-xl space-y-3">

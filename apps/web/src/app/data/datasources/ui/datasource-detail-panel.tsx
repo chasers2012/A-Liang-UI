@@ -7,14 +7,18 @@ import { Button } from '@/components/ui/button';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import {
   cancelDatasourceEditorAtom,
+  datasourceEditorProceedFromBaseTabAtom,
   datasourcesBusyIdAtom,
   datasourcesDeleteErrorAtom,
+  datasourcesDetailActiveTabAtom,
   datasourcesDetailLoadErrorAtom,
   datasourcesDetailLoadingAtom,
   datasourcesEditorFormAtom,
   datasourcesEditorLoadEffectAtom,
   datasourcesEditorMainFormValidAtom,
   datasourcesEditorSubmittingAtom,
+  datasourcesInspectColumnsBusyAtom,
+  datasourcesInspectColumnsErrorAtom,
   datasourcesIsEditingAtom,
   datasourcesPluginConfigValidAtom,
   datasourcesPluginsCatalogEffectAtom,
@@ -40,8 +44,11 @@ function DatasourceDetailActions() {
   const submitting = useAtomValue(datasourcesEditorSubmittingAtom);
   const mainFormValid = useAtomValue(datasourcesEditorMainFormValidAtom);
   const pluginFormValid = useAtomValue(datasourcesPluginConfigValidAtom);
+  const detailTab = useAtomValue(datasourcesDetailActiveTabAtom);
+  const inspecting = useAtomValue(datasourcesInspectColumnsBusyAtom);
   const saveEditor = useSetAtom(saveDatasourceEditorAtom);
   const cancelEditor = useSetAtom(cancelDatasourceEditorAtom);
+  const proceedFromBase = useSetAtom(datasourceEditorProceedFromBaseTabAtom);
   const runTest = useSetAtom(testDatasourceConnectionAtom);
   const busyId = useAtomValue(datasourcesBusyIdAtom);
   const enterEditor = useSetAtom(enterDatasourceEditorAtom);
@@ -70,19 +77,38 @@ function DatasourceDetailActions() {
     );
   }
 
+  const onBaseTab = detailTab === 'base';
+
   return (
     <>
-      <Button type="button" variant="outline" size="sm" disabled={submitting} onClick={() => void cancelEditor()}>
-        取消
-      </Button>
       <Button
         type="button"
+        variant="outline"
         size="sm"
-        disabled={submitting || !mainFormValid || !pluginFormValid}
-        onClick={() => void saveEditor()}
+        disabled={submitting || inspecting}
+        onClick={() => void cancelEditor()}
       >
-        {submitting ? '保存中…' : '保存'}
+        取消
       </Button>
+      {onBaseTab ? (
+        <Button
+          type="button"
+          size="sm"
+          disabled={submitting || inspecting || !mainFormValid || !pluginFormValid}
+          onClick={() => void proceedFromBase()}
+        >
+          {inspecting ? '探测中…' : '下一步'}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          disabled={submitting || !mainFormValid || !pluginFormValid}
+          onClick={() => void saveEditor()}
+        >
+          {submitting ? '保存中…' : '保存'}
+        </Button>
+      )}
     </>
   );
 }
@@ -104,6 +130,8 @@ export function DatasourceDetailPanel() {
   const [loadError] = useAtom(datasourcesDetailLoadErrorAtom);
   const [loading] = useAtom(datasourcesDetailLoadingAtom);
   const selectedItem = useAtomValue(datasourcesSelectedListItemAtom);
+  const [detailTab, setDetailTab] = useAtom(datasourcesDetailActiveTabAtom);
+  const [inspectColumnsError] = useAtom(datasourcesInspectColumnsErrorAtom);
 
   const detailPanels = useMemo(
     () =>
@@ -116,6 +144,10 @@ export function DatasourceDetailPanel() {
 
   return (
     <PanelDetailCard
+      panelActiveTab={detailTab}
+      onPanelActiveTabChange={(v) => {
+        if (v === 'base' || v === 'fields') setDetailTab(v);
+      }}
       title={
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <EditablePageTitle
@@ -146,6 +178,12 @@ export function DatasourceDetailPanel() {
           <AlertDescription>{testHint.message}</AlertDescription>
         </Alert>
       )}
+      {inspectColumnsError && isEditing ? (
+        <Alert variant="destructive">
+          <AlertTitle>列探测失败</AlertTitle>
+          <AlertDescription>{inspectColumnsError}</AlertDescription>
+        </Alert>
+      ) : null}
       {loadError && (
         <Alert variant="destructive">
           <AlertTitle>无法加载数据源</AlertTitle>

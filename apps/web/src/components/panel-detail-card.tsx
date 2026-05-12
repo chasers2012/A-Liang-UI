@@ -19,17 +19,31 @@ export type PanelDetailCardProps = Omit<ComponentProps<typeof Card>, 'title' | '
   children?: ReactNode;
   actions?: ReactNode;
   panels?: readonly PanelDetailCardTabPanelItem[];
+  /** When both are set, tab selection is controlled by the parent (otherwise internal state). */
+  panelActiveTab?: string;
+  onPanelActiveTabChange?: (value: string) => void;
 };
 
-function usePanelDetailCardActiveTabValue(panels: readonly PanelDetailCardTabPanelItem[] | undefined) {
+function usePanelDetailCardActiveTabValue(
+  panels: readonly PanelDetailCardTabPanelItem[] | undefined,
+  panelActiveTab: string | undefined,
+  onPanelActiveTabChange: ((value: string) => void) | undefined,
+) {
   const firstPanelValue = panels?.[0]?.value;
-  const [selectedPanelValue, setSelectedPanelValue] = useState<string | undefined>(undefined);
+  const [internalTab, setInternalTab] = useState<string | undefined>(undefined);
+
+  const controlled = panelActiveTab !== undefined && onPanelActiveTabChange !== undefined;
 
   const activePanelValue = (() => {
     if (!panels || panels.length === 0) return '';
-    if (selectedPanelValue && panels.some((p) => p.value === selectedPanelValue)) return selectedPanelValue;
+    if (controlled) {
+      return panels.some((p) => p.value === panelActiveTab) ? panelActiveTab : (firstPanelValue ?? '');
+    }
+    if (internalTab && panels.some((p) => p.value === internalTab)) return internalTab;
     return firstPanelValue ?? '';
   })();
+
+  const setSelectedPanelValue = controlled ? onPanelActiveTabChange : setInternalTab;
 
   return { activePanelValue, setSelectedPanelValue };
 }
@@ -84,8 +98,21 @@ function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children
   );
 }
 
-export function PanelDetailCard({ className, title, children, actions, panels, ...cardProps }: PanelDetailCardProps) {
-  const { activePanelValue, setSelectedPanelValue } = usePanelDetailCardActiveTabValue(panels);
+export function PanelDetailCard({
+  className,
+  title,
+  children,
+  actions,
+  panels,
+  panelActiveTab,
+  onPanelActiveTabChange,
+  ...cardProps
+}: PanelDetailCardProps) {
+  const { activePanelValue, setSelectedPanelValue } = usePanelDetailCardActiveTabValue(
+    panels,
+    panelActiveTab,
+    onPanelActiveTabChange,
+  );
 
   const mainContent = (
     <PanelDetailCardMainRegion panels={panels} activePanelValue={activePanelValue} actions={actions}>

@@ -30,6 +30,10 @@ export const datasourcesBusyIdAtom = atom<string | null>(null);
 export const datasourcesTestHintAtom = atom<{ id: string; ok: boolean; message: string } | null>(null);
 export const datasourcesSelectedIdAtom = atom<string | null>(null);
 export const datasourcesIsEditingAtom = atom<boolean>(false);
+
+/** 数据源详情卡「基础配置 / 字段映射」当前 tab（受控于页面） */
+export type DatasourceDetailTab = 'base' | 'fields';
+export const datasourcesDetailActiveTabAtom = atom<DatasourceDetailTab>('base');
 export const datasourcesDeleteTargetAtom = atom<DataSourcePublic | null>(null);
 export const datasourcesDeletingAtom = atom<boolean>(false);
 export const datasourcesDeleteErrorAtom = atom<string | null>(null);
@@ -137,6 +141,12 @@ export const inspectDatasourceColumnsAtom = atom(null, async (get, set): Promise
   } finally {
     set(datasourcesInspectColumnsBusyAtom, false);
   }
+});
+
+/** 从基础配置进入字段映射：先执行列探测，成功则切换到「字段映射」tab。 */
+export const datasourceEditorProceedFromBaseTabAtom = atom(null, async (_get, set) => {
+  const ok = await set(inspectDatasourceColumnsAtom);
+  if (ok) set(datasourcesDetailActiveTabAtom, 'fields');
 });
 
 /**
@@ -274,10 +284,12 @@ export const selectDatasourceFromListAtom = atom(null, (_get, set, itemId: strin
 export const startCreateNewDatasourceAtom = atom(null, (_get, set) => {
   set(datasourcesSelectedIdAtom, null);
   set(datasourcesIsEditingAtom, true);
+  set(datasourcesDetailActiveTabAtom, 'base');
 });
 
 export const enterDatasourceEditorAtom = atom(null, (_get, set) => {
   set(datasourcesIsEditingAtom, true);
+  set(datasourcesDetailActiveTabAtom, 'base');
 });
 
 export const requestDeleteDatasourceAtom = atom(null, (_get, set, item: DataSourcePublic) => {
@@ -286,6 +298,7 @@ export const requestDeleteDatasourceAtom = atom(null, (_get, set, item: DataSour
 
 export const cancelDatasourceEditorAtom = atom(null, (_get, set) => {
   set(datasourcesEditorFormErrorAtom, null);
+  set(datasourcesInspectColumnsErrorAtom, null);
   set(datasourcesIsEditingAtom, false);
 });
 
