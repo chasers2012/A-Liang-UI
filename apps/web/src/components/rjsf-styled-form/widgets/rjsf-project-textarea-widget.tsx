@@ -12,6 +12,8 @@ import {
 
 import { Textarea } from '@/components/ui/textarea';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 type CustomWidgetProps<
   T extends GenericObjectType = GenericObjectType,
   S extends StrictRJSFSchema = RJSFSchema,
@@ -38,7 +40,10 @@ export default function RjsfProjectTextareaWidget<
   onChange,
   options,
   className,
+  formContext,
 }: CustomWidgetProps<T, S, F>) {
+  const forcedReadonly = Boolean((formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
   const _onChange = ({ target: { value: v } }: ChangeEvent<HTMLTextAreaElement>) =>
     onChange(v === '' ? options.emptyValue : v);
   const _onBlur = ({ target }: FocusEvent<HTMLTextAreaElement>) => onBlur(id, target && target.value);
@@ -51,7 +56,7 @@ export default function RjsfProjectTextareaWidget<
         name={htmlName || id}
         placeholder={placeholder}
         disabled={disabled}
-        readOnly={readonly}
+        readOnly={isReadonly}
         value={value ?? ''}
         required={required}
         autoFocus={autofocus}

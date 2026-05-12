@@ -4,6 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { WidgetProps } from '@rjsf/utils';
 import { useCallback, useMemo } from 'react';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 function isEnumValueMatched(left: unknown, right: unknown): boolean {
   if (Object.is(left, right)) return true;
   if (left == null || right == null) return false;
@@ -17,7 +19,22 @@ function isUnset(value: unknown, emptyValue: unknown): boolean {
 }
 
 export function RjsfPortalSelectWidget(props: WidgetProps) {
-  const { id, multiple, onChange, onBlur, onFocus, options, value, disabled, readonly, required, placeholder } = props;
+  const {
+    id,
+    multiple,
+    onChange,
+    onBlur,
+    onFocus,
+    options,
+    value,
+    disabled,
+    readonly,
+    required,
+    placeholder,
+    formContext,
+  } = props;
+  const forcedReadonly = Boolean((formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
 
   const { selectedValues, multiSummary, selectedLabel } = useMemo(() => {
     const opts = Array.isArray(options.enumOptions) ? options.enumOptions : [];
@@ -91,7 +108,7 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
         if (a == null || b == null) return false;
         return isEnumValueMatched(a, b);
       }}
-      disabled={disabled || readonly}
+      disabled={disabled || isReadonly}
       required={required}
       onValueChange={onValueChange}
       onOpenChange={onOpenChange}

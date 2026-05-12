@@ -18,6 +18,8 @@ import { createElement, type ReactNode } from 'react';
 
 import { FieldGroup } from '@/components/ui/field';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 /** Same as @rjsf/shadcn ObjectFieldTemplate but wraps properties in FieldGroup for consistent field spacing. */
 export default function RjsfProjectObjectFieldTemplate<
   T extends GenericObjectType = GenericObjectType,
@@ -38,6 +40,8 @@ export default function RjsfProjectObjectFieldTemplate<
   readonly,
   registry,
 }: ObjectFieldTemplateProps<T, S, F>) {
+  const forcedReadonly = Boolean((registry.formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
   const uiOptions = getUiOptions<T, S, F>(uiSchema);
   const TitleFieldTemplate = getTemplate<'TitleFieldTemplate', T, S, F>('TitleFieldTemplate', registry, uiOptions);
   const DescriptionFieldTemplate = getTemplate<'DescriptionFieldTemplate', T, S, F>(
@@ -45,7 +49,7 @@ export default function RjsfProjectObjectFieldTemplate<
     registry,
     uiOptions,
   );
-  const showOptionalDataControlInTitle = !readonly && !disabled;
+  const showOptionalDataControlInTitle = !isReadonly && !disabled;
   const {
     ButtonTemplates: { AddButton },
   } = registry.templates;
@@ -84,7 +88,7 @@ export default function RjsfProjectObjectFieldTemplate<
             <AddButton
               id={buttonId(fieldPathId, 'add')}
               onClick={onAddProperty}
-              disabled={disabled || readonly}
+              disabled={disabled || isReadonly}
               className="rjsf-object-property-expand"
               uiSchema={uiSchema}
               registry={registry}

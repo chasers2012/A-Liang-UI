@@ -33,6 +33,7 @@ type RjsfStyledFormProps = ComponentProps<typeof Form> & {
   tabbedByNav?: boolean;
 };
 type RjsfOnChangeArg = Parameters<NonNullable<RjsfStyledFormProps['onChange']>>[0];
+type RjsfFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
 
 function shouldStopWheelPropagation(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -269,6 +270,14 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const schema = props.schema as RJSFSchema | undefined;
   const uiSchema = props.uiSchema as UiSchema | undefined;
+  const formReadonly = Boolean(props.readonly);
+  const mergedFormContext = useMemo<RjsfFormContext>(
+    () => ({
+      ...((props.formContext as Record<string, unknown> | undefined) ?? {}),
+      __rjsfProjectReadonly: formReadonly,
+    }),
+    [props.formContext, formReadonly],
+  );
   const formData = useMemo(() => (props.formData as Record<string, unknown>) ?? {}, [props.formData]);
   const { pagination, resolvedTab, tabSchemaAndUi } = useMemo(
     () => resolveTabState(tabbedByNav, schema, uiSchema, activeTab, formData),
@@ -316,6 +325,8 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
       ) : null}
       <Form
         {...props}
+        readonly={false}
+        formContext={mergedFormContext}
         schema={tabSchemaAndUi?.schema ?? props.schema}
         uiSchema={tabSchemaAndUi?.uiSchema ?? props.uiSchema}
         onChange={handleChange}

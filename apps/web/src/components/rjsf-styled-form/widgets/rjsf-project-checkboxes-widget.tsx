@@ -19,6 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 export default function RjsfProjectCheckboxesWidget<
   T extends GenericObjectType = GenericObjectType,
   S extends StrictRJSFSchema = RJSFSchema,
@@ -36,7 +38,10 @@ export default function RjsfProjectCheckboxesWidget<
   onBlur,
   onFocus,
   className,
+  formContext,
 }: WidgetProps<T, S, F>) {
+  const forcedReadonly = Boolean((formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
   const { enumOptions, enumDisabled, inline, emptyValue } = options;
   const checkboxesValues = Array.isArray(value) ? value : [value];
 
@@ -66,7 +71,7 @@ export default function RjsfProjectCheckboxesWidget<
                 id={indexOptionId}
                 name={htmlName || id}
                 required={required}
-                disabled={disabled || itemDisabled || readonly}
+                disabled={disabled || itemDisabled || isReadonly}
                 onCheckedChange={(state) => {
                   const on = state === true;
                   if (on) {
@@ -82,9 +87,7 @@ export default function RjsfProjectCheckboxesWidget<
                 onFocus={_onFocus}
                 aria-describedby={ariaDescribedByIds(id)}
               />
-              <FieldLabel className="leading-tight" htmlFor={indexOptionId}>
-                {option.label}
-              </FieldLabel>
+              <FieldLabel className="leading-tight">{option.label}</FieldLabel>
             </Field>
           );
         })}

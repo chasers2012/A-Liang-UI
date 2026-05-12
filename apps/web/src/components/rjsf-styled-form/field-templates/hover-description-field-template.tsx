@@ -7,6 +7,8 @@ import type { FieldTemplateProps } from '@rjsf/utils';
 import type { ReactNode } from 'react';
 import { HelpCircle } from 'lucide-react';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 function FieldDescriptionTooltip({ description, ariaContext }: { description: string; ariaContext: string }) {
   return (
     <Tooltip>
@@ -43,14 +45,14 @@ function buildFieldBody(args: {
       <>
         {showDescriptionTooltip ? (
           <div className="flex items-center gap-1.5">
-            <FieldLabel htmlFor={id} className="w-fit">
+            <FieldLabel className="w-fit">
               {label}
               {required ? <span className="text-destructive">*</span> : null}
             </FieldLabel>
             <FieldDescriptionTooltip description={description} ariaContext={label} />
           </div>
         ) : (
-          <FieldLabel htmlFor={id} className="w-fit">
+          <FieldLabel className="w-fit">
             {label}
             {required ? <span className="text-destructive">*</span> : null}
           </FieldLabel>
@@ -95,15 +97,16 @@ export function HoverDescriptionFieldTemplate(props: FieldTemplateProps) {
 
   const description = typeof rawDescription === 'string' ? rawDescription.trim() : '';
   const showDescriptionTooltip = description.length > 0;
-  const showFieldErrors = !hideError && !readonly && !disabled;
+  void errors;
+  const forcedReadonly = Boolean(
+    (props.registry.formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly,
+  );
+  const isReadonly = readonly || forcedReadonly;
+  const showFieldErrors = !hideError && !isReadonly && !disabled;
   const invalid = showFieldErrors && Array.isArray(rawErrors) && rawErrors.length > 0;
 
-  const errorSlot =
-    showFieldErrors && rawErrors && rawErrors.length > 0 ? (
-      <FieldError errors={rawErrors.map((message) => ({ message }))} />
-    ) : showFieldErrors && errors ? (
-      <FieldError>{errors}</FieldError>
-    ) : null;
+  const hasRawErrors = showFieldErrors && Array.isArray(rawErrors) && rawErrors.length > 0;
+  const errorSlot = hasRawErrors ? <FieldError errors={rawErrors.map((message) => ({ message }))} /> : null;
 
   return (
     <Field data-invalid={invalid || undefined} className={cn('gap-2', classNames)} style={style}>

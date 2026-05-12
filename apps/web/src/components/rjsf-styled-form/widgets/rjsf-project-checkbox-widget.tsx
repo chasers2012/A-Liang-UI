@@ -17,6 +17,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldLabel } from '@/components/ui/field';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 export default function RjsfProjectCheckboxWidget<
   T extends GenericObjectType = GenericObjectType,
   S extends StrictRJSFSchema = RJSFSchema,
@@ -39,7 +41,10 @@ export default function RjsfProjectCheckboxWidget<
     registry,
     uiSchema,
     className,
+    formContext,
   } = props;
+  const forcedReadonly = Boolean((formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
   const required = schemaRequiresTrueValue<S>(schema);
   const DescriptionFieldTemplate = getTemplate<'DescriptionFieldTemplate', T, S, F>(
     'DescriptionFieldTemplate',
@@ -54,7 +59,7 @@ export default function RjsfProjectCheckboxWidget<
   const description = options.description || schema.description;
   return (
     <div
-      className={`relative ${disabled || readonly ? 'cursor-not-allowed opacity-50' : ''}`}
+      className={`relative ${disabled || isReadonly ? 'cursor-not-allowed opacity-50' : ''}`}
       aria-describedby={ariaDescribedByIds(id)}
     >
       {!hideLabel && description ? (
@@ -72,16 +77,14 @@ export default function RjsfProjectCheckboxWidget<
           name={htmlName || id}
           checked={typeof value === 'undefined' ? false : Boolean(value)}
           required={required}
-          disabled={disabled || readonly}
+          disabled={disabled || isReadonly}
           autoFocus={autofocus}
           onCheckedChange={_onChange}
           onBlur={_onBlur}
           onFocus={_onFocus}
           className={className}
         />
-        <FieldLabel className="leading-tight" htmlFor={id}>
-          {labelValue(label, hideLabel || !label)}
-        </FieldLabel>
+        <FieldLabel className="leading-tight">{labelValue(label, hideLabel || !label)}</FieldLabel>
       </Field>
     </div>
   );

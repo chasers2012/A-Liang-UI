@@ -16,6 +16,8 @@ import { ChangeEvent, FocusEvent, MouseEvent, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
+type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
+
 export default function RjsfProjectBaseInputTemplate<
   T extends GenericObjectType = GenericObjectType,
   S extends StrictRJSFSchema = RJSFSchema,
@@ -43,6 +45,8 @@ export default function RjsfProjectBaseInputTemplate<
   registry,
 }: BaseInputTemplateProps<T, S, F>) {
   const { ClearButton } = registry.templates.ButtonTemplates;
+  const forcedReadonly = Boolean((registry.formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
+  const isReadonly = readonly || forcedReadonly;
   const inputProps = {
     ...extraProps,
     ...getInputProps<T, S, F>(schema, type, options),
@@ -70,7 +74,7 @@ export default function RjsfProjectBaseInputTemplate<
         autoFocus={autofocus}
         required={required}
         disabled={disabled}
-        readOnly={readonly}
+        readOnly={isReadonly}
         className={cn({ 'border-destructive focus-visible:ring-0': rawErrors.length > 0 }, className)}
         list={schema.examples ? examplesId(id) : undefined}
         {...inputProps}
@@ -80,7 +84,7 @@ export default function RjsfProjectBaseInputTemplate<
         onFocus={_onFocus}
         aria-describedby={ariaDescribedByIds(id, !!schema.examples)}
       />
-      {options.allowClearTextInputs && !readonly && !disabled && value ? (
+      {options.allowClearTextInputs && !isReadonly && !disabled && value ? (
         <ClearButton onClick={_onClear} registry={registry} />
       ) : null}
       {children}
