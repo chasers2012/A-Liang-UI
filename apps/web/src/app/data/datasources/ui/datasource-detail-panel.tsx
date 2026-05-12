@@ -11,8 +11,6 @@ import {
   datasourcesBusyIdAtom,
   datasourcesDeleteErrorAtom,
   datasourcesDetailActiveTabAtom,
-  datasourcesDetailLoadErrorAtom,
-  datasourcesDetailLoadingAtom,
   datasourcesEditorFormAtom,
   datasourcesEditorLoadEffectAtom,
   datasourcesEditorMainFormValidAtom,
@@ -131,8 +129,6 @@ export function DatasourceDetailPanel() {
   const [deleteError] = useAtom(datasourcesDeleteErrorAtom);
   const [testHint] = useAtom(datasourcesTestHintAtom);
   const [form] = useAtom(datasourcesEditorFormAtom);
-  const [loadError] = useAtom(datasourcesDetailLoadErrorAtom);
-  const [loading] = useAtom(datasourcesDetailLoadingAtom);
   const selectedItem = useAtomValue(datasourcesSelectedListItemAtom);
   const [detailTab, setDetailTab] = useAtom(datasourcesDetailActiveTabAtom);
   const [inspectColumnsError] = useAtom(datasourcesInspectColumnsErrorAtom);
@@ -182,30 +178,24 @@ export function DatasourceDetailPanel() {
       panels={detailPanels}
     >
       {deleteError && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertTitle>删除失败</AlertTitle>
           <AlertDescription>{deleteError}</AlertDescription>
         </Alert>
       )}
       {testHint && (
-        <Alert variant={testHint.ok ? 'default' : 'destructive'}>
+        <Alert variant={testHint.ok ? 'default' : 'destructive'} className="mb-4">
           <AlertTitle>连接测试</AlertTitle>
           <AlertDescription>{testHint.message}</AlertDescription>
         </Alert>
       )}
       {inspectColumnsError && isEditing ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-4">
           <AlertTitle>列探测失败</AlertTitle>
           <AlertDescription>{inspectColumnsError}</AlertDescription>
         </Alert>
       ) : null}
-      {loadError && (
-        <Alert variant="destructive">
-          <AlertTitle>无法加载数据源</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
-        </Alert>
-      )}
-      {loading && <p className="text-sm text-muted-foreground">加载中…</p>}
+
       {!isEditing && !selectedId && (
         <p className="text-sm text-muted-foreground">从左侧选择一个数据源，或点击「新增数据源」。</p>
       )}

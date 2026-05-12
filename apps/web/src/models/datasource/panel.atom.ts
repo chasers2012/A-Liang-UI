@@ -4,7 +4,6 @@ import { atomEffect } from 'jotai-effect';
 import { ApiError } from '@/api/client';
 import {
   deleteDatasource,
-  getDatasource,
   inspectDatasourceColumns,
   listDatasourcePlugins,
   listDatasources,
@@ -16,8 +15,6 @@ import type { DataSourcePublic, DatasourcePluginPublic } from './dto';
 import { commitDatasourceForm } from './commit-datasource';
 import { emptyForm, hydrateFormFromDataSource, type FormState } from './form-model';
 import {
-  computeDatasourcePluginBaseConfigValid,
-  computeDatasourcePluginConfigValid,
   computeDatasourcePluginFormSchemas,
   nestDatasourceConfigForApi,
   getDatasourceColumnsConfig,
@@ -47,9 +44,7 @@ export const datasourcesInspectColumnsErrorAtom = atom<string | null>(null);
 /** 右侧编辑器表单（新建/编辑数据源） */
 export const datasourcesEditorFormAtom = atom<FormState>(emptyForm());
 export const datasourcesPluginsAtom = atom<DatasourcePluginPublic[]>([]);
-export const datasourcesDetailLoadErrorAtom = atom<string | null>(null);
 export const datasourcesEditorFormErrorAtom = atom<string | null>(null);
-export const datasourcesDetailLoadingAtom = atom(false);
 export const datasourcesEditorSubmittingAtom = atom(false);
 
 /** 左侧列表搜索关键字 */
@@ -92,19 +87,54 @@ export const datasourcesPluginFormSchemasAtom = atom((get): DatasourcePluginForm
   return computeDatasourcePluginFormSchemas(form, plugin);
 });
 
+const datasourcesSelectedPluginAtom = atom((get): DatasourcePluginPublic | null => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugins = get(datasourcesPluginsAtom);
+  return plugins.find((p) => p.type === form.type) ?? null;
+});
+
 /** 插件连接 + 字段映射 RJSF 是否满足 required */
 export const datasourcesPluginConfigValidAtom = atom((get) => {
   const form = get(datasourcesEditorFormAtom);
-  const plugins = get(datasourcesPluginsAtom);
-  const plugin = plugins.find((p) => p.type === form.type) ?? null;
-  return computeDatasourcePluginConfigValid(form, plugin);
+  const plugin = get(datasourcesSelectedPluginAtom);
+  if (!plugin) return false;
+  const schemas = get(datasourcesPluginFormSchemasAtom);
+  const baseRequired = Array.isArray(schemas.baseFormSchema.required)
+    ? (schemas.baseFormSchema.required as unknown[])
+    : [];
+  const fieldsRequired =
+    schemas.fieldsFormSchema && Array.isArray(schemas.fieldsFormSchema.required)
+      ? (schemas.fieldsFormSchema.required as unknown[])
+      : [];
+  const connection = (form.config?.connection as Record<string, unknown> | undefined) ?? {};
+  const columns = (form.config?.columns as Record<string, unknown> | undefined) ?? {};
+  const isFilled = (value: unknown): boolean => {
+    if (value == null) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  };
+  const baseValid = baseRequired.every((key) => (typeof key === 'string' ? isFilled(connection[key]) : true));
+  const fieldsValid = fieldsRequired.every((key) => (typeof key === 'string' ? isFilled(columns[key]) : true));
+  return baseValid && fieldsValid;
 });
 
 export const datasourcesPluginBaseConfigValidAtom = atom((get) => {
   const form = get(datasourcesEditorFormAtom);
-  const plugins = get(datasourcesPluginsAtom);
-  const plugin = plugins.find((p) => p.type === form.type) ?? null;
-  return computeDatasourcePluginBaseConfigValid(form, plugin);
+  const plugin = get(datasourcesSelectedPluginAtom);
+  if (!plugin) return false;
+  const schemas = get(datasourcesPluginFormSchemasAtom);
+  const baseRequired = Array.isArray(schemas.baseFormSchema.required)
+    ? (schemas.baseFormSchema.required as unknown[])
+    : [];
+  const connection = (form.config?.connection as Record<string, unknown> | undefined) ?? {};
+  const isFilled = (value: unknown): boolean => {
+    if (value == null) return false;
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (Array.isArray(value)) return value.length > 0;
+    return true;
+  };
+  return baseRequired.every((key) => (typeof key === 'string' ? isFilled(connection[key]) : true));
 });
 
 export const datasourcesEditorMainFormValidAtom = atom((get) => {
@@ -243,37 +273,18 @@ export const datasourcesSyncViewFormEffectAtom = atomEffect((get, set) => {
 export const datasourcesEditorLoadEffectAtom = atomEffect((get, set) => {
   const isEditing = get(datasourcesIsEditingAtom);
   if (!isEditing) {
-    set(datasourcesDetailLoadErrorAtom, null);
     set(datasourcesEditorFormErrorAtom, null);
-    set(datasourcesDetailLoadingAtom, false);
     set(datasourcesEditorSubmittingAtom, false);
     return;
   }
   const selectedId = get(datasourcesSelectedIdAtom);
   const plugins = get(datasourcesPluginsAtom);
-  let cancelled = false;
-  set(datasourcesDetailLoadErrorAtom, null);
   set(datasourcesEditorFormErrorAtom, null);
-  set(datasourcesDetailLoadingAtom, true);
-  void (async () => {
-    try {
-      if (!selectedId) {
-        const nextName = defaultNewName('新数据源');
-        set(datasourcesEditorFormAtom, { ...emptyForm(), name: nextName, type: plugins[0]?.type ?? '', config: {} });
-      } else {
-        const ds = await getDatasource(selectedId);
-        if (cancelled) return;
-        set(datasourcesEditorFormAtom, hydrateFormFromDataSource(ds));
-      }
-    } catch (e) {
-      if (!cancelled) set(datasourcesDetailLoadErrorAtom, e instanceof Error ? e.message : String(e));
-    } finally {
-      if (!cancelled) set(datasourcesDetailLoadingAtom, false);
-    }
-  })();
-  return () => {
-    cancelled = true;
-  };
+  // Entering edit mode should not trigger a detail refetch; current form is already synced from selected item.
+  if (!selectedId) {
+    const nextName = defaultNewName('新数据源');
+    set(datasourcesEditorFormAtom, { ...emptyForm(), name: nextName, type: plugins[0]?.type ?? '', config: {} });
+  }
 });
 
 export const testDatasourceConnectionAtom = atom(null, async (_get, set, datasourceId: string) => {
