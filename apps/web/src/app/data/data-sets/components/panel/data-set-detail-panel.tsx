@@ -14,11 +14,7 @@ import {
   initDataSetEditorAtom,
   syncDataSetEditorSystemWorkflowAtom,
 } from '@/models/data-set/editor/form-state.atom';
-import {
-  dataSetEditorDatasourcesAsyncStateAtom,
-  editorDependencyFieldsByDsIdAsyncStateAtom,
-  selectedDataSetDependencyFieldsByDsIdAsyncStateAtom,
-} from '@/models/data-set/editor/datasources.atom';
+import { dataSetEditorDatasourcesAsyncStateAtom } from '@/models/data-set/editor/datasources.atom';
 import { dataSetWorkflowTemplateAsyncStateAtom } from '@/models/data-set/editor/workflow-template.atom';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import { DataSetDetailTabContent } from './data-set-detail-tab-content';
@@ -63,8 +59,6 @@ export function DataSetDetailPanel() {
   // --- shared datasources/template state (models)
   const datasourcesState = useAtomValue(dataSetEditorDatasourcesAsyncStateAtom);
   const workflowTemplateState = useAtomValue(dataSetWorkflowTemplateAsyncStateAtom);
-  void useAtomValue(selectedDataSetDependencyFieldsByDsIdAsyncStateAtom);
-  void useAtomValue(editorDependencyFieldsByDsIdAsyncStateAtom);
 
   const datasourcesValue = useMemo(() => datasourcesState.value ?? [], [datasourcesState.value]);
   const datasources = datasourcesValue;

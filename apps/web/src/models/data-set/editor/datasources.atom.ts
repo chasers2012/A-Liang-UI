@@ -7,18 +7,11 @@ import type { DataSourcePublic } from '@/models/datasource/dto';
 import { dataSetEditorStateAtom } from '@/models/data-set/editor/form-state.atom';
 import { selectedDataSetDetailAtom } from '@/models/data-set/detail.atom';
 
-export const dataSetEditorDatasourcesRevisionAtom = atom(0);
-
-export const dataSetEditorDatasourcesAsyncAtom = atom(async (get): Promise<DataSourcePublic[]> => {
-  get(dataSetEditorDatasourcesRevisionAtom);
+export const dataSetEditorDatasourcesAsyncAtom = atom(async (): Promise<DataSourcePublic[]> => {
   return await listDatasources();
 });
 
 export const dataSetEditorDatasourcesAsyncStateAtom = toAsyncValueStateAtom(dataSetEditorDatasourcesAsyncAtom);
-
-export const refreshDataSetEditorDatasourcesAtom = atom(null, (_get, set) => {
-  set(dataSetEditorDatasourcesRevisionAtom, (v) => v + 1);
-});
 
 export const datasourceDependencyFieldsRevisionAtomFamily = atomFamily((key: string) => {
   void key;

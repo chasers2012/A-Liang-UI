@@ -2,10 +2,11 @@ import { atom } from 'jotai';
 
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { defaultNewName } from '@/lib/default-new-name';
-import { createDataSet, getDataSet, patchDataSet } from '@/api/data-sets';
+import { createDataSet, patchDataSet } from '@/api/data-sets';
 import { ApiError } from '@/api/client';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
 import { dataSetsAfterSaveAtom } from '@/models/data-set/panel-ui.atom';
+import { dataSetDetailAsyncAtomFamily } from '@/models/data-set/detail.atom';
 import { syncSystemPreprocessingWorkflow } from '@/app/data/data-sets/components/panel/system-preprocessing-node-types';
 
 import { dataSetWorkflowTemplateAsyncAtom } from './workflow-template.atom';
@@ -67,7 +68,9 @@ export const initDataSetEditorAtom = atom(null, async (get, set, input: { isEdit
     void datasources;
 
     if (id) {
-      const row = await getDataSet(id);
+      // Reuse detail async source to avoid redundant direct detail fetches when entering edit mode.
+      const row = await get(dataSetDetailAsyncAtomFamily(id));
+      if (!row) throw new Error('记录已不存在');
       set(dataSetEditorStateAtom, (s) => ({
         ...s,
         editorLoading: false,
