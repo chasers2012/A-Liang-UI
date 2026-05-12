@@ -1,7 +1,6 @@
 import { atom } from 'jotai';
 
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import type { DataSetPublic } from '@/models/data-set/dto';
 import { defaultNewName } from '@/lib/default-new-name';
 import { createDataSet, getDataSet, patchDataSet } from '@/api/data-sets';
 import { ApiError } from '@/api/client';

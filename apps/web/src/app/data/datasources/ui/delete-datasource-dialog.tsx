@@ -1,21 +1,25 @@
 'use client';
 
+import { useAtomValue, useSetAtom } from 'jotai';
+
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import type { DataSourcePublic } from '@/models/datasource/dto';
+import {
+  confirmDeleteDatasourceAtom,
+  datasourcesDeleteTargetAtom,
+  datasourcesDeletingAtom,
+  dismissDeleteDatasourceDialogAtom,
+} from '@/models/datasource/panel.atom';
 
-type Props = {
-  target: DataSourcePublic | null;
-  deleting: boolean;
-  onDismiss: () => void;
-  onConfirm: () => void;
-};
-
-export function DeleteDatasourceDialog({ target, deleting, onDismiss, onConfirm }: Props) {
+export function DeleteDatasourceDialog() {
+  const target = useAtomValue(datasourcesDeleteTargetAtom);
+  const deleting = useAtomValue(datasourcesDeletingAtom);
+  const confirmDelete = useSetAtom(confirmDeleteDatasourceAtom);
+  const dismiss = useSetAtom(dismissDeleteDatasourceDialogAtom);
   return (
     <ConfirmDialog
       open={target !== null}
       onOpenChange={(o) => {
-        if (!o) onDismiss();
+        if (!o) void dismiss();
       }}
       title="删除数据源"
       description={<>确定删除「{target?.name}」？此操作不可撤销。</>}
@@ -23,7 +27,7 @@ export function DeleteDatasourceDialog({ target, deleting, onDismiss, onConfirm 
       confirmVariant="destructive"
       loading={deleting}
       loadingLabel="删除中…"
-      onConfirm={onConfirm}
+      onConfirm={confirmDelete}
     />
   );
 }

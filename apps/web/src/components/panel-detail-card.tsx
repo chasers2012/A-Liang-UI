@@ -38,15 +38,10 @@ type PanelDetailCardMainRegionProps = {
   panels: readonly PanelDetailCardTabPanelItem[] | undefined;
   activePanelValue?: string;
   actions?: ReactNode;
-  bodyChildren?: ReactNode;
+  children?: ReactNode;
 };
 
-function PanelDetailCardMainRegion({
-  panels,
-  activePanelValue,
-  actions,
-  bodyChildren,
-}: PanelDetailCardMainRegionProps) {
+function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children }: PanelDetailCardMainRegionProps) {
   const hasPanels = panels != null && panels.length > 0;
 
   const activePanel = useMemo(() => {
@@ -78,7 +73,7 @@ function PanelDetailCardMainRegion({
         <div className="flex shrink-0 items-center gap-2">{actions ?? null}</div>
       </div>
       <div className={'flex min-h-0 flex-1 flex-col overflow-hidden h-full px-6 pb-0 pt-4'}>
-        {bodyChildren}
+        {children}
         {hasPanels && activePanel ? (
           <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden space-y-6', activePanel.contentClassName)}>
             {activePanel.content}
@@ -93,12 +88,9 @@ export function PanelDetailCard({ className, title, children, actions, panels, .
   const { activePanelValue, setSelectedPanelValue } = usePanelDetailCardActiveTabValue(panels);
 
   const mainContent = (
-    <PanelDetailCardMainRegion
-      panels={panels}
-      activePanelValue={activePanelValue}
-      actions={actions}
-      bodyChildren={children}
-    />
+    <PanelDetailCardMainRegion panels={panels} activePanelValue={activePanelValue} actions={actions}>
+      {children}
+    </PanelDetailCardMainRegion>
   );
 
   return (
