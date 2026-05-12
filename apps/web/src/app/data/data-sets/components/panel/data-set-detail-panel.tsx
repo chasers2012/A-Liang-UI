@@ -122,7 +122,7 @@ export function DataSetDetailPanel() {
             label: '预处理',
             value: 'preprocessing',
             content: (
-              <div className="">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <DataSetPreprocessingTabContent
                   canvasKey={canvasKey}
                   canvasRef={canvasRef}

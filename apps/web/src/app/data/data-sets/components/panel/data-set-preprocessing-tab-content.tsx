@@ -65,9 +65,9 @@ export function DataSetPreprocessingTabContent(props: {
   const resolvedCanvasRef = isEditing ? canvasRef : readonlyCanvasRef;
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       {isEditing && formError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="shrink-0">
           <AlertTitle>提交失败</AlertTitle>
           <AlertDescription>{formError}</AlertDescription>
         </Alert>
@@ -79,6 +79,6 @@ export function DataSetPreprocessingTabContent(props: {
         canvasKey={resolvedCanvasKey}
         canvasRef={resolvedCanvasRef}
       />
-    </>
+    </div>
   );
 }
