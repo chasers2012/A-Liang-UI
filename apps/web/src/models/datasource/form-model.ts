@@ -18,15 +18,19 @@ export function emptyForm(): FormState {
   return {
     name: '',
     type: '',
-    config: {},
+    config: { connection: {}, columns: {} },
   };
 }
 
 export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
+  const c = dictLikeOrEmpty(ds.config);
   return {
     name: ds.name,
     type: String(ds.type),
-    config: dictLikeOrEmpty(ds.config),
+    config: {
+      connection: dictLikeOrEmpty(c.connection),
+      columns: dictLikeOrEmpty(c.columns),
+    },
   };
 }
 

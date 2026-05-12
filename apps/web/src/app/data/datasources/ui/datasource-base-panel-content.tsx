@@ -15,6 +15,7 @@ import {
   datasourcesPluginsAtom,
   datasourcesSelectedIdAtom,
 } from '@/models/datasource/panel.atom';
+import { getDatasourceConnectionConfig } from '@/models/datasource/plugin-form-schemas';
 import { RjsfStyledForm } from '@/components/rjsf-styled-form';
 import { UploadPathWidget } from './datasource-form-upload';
 
@@ -54,7 +55,7 @@ export function DatasourceBasePanelContent() {
               disabled={!!selectedId}
               onValueChange={(v) => {
                 if (v == null || v === '') return;
-                setForm((f) => ({ ...f, type: v, config: {} }));
+                setForm((f) => ({ ...f, type: v, config: { connection: {}, columns: {} } }));
               }}
             >
               <SelectTrigger id="ds-type" className="w-full">
@@ -73,12 +74,15 @@ export function DatasourceBasePanelContent() {
             schema={baseFormSchema}
             uiSchema={baseFormUiSchema}
             validator={validator}
-            formData={form.config}
+            formData={getDatasourceConnectionConfig(form)}
             widgets={{ file: UploadPathWidget }}
             onChange={(next: { formData?: Record<string, unknown> }) =>
               setForm((f) => ({
                 ...f,
-                config: { ...f.config, ...(next.formData ?? {}) },
+                config: {
+                  ...f.config,
+                  connection: { ...(next.formData ?? {}) },
+                },
               }))
             }
             liveValidate={false}

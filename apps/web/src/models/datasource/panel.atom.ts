@@ -18,6 +18,8 @@ import { emptyForm, hydrateFormFromDataSource, type FormState } from './form-mod
 import {
   computeDatasourcePluginConfigValid,
   computeDatasourcePluginFormSchemas,
+  nestDatasourceConfigForApi,
+  getDatasourceColumnsConfig,
   type DatasourcePluginFormSchemas,
 } from './plugin-form-schemas';
 
@@ -111,7 +113,8 @@ export const datasourcesEditorMainFormValidAtom = atom((get) => {
 export const inspectDatasourceColumnsAtom = atom(null, async (get, set): Promise<boolean> => {
   const selectedId = get(datasourcesSelectedIdAtom);
   const form = get(datasourcesEditorFormAtom);
-  const { type, config } = form;
+  const { type } = form;
+  const config = nestDatasourceConfigForApi(form);
 
   set(datasourcesInspectColumnsBusyAtom, true);
   set(datasourcesInspectColumnsErrorAtom, null);
@@ -128,9 +131,12 @@ export const inspectDatasourceColumnsAtom = atom(null, async (get, set): Promise
       ...f,
       config: {
         ...f.config,
-        columns: cols,
-        date_column: resp.date_column,
-        asset_column: resp.asset_column,
+        columns: {
+          ...getDatasourceColumnsConfig(f),
+          columns: cols,
+          date_column: resp.date_column,
+          asset_column: resp.asset_column,
+        },
       },
     }));
     return true;

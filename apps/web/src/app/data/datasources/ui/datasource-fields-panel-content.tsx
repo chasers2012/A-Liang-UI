@@ -12,6 +12,7 @@ import {
   datasourcesSelectedIdAtom,
   inspectDatasourceColumnsAtom,
 } from '@/models/datasource/panel.atom';
+import { getDatasourceColumnsConfig } from '@/models/datasource/plugin-form-schemas';
 
 import { UploadPathWidget } from './datasource-form-upload';
 
@@ -67,12 +68,15 @@ export function DatasourceFieldsPanelContent() {
             schema={fieldsFormSchema}
             uiSchema={fieldsFormUiSchema}
             validator={validator}
-            formData={form.config}
+            formData={getDatasourceColumnsConfig(form)}
             widgets={{ file: UploadPathWidget }}
             onChange={(next: { formData?: Record<string, unknown> }) =>
               setForm((f) => ({
                 ...f,
-                config: { ...f.config, ...(next.formData ?? {}) },
+                config: {
+                  ...f.config,
+                  columns: { ...(next.formData ?? {}) },
+                },
               }))
             }
             liveValidate={false}

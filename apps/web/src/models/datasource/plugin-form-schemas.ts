@@ -1,6 +1,27 @@
 import type { DatasourcePluginPublic } from '@/models/datasource/dto';
 import type { FormState } from '@/models/datasource/form-model';
 
+function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return v as Record<string, unknown>;
+}
+
+export function getDatasourceConnectionConfig(form: FormState): Record<string, unknown> {
+  return dictLikeOrEmpty(dictLikeOrEmpty(form.config).connection);
+}
+
+export function getDatasourceColumnsConfig(form: FormState): Record<string, unknown> {
+  return dictLikeOrEmpty(dictLikeOrEmpty(form.config).columns);
+}
+
+/** Body shape for ``inspect-columns`` and internal merges: ``{ connection, columns }``. */
+export function nestDatasourceConfigForApi(form: FormState): Record<string, unknown> {
+  return {
+    connection: getDatasourceConnectionConfig(form),
+    columns: getDatasourceColumnsConfig(form),
+  };
+}
+
 export type DatasourcePluginFormSchemas = {
   baseFormSchema: Record<string, unknown>;
   baseFormUiSchema: Record<string, unknown>;
@@ -58,10 +79,11 @@ export function computeDatasourcePluginFormSchemas(
   const connectionUiSchema = (plugin?.connection_ui_schema ?? {}) as Record<string, unknown>;
   const rawColumnsSchema = (plugin?.columns_json_schema ?? {}) as Record<string, unknown>;
   const rawColumnsUiSchema = (plugin?.columns_ui_schema ?? {}) as Record<string, unknown>;
+  const columnsConfig = getDatasourceColumnsConfig(form);
   const hasSplitColumnsConfig = Object.keys(rawColumnsSchema).length > 0;
   const persistedColumns = Array.from(
     new Set(
-      (Array.isArray(form.config.columns) ? form.config.columns : [])
+      (Array.isArray(columnsConfig.columns) ? columnsConfig.columns : [])
         .map((x) => String(x).trim())
         .filter((x) => x.length > 0),
     ),
@@ -88,7 +110,7 @@ export function computeDatasourcePluginFormSchemas(
 export function computeDatasourcePluginConfigValid(form: FormState, plugin: DatasourcePluginPublic | null): boolean {
   if (!plugin) return false;
   const { baseFormSchema, fieldsFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
-  const baseValid = areRequiredFieldsFilled(baseFormSchema, form.config);
-  const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, form.config);
+  const baseValid = areRequiredFieldsFilled(baseFormSchema, getDatasourceConnectionConfig(form));
+  const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, getDatasourceColumnsConfig(form));
   return baseValid && fieldsValid;
 }

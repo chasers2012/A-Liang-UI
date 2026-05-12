@@ -3,6 +3,11 @@ import { createDatasource, patchDatasource } from '@/api/datasources';
 
 import type { EditorMode, FormState } from './form-model';
 
+function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return v as Record<string, unknown>;
+}
+
 async function createDatasourceFromForm(form: FormState): Promise<DataSourcePublic> {
   if (!form.name.trim()) {
     throw new Error('请填写显示名称');
@@ -10,10 +15,14 @@ async function createDatasourceFromForm(form: FormState): Promise<DataSourcePubl
   if (!form.type.trim()) {
     throw new Error('请选择数据源类型');
   }
+  const container = dictLikeOrEmpty(form.config);
+  const connection = dictLikeOrEmpty(container.connection);
+  const columns = dictLikeOrEmpty(container.columns);
   return await createDatasource({
     name: form.name.trim(),
     type: form.type,
-    config: form.config,
+    connection_config: connection,
+    columns_config: columns,
   });
 }
 
@@ -22,8 +31,18 @@ function buildEditPatch(form: FormState, orig: DataSourcePublic): Record<string,
 
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
 
-  if (JSON.stringify(form.config) !== JSON.stringify(orig.config ?? {})) {
-    patch.config = form.config;
+  const container = dictLikeOrEmpty(form.config);
+  const next = {
+    connection: dictLikeOrEmpty(container.connection),
+    columns: dictLikeOrEmpty(container.columns),
+  };
+  const oc = dictLikeOrEmpty(dictLikeOrEmpty(orig.config).connection);
+  const ocol = dictLikeOrEmpty(dictLikeOrEmpty(orig.config).columns);
+  if (JSON.stringify(next.connection) !== JSON.stringify(oc)) {
+    patch.connection_config = next.connection;
+  }
+  if (JSON.stringify(next.columns) !== JSON.stringify(ocol)) {
+    patch.columns_config = next.columns;
   }
 
   return patch;
