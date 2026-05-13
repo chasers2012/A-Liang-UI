@@ -71,8 +71,10 @@ export default function RjsfProjectCheckboxesWidget<
                 id={indexOptionId}
                 name={htmlName || id}
                 required={required}
-                disabled={disabled || itemDisabled || isReadonly}
+                disabled={itemDisabled || disabled}
+                readOnly={isReadonly}
                 onCheckedChange={(state) => {
+                  if (isReadonly) return;
                   const on = state === true;
                   if (on) {
                     onChange(enumOptionsSelectValue<S>(index, checkboxesValues, enumOptions));

@@ -52,7 +52,10 @@ export default function RjsfProjectCheckboxWidget<
     options,
   );
 
-  const _onChange = (checked: boolean | 'indeterminate') => onChange(checked === true);
+  const _onChange = (checked: boolean | 'indeterminate') => {
+    if (isReadonly) return;
+    onChange(checked === true);
+  };
   const _onBlur = () => onBlur(id, value);
   const _onFocus = () => onFocus(id, value);
 
@@ -77,7 +80,8 @@ export default function RjsfProjectCheckboxWidget<
           name={htmlName || id}
           checked={typeof value === 'undefined' ? false : Boolean(value)}
           required={required}
-          disabled={disabled || isReadonly}
+          disabled={disabled}
+          readOnly={isReadonly}
           autoFocus={autofocus}
           onCheckedChange={_onChange}
           onBlur={_onBlur}

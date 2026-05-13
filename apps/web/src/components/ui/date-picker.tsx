@@ -27,6 +27,8 @@ export type DatePickerProps = {
   value: string;
   onChange: (next: string) => void;
   disabled?: boolean;
+  /** 浏览态只读：不灰显为 disabled，且无法打开日历 */
+  readOnly?: boolean;
   placeholder?: string;
   className?: string;
   size?: 'sm' | 'default';
@@ -38,6 +40,7 @@ export function DatePicker({
   value,
   onChange,
   disabled,
+  readOnly,
   placeholder = '选择日期',
   className,
   size = 'default',
@@ -46,15 +49,27 @@ export function DatePicker({
   const [open, setOpen] = React.useState(false);
   const ymd = value;
   const selected = ymd ? ymdToDate(ymd) : undefined;
+  const blockInteraction = Boolean(disabled) || Boolean(readOnly);
+
+  React.useEffect(() => {
+    if (blockInteraction) setOpen(false);
+  }, [blockInteraction]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (blockInteraction && next) return;
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           id={id}
           type="button"
           variant="outline"
           disabled={disabled}
+          aria-readonly={readOnly || undefined}
           aria-required={required}
           data-size={size}
           className={cn(
@@ -76,6 +91,7 @@ export function DatePicker({
           defaultMonth={selected}
           className={cn(size === 'sm' && '[--cell-size:--spacing(7)]')}
           onSelect={(d) => {
+            if (blockInteraction) return;
             if (!d) {
               onChange('');
               return;
@@ -94,6 +110,7 @@ export type DateTimePickerProps = {
   value: string;
   onChange: (next: string) => void;
   disabled?: boolean;
+  readOnly?: boolean;
   placeholder?: string;
   className?: string;
   size?: 'sm' | 'default';
@@ -104,6 +121,7 @@ export function DateTimePicker({
   value,
   onChange,
   disabled,
+  readOnly,
   placeholder = '选择日期时间',
   className,
   size = 'default',
@@ -124,8 +142,15 @@ export function DateTimePicker({
     setTime(timePart);
   }, [timePart]);
 
+  const blockInteraction = Boolean(disabled) || Boolean(readOnly);
+
+  React.useEffect(() => {
+    if (blockInteraction) setOpen(false);
+  }, [blockInteraction]);
+
   const commit = React.useCallback(
     (nextDate: Date | undefined, nextTime: string) => {
+      if (blockInteraction) return;
       if (!nextDate) {
         onChange('');
         return;
@@ -134,19 +159,26 @@ export function DateTimePicker({
       if (!/^\d{2}:\d{2}$/.test(t)) return;
       onChange(`${dateToYmd(nextDate)}T${t}`);
     },
-    [onChange],
+    [blockInteraction, onChange],
   );
 
   const display = selected != null ? `${format(selected, 'PPP', { locale: zhCN })} ${time || '00:00'}` : null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (blockInteraction && next) return;
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           id={id}
           type="button"
           variant="outline"
           disabled={disabled}
+          aria-readonly={readOnly || undefined}
           data-size={size}
           className={cn(
             'w-full justify-between font-normal data-[empty=true]:text-muted-foreground',
@@ -168,6 +200,7 @@ export function DateTimePicker({
             defaultMonth={selected}
             className={cn('rounded-md border-0 p-1 shadow-none', size === 'sm' && '[--cell-size:--spacing(7)]')}
             onSelect={(d) => {
+              if (blockInteraction) return;
               if (d) commit(d, time);
             }}
           />
@@ -177,9 +210,11 @@ export function DateTimePicker({
               type="time"
               step={60}
               disabled={disabled}
+              readOnly={Boolean(readOnly) && !disabled}
               className={cn('font-mono', size === 'sm' ? 'h-7 text-xs' : 'h-8')}
               value={time}
               onChange={(e) => {
+                if (blockInteraction) return;
                 const next = e.target.value.slice(0, 5);
                 setTime(next);
                 if (selected) commit(selected, next);

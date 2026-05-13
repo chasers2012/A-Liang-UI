@@ -1,4 +1,4 @@
-import { DatePicker } from '@/components/ui/date-picker';
+import { DatePicker, DateTimePicker } from '@/components/ui/date-picker';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,9 +39,12 @@ export function BooleanParamRow(props: IParamRowProps<boolean>) {
       <Switch
         className={cn({ 'cursor-pointer': !readOnly })}
         size="sm"
-        disabled={readOnly}
+        readOnly={readOnly}
         checked={Boolean(value)}
-        onCheckedChange={(checked) => onChange(checked)}
+        onCheckedChange={(checked) => {
+          if (readOnly) return;
+          onChange(checked);
+        }}
       />
     </Field>
   );
@@ -55,10 +58,13 @@ export function StringParamRow(props: IParamRowProps<string>) {
       <ParamFieldLabel label={label} description={description} />
       <Input
         type="text"
-        disabled={readOnly}
+        readOnly={readOnly}
         className="h-7 font-mono text-xs"
         value={s}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          if (readOnly) return;
+          onChange(e.target.value);
+        }}
       />
     </Field>
   );
@@ -72,11 +78,14 @@ export function TextareaParamRow(props: IParamRowProps<string> & { rows?: number
     <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
       <Textarea
-        disabled={readOnly}
+        readOnly={readOnly}
         rows={rowCount}
         className="min-h-0 max-h-48 resize-y font-mono text-xs leading-snug"
         value={s}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          if (readOnly) return;
+          onChange(e.target.value);
+        }}
       />
     </Field>
   );
@@ -122,11 +131,12 @@ export function SelectParamRow(props: IParamRowProps<unknown> & { options: unkno
         modal={false}
         value={current}
         onValueChange={(v) => {
+          if (readOnly) return;
           if (v === null || v === undefined) return;
           const hit = optionsItems.find((o) => String(o.value) === String(v));
           onChange(hit ? hit.value : v);
         }}
-        disabled={readOnly}
+        readOnly={readOnly}
       >
         <SelectTrigger size="sm" className="h-7 w-full text-xs">
           <SelectValue placeholder="请选择">
@@ -156,7 +166,7 @@ export function DateParamRow(props: IParamRowProps<string>) {
   return (
     <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
-      <DatePicker disabled={readOnly} value={value} onChange={(next) => onChange(next)} placeholder="选择日期" />
+      <DatePicker readOnly={readOnly} value={value} onChange={(next) => onChange(next)} placeholder="选择日期" />
     </Field>
   );
 }
@@ -167,7 +177,7 @@ export function DateTimeParamRow(props: IParamRowProps<string>) {
   return (
     <Field className="gap-1">
       <ParamFieldLabel label={label} description={description} />
-      <DatePicker disabled={readOnly} value={s} onChange={(next) => onChange(next)} placeholder="选择日期时间" />
+      <DateTimePicker readOnly={readOnly} value={s} onChange={(next) => onChange(next)} placeholder="选择日期时间" />
     </Field>
   );
 }
@@ -180,13 +190,14 @@ export function NumberParamRow(props: IParamRowProps<number | undefined> & { max
       <ParamFieldLabel label={label} description={description} />
       <Input
         type="number"
-        disabled={readOnly}
+        readOnly={readOnly}
         className="h-7 font-mono text-xs"
         value={numStr}
         min={minimum ?? undefined}
         max={maximum ?? undefined}
         step="any"
         onChange={(e) => {
+          if (readOnly) return;
           const s = e.target.value.trim();
           if (s === '' || s === '-') onChange(undefined);
           else onChange(Number(s));
@@ -253,7 +264,6 @@ export function RjsfParamRow(
         }}
         validator={validator}
         formData={value as unknown}
-        disabled={readOnly}
         readonly={readOnly}
         liveValidate={false}
         noHtml5Validate

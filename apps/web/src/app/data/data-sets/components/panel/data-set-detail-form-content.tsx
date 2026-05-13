@@ -74,7 +74,7 @@ export function DataSetDetailFormContent(props: {
                 onChange={(v) => (readOnly ? undefined : patchForm({ start: v }))}
                 placeholder="选择开始日期"
                 required
-                disabled={readOnly}
+                readOnly={readOnly}
               />
             </Field>
             <Field className="gap-2">
@@ -85,7 +85,7 @@ export function DataSetDetailFormContent(props: {
                 onChange={(v) => (readOnly ? undefined : patchForm({ end: v }))}
                 placeholder="选择结束日期"
                 required
-                disabled={readOnly}
+                readOnly={readOnly}
               />
             </Field>
           </FieldGroup>
@@ -98,7 +98,7 @@ export function DataSetDetailFormContent(props: {
               onChange={(e) => (readOnly ? undefined : patchForm({ instrument_codes_text: e.target.value }))}
               placeholder="每行一个或逗号分隔；留空表示不限制标的范围"
               rows={4}
-              disabled={readOnly}
+              readOnly={readOnly}
               className="min-h-0 resize-y font-mono text-xs"
             />
           </Field>
