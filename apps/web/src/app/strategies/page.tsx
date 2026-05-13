@@ -5,6 +5,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
+import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { Button } from '@/components/ui/button';
@@ -104,24 +105,26 @@ function StrategiesPageContent() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <SearchList
-        className="h-full min-h-0 w-[320px]"
-        items={items?.map((s) => ({ ...s, category: '策略' })) ?? null}
-        getGroupKey={(item) => item.category}
-        renderTitle={(item) => item.name}
-        renderDescription={(item) => item.description ?? ''}
-        getSearchText={(item) => [item.name, item.description ?? '', item.id].join(' ')}
-        title="策略列表"
-        searchPlaceholder="搜索策略"
-        selectedId={listSelectedId}
-        emptyText={getEmptyText(error, items?.length ?? 0)}
-        onItemSelected={(item) => void selectItem(item.id)}
-        toolbarRight={
-          <Button type="button" aria-label="新增策略" size="icon" onClick={() => void startCreate()}>
-            <Plus className="size-4" />
-          </Button>
-        }
-      />
+      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
+        <SearchList
+          className="h-full min-h-0"
+          items={items?.map((s) => ({ ...s, category: '策略' })) ?? null}
+          getGroupKey={(item) => item.category}
+          renderTitle={(item) => item.name}
+          renderDescription={(item) => item.description ?? ''}
+          getSearchText={(item) => [item.name, item.description ?? '', item.id].join(' ')}
+          title="策略列表"
+          searchPlaceholder="搜索策略"
+          selectedId={listSelectedId}
+          emptyText={getEmptyText(error, items?.length ?? 0)}
+          onItemSelected={(item) => void selectItem(item.id)}
+          toolbarRight={
+            <Button type="button" aria-label="新增策略" size="icon" onClick={() => void startCreate()}>
+              <Plus className="size-4" />
+            </Button>
+          }
+        />
+      </CollapsibleSearchListSidebar>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <StrategyDetailPanel nodeTypes={nodeTypes} nodeCatalogError={nodeCatalogError} />
       </div>

@@ -2,9 +2,9 @@
 
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
-
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import {
@@ -12,6 +12,7 @@ import {
   datasourcesListCountAtom,
   datasourcesListRefreshOnMountEffectAtom,
   datasourcesListSearchQueryAtom,
+  datasourcesIsEditingAtom,
   datasourcesSearchListRowsAtom,
   datasourcesSelectedIdAtom,
   selectDatasourceFromListAtom,
@@ -34,7 +35,7 @@ function DatasourceListPanel() {
   const startCreate = useSetAtom(startCreateNewDatasourceAtom);
 
   return (
-    <div className="flex h-full min-h-0 w-[300px] flex-col gap-2">
+    <div className="flex h-full min-h-0 w-full flex-col gap-2">
       {listError && (
         <Alert variant="destructive">
           <AlertTitle>无法加载列表</AlertTitle>
@@ -68,9 +69,13 @@ function DatasourceListPanel() {
 }
 
 export function DatasourcesPanel() {
+  const isEditing = useAtomValue(datasourcesIsEditingAtom);
+
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <DatasourceListPanel />
+      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[300px]">
+        <DatasourceListPanel />
+      </CollapsibleSearchListSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <DatasourceDetailPanel />

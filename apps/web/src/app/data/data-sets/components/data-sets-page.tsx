@@ -4,6 +4,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
+import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,11 @@ import {
   setDataSetsSearchQueryAtom,
 } from '@/models/data-set/browse.atom';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
-import { dataSetsEnterCreateAtom, dataSetsSelectAndDetailAtom } from '@/models/data-set/panel-ui.atom';
+import {
+  dataSetsEnterCreateAtom,
+  dataSetsIsEditingAtom,
+  dataSetsSelectAndDetailAtom,
+} from '@/models/data-set/panel-ui.atom';
 import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 
 import { DataSetDetailPanel } from './panel/data-set-detail-panel';
@@ -36,6 +41,7 @@ export function DataSetsPage() {
   const enterCreate = useSetAtom(dataSetsEnterCreateAtom);
   const refreshList = useSetAtom(dataSetAtoms.refreshAtom);
   const listError = useAtomValue(dataSetAtoms.errorAtom);
+  const isEditing = useAtomValue(dataSetsIsEditingAtom);
 
   useEffect(() => {
     void refreshList();
@@ -53,46 +59,48 @@ export function DataSetsPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <div className="flex h-full min-h-0 w-[300px] flex-col gap-2 overflow-hidden">
-        {listError ? (
-          <Alert variant="destructive">
-            <AlertTitle>无法加载列表</AlertTitle>
-            <AlertDescription>{listError}</AlertDescription>
-          </Alert>
-        ) : null}
-        <SearchList
-          className="h-full min-h-0"
-          items={
-            filteredItems?.map((m) => ({
-              id: m.id,
-              label: m.name,
-              description: m.description,
-              datasourceType: m.datasource_bindings?.[0]?.datasource_type ?? '',
-            })) ?? null
-          }
-          getGroupKey={() => DATA_SETS_LIST_GROUP_KEY}
-          renderTitle={(item) => item.label}
-          renderDescription={(item) => item.description ?? ''}
-          getSearchText={(item) => [item.label, item.description ?? '', item.datasourceType].join(' ')}
-          title="数据集列表"
-          searchPlaceholder="搜索数据集"
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          selectedId={selectedId}
-          emptyText={emptyText}
-          onItemSelected={onSelectItem}
-          toolbarRight={
-            <Button
-              type="button"
-              aria-label="新增数据集"
-              className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
-              onClick={() => enterCreate()}
-            >
-              <Plus />
-            </Button>
-          }
-        />
-      </div>
+      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[300px]">
+        <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+          {listError ? (
+            <Alert variant="destructive">
+              <AlertTitle>无法加载列表</AlertTitle>
+              <AlertDescription>{listError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <SearchList
+            className="h-full min-h-0"
+            items={
+              filteredItems?.map((m) => ({
+                id: m.id,
+                label: m.name,
+                description: m.description,
+                datasourceType: m.datasource_bindings?.[0]?.datasource_type ?? '',
+              })) ?? null
+            }
+            getGroupKey={() => DATA_SETS_LIST_GROUP_KEY}
+            renderTitle={(item) => item.label}
+            renderDescription={(item) => item.description ?? ''}
+            getSearchText={(item) => [item.label, item.description ?? '', item.datasourceType].join(' ')}
+            title="数据集列表"
+            searchPlaceholder="搜索数据集"
+            searchQuery={searchQuery}
+            onSearchQueryChange={setSearchQuery}
+            selectedId={selectedId}
+            emptyText={emptyText}
+            onItemSelected={onSelectItem}
+            toolbarRight={
+              <Button
+                type="button"
+                aria-label="新增数据集"
+                className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
+                onClick={() => enterCreate()}
+              >
+                <Plus />
+              </Button>
+            }
+          />
+        </div>
+      </CollapsibleSearchListSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <DataSetDetailPanel />

@@ -4,6 +4,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { useEffect } from 'react';
 
+import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
 import { buttonVariants } from '@/components/ui/button';
@@ -31,51 +32,53 @@ function FactorsListPane() {
   const browseState = useAtomValue(factorsBrowseStateAtom);
 
   return (
-    <SearchList
-      className="h-full min-h-0 w-[320px]"
-      items={
-        filteredItems?.map((m) => ({
-          id: m.id,
-          label: m.name,
-          description: m.description,
-          category: m.group,
-        })) ?? null
-      }
-      getGroupKey={(item) => item.category ?? '未分组'}
-      renderTitle={(item) => item.label}
-      renderDescription={(item) => item.description ?? ''}
-      getSearchText={(item) => [item.label, item.description ?? '', item.category ?? '', item.id].join(' ')}
-      title="因子列表"
-      searchPlaceholder="搜索因子"
-      searchQuery={browseState.searchQuery}
-      onSearchQueryChange={setSearchQuery}
-      selectedId={selectedId}
-      emptyText={
-        listError
-          ? '因子列表加载失败。'
-          : (listItems?.length ?? 0) === 0
-            ? '暂无因子。请使用右上角「新增因子」创建。'
-            : '没有符合当前筛选条件的因子。'
-      }
-      onItemSelected={(item) => {
-        setSelectedId(item.id);
-        if (editing) {
-          setEditing(false);
+    <CollapsibleSearchListSidebar collapsed={editing} innerWidthClassName="w-[320px]">
+      <SearchList
+        className="h-full min-h-0"
+        items={
+          filteredItems?.map((m) => ({
+            id: m.id,
+            label: m.name,
+            description: m.description,
+            category: m.group,
+          })) ?? null
         }
-      }}
-      toolbarRight={
-        <button
-          type="button"
-          aria-label="新增因子"
-          className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
-          onClick={() => {
-            startCreate(true);
-          }}
-        >
-          <Plus />
-        </button>
-      }
-    />
+        getGroupKey={(item) => item.category ?? '未分组'}
+        renderTitle={(item) => item.label}
+        renderDescription={(item) => item.description ?? ''}
+        getSearchText={(item) => [item.label, item.description ?? '', item.category ?? '', item.id].join(' ')}
+        title="因子列表"
+        searchPlaceholder="搜索因子"
+        searchQuery={browseState.searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        selectedId={selectedId}
+        emptyText={
+          listError
+            ? '因子列表加载失败。'
+            : (listItems?.length ?? 0) === 0
+              ? '暂无因子。请使用右上角「新增因子」创建。'
+              : '没有符合当前筛选条件的因子。'
+        }
+        onItemSelected={(item) => {
+          setSelectedId(item.id);
+          if (editing) {
+            setEditing(false);
+          }
+        }}
+        toolbarRight={
+          <button
+            type="button"
+            aria-label="新增因子"
+            className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
+            onClick={() => {
+              startCreate(true);
+            }}
+          >
+            <Plus />
+          </button>
+        }
+      />
+    </CollapsibleSearchListSidebar>
   );
 }
 
