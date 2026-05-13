@@ -257,15 +257,6 @@ function StrategyDetailPanelEditor() {
             </Alert>
           ) : null}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">名称</p>
-            <EditablePageTitle
-              value={formState.name}
-              onChange={(n) => void setName(n)}
-              inputAriaLabel="策略名称"
-              editButtonAriaLabel="编辑名称"
-            />
-          </div>
-          <div className="space-y-2">
             <p className="text-sm font-medium text-muted-foreground">描述</p>
             <EditablePageDescription
               value={formState.description}
@@ -306,7 +297,16 @@ function StrategyDetailPanelEditor() {
       onPanelActiveTabChange={(v) => {
         if (v === 'meta' || v === 'workflow') setEditTab(v);
       }}
-      title={isCreate ? '新增策略' : <span className="truncate">{formState.name || '编辑策略'}</span>}
+      title={
+        <EditablePageTitle
+          value={formState.name}
+          showEdit
+          onChange={(n) => void setName(n)}
+          inputAriaLabel="策略名称"
+          editButtonAriaLabel="编辑名称"
+          placeholder={isCreate ? '新增策略' : '编辑策略'}
+        />
+      }
       actions={
         <div className="flex items-center gap-2">
           <Button
