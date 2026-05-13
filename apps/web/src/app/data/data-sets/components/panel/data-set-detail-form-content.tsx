@@ -241,6 +241,7 @@ function DataSetBindingRowBlock({
             items={selectItems}
             value={row.datasource_id}
             onValueChange={(v) => {
+              if (readOnly) return;
               if (!v) return;
               const picked = labelLookupDatasources.find((d) => d.id === v);
               updateBinding(index, {
@@ -250,7 +251,8 @@ function DataSetBindingRowBlock({
                 datasource_type: picked?.type,
               });
             }}
-            disabled={readOnly || bindingDatasources.length === 0}
+            readOnly={readOnly}
+            disabled={bindingDatasources.length === 0}
           >
             <SelectTrigger id={dsTriggerId} className="w-full min-w-0">
               <SelectValue placeholder="选择数据源" />

@@ -284,6 +284,7 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
     [tabbedByNav, schema, uiSchema, activeTab, formData],
   );
   const handleChange = (next: RjsfOnChangeArg) => {
+    if (formReadonly) return;
     if (tabSchemaAndUi) {
       const nextEvent = (typeof next === 'object' && next ? next : {}) as Record<string, unknown>;
       const nextData = (nextEvent.formData as Record<string, unknown> | undefined) ?? {};
@@ -325,7 +326,7 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
       ) : null}
       <Form
         {...props}
-        readonly={false}
+        readonly={formReadonly}
         formContext={mergedFormContext}
         schema={tabSchemaAndUi?.schema ?? props.schema}
         uiSchema={tabSchemaAndUi?.uiSchema ?? props.uiSchema}

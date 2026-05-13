@@ -52,9 +52,11 @@ export function DatasourceBasePanelContent() {
               modal={false}
               items={typeItems}
               value={form.type}
-              disabled={!!selectedId}
+              readOnly={!isEditing || !!selectedId}
+              disabled={plugins.length === 0}
               onValueChange={(v) => {
                 if (v == null || v === '') return;
+                if (!isEditing || !!selectedId) return;
                 setForm((f) => ({ ...f, type: v, config: { connection: {}, columns: {} } }));
               }}
             >

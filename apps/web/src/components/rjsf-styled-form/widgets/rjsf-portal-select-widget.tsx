@@ -74,6 +74,7 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
 
   const onValueChange = useCallback(
     (next: unknown) => {
+      if (isReadonly) return;
       if (multiple) {
         const arr = Array.isArray(next) ? next : [];
         onChange(arr);
@@ -85,7 +86,7 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
       }
       onChange(next);
     },
-    [multiple, onChange, options],
+    [isReadonly, multiple, onChange, options],
   );
 
   const onOpenChange = useCallback(
@@ -108,7 +109,8 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
         if (a == null || b == null) return false;
         return isEnumValueMatched(a, b);
       }}
-      disabled={disabled || isReadonly}
+      disabled={disabled}
+      readOnly={isReadonly}
       required={required}
       onValueChange={onValueChange}
       onOpenChange={onOpenChange}

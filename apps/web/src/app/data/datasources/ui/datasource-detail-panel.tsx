@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import {
   cancelDatasourceEditorAtom,
+  clearDatasourceTransientAlertsAtom,
   datasourceEditorProceedFromBaseTabAtom,
   datasourcesBusyIdAtom,
   datasourcesDeleteErrorAtom,
@@ -133,6 +134,7 @@ export function DatasourceDetailPanel() {
   const [detailTab, setDetailTab] = useAtom(datasourcesDetailActiveTabAtom);
   const [inspectColumnsError] = useAtom(datasourcesInspectColumnsErrorAtom);
   const proceedFromBase = useSetAtom(datasourceEditorProceedFromBaseTabAtom);
+  const clearTransientAlerts = useSetAtom(clearDatasourceTransientAlertsAtom);
 
   const detailPanels = useMemo(
     () =>
@@ -147,16 +149,19 @@ export function DatasourceDetailPanel() {
     <PanelDetailCard
       panelActiveTab={detailTab}
       onPanelActiveTabChange={(v) => {
+        if (v !== 'base' && v !== 'fields') return;
         if (v === 'base') {
-          setDetailTab(v);
+          if (detailTab !== 'base') clearTransientAlerts();
+          setDetailTab('base');
           return;
         }
-        if (v !== 'fields') return;
         if (!isEditing) {
-          setDetailTab(v);
+          if (detailTab !== 'fields') clearTransientAlerts();
+          setDetailTab('fields');
           return;
         }
         if (!mainFormValid || !pluginBaseFormValid) return;
+        clearTransientAlerts();
         void proceedFromBase();
       }}
       title={

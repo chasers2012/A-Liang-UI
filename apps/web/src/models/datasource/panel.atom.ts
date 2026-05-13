@@ -41,6 +41,13 @@ export const datasourcesDeleteErrorAtom = atom<string | null>(null);
 export const datasourcesInspectColumnsBusyAtom = atom(false);
 export const datasourcesInspectColumnsErrorAtom = atom<string | null>(null);
 
+/** 清除详情区全局提示（删除失败、连接测试、列探测）；在切换选中项、Tab、编辑流等操作后调用 */
+export const clearDatasourceTransientAlertsAtom = atom(null, (_get, set) => {
+  set(datasourcesDeleteErrorAtom, null);
+  set(datasourcesTestHintAtom, null);
+  set(datasourcesInspectColumnsErrorAtom, null);
+});
+
 /** 右侧编辑器表单（新建/编辑数据源） */
 export const datasourcesEditorFormAtom = atom<FormState>(emptyForm());
 export const datasourcesPluginsAtom = atom<DatasourcePluginPublic[]>([]);
@@ -198,6 +205,7 @@ export const datasourceEditorProceedFromBaseTabAtom = atom(null, async (_get, se
  * 新建成功时选中新建 id、退出编辑态；失败写入 {@link datasourcesEditorFormErrorAtom}。
  */
 export const saveDatasourceEditorAtom = atom(null, async (get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
   set(datasourcesEditorFormErrorAtom, null);
   set(datasourcesEditorSubmittingAtom, true);
   try {
@@ -304,17 +312,20 @@ export const testDatasourceConnectionAtom = atom(null, async (_get, set, datasou
 });
 
 export const selectDatasourceFromListAtom = atom(null, (_get, set, itemId: string) => {
+  set(clearDatasourceTransientAlertsAtom);
   set(datasourcesSelectedIdAtom, itemId);
   set(datasourcesIsEditingAtom, false);
 });
 
 export const startCreateNewDatasourceAtom = atom(null, (_get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
   set(datasourcesSelectedIdAtom, null);
   set(datasourcesIsEditingAtom, true);
   set(datasourcesDetailActiveTabAtom, 'base');
 });
 
 export const enterDatasourceEditorAtom = atom(null, (_get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
   set(datasourcesIsEditingAtom, true);
   set(datasourcesDetailActiveTabAtom, 'base');
 });
@@ -324,11 +335,12 @@ export const requestDeleteDatasourceAtom = atom(null, (_get, set, item: DataSour
 });
 
 export const cancelDatasourceEditorAtom = atom(null, (_get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
   set(datasourcesEditorFormErrorAtom, null);
-  set(datasourcesInspectColumnsErrorAtom, null);
   set(datasourcesIsEditingAtom, false);
 });
 
 export const dismissDeleteDatasourceDialogAtom = atom(null, (_get, set) => {
   set(datasourcesDeleteTargetAtom, null);
+  set(datasourcesDeleteErrorAtom, null);
 });
