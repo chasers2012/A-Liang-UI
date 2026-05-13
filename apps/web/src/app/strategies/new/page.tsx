@@ -1,7 +1,5 @@
-'use client';
-
-import { StrategyFormPage } from '../ui/strategy-form-page';
+import { redirect } from 'next/navigation';
 
 export default function NewStrategyPage() {
-  return <StrategyFormPage />;
+  redirect('/strategies?new=1');
 }

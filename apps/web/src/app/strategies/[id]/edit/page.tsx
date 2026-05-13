@@ -1,11 +1,8 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { useParams } from 'next/navigation';
-import { StrategyFormPage } from '../../ui/strategy-form-page';
+type Props = { params: Promise<{ id: string }> };
 
-export default function EditStrategyPage() {
-  const params = useParams<{ id?: string | string[] }>();
-  const rawId = params?.id;
-  const id = Array.isArray(rawId) ? rawId[0] : rawId;
-  return <StrategyFormPage id={id} />;
+export default async function EditStrategyPage(props: Props) {
+  const { id } = await props.params;
+  redirect(`/strategies?strategyId=${encodeURIComponent(id)}&edit=1`);
 }
