@@ -12,6 +12,8 @@ export type PanelDetailCardTabPanelItem = {
   label: ReactNode;
   content: ReactNode;
   contentClassName?: string;
+  /** 为 true 时该 tab 不可切换（仍会随 value 显示对应内容） */
+  disabled?: boolean;
 };
 
 export type PanelDetailCardProps = Omit<ComponentProps<typeof Card>, 'title' | 'children'> & {
@@ -77,7 +79,7 @@ function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children
           {hasPanels ? (
             <TabsList className="inline-flex h-9 w-fit flex-wrap items-center gap-1 rounded-lg bg-muted/80 p-1 text-muted-foreground">
               {panels!.map((p) => (
-                <TabsTrigger key={p.value} value={p.value}>
+                <TabsTrigger key={p.value} value={p.value} disabled={p.disabled}>
                   {p.label}
                 </TabsTrigger>
               ))}

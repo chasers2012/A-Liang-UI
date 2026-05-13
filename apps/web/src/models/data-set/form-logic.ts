@@ -6,6 +6,9 @@ import type { DataSetPublic } from './dto';
 export type DataSetBindingFormRow = {
   datasource_id: string;
   columns: string[];
+  /** 详情接口快照；用于下拉目录未包含该 id 时在触发器上展示名称 */
+  datasource_name?: string;
+  datasource_type?: string;
 };
 
 export type DataSetFormState = {
@@ -52,6 +55,8 @@ export function hydrateDataSetForm(row: DataSetPublic): DataSetFormState {
       ? row.datasource_bindings.map((b) => ({
           datasource_id: b.datasource_id,
           columns: b.columns ?? [],
+          datasource_name: b.datasource_name,
+          datasource_type: b.datasource_type,
         }))
       : [
           {

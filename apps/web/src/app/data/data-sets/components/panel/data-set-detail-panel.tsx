@@ -1,17 +1,18 @@
 'use client';
 
-import { useAtomValue, useSetAtom } from 'jotai';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import type { DataSetPublic } from '@/models/data-set/dto';
-import { dataSetsIsEditingAtom } from '@/models/data-set/panel-ui.atom';
+import { dataSetsIsEditingAtom, dataSetDetailPanelActiveTabAtom } from '@/models/data-set/panel-ui.atom';
 import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 import { dataSetDetailAsyncStateAtomFamily } from '@/models/data-set/detail.atom';
+import { prepareDataSetEditorAtom } from '@/models/data-set/edit.atom';
 import {
   dataSetEditorHydrateTickAtom,
   dataSetEditorStateAtom,
-  initDataSetEditorAtom,
+  setDataSetEditorFormPatchAtom,
   syncDataSetEditorSystemWorkflowAtom,
 } from '@/models/data-set/editor/form-state.atom';
 import { dataSetEditorDatasourcesAsyncStateAtom } from '@/models/data-set/editor/datasources.atom';
@@ -49,6 +50,7 @@ export function DataSetDetailPanel() {
 
   // --- detail (readonly) state (async/loadable)
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [panelActiveTab, setPanelActiveTab] = useAtom(dataSetDetailPanelActiveTabAtom);
   const detailState = useAtomValue(dataSetDetailAsyncStateAtomFamily(dataSetId || null));
   const readonlyCanvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
 
@@ -66,7 +68,8 @@ export function DataSetDetailPanel() {
 
   // --- editor (create/edit) state (models)
   const isEditing = useAtomValue(dataSetsIsEditingAtom);
-  const initEditor = useSetAtom(initDataSetEditorAtom);
+  const initEditor = useSetAtom(prepareDataSetEditorAtom);
+  const patchForm = useSetAtom(setDataSetEditorFormPatchAtom);
   const syncSystemWorkflow = useSetAtom(syncDataSetEditorSystemWorkflowAtom);
   const editorState = useAtomValue(dataSetEditorStateAtom);
   const hydrateTick = useAtomValue(dataSetEditorHydrateTickAtom);
@@ -75,10 +78,21 @@ export function DataSetDetailPanel() {
   const canvasKey = hydrateTick;
   const canvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
 
+  const pageTitleValue = isEditing
+    ? form.name
+    : !dataSetId || detailLoading || detailError || !detailRow
+      ? ''
+      : detailRow.name;
+
   useEffect(() => {
     if (!isEditing) return;
     void initEditor({ isEditing, dataSetId });
   }, [isEditing, dataSetId, initEditor]);
+
+  useEffect(() => {
+    if (!isEditing || panelActiveTab !== 'preview') return;
+    setPanelActiveTab('detail');
+  }, [isEditing, panelActiveTab, setPanelActiveTab]);
 
   const datasourceNameById = useMemo(() => Object.fromEntries(datasources.map((d) => [d.id, d.name])), [datasources]);
 
@@ -97,9 +111,12 @@ export function DataSetDetailPanel() {
       <PanelDetailCard
         title={
           <EditablePageTitle
-            value={!dataSetId || detailLoading || detailError || !detailRow ? '' : detailRow.name}
+            value={pageTitleValue}
             showEdit={isEditing}
-            onChange={() => {}}
+            onChange={(v) => {
+              if (!isEditing) return;
+              patchForm({ name: v });
+            }}
             placeholder={getReadonlyTitlePlaceholder({
               idForForm: dataSetId,
               loading: detailLoading,
@@ -108,6 +125,12 @@ export function DataSetDetailPanel() {
             })}
           />
         }
+        panelActiveTab={panelActiveTab}
+        onPanelActiveTabChange={(v) => {
+          if (v !== 'detail' && v !== 'preprocessing' && v !== 'preview') return;
+          if (isEditing && v === 'preview') return;
+          setPanelActiveTab(v);
+        }}
         panels={[
           {
             label: '详情',
@@ -134,14 +157,22 @@ export function DataSetDetailPanel() {
           {
             label: '预览',
             value: 'preview',
+            disabled: isEditing,
             content: (
-              <div className="flex min-h-80 flex-1 flex-col overflow-hidden">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <DataSetPanelPreviewTabContent dataSetId={dataSetId} />
               </div>
             ),
           },
         ]}
-        actions={<DataSetPanelHeaderActions onOpenDelete={() => setDeleteOpen(true)} />}
+        actions={
+          <DataSetPanelHeaderActions
+            onOpenDelete={() => setDeleteOpen(true)}
+            panelActiveTab={panelActiveTab}
+            onGoToPreprocessing={() => setPanelActiveTab('preprocessing')}
+            getLivePreprocessingWorkflow={() => canvasRef.current?.getGraph() ?? null}
+          />
+        }
       />
       <DataSetPanelDialogs deleteOpen={deleteOpen} onOpenDelete={setDeleteOpen} />
     </>

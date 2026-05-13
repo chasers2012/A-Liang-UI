@@ -208,6 +208,8 @@ export const saveDatasourceEditorAtom = atom(null, async (get, set) => {
     const items = get(datasourcesListAtoms.valueAtom);
     const result = await commitDatasourceForm(isCreate ? 'create' : 'edit', selectedId, form, items);
     set(datasourcesListAtoms.refreshAtom);
+    // 与 nodes 详情 bump 类似：等列表 async 完成后再退出编辑，避免 sync 读到旧列表导致右侧详情不更新
+    await get(datasourcesListAtoms.asyncAtom);
     if (isCreate && result) {
       set(datasourcesSelectedIdAtom, result.id);
     }

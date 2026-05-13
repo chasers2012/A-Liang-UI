@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, type ReactNode } from 'react';
 import { useSetAtom } from 'jotai';
 import { Minus, Plus } from 'lucide-react';
 
@@ -44,11 +45,6 @@ export function DataSetDetailFormContent(props: {
   const addBinding = useSetAtom(addDataSetEditorBindingAtom);
   const updateBinding = useSetAtom(updateDataSetEditorBindingAtom);
   const removeBinding = useSetAtom(removeDataSetEditorBindingAtom);
-
-  const dsItems: Record<string, string> = {};
-  for (const d of bindingDatasources) {
-    dsItems[d.id] = `${d.name} (${d.type})`;
-  }
 
   return (
     <>
@@ -123,7 +119,7 @@ export function DataSetDetailFormContent(props: {
             row={row}
             bindingsLength={form.bindings.length}
             dependencyFieldsByDsId={dependencyFieldsByDsId}
-            dsItems={dsItems}
+            labelLookupDatasources={bindingDatasources}
             bindingDatasources={(() => {
               const currentId = row.datasource_id.trim();
               const takenIds = new Set(
@@ -147,12 +143,28 @@ export function DataSetDetailFormContent(props: {
   );
 }
 
+function bindingDatasourceTriggerLabel(
+  row: DataSetBindingFormRow,
+  bindingDatasources: DataSourcePublic[],
+): string | null {
+  const id = row.datasource_id.trim();
+  if (!id) return null;
+  const d = bindingDatasources.find((x) => x.id === id);
+  if (d) return `${d.name} (${d.type})`;
+  const n = row.datasource_name?.trim();
+  const t = row.datasource_type?.trim();
+  if (n && t) return `${n} (${t})`;
+  if (n) return n;
+  return id;
+}
+
 type DataSetBindingRowBlockProps = {
   index: number;
   row: DataSetBindingFormRow;
   bindingsLength: number;
   dependencyFieldsByDsId: Record<string, string[]>;
-  dsItems: Record<string, string>;
+  /** 完整目录，用于触发器上解析 id → 名称 */
+  labelLookupDatasources: DataSourcePublic[];
   bindingDatasources: DataSourcePublic[];
   updateBinding: (i: number, patch: Partial<DataSetBindingFormRow>) => void;
   removeBinding: (i: number) => void;
@@ -164,7 +176,7 @@ function DataSetBindingRowBlock({
   row,
   bindingsLength,
   dependencyFieldsByDsId,
-  dsItems,
+  labelLookupDatasources,
   bindingDatasources,
   updateBinding,
   removeBinding,
@@ -183,6 +195,26 @@ function DataSetBindingRowBlock({
   const columnsAnchor = useComboboxAnchor();
 
   const dsTriggerId = `ds-binding-${index}-trigger`;
+
+  const selectItems = useMemo((): Record<string, ReactNode> => {
+    const items: Record<string, ReactNode> = {};
+    for (const d of bindingDatasources) {
+      items[d.id] = `${d.name} (${d.type})`;
+    }
+    const cur = row.datasource_id.trim();
+    if (cur && !(cur in items)) {
+      const label = bindingDatasourceTriggerLabel(row, labelLookupDatasources) ?? cur;
+      items[cur] = (
+        <span className="flex min-w-0 max-w-full items-center gap-2">
+          <span className="min-w-0 truncate">{label}</span>
+          <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+            已删除
+          </span>
+        </span>
+      );
+    }
+    return items;
+  }, [bindingDatasources, labelLookupDatasources, row]);
 
   return (
     <div className="space-y-3 rounded-lg border border-border/60 bg-muted/5 p-4">
@@ -206,19 +238,22 @@ function DataSetBindingRowBlock({
           <FieldLabel htmlFor={dsTriggerId}>数据源</FieldLabel>
           <Select
             modal={false}
-            items={dsItems}
+            items={selectItems}
             value={row.datasource_id}
-            onValueChange={(v) =>
-              v &&
+            onValueChange={(v) => {
+              if (!v) return;
+              const picked = labelLookupDatasources.find((d) => d.id === v);
               updateBinding(index, {
                 datasource_id: v,
                 columns: [],
-              })
-            }
+                datasource_name: picked?.name,
+                datasource_type: picked?.type,
+              });
+            }}
             disabled={readOnly || bindingDatasources.length === 0}
           >
             <SelectTrigger id={dsTriggerId} className="w-full min-w-0">
-              <SelectValue />
+              <SelectValue placeholder="选择数据源" />
             </SelectTrigger>
             <SelectContent>
               {bindingDatasources.map((d) => (

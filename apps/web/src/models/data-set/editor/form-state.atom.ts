@@ -1,26 +1,9 @@
 import { atom } from 'jotai';
 
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import { defaultNewName } from '@/lib/default-new-name';
-import { createDataSet, patchDataSet } from '@/api/data-sets';
-import { ApiError } from '@/api/client';
-import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
-import { dataSetsAfterSaveAtom } from '@/models/data-set/panel-ui.atom';
-import { dataSetDetailAsyncAtomFamily } from '@/models/data-set/detail.atom';
 import { syncSystemPreprocessingWorkflow } from '@/app/data/data-sets/components/panel/system-preprocessing-node-types';
 
-import { dataSetWorkflowTemplateAsyncAtom } from './workflow-template.atom';
-import { dataSetEditorDatasourcesAsyncAtom } from './datasources.atom';
-import {
-  emptyDataSetForm,
-  hydrateDataSetForm,
-  parseInstrumentCodesFromText,
-  sameWorkflowGraph,
-  validateDataSetBindings,
-  validatePreprocessingWorkflow,
-  type DataSetBindingFormRow,
-  type DataSetFormState,
-} from '../form-logic';
+import { emptyDataSetForm, sameWorkflowGraph, type DataSetBindingFormRow, type DataSetFormState } from '../form-logic';
 
 export type DataSetEditorState = {
   editorLoading: boolean;
@@ -30,7 +13,7 @@ export type DataSetEditorState = {
   form: DataSetFormState;
 };
 
-function initialEditorState(): DataSetEditorState {
+export function resetDataSetEditorState(): DataSetEditorState {
   return {
     editorLoading: false,
     editorLoadError: null,
@@ -40,70 +23,12 @@ function initialEditorState(): DataSetEditorState {
   };
 }
 
-export const dataSetEditorStateAtom = atom<DataSetEditorState>(initialEditorState());
+export const dataSetEditorStateAtom = atom<DataSetEditorState>(resetDataSetEditorState());
 
 /**
- * Tick that bumps whenever editor hydration completes (useful for forcing canvas remount in UI).
- * UI can keep `canvasKey` locally and increment when this value changes.
+ * Tick that bumps whenever editor hydration completes（画布 remount 用）。
  */
 export const dataSetEditorHydrateTickAtom = atom(0);
-
-export const initDataSetEditorAtom = atom(null, async (get, set, input: { isEditing: boolean; dataSetId: string }) => {
-  const isEditing = input.isEditing;
-  const id = (input.dataSetId ?? '').trim();
-  if (!isEditing) return;
-
-  set(dataSetEditorStateAtom, (s) => ({
-    ...s,
-    editorLoading: Boolean(id),
-    editorLoadError: null,
-    formError: null,
-  }));
-
-  try {
-    const [datasources, template] = await Promise.all([
-      get(dataSetEditorDatasourcesAsyncAtom),
-      get(dataSetWorkflowTemplateAsyncAtom),
-    ]);
-    void datasources;
-
-    if (id) {
-      // Reuse detail async source to avoid redundant direct detail fetches when entering edit mode.
-      const row = await get(dataSetDetailAsyncAtomFamily(id));
-      if (!row) throw new Error('记录已不存在');
-      set(dataSetEditorStateAtom, (s) => ({
-        ...s,
-        editorLoading: false,
-        editorLoadError: null,
-        form: hydrateDataSetForm(row),
-      }));
-      set(dataSetEditorHydrateTickAtom, (v) => v + 1);
-      return;
-    }
-
-    // Create: keep user's typed fields when toggling modes.
-    set(dataSetEditorStateAtom, (s) => ({
-      ...s,
-      editorLoading: false,
-      editorLoadError: null,
-      form: {
-        ...emptyDataSetForm(template),
-        name: s.form.name.trim() ? s.form.name : defaultNewName('新数据集'),
-        description: s.form.description,
-        start: s.form.start,
-        end: s.form.end,
-        instrument_codes_text: s.form.instrument_codes_text,
-      },
-    }));
-    set(dataSetEditorHydrateTickAtom, (v) => v + 1);
-  } catch (e) {
-    set(dataSetEditorStateAtom, (s) => ({
-      ...s,
-      editorLoading: false,
-      editorLoadError: e instanceof Error ? e.message : String(e),
-    }));
-  }
-});
 
 export const setDataSetEditorFormPatchAtom = atom(null, (_get, set, patch: Partial<DataSetFormState>) => {
   set(dataSetEditorStateAtom, (s) => ({ ...s, form: { ...s.form, ...patch } }));
@@ -147,55 +72,6 @@ export const removeDataSetEditorBindingAtom = atom(null, (_get, set, index: numb
     },
   }));
 });
-
-export const submitDataSetEditorAtom = atom(
-  null,
-  async (get, set, input: { dataSetId: string; workflowOverride?: WorkflowGraphPersisted | null }) => {
-    const id = (input.dataSetId ?? '').trim();
-    const { form } = get(dataSetEditorStateAtom);
-
-    set(dataSetEditorStateAtom, (s) => ({ ...s, submitting: true, formError: null }));
-
-    try {
-      const name = form.name.trim();
-      if (!name) throw new Error('名称不能为空');
-
-      const bindingsError = validateDataSetBindings(form.bindings);
-      if (bindingsError) throw new Error(bindingsError);
-
-      const wf = input.workflowOverride ?? form.preprocessing_workflow;
-      const wfError = validatePreprocessingWorkflow(wf);
-      if (wfError) throw new Error(wfError);
-
-      const instrument_codes = parseInstrumentCodesFromText(form.instrument_codes_text);
-      const datasource_bindings = form.bindings.map((b) => ({
-        datasource_id: b.datasource_id.trim(),
-        columns: (b.columns ?? []).map((c) => c.trim()).filter(Boolean),
-      }));
-
-      const payload = {
-        name,
-        description: form.description.trim(),
-        datasource_bindings,
-        preprocessing_workflow: wf,
-        start: form.start.trim(),
-        end: form.end.trim(),
-        instrument_codes,
-      };
-
-      const createdOrId = !id ? await createDataSet(payload) : await patchDataSet(id, payload).then(() => ({ id }));
-      set(dataSetAtoms.refreshAtom);
-      set(dataSetsAfterSaveAtom, createdOrId.id);
-
-      set(dataSetEditorStateAtom, (s) => ({ ...s, submitting: false }));
-      return createdOrId.id;
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err);
-      set(dataSetEditorStateAtom, (s) => ({ ...s, submitting: false, formError: msg }));
-      return null;
-    }
-  },
-);
 
 export const syncDataSetEditorSystemWorkflowAtom = atom(
   null,

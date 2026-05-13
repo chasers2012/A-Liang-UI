@@ -21,6 +21,9 @@ import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 
 import { DataSetDetailPanel } from './panel/data-set-detail-panel';
 
+/** 所有数据集共用一个分组键，避免按数据源类型拆分（SearchList 不改，仅用 getGroupKey 归组） */
+const DATA_SETS_LIST_GROUP_KEY = '数据集';
+
 /** 与 `apps/web/src/app/nodes/page.tsx` 对齐：左列表 + 右卡片，状态全部走 jotai */
 export function DataSetsPage() {
   const items = useAtomValue(dataSetAtoms.valueAtom);
@@ -64,13 +67,13 @@ export function DataSetsPage() {
               id: m.id,
               label: m.name,
               description: m.description,
-              category: m.datasource_bindings?.[0]?.datasource_type ?? '数据集',
+              datasourceType: m.datasource_bindings?.[0]?.datasource_type ?? '',
             })) ?? null
           }
-          getGroupKey={(item) => item.category ?? '数据集'}
+          getGroupKey={() => DATA_SETS_LIST_GROUP_KEY}
           renderTitle={(item) => item.label}
           renderDescription={(item) => item.description ?? ''}
-          getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
+          getSearchText={(item) => [item.label, item.description ?? '', item.datasourceType].join(' ')}
           title="数据集列表"
           searchPlaceholder="搜索数据集"
           searchQuery={searchQuery}

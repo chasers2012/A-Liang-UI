@@ -148,7 +148,7 @@ export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string
   }
 
   return (
-    <>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {previewLoading ? (
         <p className="text-sm text-muted-foreground">加载预处理后的数据中…</p>
       ) : previewError ? (
@@ -157,8 +157,8 @@ export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string
           <AlertDescription>{previewError}</AlertDescription>
         </Alert>
       ) : table && table.headers.length > 0 ? (
-        <div className="overflow-x-auto rounded-md border border-border/60">
-          <div className="max-h-[min(60vh,560px)] overflow-y-auto">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-border/60">
+          <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-max min-w-full caption-bottom border-collapse text-sm text-card-foreground">
               <thead className="[&_tr]:border-b [&_tr]:border-border/80 [&_tr]:bg-muted/40 [&_tr]:transition-colors [&_tr:hover]:bg-muted/50">
                 <tr className="border-b border-border/60 transition-colors">
@@ -192,6 +192,6 @@ export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string
       ) : (
         <p className="text-sm text-muted-foreground">暂无预览数据。</p>
       )}
-    </>
+    </div>
   );
 }
