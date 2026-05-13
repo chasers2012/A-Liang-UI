@@ -4,6 +4,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
+import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -12,7 +13,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { filteredNodesAtom, nodesBrowseStateAtom, setNodesSearchQueryAtom } from '@/models/nodes/browse.atom';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
-import { nodesCreateModeAtom, nodesEditActiveAtom } from '@/models/nodes/edit.atom';
+import { handleCancelNodesEditAtom, nodesCreateModeAtom, nodesEditActiveAtom } from '@/models/nodes/edit.atom';
 import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
 import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
@@ -26,6 +27,11 @@ export default function NodesPage() {
   const [selectedId, setSelectedId] = useAtom(nodesSelectedIdAtom);
   const setSearchQuery = useSetAtom(setNodesSearchQueryAtom);
   const refreshList = useSetAtom(nodesListAtoms.refreshAtom);
+  const cancelNodesEdit = useSetAtom(handleCancelNodesEditAtom);
+
+  useNavigationEditGuard(nodesEditActiveAtom, {
+    onAbandon: () => cancelNodesEdit(),
+  });
 
   useEffect(() => {
     void refreshList();

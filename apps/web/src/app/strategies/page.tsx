@@ -16,7 +16,9 @@ import {
   strategiesListAtoms,
   strategyNodeTypesAtom,
 } from '@/models/strategy/list-detail.atom';
+import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import {
+  cancelStrategyEditorAtom,
   enterStrategyEditorAtom,
   selectStrategyFromListAtom,
   startCreateStrategyAtom,
@@ -53,6 +55,11 @@ function StrategiesPageContent() {
   const selectItem = useSetAtom(selectStrategyFromListAtom);
   const startCreate = useSetAtom(startCreateStrategyAtom);
   const enterEditor = useSetAtom(enterStrategyEditorAtom);
+  const cancelStrategyEdit = useSetAtom(cancelStrategyEditorAtom);
+
+  useNavigationEditGuard(strategiesPanelIsEditingAtom, {
+    onAbandon: () => cancelStrategyEdit(),
+  });
 
   const listSelectedId = isEditing && selectedId == null ? null : selectedId;
 

@@ -4,6 +4,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { useEffect } from 'react';
 
+import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -84,6 +85,13 @@ function FactorsListPane() {
 
 export default function FactorsPage() {
   const refreshList = useSetAtom(factorsListAtoms.refreshAtom);
+  const abandonFactorEdit = useSetAtom(factorsEditingAtom);
+
+  useNavigationEditGuard(factorsEditingAtom, {
+    onAbandon: () => {
+      void abandonFactorEdit(false);
+    },
+  });
 
   useEffect(() => {
     void refreshList();

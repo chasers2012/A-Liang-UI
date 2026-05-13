@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { NavigationGuardLink } from '@/components/navigation-guard-link';
 
 import {
   Breadcrumb,
@@ -48,7 +48,7 @@ export const PageBreadcrumb = React.memo(function PageBreadcrumb({
               <BreadcrumbItem className="max-w-full min-w-0">
                 {hasLink ? (
                   <BreadcrumbLink
-                    render={<Link href={item.href!} />}
+                    render={<NavigationGuardLink href={item.href!} />}
                     className={cn(
                       'truncate rounded-md px-0.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       header && 'font-medium',

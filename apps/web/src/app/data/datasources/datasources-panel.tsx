@@ -4,6 +4,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -12,6 +13,7 @@ import {
   datasourcesListCountAtom,
   datasourcesListRefreshOnMountEffectAtom,
   datasourcesListSearchQueryAtom,
+  cancelDatasourceEditorAtom,
   datasourcesIsEditingAtom,
   datasourcesSearchListRowsAtom,
   datasourcesSelectedIdAtom,
@@ -70,6 +72,11 @@ function DatasourceListPanel() {
 
 export function DatasourcesPanel() {
   const isEditing = useAtomValue(datasourcesIsEditingAtom);
+  const cancelDatasourceEdit = useSetAtom(cancelDatasourceEditorAtom);
+
+  useNavigationEditGuard(datasourcesIsEditingAtom, {
+    onAbandon: () => cancelDatasourceEdit(),
+  });
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">

@@ -4,6 +4,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
+import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList } from '@/components/search-list';
@@ -17,6 +18,7 @@ import {
   setDataSetsSearchQueryAtom,
 } from '@/models/data-set/browse.atom';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
+import { handleCancelDataSetEditAtom } from '@/models/data-set/edit.atom';
 import {
   dataSetsEnterCreateAtom,
   dataSetsIsEditingAtom,
@@ -42,6 +44,11 @@ export function DataSetsPage() {
   const refreshList = useSetAtom(dataSetAtoms.refreshAtom);
   const listError = useAtomValue(dataSetAtoms.errorAtom);
   const isEditing = useAtomValue(dataSetsIsEditingAtom);
+  const cancelDataSetEdit = useSetAtom(handleCancelDataSetEditAtom);
+
+  useNavigationEditGuard(dataSetsIsEditingAtom, {
+    onAbandon: () => void cancelDataSetEdit(),
+  });
 
   useEffect(() => {
     void refreshList();

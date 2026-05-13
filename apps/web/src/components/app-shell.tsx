@@ -1,6 +1,10 @@
 'use client';
 
-import Link from 'next/link';
+import * as React from 'react';
+
+import { NavigationEditGuardDialog } from '@/components/navigation-edit-guard-dialog';
+import { NavigationEditGuardProvider } from '@/components/navigation-edit-guard-context';
+import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
@@ -52,10 +56,10 @@ function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainIte
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
                 render={
-                  <Link href={item.url}>
+                  <NavigationGuardLink href={item.url}>
                     <Icon aria-hidden />
                     <span>{item.title}</span>
-                  </Link>
+                  </NavigationGuardLink>
                 }
                 isActive={active}
                 tooltip={item.title}
@@ -70,10 +74,10 @@ function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainIte
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton
               render={
-                <Link href={item.url}>
+                <NavigationGuardLink href={item.url}>
                   <Icon aria-hidden />
                   <span>{item.title}</span>
-                </Link>
+                </NavigationGuardLink>
               }
               isActive={sectionActive}
               tooltip={item.title}
@@ -86,10 +90,10 @@ function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainIte
                   <SidebarMenuSubItem key={sub.url}>
                     <SidebarMenuSubButton
                       render={
-                        <Link href={sub.url}>
+                        <NavigationGuardLink href={sub.url}>
                           <SubIcon aria-hidden />
                           <span>{sub.title}</span>
-                        </Link>
+                        </NavigationGuardLink>
                       }
                       isActive={subActive}
                     />
@@ -141,19 +145,22 @@ function AppSidebar() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider
-      className="flex min-h-0 min-w-0 flex-1 h-screen w-screen overflow-hidden"
-      style={
-        {
-          '--sidebar-width': '14rem',
-          '--sidebar-width-icon': '3.5rem',
-        } as React.CSSProperties
-      }
-    >
-      <AppSidebar />
-      <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-auto">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <NavigationEditGuardProvider>
+      <SidebarProvider
+        className="flex min-h-0 min-w-0 flex-1 h-screen w-screen overflow-hidden"
+        style={
+          {
+            '--sidebar-width': '14rem',
+            '--sidebar-width-icon': '3.5rem',
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar />
+        <NavigationEditGuardDialog />
+        <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-auto">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </NavigationEditGuardProvider>
   );
 }
