@@ -179,3 +179,136 @@
     background-clip: padding-box;
   }
 }
+
+/**
+ * 只读表单控件：使用**无 @layer** 规则，确保覆盖同一元素上的 Tailwind utilities（@layer components 会输给 utilities）。
+ * 视觉对齐 `bg-muted/30`、`rounded-md`、去边框与 ring。
+ */
+input[data-slot='input']:read-only:not(:disabled):not([type='file']),
+input[data-slot='input-group-control']:read-only:not(:disabled):not([type='file']) {
+  pointer-events: none !important;
+  cursor: default !important;
+  height: auto !important;
+  min-height: 2rem !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  padding-inline: 0.75rem !important;
+  padding-block: 0.5rem !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+textarea[data-slot='textarea']:read-only:not(:disabled),
+textarea[data-slot='input-group-control']:read-only:not(:disabled) {
+  pointer-events: none !important;
+  cursor: default !important;
+  min-height: 4rem !important;
+  height: auto !important;
+  width: 100% !important;
+  resize: none !important;
+  white-space: pre-wrap !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  padding-inline: 0.75rem !important;
+  padding-block: 0.5rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+[data-slot='select-trigger'][data-readonly] {
+  pointer-events: none !important;
+  cursor: default !important;
+  height: auto !important;
+  min-height: 2rem !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  border-radius: var(--radius-md) !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  padding-inline: 0.75rem !important;
+  padding-block: 0.5rem !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+[data-slot='select-trigger'][data-readonly] svg {
+  display: none !important;
+}
+
+[data-slot='switch'][data-readonly],
+[data-slot='checkbox'][data-readonly] {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* DatePicker / DateTimePicker：Popover `asChild` 合并后触发器为 `data-slot=popover-trigger`；只读用 `aria-readonly`，不依赖改 ui */
+button[data-slot='popover-trigger'][aria-readonly]:not(:disabled) {
+  pointer-events: none !important;
+  cursor: default !important;
+  height: auto !important;
+  min-height: 2rem !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+  border-radius: var(--radius-md) !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  padding-inline: 0.75rem !important;
+  padding-block: 0.5rem !important;
+  font-family: var(--font-mono) !important;
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  line-height: 1.25rem !important;
+  color: var(--foreground) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+button[data-slot='popover-trigger'][aria-readonly]:not(:disabled) svg {
+  display: none !important;
+}
+
+button[data-slot='popover-trigger'][aria-readonly][data-size='sm']:not(:disabled) {
+  min-height: 1.75rem !important;
+  padding-block: 0.375rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+button[data-slot='popover-trigger'][aria-readonly][data-empty]:not(:disabled) {
+  color: color-mix(in oklch, var(--muted-foreground) 85%, transparent) !important;
+}
+
+.code-jar-editor[aria-readonly] {
+  cursor: default !important;
+  border-color: transparent !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.code-jar-editor[aria-readonly]:focus-visible {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+}

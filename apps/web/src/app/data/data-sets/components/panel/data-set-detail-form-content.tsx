@@ -31,6 +31,8 @@ import {
   updateDataSetEditorBindingAtom,
 } from '@/models/data-set/editor/form-state.atom';
 import { Section } from '@/components/section';
+import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
+import { cn } from '@/lib/utils';
 
 export function DataSetDetailFormContent(props: {
   form: DataSetFormState;
@@ -271,59 +273,57 @@ function DataSetBindingRowBlock({
           <FieldLabel>
             筛选数据列<span className="text-xs text-muted-foreground">留空启用全部</span>
           </FieldLabel>
-          {readOnly ? (
-            <div className="flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent bg-clip-padding px-2.5 py-1 text-sm">
-              {row.columns.length ? (
-                row.columns.map((c) => (
-                  <span
-                    key={c}
-                    className="flex h-5.25 w-fit items-center justify-center rounded-sm bg-muted px-1.5 font-mono text-xs font-medium whitespace-nowrap text-foreground opacity-70"
-                  >
-                    {c}
-                  </span>
-                ))
-              ) : (
-                <span className="text-xs text-muted-foreground">（未选择：启用全部）</span>
-              )}
-            </div>
-          ) : (
-            <Combobox
-              items={columnOptions}
-              multiple
-              value={row.columns}
-              onValueChange={(v) => updateBinding(index, { columns: v ?? [] })}
-              openOnInputClick
+          <Combobox
+            items={columnOptions}
+            multiple
+            value={row.columns}
+            readOnly={readOnly}
+            openOnInputClick={!readOnly}
+            onValueChange={(v) => {
+              if (readOnly) return;
+              updateBinding(index, { columns: v ?? [] });
+            }}
+          >
+            <ComboboxChips
+              ref={columnsAnchor}
+              className={cn('w-full min-w-0', readOnly && READONLY_CONTROL_SURFACE, readOnly && 'font-normal')}
             >
-              <ComboboxChips ref={columnsAnchor} className="w-full min-w-0">
-                <ComboboxValue>
-                  {(value: string[]) => (
-                    <>
-                      {value.map((c) => (
-                        <ComboboxChip key={c} className="font-mono text-xs" aria-label={`移除 ${c}`}>
-                          {c}
-                        </ComboboxChip>
-                      ))}
-                    </>
-                  )}
-                </ComboboxValue>
-              </ComboboxChips>
-              <ComboboxContent
-                anchor={columnsAnchor}
-                sideOffset={4}
-                align="start"
-                className="w-max max-w-[min(28rem,var(--available-width))]"
-              >
-                <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配列</ComboboxEmpty>
-                <ComboboxList className="outline-none">
-                  {(item: string) => (
-                    <ComboboxItem key={item} value={item} className="items-start text-sm">
-                      <span className="min-w-0 flex-1 whitespace-normal wrap-break-word font-mono text-xs">{item}</span>
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          )}
+              <ComboboxValue>
+                {(value: string[]) => (
+                  <>
+                    {readOnly && value.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">（未选择：启用全部）</span>
+                    ) : null}
+                    {value.map((c) => (
+                      <ComboboxChip
+                        key={c}
+                        className={cn('font-mono text-xs', readOnly && 'opacity-70')}
+                        aria-label={readOnly ? c : `移除 ${c}`}
+                        showRemove={!readOnly}
+                      >
+                        {c}
+                      </ComboboxChip>
+                    ))}
+                  </>
+                )}
+              </ComboboxValue>
+            </ComboboxChips>
+            <ComboboxContent
+              anchor={columnsAnchor}
+              sideOffset={4}
+              align="start"
+              className="w-max max-w-[min(28rem,var(--available-width))]"
+            >
+              <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">无匹配列</ComboboxEmpty>
+              <ComboboxList className="outline-none">
+                {(item: string) => (
+                  <ComboboxItem key={item} value={item} className="items-start text-sm">
+                    <span className="min-w-0 flex-1 whitespace-normal wrap-break-word font-mono text-xs">{item}</span>
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </Field>
       </FieldGroup>
     </div>

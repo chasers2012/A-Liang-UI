@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus, Trash2 } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import {
   factorsEditDependenciesAtom,
   factorsEditDescriptionAtom,
@@ -19,6 +20,7 @@ import {
   factorsEditParamSpecsAtom,
 } from '@/models/factor';
 import { CodeJar } from '@/components/ui/code-jar';
+import { READONLY_CONTROL_SURFACE, READONLY_VALUE_MONO_CLASSNAME } from '@/lib/readonly-field';
 import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
 import { FactorGroupCombobox } from './factor-group-combobox';
 
@@ -45,7 +47,7 @@ function FactorParamsField({
     <Field className="gap-2">
       <FieldLabel htmlFor={pid('params')}>参数 params</FieldLabel>
       {paramSpecs.length > 0 ? (
-        <div id={pid('params')} className="rounded-md bg-muted/30 px-3 py-2 text-sm">
+        <div id={pid('params')} className={cn(READONLY_CONTROL_SURFACE, 'text-sm')}>
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
@@ -62,121 +64,104 @@ function FactorParamsField({
                 {paramSpecs.map((p, index) => (
                   <tr key={`${p.name}-${index}`} className="align-middle">
                     <td className="py-1 pr-2">
-                      {readOnly ? (
-                        <Badge variant="secondary" size="default" className="font-mono shrink-0">
-                          {p.name}
-                        </Badge>
-                      ) : (
-                        <Input
-                          id={pid(`params-name-${p.name}`)}
-                          className="h-7 w-28 font-mono text-xs"
-                          value={p.name}
-                          onChange={(e) => {
-                            setParamSpecs((current) => {
-                              return (current ?? []).map((row, i) =>
-                                i === index ? { ...row, name: e.target.value } : row,
-                              );
-                            });
-                          }}
-                        />
-                      )}
-                    </td>
-                    <td className="py-1 pr-2 min-w-[180px]">
-                      {readOnly ? (
-                        <span className="text-muted-foreground">{p.label}</span>
-                      ) : (
-                        <Input
-                          id={pid(`params-label-${p.name}`)}
-                          className="h-7 min-w-[96px] w-full text-xs"
-                          value={p.label}
-                          onChange={(e) => {
-                            const label = e.target.value;
-                            setParamSpecs((current) =>
-                              (current ?? []).map((row, i) => (i === index ? { ...row, label } : row)),
+                      <Input
+                        id={pid(`params-name-${p.name}`)}
+                        className="h-7 w-28 font-mono text-xs"
+                        value={p.name}
+                        readOnly={readOnly}
+                        onChange={(e) => {
+                          setParamSpecs((current) => {
+                            return (current ?? []).map((row, i) =>
+                              i === index ? { ...row, name: e.target.value } : row,
                             );
-                          }}
-                        />
-                      )}
+                          });
+                        }}
+                      />
+                    </td>
+                    <td className="min-w-[180px] py-1 pr-2">
+                      <Input
+                        id={pid(`params-label-${p.name}`)}
+                        className="h-7 min-w-[96px] w-full text-xs"
+                        value={p.label}
+                        readOnly={readOnly}
+                        onChange={(e) => {
+                          const label = e.target.value;
+                          setParamSpecs((current) =>
+                            (current ?? []).map((row, i) => (i === index ? { ...row, label } : row)),
+                          );
+                        }}
+                      />
                     </td>
                     <td className="py-1 pr-2">
-                      {readOnly ? (
-                        <span className="font-mono text-xs text-muted-foreground">{p.default ?? '-'}</span>
-                      ) : (
-                        <Input
-                          id={pid(`params-default-${p.name}`)}
-                          type="number"
-                          className="h-7 w-24 font-mono text-xs"
-                          value={p.default ?? ''}
-                          onChange={(e) => {
-                            const v = e.target.value.trim();
-                            if (v === '' || v === '-') {
-                              setParamSpecs((current) =>
-                                (current ?? []).map((row, i) => (i === index ? { ...row, default: null } : row)),
-                              );
-                              return;
-                            }
-                            const n = Number(v);
-                            if (!Number.isFinite(n)) return;
+                      <Input
+                        id={pid(`params-default-${p.name}`)}
+                        type="number"
+                        className="h-7 w-24 font-mono text-xs"
+                        value={p.default ?? ''}
+                        readOnly={readOnly}
+                        onChange={(e) => {
+                          const v = e.target.value.trim();
+                          if (v === '' || v === '-') {
                             setParamSpecs((current) =>
-                              (current ?? []).map((row, i) => (i === index ? { ...row, default: n } : row)),
+                              (current ?? []).map((row, i) => (i === index ? { ...row, default: null } : row)),
                             );
-                          }}
-                        />
-                      )}
+                            return;
+                          }
+                          const n = Number(v);
+                          if (!Number.isFinite(n)) return;
+                          setParamSpecs((current) =>
+                            (current ?? []).map((row, i) => (i === index ? { ...row, default: n } : row)),
+                          );
+                        }}
+                      />
                     </td>
                     <td className="py-1 pr-2">
-                      {readOnly ? (
-                        <span className="font-mono text-xs text-muted-foreground">{p.min ?? '-'}</span>
-                      ) : (
-                        <Input
-                          id={pid(`params-min-${p.name}`)}
-                          type="number"
-                          className="h-7 w-20 font-mono text-xs"
-                          value={p.min ?? ''}
-                          placeholder="min"
-                          onChange={(e) => {
-                            const v = e.target.value.trim();
-                            if (v === '' || v === '-') {
-                              setParamSpecs((current) =>
-                                (current ?? []).map((row, i) => (i === index ? { ...row, min: null } : row)),
-                              );
-                              return;
-                            }
-                            const n = Number(v);
-                            if (!Number.isFinite(n)) return;
+                      <Input
+                        id={pid(`params-min-${p.name}`)}
+                        type="number"
+                        className="h-7 w-20 font-mono text-xs"
+                        value={p.min ?? ''}
+                        readOnly={readOnly}
+                        placeholder="min"
+                        onChange={(e) => {
+                          const v = e.target.value.trim();
+                          if (v === '' || v === '-') {
                             setParamSpecs((current) =>
-                              (current ?? []).map((row, i) => (i === index ? { ...row, min: n } : row)),
+                              (current ?? []).map((row, i) => (i === index ? { ...row, min: null } : row)),
                             );
-                          }}
-                        />
-                      )}
+                            return;
+                          }
+                          const n = Number(v);
+                          if (!Number.isFinite(n)) return;
+                          setParamSpecs((current) =>
+                            (current ?? []).map((row, i) => (i === index ? { ...row, min: n } : row)),
+                          );
+                        }}
+                      />
                     </td>
                     <td className="py-1 pr-2">
-                      {readOnly ? (
-                        <span className="font-mono text-xs text-muted-foreground">{p.max ?? '-'}</span>
-                      ) : (
-                        <Input
-                          id={pid(`params-max-${p.name}`)}
-                          type="number"
-                          className="h-7 w-20 font-mono text-xs"
-                          value={p.max ?? ''}
-                          placeholder="max"
-                          onChange={(e) => {
-                            const v = e.target.value.trim();
-                            if (v === '' || v === '-') {
-                              setParamSpecs((current) =>
-                                (current ?? []).map((row, i) => (i === index ? { ...row, max: null } : row)),
-                              );
-                              return;
-                            }
-                            const n = Number(v);
-                            if (!Number.isFinite(n)) return;
+                      <Input
+                        id={pid(`params-max-${p.name}`)}
+                        type="number"
+                        className="h-7 w-20 font-mono text-xs"
+                        value={p.max ?? ''}
+                        readOnly={readOnly}
+                        placeholder="max"
+                        onChange={(e) => {
+                          const v = e.target.value.trim();
+                          if (v === '' || v === '-') {
                             setParamSpecs((current) =>
-                              (current ?? []).map((row, i) => (i === index ? { ...row, max: n } : row)),
+                              (current ?? []).map((row, i) => (i === index ? { ...row, max: null } : row)),
                             );
-                          }}
-                        />
-                      )}
+                            return;
+                          }
+                          const n = Number(v);
+                          if (!Number.isFinite(n)) return;
+                          setParamSpecs((current) =>
+                            (current ?? []).map((row, i) => (i === index ? { ...row, max: n } : row)),
+                          );
+                        }}
+                      />
                     </td>
                     {!readOnly ? (
                       <td className="py-1 text-right">
@@ -204,7 +189,10 @@ function FactorParamsField({
           </div>
         </div>
       ) : (
-        <div id={pid('params')} className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <div
+          id={pid('params')}
+          className={cn(READONLY_VALUE_MONO_CLASSNAME, 'flex h-8 items-center text-muted-foreground')}
+        >
           -
         </div>
       )}
@@ -256,25 +244,28 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
         {!hideNameField && (
           <Field className="gap-2 sm:col-span-2">
             <FieldLabel htmlFor={pid('name')}>标识 name</FieldLabel>
-            {readOnly ? (
-              <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.name || '-'}</div>
-            ) : (
-              <Input
-                id={pid('name')}
-                className="font-mono text-sm"
-                value={form.name}
-                readOnly={readOnly}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="my_factor"
-                autoComplete="off"
-              />
-            )}
+            <Input
+              id={pid('name')}
+              className="font-mono text-sm"
+              value={form.name}
+              readOnly={readOnly}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={readOnly ? '-' : 'my_factor'}
+              autoComplete="off"
+            />
           </Field>
         )}
         <Field className="min-w-0 gap-2">
           <FieldLabel htmlFor={pid('group')}>分组 group</FieldLabel>
           {readOnly ? (
-            <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.group || '-'}</div>
+            <Input
+              id={pid('group')}
+              className="font-mono text-sm"
+              value={form.group}
+              readOnly
+              placeholder="-"
+              onChange={() => {}}
+            />
           ) : (
             <FactorGroupCombobox id={pid('group')} value={form.group} onValueChange={(group) => setGroup(group)} />
           )}
@@ -282,40 +273,31 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
         </Field>
         <Field className="min-w-0 gap-2">
           <FieldLabel htmlFor={pid('mw')}>window</FieldLabel>
-          {readOnly ? (
-            <div className="rounded-md bg-muted/30 px-3 py-2 font-mono text-sm">{form.window || '-'}</div>
-          ) : (
-            <Input
-              id={pid('mw')}
-              type="number"
-              min={1}
-              className="font-mono"
-              value={String(form.window)}
-              readOnly={readOnly}
-              onChange={(e) => {
-                const next = Number.parseInt(e.target.value, 10);
-                setWindow(Number.isFinite(next) ? next : 1);
-              }}
-            />
-          )}
+          <Input
+            id={pid('mw')}
+            type="number"
+            min={1}
+            className="font-mono"
+            value={String(form.window)}
+            readOnly={readOnly}
+            onChange={(e) => {
+              const next = Number.parseInt(e.target.value, 10);
+              setWindow(Number.isFinite(next) ? next : 1);
+            }}
+          />
         </Field>
       </FieldGroup>
       {!hideDescriptionField ? (
         <Field className="gap-2">
           <FieldLabel htmlFor={pid('desc')}>描述</FieldLabel>
-          {readOnly ? (
-            <div className="min-h-16 rounded-md bg-muted/30 px-3 py-2 text-sm whitespace-pre-wrap">
-              {form.description || '-'}
-            </div>
-          ) : (
-            <Textarea
-              id={pid('desc')}
-              rows={2}
-              value={form.description}
-              readOnly={readOnly}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          )}
+          <Textarea
+            id={pid('desc')}
+            rows={2}
+            value={form.description}
+            readOnly={readOnly}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={readOnly ? '-' : undefined}
+          />
         </Field>
       ) : null}
       <Field className="gap-2">
@@ -330,7 +312,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               ))}
             </div>
           ) : (
-            <div className="rounded-md bg-muted/30 px-3 py-2 text-sm text-muted-foreground h-[32px]">-</div>
+            <div className={cn(READONLY_VALUE_MONO_CLASSNAME, 'flex h-8 items-center text-muted-foreground')}>-</div>
           )
         ) : (
           <FactorDependenciesCombobox
