@@ -20,25 +20,10 @@ export function EvaluationProfilePanelActions() {
   const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
   const [selectedId] = useAtom(evaluationProfilesPanelSelectedIdAtom);
   const isCreate = selectedId == null;
-  const formKey = isCreate ? '__new__' : selectedId;
-  const formState = useAtomValue(evaluationProfileFormStateAtomFamily(formKey));
+  const formState = useAtomValue(evaluationProfileFormStateAtomFamily(selectedId));
   const cancelEditor = useSetAtom(cancelEvaluationProfileEditorAtom);
   const enterEditor = useSetAtom(enterEvaluationProfileEditorAtom);
   const commitEditor = useSetAtom(commitEvaluationProfileEditorAtom);
-
-  const pending = formState.loading || formState.templateLoading || formState.loadError;
-
-  if (isEditing && pending) {
-    return (
-      <button
-        type="button"
-        className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
-        onClick={() => void cancelEditor()}
-      >
-        取消
-      </button>
-    );
-  }
 
   if (isEditing) {
     return (
