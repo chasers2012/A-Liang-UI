@@ -4,23 +4,19 @@ import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
-import { buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Page } from '@/components/page';
-import { cn } from '@/lib/utils';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { SearchList } from '@/components/search-list';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
+import { listAtoms, refreshNodeTypesAtom } from '@/models/evaluation-profile/list-detail.atom';
 import {
-  evaluationProfilesListAtoms,
-  refreshEvaluationProfileNodeTypesAtom,
-} from '@/models/evaluation-profile/list-detail.atom';
-import {
-  cancelEvaluationProfileEditorAtom,
-  evaluationProfilesPanelIsEditingAtom,
-  evaluationProfilesPanelSelectedIdAtom,
-  selectEvaluationProfileFromListAtom,
-  startCreateEvaluationProfileAtom,
-} from '@/models/evaluation-profile/panel.atom';
+  cancelEditorAtom,
+  isEditingAtom,
+  selectedIdAtom,
+  selectProfileAtom,
+  startCreateAtom,
+} from '@/models/evaluation-profile/scope.atom';
 
 import { EvaluationProfileDetailPanel } from './ui/evaluation-profile-detail-panel';
 
@@ -30,18 +26,18 @@ function listEmptyText(itemCount: number): string {
 }
 
 export default function EvaluationProfilesPage() {
-  const items = useAtomValue(evaluationProfilesListAtoms.valueAtom);
-  const refreshList = useSetAtom(evaluationProfilesListAtoms.refreshAtom);
-  const refreshNodeTypes = useSetAtom(refreshEvaluationProfileNodeTypesAtom);
+  const items = useAtomValue(listAtoms.valueAtom);
+  const refreshList = useSetAtom(listAtoms.refreshAtom);
+  const refreshNodeTypes = useSetAtom(refreshNodeTypesAtom);
 
-  const selectedId = useAtomValue(evaluationProfilesPanelSelectedIdAtom);
-  const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
-  const setPanelSelectedId = useSetAtom(evaluationProfilesPanelSelectedIdAtom);
-  const selectItem = useSetAtom(selectEvaluationProfileFromListAtom);
-  const startCreate = useSetAtom(startCreateEvaluationProfileAtom);
-  const cancelEdit = useSetAtom(cancelEvaluationProfileEditorAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const setPanelSelectedId = useSetAtom(selectedIdAtom);
+  const selectItem = useSetAtom(selectProfileAtom);
+  const startCreate = useSetAtom(startCreateAtom);
+  const cancelEdit = useSetAtom(cancelEditorAtom);
 
-  useNavigationEditGuard(evaluationProfilesPanelIsEditingAtom, {
+  useNavigationEditGuard(isEditingAtom, {
     onAbandon: () => cancelEdit(),
   });
 
@@ -80,14 +76,15 @@ export default function EvaluationProfilesPage() {
           loadingText="加载中…"
           onItemSelected={(item) => void selectItem(item.id)}
           toolbarRight={
-            <button
+            <Button
               type="button"
-              className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
+              variant="default"
+              size="icon"
               aria-label="新增评价方案"
               onClick={() => void startCreate()}
             >
               <Plus className="size-4" aria-hidden />
-            </button>
+            </Button>
           }
         />
       </CollapsibleSearchListSidebar>

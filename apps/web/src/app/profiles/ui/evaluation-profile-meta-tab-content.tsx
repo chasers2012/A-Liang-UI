@@ -2,37 +2,31 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
-import { EditablePageDescription } from '@/components/editable-page-description';
-import {
-  evaluationProfileMetaPresentationAtom,
-  setEvaluationProfileMetaDescriptionAtom,
-} from '@/models/evaluation-profile/meta.atom';
-import {
-  evaluationProfilesPanelIsEditingAtom,
-  evaluationProfilesPanelLoadingAtom,
-} from '@/models/evaluation-profile/panel.atom';
+import { Textarea } from '@/components/ui/textarea';
+import { mergedDescriptionAtom, setMetaDescriptionAtom } from '@/models/evaluation-profile/meta.atom';
+import { isEditingAtom, loadingAtom } from '@/models/evaluation-profile/scope.atom';
+import { Section } from '@/components/section';
 
 export function EvaluationProfileMetaTabContent() {
-  const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
-  const { description, showSection } = useAtomValue(evaluationProfileMetaPresentationAtom);
-  const setDescription = useSetAtom(setEvaluationProfileMetaDescriptionAtom);
-  const panelLoading = useAtomValue(evaluationProfilesPanelLoadingAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const description = useAtomValue(mergedDescriptionAtom);
+  const setDescription = useSetAtom(setMetaDescriptionAtom);
+  const panelLoading = useAtomValue(loadingAtom);
 
   if (panelLoading) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-1">
-      {showSection ? (
-        <div className="rounded-md border bg-card p-4">
-          <EditablePageDescription
-            value={description}
-            onChange={(v) => void setDescription(v)}
-            textareaAriaLabel="评价方案描述"
-            emptyText="无描述"
-            showEdit={isEditing}
-          />
-        </div>
-      ) : null}
+      <Section title="简介">
+        <Textarea
+          value={description}
+          onChange={(e) => void setDescription(e.target.value)}
+          readOnly={!isEditing}
+          aria-label="评价方案描述"
+          placeholder="无描述"
+          className="min-h-28 resize-y text-sm leading-relaxed"
+        />
+      </Section>
     </div>
   );
 }

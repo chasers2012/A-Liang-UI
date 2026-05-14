@@ -6,63 +6,59 @@ import { listNodes } from '@/api/nodes';
 import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
 import type { EvaluationProfilePublic } from './dto';
 import type { NodeSummaryPublic } from '@/models/nodes/dto';
-import {
-  adjustEvaluationProfilesPanelLoadingDepthAtom,
-  evaluationProfilesPanelErrorAtom,
-  evaluationProfilesPanelIsEditingAtom,
-} from '@/models/evaluation-profile/panel.atom';
+import { adjustLoadingDepthAtom, errorAtom, isEditingAtom } from '@/models/evaluation-profile/scope.atom';
 
-export const evaluationProfilesListAtoms = createRefreshableAsyncAtoms<EvaluationProfilePublic[] | null>({
+export const listAtoms = createRefreshableAsyncAtoms<EvaluationProfilePublic[] | null>({
   initialValue: null,
   fetcher: listEvaluationProfiles,
 });
 
-export type EvaluationProfileDetailState = {
+export type DetailState = {
   row: EvaluationProfilePublic | null;
 };
 
-export const evaluationProfileDetailAtomFamily = atomFamily((id: string) => {
+export const detailAtomFamily = atomFamily((id: string) => {
   void id;
-  return atom<EvaluationProfileDetailState>({ row: null });
+  return atom<DetailState>({ row: null });
 });
 
-export const loadEvaluationProfileDetailAtomFamily = atomFamily((id: string) =>
+export const loadDetailAtomFamily = atomFamily((id: string) =>
   atom(null, async (_get, set) => {
     if (!id) return;
-    set(adjustEvaluationProfilesPanelLoadingDepthAtom, 1);
+    set(adjustLoadingDepthAtom, 1);
     try {
-      set(evaluationProfilesPanelErrorAtom, null);
-      set(evaluationProfileDetailAtomFamily(id), { row: null });
+      set(errorAtom, null);
+      set(detailAtomFamily(id), { row: null });
       const row = await getEvaluationProfile(id);
-      set(evaluationProfileDetailAtomFamily(id), { row });
-      set(evaluationProfilesPanelErrorAtom, null);
+      set(detailAtomFamily(id), { row });
+      set(errorAtom, null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      set(evaluationProfileDetailAtomFamily(id), { row: null });
-      set(evaluationProfilesPanelErrorAtom, msg);
+      set(detailAtomFamily(id), { row: null });
+      set(errorAtom, msg);
     } finally {
-      set(adjustEvaluationProfilesPanelLoadingDepthAtom, -1);
+      set(adjustLoadingDepthAtom, -1);
     }
   }),
 );
 
-export type EvaluationProfileNodeTypesState = {
+export type NodeTypesState = {
   items: NodeSummaryPublic[] | null;
 };
 
-export const evaluationProfileNodeTypesAtom = atom<EvaluationProfileNodeTypesState>({
+export const nodeTypesAtom = atom<NodeTypesState>({
   items: null,
 });
 
-export const refreshEvaluationProfileNodeTypesAtom = atom(null, async (get, set) => {
+export const refreshNodeTypesAtom = atom(null, async (get, set) => {
   try {
     const items = await listNodes('evaluation-profile');
-    set(evaluationProfileNodeTypesAtom, { items });
+    set(nodeTypesAtom, { items });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    set(evaluationProfileNodeTypesAtom, { items: null });
-    if (!get(evaluationProfilesPanelIsEditingAtom)) {
-      set(evaluationProfilesPanelErrorAtom, msg);
+    set(nodeTypesAtom, { items: null });
+    if (!get(isEditingAtom)) {
+      set(errorAtom, msg);
     }
   }
 });

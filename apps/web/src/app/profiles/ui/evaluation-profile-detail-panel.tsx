@@ -6,22 +6,14 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { detailAtomFamily, loadDetailAtomFamily } from '@/models/evaluation-profile/list-detail.atom';
+import { errorAtom, isEditingAtom, loadingAtom, selectedIdAtom } from '@/models/evaluation-profile/scope.atom';
 import {
-  evaluationProfileDetailAtomFamily,
-  loadEvaluationProfileDetailAtomFamily,
-} from '@/models/evaluation-profile/list-detail.atom';
-import {
-  evaluationProfilesPanelErrorAtom,
-  evaluationProfilesPanelIsEditingAtom,
-  evaluationProfilesPanelLoadingAtom,
-  evaluationProfilesPanelSelectedIdAtom,
-} from '@/models/evaluation-profile/panel.atom';
-import {
-  evaluationProfileEditorGetLiveWorkflowAtom,
-  EVALUATION_PROFILE_SUBMIT_ERROR_PREFIX,
-  initEvaluationProfileFormAtomFamily,
-  setEvaluationProfileFormNameAtomFamily,
-  evaluationProfileFormStateAtomFamily,
+  editorGetLiveWorkflowAtom,
+  SUBMIT_ERROR_PREFIX,
+  initFormAtom,
+  setFormNameAtom,
+  formStateAtom,
 } from '@/models/evaluation-profile/form.atom';
 import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
@@ -31,10 +23,10 @@ import { EvaluationProfilePanelActions } from './evaluation-profile-panel-action
 import { EvaluationProfileWorkflowTabContent } from './evaluation-profile-workflow-tab-content';
 
 function EvaluationProfileDetailPanelAlerts() {
-  const panelError = useAtomValue(evaluationProfilesPanelErrorAtom);
-  const panelLoading = useAtomValue(evaluationProfilesPanelLoadingAtom);
-  const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
-  const selectedId = useAtomValue(evaluationProfilesPanelSelectedIdAtom);
+  const panelError = useAtomValue(errorAtom);
+  const panelLoading = useAtomValue(loadingAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
 
   if (panelLoading) {
     return <p className="mb-4 text-sm text-muted-foreground">加载中…</p>;
@@ -49,13 +41,11 @@ function EvaluationProfileDetailPanelAlerts() {
   }
 
   if (panelError) {
-    const isSubmitError = panelError.startsWith(EVALUATION_PROFILE_SUBMIT_ERROR_PREFIX);
+    const isSubmitError = panelError.startsWith(SUBMIT_ERROR_PREFIX);
     return (
       <Alert variant="destructive" className="mb-4">
         {isSubmitError ? <AlertTitle>无法保存</AlertTitle> : null}
-        <AlertDescription>
-          {isSubmitError ? panelError.slice(EVALUATION_PROFILE_SUBMIT_ERROR_PREFIX.length) : panelError}
-        </AlertDescription>
+        <AlertDescription>{isSubmitError ? panelError.slice(SUBMIT_ERROR_PREFIX.length) : panelError}</AlertDescription>
       </Alert>
     );
   }
@@ -77,19 +67,19 @@ function getReadonlyTitlePlaceholder(args: {
 }
 
 export function EvaluationProfileDetailPanel() {
-  const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
-  const [selectedId] = useAtom(evaluationProfilesPanelSelectedIdAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const [selectedId] = useAtom(selectedIdAtom);
 
   const isCreate = selectedId == null;
-  const formState = useAtomValue(evaluationProfileFormStateAtomFamily(selectedId));
-  const initForm = useSetAtom(initEvaluationProfileFormAtomFamily(selectedId));
-  const setName = useSetAtom(setEvaluationProfileFormNameAtomFamily(selectedId));
-  const setGetLiveWorkflow = useSetAtom(evaluationProfileEditorGetLiveWorkflowAtom);
+  const formState = useAtomValue(formStateAtom);
+  const initForm = useSetAtom(initFormAtom);
+  const setName = useSetAtom(setFormNameAtom);
+  const setGetLiveWorkflow = useSetAtom(editorGetLiveWorkflowAtom);
 
-  const { row } = useAtomValue(evaluationProfileDetailAtomFamily(selectedId ?? ''));
-  const panelError = useAtomValue(evaluationProfilesPanelErrorAtom);
-  const panelLoading = useAtomValue(evaluationProfilesPanelLoadingAtom);
-  const loadDetail = useSetAtom(loadEvaluationProfileDetailAtomFamily(selectedId ?? ''));
+  const { row } = useAtomValue(detailAtomFamily(selectedId ?? ''));
+  const panelError = useAtomValue(errorAtom);
+  const panelLoading = useAtomValue(loadingAtom);
+  const loadDetail = useSetAtom(loadDetailAtomFamily(selectedId ?? ''));
 
   const [canvasKey, setCanvasKey] = useState(0);
   const canvasRef = useRef<WorkflowGraphCanvasHandle>(null);
@@ -142,22 +132,13 @@ export function EvaluationProfileDetailPanel() {
         {
           value: 'meta',
           label: '基础信息',
-          content: (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-              <EvaluationProfileMetaTabContent />
-            </div>
-          ),
+          content: <EvaluationProfileMetaTabContent />,
           contentClassName: 'overflow-y-auto',
         },
         {
           value: 'workflow',
           label: '工作流',
-          content: (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-              <EvaluationProfileWorkflowTabContent canvasKey={canvasKey} canvasRef={canvasRef} />
-            </div>
-          ),
-          contentClassName: 'overflow-hidden',
+          content: <EvaluationProfileWorkflowTabContent canvasKey={canvasKey} canvasRef={canvasRef} />,
         },
       ]}
     >

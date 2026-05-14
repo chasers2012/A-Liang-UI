@@ -1,47 +1,43 @@
 import { atom } from 'jotai';
 
-import { evaluationProfileFormStateAtomFamily } from '@/models/evaluation-profile/form.atom';
-import { evaluationProfileDetailAtomFamily } from '@/models/evaluation-profile/list-detail.atom';
-import {
-  evaluationProfilesPanelIsEditingAtom,
-  evaluationProfilesPanelSelectedIdAtom,
-} from '@/models/evaluation-profile/panel.atom';
+import { formStateAtom } from '@/models/evaluation-profile/form.atom';
+import { detailAtomFamily } from '@/models/evaluation-profile/list-detail.atom';
+import { isEditingAtom, selectedIdAtom } from '@/models/evaluation-profile/scope.atom';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 
 /**
  * 远程数据层：详情 row 上的工作流图（无 row 或未选中时为 null）。
  */
-export const evaluationProfileWorkflowRemoteWorkflowAtom = atom((get) => {
-  const selectedId = get(evaluationProfilesPanelSelectedIdAtom);
-  if (selectedId == null) return null;
-  return get(evaluationProfileDetailAtomFamily(selectedId)).row?.workflow ?? null;
+export const remoteWorkflowAtom = atom((get) => {
+  const sid = get(selectedIdAtom);
+  if (sid == null) return null;
+  return get(detailAtomFamily(sid)).row?.workflow ?? null;
 });
 
 /**
- * 本地修改层：表单草稿中的工作流（与 {@link evaluationProfileFormStateAtomFamily} 一致）。
+ * 本地修改层：表单草稿中的工作流（与 {@link formStateAtom} 一致）。
  */
-export const evaluationProfileWorkflowLocalWorkflowAtom = atom((get) => {
-  const selectedId = get(evaluationProfilesPanelSelectedIdAtom);
-  return get(evaluationProfileFormStateAtomFamily(selectedId)).workflow;
-});
+export const localWorkflowAtom = atom((get) => get(formStateAtom).workflow);
 
-export type EvaluationProfileWorkflowPresentation = {
-  /** 画布 initialGraph：编辑态用本地，只读态用远程，无远程时回落本地（与原 UI 一致） */
+export type WorkflowDerived = {
+  /** initialGraph 取值：编辑会话用表单草稿，否则用远程；无远程时回落为草稿。 */
   workflow: WorkflowGraphPersisted;
-  showCanvas: boolean;
-  readOnly: boolean;
+  /** 是否具备可绑定工作流图的数据上下文（编辑中或已加载到 row）。 */
+  workflowGraphAvailable: boolean;
+  /** 工作流图是否禁止编辑（与编辑会话互斥）。 */
+  workflowReadOnly: boolean;
 };
 
-/** 对 UI 暴露的合并只读状态（远程 + 本地） */
-export const evaluationProfileWorkflowPresentationAtom = atom<EvaluationProfileWorkflowPresentation>((get) => {
-  const isEditing = get(evaluationProfilesPanelIsEditingAtom);
-  const selectedId = get(evaluationProfilesPanelSelectedIdAtom);
-  const local = get(evaluationProfileWorkflowLocalWorkflowAtom);
-  const remote = get(evaluationProfileWorkflowRemoteWorkflowAtom);
-  const { row } = get(evaluationProfileDetailAtomFamily(selectedId ?? ''));
+/** 合并远程与表单的只读派生状态。 */
+export const workflowDerivedAtom = atom<WorkflowDerived>((get) => {
+  const editing = get(isEditingAtom);
+  const sid = get(selectedIdAtom);
+  const local = get(localWorkflowAtom);
+  const remote = get(remoteWorkflowAtom);
+  const { row } = get(detailAtomFamily(sid ?? ''));
   return {
-    workflow: isEditing ? local : (remote ?? local),
-    showCanvas: isEditing || (!!selectedId && !!row),
-    readOnly: !isEditing,
+    workflow: editing ? local : (remote ?? local),
+    workflowGraphAvailable: editing || (!!sid && !!row),
+    workflowReadOnly: !editing,
   };
 });

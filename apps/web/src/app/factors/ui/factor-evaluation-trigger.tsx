@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
-import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-detail.atom';
+import { listAtoms } from '@/models/evaluation-profile/list-detail.atom';
 import { runEvaluationActionAtom } from '@/models/evaluation-run';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useMemo, useState } from 'react';
@@ -14,7 +14,7 @@ export function FactorEvaluationTrigger(props: { factorId: string }) {
   const { factorId } = props;
 
   const dataSets = useAtomValue(dataSetAtoms.valueAtom) ?? EMPTY_DATA_SETS;
-  const evaluationProfiles = useAtomValue(evaluationProfilesListAtoms.valueAtom) ?? EMPTY_EVALUATION_PROFILES;
+  const evaluationProfiles = useAtomValue(listAtoms.valueAtom) ?? EMPTY_EVALUATION_PROFILES;
   const runEvaluation = useSetAtom(runEvaluationActionAtom);
 
   const [runProfileId, setRunProfileId] = useState<string>('');

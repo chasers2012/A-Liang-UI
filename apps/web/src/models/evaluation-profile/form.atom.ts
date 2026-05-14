@@ -1,5 +1,4 @@
 import { atom } from 'jotai';
-import { atomFamily } from 'jotai-family';
 
 import {
   createEvaluationProfile,
@@ -10,109 +9,100 @@ import {
 import { defaultNewName } from '@/lib/default-new-name';
 import { EMPTY_WORKFLOW, parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import { evaluationProfilesListAtoms } from '@/models/evaluation-profile/list-detail.atom';
+import { listAtoms } from '@/models/evaluation-profile/list-detail.atom';
 import {
-  adjustEvaluationProfilesPanelLoadingDepthAtom,
-  cancelEvaluationProfileEditorAtom,
-  evaluationProfilesPanelErrorAtom,
-  evaluationProfilesPanelIsEditingAtom,
-  evaluationProfilesPanelSelectedIdAtom,
-} from '@/models/evaluation-profile/panel.atom';
+  adjustLoadingDepthAtom,
+  cancelEditorAtom,
+  errorAtom,
+  isEditingAtom,
+  selectedIdAtom,
+} from '@/models/evaluation-profile/scope.atom';
 
-/** 与 {@link evaluationProfilesPanelErrorAtom} 中保存失败文案前缀一致，供 UI 区分初始化错误与保存错误 */
-export const EVALUATION_PROFILE_SUBMIT_ERROR_PREFIX = '无法保存：' as const;
+/** 与 {@link errorAtom} 中保存失败文案前缀一致，便于区分初始化错误与保存错误 */
+export const SUBMIT_ERROR_PREFIX = '无法保存：' as const;
 
-export type EvaluationProfileFormState = {
+export type FormState = {
   submitting: boolean;
   name: string;
   description: string;
   workflow: WorkflowGraphPersisted;
 };
 
-export const evaluationProfileFormStateAtomFamily = atomFamily((key: string | null) => {
-  void key;
-  return atom<EvaluationProfileFormState>({
-    submitting: false,
-    name: '',
-    description: '',
-    workflow: EMPTY_WORKFLOW,
-  });
+/** 当前唯一一份编辑草稿（任意时刻仅允许编辑一个评价方案）。 */
+export const formStateAtom = atom<FormState>({
+  submitting: false,
+  name: '',
+  description: '',
+  workflow: EMPTY_WORKFLOW,
 });
 
-export const initEvaluationProfileFormAtomFamily = atomFamily((key: string | null) =>
-  atom(null, async (_get, set, id?: string | null) => {
-    const isEdit = Boolean(id);
+export const initFormAtom = atom(null, async (_get, set, id?: string | null) => {
+  const isEdit = Boolean(id);
 
-    set(evaluationProfilesPanelErrorAtom, null);
-    set(adjustEvaluationProfilesPanelLoadingDepthAtom, 1);
-    try {
-      if (isEdit && id) {
-        try {
-          const d = await getEvaluationProfile(id);
-          set(evaluationProfileFormStateAtomFamily(key), (s) => ({
-            ...s,
-            name: d.name,
-            description: d.description,
-            workflow: d.workflow,
-          }));
-          set(evaluationProfilesPanelErrorAtom, null);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          set(evaluationProfilesPanelErrorAtom, msg);
-        }
-        return;
-      }
-
+  set(errorAtom, null);
+  set(adjustLoadingDepthAtom, 1);
+  try {
+    if (isEdit && id) {
       try {
-        const raw = await getEvaluationWorkflowTemplate();
-        const workflow = parsePersistedWorkflowGraphPayload(raw);
-        set(evaluationProfileFormStateAtomFamily(key), (s) => ({
+        const d = await getEvaluationProfile(id);
+        set(formStateAtom, (s) => ({
           ...s,
-          name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
-          workflow,
+          name: d.name,
+          description: d.description,
+          workflow: d.workflow,
         }));
-        set(evaluationProfilesPanelErrorAtom, null);
+        set(errorAtom, null);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        set(evaluationProfilesPanelErrorAtom, msg);
-        set(evaluationProfileFormStateAtomFamily(key), (s) => ({
-          ...s,
-          name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
-          workflow: EMPTY_WORKFLOW,
-        }));
+        set(errorAtom, msg);
       }
-    } finally {
-      set(adjustEvaluationProfilesPanelLoadingDepthAtom, -1);
+      return;
     }
-  }),
-);
 
-export const setEvaluationProfileFormNameAtomFamily = atomFamily((key: string | null) =>
-  atom(null, (_get, set, name: string) => {
-    set(evaluationProfileFormStateAtomFamily(key), (s) => ({ ...s, name }));
-  }),
-);
+    try {
+      const raw = await getEvaluationWorkflowTemplate();
+      const workflow = parsePersistedWorkflowGraphPayload(raw);
+      set(formStateAtom, (s) => ({
+        ...s,
+        name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
+        workflow,
+      }));
+      set(errorAtom, null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      set(errorAtom, msg);
+      set(formStateAtom, (s) => ({
+        ...s,
+        name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
+        workflow: EMPTY_WORKFLOW,
+      }));
+    }
+  } finally {
+    set(adjustLoadingDepthAtom, -1);
+  }
+});
 
-export const setEvaluationProfileFormDescriptionAtomFamily = atomFamily((key: string | null) =>
-  atom(null, (_get, set, description: string) => {
-    set(evaluationProfileFormStateAtomFamily(key), (s) => ({ ...s, description }));
-  }),
-);
+export const setFormNameAtom = atom(null, (_get, set, name: string) => {
+  set(formStateAtom, (s) => ({ ...s, name }));
+});
 
-export const setEvaluationProfileFormWorkflowAtomFamily = atomFamily((key: string | null) =>
-  atom(null, (_get, set, workflow: WorkflowGraphPersisted) => {
-    set(evaluationProfileFormStateAtomFamily(key), (s) => ({ ...s, workflow }));
-  }),
-);
+export const setFormDescriptionAtom = atom(null, (_get, set, description: string) => {
+  set(formStateAtom, (s) => ({ ...s, description }));
+});
 
-export const submitEvaluationProfileFormAtomFamily = atomFamily((key: string | null) =>
-  atom(null, async (get, set, payload: { id?: string | null; workflow: WorkflowGraphPersisted }) => {
+export const setFormWorkflowAtom = atom(null, (_get, set, workflow: WorkflowGraphPersisted) => {
+  set(formStateAtom, (s) => ({ ...s, workflow }));
+});
+
+export const submitFormAtom = atom(
+  null,
+  async (get, set, payload: { id?: string | null; workflow: WorkflowGraphPersisted }) => {
     const { id, workflow } = payload;
     const isEdit = Boolean(id);
-    const s = get(evaluationProfileFormStateAtomFamily(key));
+    const s = get(formStateAtom);
 
-    set(evaluationProfilesPanelErrorAtom, null);
-    set(evaluationProfileFormStateAtomFamily(key), (st) => ({ ...st, submitting: true }));
+    set(errorAtom, null);
+    set(formStateAtom, (st) => ({ ...st, submitting: true }));
     try {
       if (isEdit) {
         if (!id) throw new Error('无效 id');
@@ -121,7 +111,7 @@ export const submitEvaluationProfileFormAtomFamily = atomFamily((key: string | n
           description: s.description.trim(),
           workflow,
         });
-        set(evaluationProfileFormStateAtomFamily(key), (st) => ({ ...st, submitting: false }));
+        set(formStateAtom, (st) => ({ ...st, submitting: false }));
         return saved.id;
       }
       const created = await createEvaluationProfile({
@@ -129,39 +119,39 @@ export const submitEvaluationProfileFormAtomFamily = atomFamily((key: string | n
         description: s.description.trim(),
         workflow,
       });
-      set(evaluationProfileFormStateAtomFamily(key), (st) => ({ ...st, submitting: false }));
+      set(formStateAtom, (st) => ({ ...st, submitting: false }));
       return created.id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      set(evaluationProfilesPanelErrorAtom, `${EVALUATION_PROFILE_SUBMIT_ERROR_PREFIX}${msg}`);
-      set(evaluationProfileFormStateAtomFamily(key), (st) => ({
+      set(errorAtom, `${SUBMIT_ERROR_PREFIX}${msg}`);
+      set(formStateAtom, (st) => ({
         ...st,
         submitting: false,
       }));
       return null;
     }
-  }),
+  },
 );
 
-/** 编辑态下由详情面板注册，保存时优先取画布当前图 */
-export const evaluationProfileEditorGetLiveWorkflowAtom = atom<(() => WorkflowGraphPersisted | null) | null>(null);
+/** 编辑会话中由外部注册；提交保存时若存在则优先采用其返回的工作流图，否则使用表单内草稿。 */
+export const editorGetLiveWorkflowAtom = atom<(() => WorkflowGraphPersisted | null) | null>(null);
 
-export const commitEvaluationProfileEditorAtom = atom(null, async (get, set) => {
-  if (!get(evaluationProfilesPanelIsEditingAtom)) return;
+export const commitEditorAtom = atom(null, async (get, set) => {
+  if (!get(isEditingAtom)) return;
 
-  const selectedId = get(evaluationProfilesPanelSelectedIdAtom);
-  const isCreate = selectedId == null;
-  const formState = get(evaluationProfileFormStateAtomFamily(selectedId));
-  const getLive = get(evaluationProfileEditorGetLiveWorkflowAtom);
+  const sid = get(selectedIdAtom);
+  const isCreate = sid == null;
+  const formState = get(formStateAtom);
+  const getLive = get(editorGetLiveWorkflowAtom);
   const workflow = getLive?.() ?? formState.workflow;
 
-  const savedId = await set(submitEvaluationProfileFormAtomFamily(selectedId), {
-    id: isCreate ? null : selectedId,
+  const savedId = await set(submitFormAtom, {
+    id: isCreate ? null : sid,
     workflow,
   });
   if (!savedId) return;
 
-  set(cancelEvaluationProfileEditorAtom);
-  set(evaluationProfilesPanelSelectedIdAtom, savedId);
-  set(evaluationProfilesListAtoms.refreshAtom);
+  set(cancelEditorAtom);
+  set(selectedIdAtom, savedId);
+  set(listAtoms.refreshAtom);
 });
