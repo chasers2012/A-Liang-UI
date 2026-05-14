@@ -21,7 +21,6 @@ import {
 } from '@/models/evaluation-profile/form.atom';
 import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
-import { toWorkflowNodeTypes } from '@/components/workflow-graph';
 
 import { EvaluationProfileMetaTabContent } from './evaluation-profile-meta-tab-content';
 import { EvaluationProfilePanelActions } from './evaluation-profile-panel-actions';
@@ -39,8 +38,7 @@ function getReadonlyTitlePlaceholder(args: {
   return '评价方案详情';
 }
 
-export function EvaluationProfileDetailPanel(props: { nodeTypes: ReturnType<typeof toWorkflowNodeTypes> }) {
-  const { nodeTypes } = props;
+export function EvaluationProfileDetailPanel() {
   const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
   const [selectedId] = useAtom(evaluationProfilesPanelSelectedIdAtom);
 
@@ -120,7 +118,6 @@ export function EvaluationProfileDetailPanel(props: { nodeTypes: ReturnType<type
               <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
                 <EvaluationProfileWorkflowTabContent
                   isEditing={isEditing}
-                  nodeTypes={nodeTypes}
                   canvasKey={canvasKey}
                   canvasRef={canvasRef}
                 />

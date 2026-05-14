@@ -12,7 +12,6 @@ import { SearchList } from '@/components/search-list';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import {
   evaluationProfilesListAtoms,
-  evaluationProfileNodeTypesAtom,
   refreshEvaluationProfileNodeTypesAtom,
 } from '@/models/evaluation-profile/list-detail.atom';
 import {
@@ -22,7 +21,6 @@ import {
   selectEvaluationProfileFromListAtom,
   startCreateEvaluationProfileAtom,
 } from '@/models/evaluation-profile/panel.atom';
-import { toWorkflowNodeTypes } from '@/components/workflow-graph';
 
 import { EvaluationProfileDetailPanel } from './ui/evaluation-profile-detail-panel';
 
@@ -35,8 +33,6 @@ export default function EvaluationProfilesPage() {
   const items = useAtomValue(evaluationProfilesListAtoms.valueAtom);
   const refreshList = useSetAtom(evaluationProfilesListAtoms.refreshAtom);
   const refreshNodeTypes = useSetAtom(refreshEvaluationProfileNodeTypesAtom);
-  const { items: nodeCatalog } = useAtomValue(evaluationProfileNodeTypesAtom);
-  const nodeTypes = useMemo(() => toWorkflowNodeTypes(nodeCatalog ?? []), [nodeCatalog]);
 
   const selectedId = useAtomValue(evaluationProfilesPanelSelectedIdAtom);
   const isEditing = useAtomValue(evaluationProfilesPanelIsEditingAtom);
@@ -97,7 +93,7 @@ export default function EvaluationProfilesPage() {
       </CollapsibleSearchListSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <EvaluationProfileDetailPanel nodeTypes={nodeTypes} />
+        <EvaluationProfileDetailPanel />
       </div>
     </Page>
   );
