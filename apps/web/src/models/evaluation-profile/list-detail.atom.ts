@@ -2,8 +2,10 @@ import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
 import { getEvaluationProfile, listEvaluationProfiles } from '@/api/evaluation-profiles';
+import { listNodes } from '@/api/nodes';
 import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
 import type { EvaluationProfilePublic } from './dto';
+import type { NodeSummaryPublic } from '@/models/nodes/dto';
 
 export const evaluationProfilesListAtoms = createRefreshableAsyncAtoms<EvaluationProfilePublic[] | null>({
   initialValue: null,
@@ -35,3 +37,26 @@ export const loadEvaluationProfileDetailAtomFamily = atomFamily((id: string) =>
     }
   }),
 );
+
+export type EvaluationProfileNodeTypesState = {
+  items: NodeSummaryPublic[] | null;
+  error: string | null;
+};
+
+export const evaluationProfileNodeTypesAtom = atom<EvaluationProfileNodeTypesState>({
+  items: null,
+  error: null,
+});
+
+export const refreshEvaluationProfileNodeTypesAtom = atom(null, async (_get, set) => {
+  set(evaluationProfileNodeTypesAtom, (s) => ({ ...s, error: null }));
+  try {
+    const items = await listNodes('evaluation-profile');
+    set(evaluationProfileNodeTypesAtom, { items, error: null });
+  } catch (e) {
+    set(evaluationProfileNodeTypesAtom, {
+      items: null,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
+});

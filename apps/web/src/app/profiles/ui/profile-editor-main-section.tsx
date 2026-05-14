@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, type RefObject } from 'react';
-import { useSetAtom } from 'jotai';
+import { useMemo, type RefObject } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Field, FieldTitle } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import { getNode, getNodesDetailBatch, listNodes } from '@/api/nodes';
+import { getNode, getNodesDetailBatch } from '@/api/nodes';
 
 import {
   WORKFLOW_GRAPH_NODE_DRAG_MIME,
@@ -15,9 +15,12 @@ import {
   toWorkflowNodeTypes,
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import { NodeSummaryPublic } from '@/models/nodes/dto';
 import { SearchList } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
+import {
+  evaluationProfileNodeTypesAtom,
+  refreshEvaluationProfileNodeTypesAtom,
+} from '@/models/evaluation-profile/list-detail.atom';
 
 export function ProfileWorkflowEditorBlock(props: {
   workflow: WorkflowGraphPersisted;
@@ -27,24 +30,18 @@ export function ProfileWorkflowEditorBlock(props: {
 }) {
   const { workflow, canvasKey, canvasRef, className } = props;
 
-  const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
-  const [wfMetaLoading, setWfMetaLoading] = useState(true);
+  const { items: catalog } = useAtomValue(evaluationProfileNodeTypesAtom);
+  const refreshCatalog = useSetAtom(refreshEvaluationProfileNodeTypesAtom);
   const refreshProfileNodes = useSetAtom(refreshNodesByDomainAtomFamily('evaluation-profile'));
 
-  useEffect(() => {
-    void listNodes('evaluation-profile')
-      .then(setCatalog)
-      .catch(() => {})
-      .finally(() => setWfMetaLoading(false));
-  }, []);
-
-  const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
+  const catalogPending = catalog === null;
+  const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog ?? []), [catalog]);
 
   return (
     <div className={cn('flex flex-col min-h-0 flex-1 gap-3', className)}>
       <Field className="min-h-0 flex-1 gap-3">
         <FieldTitle>评估配置节点</FieldTitle>
-        {wfMetaLoading ? (
+        {catalogPending ? (
           <p className="text-sm text-muted-foreground">正在加载评估节点…</p>
         ) : (
           <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
@@ -72,7 +69,11 @@ export function ProfileWorkflowEditorBlock(props: {
               resolveNodeTypeDefinitions={async (typeKeys) =>
                 (await getNodesDetailBatch(typeKeys)).map((detail) => toWorkflowNodeType(detail))
               }
-              onRefreshNodeDefinitions={async () => toWorkflowNodeTypes(await refreshProfileNodes())}
+              onRefreshNodeDefinitions={async () => {
+                const next = await refreshProfileNodes();
+                void refreshCatalog();
+                return toWorkflowNodeTypes(next);
+              }}
               className="h-full flex-1"
             />
           </div>
