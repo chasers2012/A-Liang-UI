@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -101,6 +101,8 @@ export default function SubagentsPage() {
     [data, effectiveSelectedId],
   );
 
+  const subagentsSearchListNotice = loading ? '正在加载子代理配置...' : error ? `加载失败：${error}` : '暂无子代理配置';
+
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <SearchList
@@ -122,10 +124,10 @@ export default function SubagentsPage() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         selectedId={effectiveSelectedId}
-        loadingText="正在加载子代理配置..."
-        emptyText={error ? `加载失败：${error}` : '暂无子代理配置'}
-        onItemSelected={(item) => setSelectedId(item.id)}
-      />
+        renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => setSelectedId(item.id)} />}
+      >
+        <p className="p-6 text-sm text-muted-foreground">{subagentsSearchListNotice}</p>
+      </SearchList>
 
       <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-4">
         {loading ? (

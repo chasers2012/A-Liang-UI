@@ -7,9 +7,7 @@ import { useEffect } from 'react';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import {
   creatingAtom,
   factorsBrowseStateAtom,
@@ -32,6 +30,13 @@ function FactorsListPane() {
   const filteredItems = useAtomValue(filteredFactorsAtom);
   const browseState = useAtomValue(factorsBrowseStateAtom);
 
+  const factorsSearchListNotice = (() => {
+    if (listError) return '因子列表加载失败。';
+    if (listItems == null) return '加载中…';
+    if (listItems.length === 0) return '暂无因子。请使用右上角「新增因子」创建。';
+    return '没有符合当前筛选条件的因子。';
+  })();
+
   return (
     <CollapsibleSearchListSidebar collapsed={editing} innerWidthClassName="w-[320px]">
       <SearchList
@@ -53,32 +58,31 @@ function FactorsListPane() {
         searchQuery={browseState.searchQuery}
         onSearchQueryChange={setSearchQuery}
         selectedId={selectedId}
-        emptyText={
-          listError
-            ? '因子列表加载失败。'
-            : (listItems?.length ?? 0) === 0
-              ? '暂无因子。请使用右上角「新增因子」创建。'
-              : '没有符合当前筛选条件的因子。'
-        }
-        onItemSelected={(item) => {
-          setSelectedId(item.id);
-          if (editing) {
-            setEditing(false);
-          }
-        }}
-        toolbarRight={
-          <button
-            type="button"
-            aria-label="新增因子"
-            className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
-            onClick={() => {
-              startCreate(true);
+        renderItem={(p) => (
+          <SearchListItem
+            {...p}
+            onItemSelected={(item) => {
+              setSelectedId(item.id);
+              if (editing) {
+                setEditing(false);
+              }
             }}
-          >
-            <Plus />
-          </button>
-        }
-      />
+          />
+        )}
+        actions={[
+          {
+            label: '新增因子',
+            icon: Plus,
+            variant: 'default',
+            size: 'icon',
+            onClick: () => {
+              startCreate(true);
+            },
+          },
+        ]}
+      >
+        <p className="p-6 text-sm text-muted-foreground">{factorsSearchListNotice}</p>
+      </SearchList>
     </CollapsibleSearchListSidebar>
   );
 }

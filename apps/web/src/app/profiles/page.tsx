@@ -4,10 +4,9 @@ import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Page } from '@/components/page';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { listAtoms, refreshNodeTypesAtom } from '@/models/evaluation-profile/list-detail.atom';
 import {
@@ -57,7 +56,10 @@ export default function EvaluationProfilesPage() {
 
   const sidebarItems = useMemo(() => items?.map((p) => ({ ...p, category: '评价方案' })) ?? null, [items]);
 
-  const emptyText = listEmptyText(items?.length ?? 0);
+  const evaluationProfilesSearchListLoading = items == null;
+  const evaluationProfilesSearchListNotice = evaluationProfilesSearchListLoading
+    ? '加载中…'
+    : listEmptyText(items.length);
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -72,21 +74,19 @@ export default function EvaluationProfilesPage() {
           title="评价方案列表"
           searchPlaceholder="搜索评价方案"
           selectedId={listSelectedId}
-          emptyText={emptyText}
-          loadingText="加载中…"
-          onItemSelected={(item) => void selectItem(item.id)}
-          toolbarRight={
-            <Button
-              type="button"
-              variant="default"
-              size="icon"
-              aria-label="新增评价方案"
-              onClick={() => void startCreate()}
-            >
-              <Plus className="size-4" aria-hidden />
-            </Button>
-          }
-        />
+          renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+          actions={[
+            {
+              label: '新增评价方案',
+              icon: Plus,
+              variant: 'default',
+              size: 'icon',
+              onClick: () => void startCreate(),
+            },
+          ]}
+        >
+          <p className="p-6 text-sm text-muted-foreground">{evaluationProfilesSearchListNotice}</p>
+        </SearchList>
       </CollapsibleSearchListSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

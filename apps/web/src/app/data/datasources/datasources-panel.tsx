@@ -3,11 +3,10 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import {
   datasourcesListAtoms,
   datasourcesListCountAtom,
@@ -36,6 +35,12 @@ function DatasourceListPanel() {
   const selectItem = useSetAtom(selectDatasourceFromListAtom);
   const startCreate = useSetAtom(startCreateNewDatasourceAtom);
 
+  const datasourceSearchListNotice = (() => {
+    if (listError) return '数据源列表加载失败。';
+    if (listItems == null) return '加载中…';
+    return (count ?? 0) === 0 ? '暂无数据源。请使用上方「新增数据源」开始配置。' : '没有符合当前搜索条件的数据源。';
+  })();
+
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-2">
       {listError && (
@@ -56,16 +61,19 @@ function DatasourceListPanel() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         selectedId={selectedId}
-        emptyText={
-          (count ?? 0) === 0 ? '暂无数据源。请使用上方「新增数据源」开始配置。' : '没有符合当前搜索条件的数据源。'
-        }
-        onItemSelected={(item) => void selectItem(item.id)}
-        toolbarRight={
-          <Button type="button" aria-label="新增数据源" size="icon" onClick={() => void startCreate()}>
-            <Plus />
-          </Button>
-        }
-      />
+        renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+        actions={[
+          {
+            label: '新增数据源',
+            icon: Plus,
+            variant: 'default',
+            size: 'icon',
+            onClick: () => void startCreate(),
+          },
+        ]}
+      >
+        <p className="p-6 text-sm text-muted-foreground">{datasourceSearchListNotice}</p>
+      </SearchList>
     </div>
   );
 }

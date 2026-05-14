@@ -15,7 +15,7 @@ import {
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
 export function PreprocessingWorkflowEditorBlock(props: {
@@ -28,20 +28,29 @@ export function PreprocessingWorkflowEditorBlock(props: {
   const { workflow, canvasKey, canvasRef, className, readOnly = false } = props;
 
   const [catalog, setCatalog] = useState<NodeSummaryPublic[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const refreshPreprocessorNodes = useSetAtom(refreshNodesByDomainAtomFamily('preprocessors'));
 
   useEffect(() => {
-    listNodes('preprocessors').then(setCatalog);
+    void listNodes('preprocessors')
+      .then(setCatalog)
+      .finally(() => setCatalogLoading(false));
   }, []);
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
+
+  const preprocessorSearchListNotice = catalogLoading
+    ? '正在加载预处理器节点…'
+    : nodeTypes.length === 0
+      ? '暂无预处理器节点'
+      : '没有符合搜索条件的节点';
 
   return (
     <div className={cn('flex h-full min-h-0 flex-1 flex-col gap-3', className)}>
       <div className="flex h-full min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
         {!readOnly ? (
           <SearchList
-            items={nodeTypes}
+            items={catalogLoading ? null : nodeTypes}
             className="w-[300px]"
             title="预处理器节点"
             searchPlaceholder="搜索节点/描述"
@@ -49,12 +58,19 @@ export function PreprocessingWorkflowEditorBlock(props: {
             renderTitle={(item) => item.label}
             renderDescription={(item) => item.description ?? ''}
             getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
-            onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
-            onItemDrag={(item, e) => {
-              e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
-              e.dataTransfer.effectAllowed = 'copy';
-            }}
-          />
+            renderItem={(p) => (
+              <SearchListItem
+                {...p}
+                onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
+                onItemDrag={(item, e) => {
+                  e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+              />
+            )}
+          >
+            <p className="p-6 text-sm text-muted-foreground">{preprocessorSearchListNotice}</p>
+          </SearchList>
         ) : null}
         <WorkflowGraphCanvas
           key={canvasKey}

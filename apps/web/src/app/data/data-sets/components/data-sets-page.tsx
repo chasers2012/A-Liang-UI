@@ -7,10 +7,7 @@ import { useCallback, useEffect } from 'react';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
-import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   dataSetsBrowseStateAtom,
@@ -61,8 +58,14 @@ export function DataSetsPage() {
     [selectDetail],
   );
 
-  const emptyText =
+  const listEmptyMessage =
     (items?.length ?? 0) === 0 ? '暂无数据集。请使用上方「新增数据集」开始配置。' : '没有符合搜索条件的数据集。';
+
+  const dataSetsSearchListNotice = (() => {
+    if (listError) return '数据集列表加载失败。';
+    if (filteredItems == null) return '加载中…';
+    return listEmptyMessage;
+  })();
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -93,19 +96,19 @@ export function DataSetsPage() {
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             selectedId={selectedId}
-            emptyText={emptyText}
-            onItemSelected={onSelectItem}
-            toolbarRight={
-              <Button
-                type="button"
-                aria-label="新增数据集"
-                className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
-                onClick={() => enterCreate()}
-              >
-                <Plus />
-              </Button>
-            }
-          />
+            renderItem={(p) => <SearchListItem {...p} onItemSelected={onSelectItem} />}
+            actions={[
+              {
+                label: '新增数据集',
+                icon: Plus,
+                variant: 'default',
+                size: 'icon',
+                onClick: () => enterCreate(),
+              },
+            ]}
+          >
+            <p className="p-6 text-sm text-muted-foreground">{dataSetsSearchListNotice}</p>
+          </SearchList>
         </div>
       </CollapsibleSearchListSidebar>
 

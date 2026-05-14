@@ -12,7 +12,7 @@ import {
   toWorkflowNodeType,
   toWorkflowNodeTypes,
 } from '@/components/workflow-graph';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 import { nodeTypesAtom, refreshNodeTypesAtom } from '@/models/evaluation-profile/list-detail.atom';
 import { workflowDerivedAtom } from '@/models/evaluation-profile/workflow.atom';
@@ -36,6 +36,8 @@ export function EvaluationProfileWorkflowTabContent(props: {
   const catalogPending = catalog === null;
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog ?? []), [catalog]);
 
+  const evaluationWorkflowSearchListNotice = nodeTypes.length === 0 ? '暂无可用节点' : '没有符合搜索条件的节点';
+
   if (panelLoading) return null;
 
   if (!showCanvas) {
@@ -58,12 +60,19 @@ export function EvaluationProfileWorkflowTabContent(props: {
           renderTitle={(item) => item.label}
           renderDescription={(item) => item.description ?? ''}
           getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
-          onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
-          onItemDrag={(item, e) => {
-            e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
-            e.dataTransfer.effectAllowed = 'copy';
-          }}
-        />
+          renderItem={(p) => (
+            <SearchListItem
+              {...p}
+              onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
+              onItemDrag={(item, e) => {
+                e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+            />
+          )}
+        >
+          <p className="p-6 text-sm text-muted-foreground">{evaluationWorkflowSearchListNotice}</p>
+        </SearchList>
       ) : null}
       <WorkflowGraphCanvas
         key={canvasKey}

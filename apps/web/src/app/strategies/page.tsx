@@ -7,8 +7,7 @@ import { Plus } from 'lucide-react';
 
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
-import { Button } from '@/components/ui/button';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { toWorkflowNodeTypes } from '@/components/workflow-graph';
 import {
@@ -110,6 +109,9 @@ function StrategiesPageContent() {
     }
   }, [selectedId, isEditing, router]);
 
+  const strategiesSearchListLoading = items == null && !error;
+  const strategiesSearchListNotice = strategiesSearchListLoading ? '加载中…' : getEmptyText(error, items?.length ?? 0);
+
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
@@ -123,14 +125,19 @@ function StrategiesPageContent() {
           title="策略列表"
           searchPlaceholder="搜索策略"
           selectedId={listSelectedId}
-          emptyText={getEmptyText(error, items?.length ?? 0)}
-          onItemSelected={(item) => void selectItem(item.id)}
-          toolbarRight={
-            <Button type="button" aria-label="新增策略" size="icon" onClick={() => void startCreate()}>
-              <Plus className="size-4" />
-            </Button>
-          }
-        />
+          renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+          actions={[
+            {
+              label: '新增策略',
+              icon: Plus,
+              variant: 'default',
+              size: 'icon',
+              onClick: () => void startCreate(),
+            },
+          ]}
+        >
+          <p className="p-6 text-sm text-muted-foreground">{strategiesSearchListNotice}</p>
+        </SearchList>
       </CollapsibleSearchListSidebar>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <StrategyDetailPanel nodeTypes={nodeTypes} nodeCatalogError={nodeCatalogError} />

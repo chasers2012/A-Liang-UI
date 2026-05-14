@@ -7,15 +7,12 @@ import { useCallback, useEffect } from 'react';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
-import { SearchList } from '@/components/search-list';
-import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { SearchList, SearchListItem } from '@/components/search-list';
+import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { filteredNodesAtom, nodesBrowseStateAtom, setNodesSearchQueryAtom } from '@/models/nodes/browse.atom';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
 import { handleCancelNodesEditAtom, nodesCreateModeAtom, nodesEditActiveAtom } from '@/models/nodes/edit.atom';
 import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
-import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
 import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
 export default function NodesPage() {
@@ -44,6 +41,12 @@ export default function NodesPage() {
     [setSelectedId],
   );
 
+  const nodesSearchListNotice = (() => {
+    if (filteredItems == null) return '加载中…';
+    if ((items?.length ?? 0) === 0) return '暂无节点。请使用上方「新增节点」开始配置。';
+    return '没有符合当前筛选条件的节点。';
+  })();
+
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <CollapsibleSearchListSidebar collapsed={isEditActive} innerWidthClassName="w-[300px]">
@@ -66,24 +69,20 @@ export default function NodesPage() {
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           selectedId={selectedId}
-          emptyText={
-            (items?.length ?? 0) === 0 ? '暂无节点。请使用上方「新增节点」开始配置。' : '没有符合当前筛选条件的节点。'
-          }
-          onItemSelected={onSelectNode}
-          toolbarRight={
-            <>
-              <NodesListFilterPopover />
-              <Button
-                type="button"
-                aria-label="新增节点"
-                className={cn(buttonVariants({ variant: 'default', size: 'icon' }))}
-                onClick={() => setIsCreate(true)}
-              >
-                <Plus />
-              </Button>
-            </>
-          }
-        />
+          renderItem={(p) => <SearchListItem {...p} onItemSelected={onSelectNode} />}
+          actions={[
+            { label: '筛选节点', render: () => <NodesListFilterPopover /> },
+            {
+              label: '新增节点',
+              icon: Plus,
+              variant: 'default',
+              size: 'icon',
+              onClick: () => setIsCreate(true),
+            },
+          ]}
+        >
+          <p className="p-6 text-sm text-muted-foreground">{nodesSearchListNotice}</p>
+        </SearchList>
       </CollapsibleSearchListSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

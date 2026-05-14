@@ -15,7 +15,7 @@ import {
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
-import { SearchList } from '@/components/search-list';
+import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
 export function StrategyWorkflowEditorBlock(props: {
@@ -38,6 +38,8 @@ export function StrategyWorkflowEditorBlock(props: {
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
+  const strategyNodesSearchListNotice = nodeTypes.length === 0 ? '暂无策略节点' : '没有符合搜索条件的节点';
+
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col gap-3 overflow-hidden', className)}>
       {loading ? (
@@ -53,12 +55,19 @@ export function StrategyWorkflowEditorBlock(props: {
             renderTitle={(item) => item.label}
             renderDescription={(item) => item.description ?? ''}
             getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
-            onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
-            onItemDrag={(item, e) => {
-              e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
-              e.dataTransfer.effectAllowed = 'copy';
-            }}
-          />
+            renderItem={(p) => (
+              <SearchListItem
+                {...p}
+                onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
+                onItemDrag={(item, e) => {
+                  e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+              />
+            )}
+          >
+            <p className="p-6 text-sm text-muted-foreground">{strategyNodesSearchListNotice}</p>
+          </SearchList>
           <WorkflowGraphCanvas
             key={canvasKey}
             ref={canvasRef}
