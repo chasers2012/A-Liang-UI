@@ -1,13 +1,10 @@
 import { atom } from 'jotai';
 
-import {
-  createEvaluationProfile,
-  getEvaluationWorkflowTemplate,
-  patchEvaluationProfile,
-} from '@/api/evaluation-profiles';
+import { createEvaluationProfile, patchEvaluationProfile } from '@/api/evaluation-profiles';
 import { defaultNewName } from '@/lib/default-new-name';
-import { EMPTY_WORKFLOW, parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph/reactflow/serialize';
+import { EMPTY_WORKFLOW } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+import { evaluationWorkflowTemplateAsyncAtom } from '@/models/evaluation-profile/evaluation-workflow-template.atom';
 import { detailAtomFamily, listAtoms } from '@/models/evaluation-profile/list-detail.atom';
 import {
   cancelEditorAtom,
@@ -33,12 +30,10 @@ export const formDescriptionAtom = atom('');
 export const formWorkflowAtom = atom<WorkflowGraphPersisted>(EMPTY_WORKFLOW);
 
 export const initFormAtom = atom(null, async (get, set, id?: string | null) => {
-  const isEdit = Boolean(id);
-
   set(errorAtom, null);
   set(loadingAtom, true);
   try {
-    if (isEdit && id) {
+    if (id) {
       const row = get(detailAtomFamily(id));
       if (row) {
         set(formNameAtom, row.name);
@@ -52,8 +47,7 @@ export const initFormAtom = atom(null, async (get, set, id?: string | null) => {
     }
 
     try {
-      const raw = await getEvaluationWorkflowTemplate();
-      const workflow = parsePersistedWorkflowGraphPayload(raw);
+      const workflow = await get(evaluationWorkflowTemplateAsyncAtom);
       const name = get(formNameAtom);
       set(formNameAtom, name.trim() ? name : defaultNewName('新评价方案'));
       set(formWorkflowAtom, workflow);
