@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 
-import { formStateAtom } from '@/models/evaluation-profile/form.atom';
+import { formWorkflowAtom } from '@/models/evaluation-profile/form.atom';
 import { detailAtomFamily } from '@/models/evaluation-profile/list-detail.atom';
 import { isEditingAtom, selectedIdAtom } from '@/models/evaluation-profile/scope.atom';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
@@ -11,13 +11,13 @@ import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactfl
 export const remoteWorkflowAtom = atom((get) => {
   const sid = get(selectedIdAtom);
   if (sid == null) return null;
-  return get(detailAtomFamily(sid)).row?.workflow ?? null;
+  return get(detailAtomFamily(sid))?.workflow ?? null;
 });
 
 /**
- * 本地修改层：表单草稿中的工作流（与 {@link formStateAtom} 一致）。
+ * 本地修改层：表单草稿中的工作流（与 {@link formWorkflowAtom} 一致）。
  */
-export const localWorkflowAtom = atom((get) => get(formStateAtom).workflow);
+export const localWorkflowAtom = atom((get) => get(formWorkflowAtom));
 
 export type WorkflowDerived = {
   /** initialGraph 取值：编辑会话用表单草稿，否则用远程；无远程时回落为草稿。 */
@@ -34,7 +34,7 @@ export const workflowDerivedAtom = atom<WorkflowDerived>((get) => {
   const sid = get(selectedIdAtom);
   const local = get(localWorkflowAtom);
   const remote = get(remoteWorkflowAtom);
-  const { row } = get(detailAtomFamily(sid ?? ''));
+  const row = get(detailAtomFamily(sid ?? ''));
   return {
     workflow: editing ? local : (remote ?? local),
     workflowGraphAvailable: editing || (!!sid && !!row),

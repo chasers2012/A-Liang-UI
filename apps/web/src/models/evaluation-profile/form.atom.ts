@@ -2,59 +2,51 @@ import { atom } from 'jotai';
 
 import {
   createEvaluationProfile,
-  getEvaluationProfile,
   getEvaluationWorkflowTemplate,
   patchEvaluationProfile,
 } from '@/api/evaluation-profiles';
 import { defaultNewName } from '@/lib/default-new-name';
 import { EMPTY_WORKFLOW, parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph/reactflow/serialize';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import { listAtoms } from '@/models/evaluation-profile/list-detail.atom';
+import { detailAtomFamily, listAtoms } from '@/models/evaluation-profile/list-detail.atom';
 import {
-  adjustLoadingDepthAtom,
   cancelEditorAtom,
   errorAtom,
   isEditingAtom,
+  loadingAtom,
   selectedIdAtom,
 } from '@/models/evaluation-profile/scope.atom';
 
 /** 与 {@link errorAtom} 中保存失败文案前缀一致，便于区分初始化错误与保存错误 */
 export const SUBMIT_ERROR_PREFIX = '无法保存：' as const;
 
-export type FormState = {
-  submitting: boolean;
-  name: string;
-  description: string;
-  workflow: WorkflowGraphPersisted;
-};
+/** 当前唯一一份编辑草稿：是否正在提交保存。 */
+export const formSubmittingAtom = atom(false);
 
-/** 当前唯一一份编辑草稿（任意时刻仅允许编辑一个评价方案）。 */
-export const formStateAtom = atom<FormState>({
-  submitting: false,
-  name: '',
-  description: '',
-  workflow: EMPTY_WORKFLOW,
-});
+/** 当前唯一一份编辑草稿：名称。 */
+export const formNameAtom = atom('');
 
-export const initFormAtom = atom(null, async (_get, set, id?: string | null) => {
+/** 当前唯一一份编辑草稿：描述。 */
+export const formDescriptionAtom = atom('');
+
+/** 当前唯一一份编辑草稿：工作流图（任意时刻仅允许编辑一个评价方案）。 */
+export const formWorkflowAtom = atom<WorkflowGraphPersisted>(EMPTY_WORKFLOW);
+
+export const initFormAtom = atom(null, async (get, set, id?: string | null) => {
   const isEdit = Boolean(id);
 
   set(errorAtom, null);
-  set(adjustLoadingDepthAtom, 1);
+  set(loadingAtom, true);
   try {
     if (isEdit && id) {
-      try {
-        const d = await getEvaluationProfile(id);
-        set(formStateAtom, (s) => ({
-          ...s,
-          name: d.name,
-          description: d.description,
-          workflow: d.workflow,
-        }));
+      const row = get(detailAtomFamily(id));
+      if (row) {
+        set(formNameAtom, row.name);
+        set(formDescriptionAtom, row.description);
+        set(formWorkflowAtom, row.workflow);
         set(errorAtom, null);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        set(errorAtom, msg);
+      } else {
+        set(errorAtom, '评价方案详情尚未加载，请稍后再试或返回后重新进入编辑。');
       }
       return;
     }
@@ -62,36 +54,20 @@ export const initFormAtom = atom(null, async (_get, set, id?: string | null) => 
     try {
       const raw = await getEvaluationWorkflowTemplate();
       const workflow = parsePersistedWorkflowGraphPayload(raw);
-      set(formStateAtom, (s) => ({
-        ...s,
-        name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
-        workflow,
-      }));
+      const name = get(formNameAtom);
+      set(formNameAtom, name.trim() ? name : defaultNewName('新评价方案'));
+      set(formWorkflowAtom, workflow);
       set(errorAtom, null);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       set(errorAtom, msg);
-      set(formStateAtom, (s) => ({
-        ...s,
-        name: s.name.trim() ? s.name : defaultNewName('新评价方案'),
-        workflow: EMPTY_WORKFLOW,
-      }));
+      const name = get(formNameAtom);
+      set(formNameAtom, name.trim() ? name : defaultNewName('新评价方案'));
+      set(formWorkflowAtom, EMPTY_WORKFLOW);
     }
   } finally {
-    set(adjustLoadingDepthAtom, -1);
+    set(loadingAtom, false);
   }
-});
-
-export const setFormNameAtom = atom(null, (_get, set, name: string) => {
-  set(formStateAtom, (s) => ({ ...s, name }));
-});
-
-export const setFormDescriptionAtom = atom(null, (_get, set, description: string) => {
-  set(formStateAtom, (s) => ({ ...s, description }));
-});
-
-export const setFormWorkflowAtom = atom(null, (_get, set, workflow: WorkflowGraphPersisted) => {
-  set(formStateAtom, (s) => ({ ...s, workflow }));
 });
 
 export const submitFormAtom = atom(
@@ -99,35 +75,33 @@ export const submitFormAtom = atom(
   async (get, set, payload: { id?: string | null; workflow: WorkflowGraphPersisted }) => {
     const { id, workflow } = payload;
     const isEdit = Boolean(id);
-    const s = get(formStateAtom);
+    const name = get(formNameAtom);
+    const description = get(formDescriptionAtom);
 
     set(errorAtom, null);
-    set(formStateAtom, (st) => ({ ...st, submitting: true }));
+    set(formSubmittingAtom, true);
     try {
       if (isEdit) {
         if (!id) throw new Error('无效 id');
         const saved = await patchEvaluationProfile(id, {
-          name: s.name.trim(),
-          description: s.description.trim(),
+          name: name.trim(),
+          description: description.trim(),
           workflow,
         });
-        set(formStateAtom, (st) => ({ ...st, submitting: false }));
+        set(formSubmittingAtom, false);
         return saved.id;
       }
       const created = await createEvaluationProfile({
-        name: s.name.trim(),
-        description: s.description.trim(),
+        name: name.trim(),
+        description: description.trim(),
         workflow,
       });
-      set(formStateAtom, (st) => ({ ...st, submitting: false }));
+      set(formSubmittingAtom, false);
       return created.id;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       set(errorAtom, `${SUBMIT_ERROR_PREFIX}${msg}`);
-      set(formStateAtom, (st) => ({
-        ...st,
-        submitting: false,
-      }));
+      set(formSubmittingAtom, false);
       return null;
     }
   },
@@ -141,9 +115,8 @@ export const commitEditorAtom = atom(null, async (get, set) => {
 
   const sid = get(selectedIdAtom);
   const isCreate = sid == null;
-  const formState = get(formStateAtom);
   const getLive = get(editorGetLiveWorkflowAtom);
-  const workflow = getLive?.() ?? formState.workflow;
+  const workflow = getLive?.() ?? get(formWorkflowAtom);
 
   const savedId = await set(submitFormAtom, {
     id: isCreate ? null : sid,

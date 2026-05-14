@@ -12,8 +12,7 @@ import {
   editorGetLiveWorkflowAtom,
   SUBMIT_ERROR_PREFIX,
   initFormAtom,
-  setFormNameAtom,
-  formStateAtom,
+  formNameAtom,
 } from '@/models/evaluation-profile/form.atom';
 import type { EvaluationProfilePublic } from '@/models/evaluation-profile/dto';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
@@ -71,12 +70,12 @@ export function EvaluationProfileDetailPanel() {
   const [selectedId] = useAtom(selectedIdAtom);
 
   const isCreate = selectedId == null;
-  const formState = useAtomValue(formStateAtom);
+  const formName = useAtomValue(formNameAtom);
   const initForm = useSetAtom(initFormAtom);
-  const setName = useSetAtom(setFormNameAtom);
+  const setName = useSetAtom(formNameAtom);
   const setGetLiveWorkflow = useSetAtom(editorGetLiveWorkflowAtom);
 
-  const { row } = useAtomValue(detailAtomFamily(selectedId ?? ''));
+  const row = useAtomValue(detailAtomFamily(selectedId ?? ''));
   const panelError = useAtomValue(errorAtom);
   const panelLoading = useAtomValue(loadingAtom);
   const loadDetail = useSetAtom(loadDetailAtomFamily(selectedId ?? ''));
@@ -90,8 +89,10 @@ export function EvaluationProfileDetailPanel() {
 
   useEffect(() => {
     if (!isEditing) return;
+    // 编辑态表单由详情缓存填充，不重复请求；若详情尚未写入则等 `loadDetail` 完成后再初始化。
+    if (!isCreate && row == null) return;
     void initForm(isCreate ? null : selectedId).then(() => setCanvasKey((k) => k + 1));
-  }, [isEditing, isCreate, selectedId, initForm]);
+  }, [isEditing, isCreate, selectedId, initForm, row]);
 
   const pending = isEditing && panelLoading;
 
@@ -104,7 +105,7 @@ export function EvaluationProfileDetailPanel() {
     return () => setGetLiveWorkflow(null);
   }, [isEditing, pending, setGetLiveWorkflow]);
 
-  const pageTitleValue = isEditing ? (pending ? '' : formState.name) : (row?.name ?? '');
+  const pageTitleValue = isEditing ? (pending ? '' : formName) : (row?.name ?? '');
 
   return (
     <PanelDetailCard

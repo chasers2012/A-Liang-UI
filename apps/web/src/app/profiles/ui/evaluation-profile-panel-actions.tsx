@@ -10,13 +10,14 @@ import {
   isEditingAtom,
   selectedIdAtom,
 } from '@/models/evaluation-profile/scope.atom';
-import { commitEditorAtom, formStateAtom } from '@/models/evaluation-profile/form.atom';
+import { commitEditorAtom, formNameAtom, formSubmittingAtom } from '@/models/evaluation-profile/form.atom';
 
 export function EvaluationProfilePanelActions() {
   const isEditing = useAtomValue(isEditingAtom);
   const [selectedId] = useAtom(selectedIdAtom);
   const isCreate = selectedId == null;
-  const formState = useAtomValue(formStateAtom);
+  const submitting = useAtomValue(formSubmittingAtom);
+  const formName = useAtomValue(formNameAtom);
   const cancelEditor = useSetAtom(cancelEditorAtom);
   const enterEditor = useSetAtom(enterEditorAtom);
   const commitEditor = useSetAtom(commitEditorAtom);
@@ -24,23 +25,17 @@ export function EvaluationProfilePanelActions() {
   if (isEditing) {
     return (
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => void cancelEditor()}
-          disabled={formState.submitting}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={() => void cancelEditor()} disabled={submitting}>
           取消
         </Button>
         <Button
           type="button"
           variant="default"
           size="sm"
-          disabled={formState.submitting || !formState.name.trim()}
+          disabled={submitting || !formName.trim()}
           onClick={() => void commitEditor()}
         >
-          {formState.submitting ? (isCreate ? '创建中…' : '保存中…') : isCreate ? '创建' : '保存'}
+          {submitting ? (isCreate ? '创建中…' : '保存中…') : isCreate ? '创建' : '保存'}
         </Button>
       </div>
     );

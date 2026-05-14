@@ -30,7 +30,7 @@ export function EvaluationProfileWorkflowTabContent(props: {
   } = useAtomValue(workflowDerivedAtom);
   const panelLoading = useAtomValue(loadingAtom);
 
-  const { items: catalog } = useAtomValue(nodeTypesAtom);
+  const catalog = useAtomValue(nodeTypesAtom);
   const refreshCatalog = useSetAtom(refreshNodeTypesAtom);
   const refreshProfileNodes = useSetAtom(refreshNodesByDomainAtomFamily('evaluation-profile'));
   const catalogPending = catalog === null;
