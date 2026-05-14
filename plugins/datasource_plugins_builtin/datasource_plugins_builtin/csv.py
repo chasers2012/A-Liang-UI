@@ -20,17 +20,28 @@ def resolve_csv_path(path_str: str) -> Path:
     return (get_workspace_root() / p).resolve()
 
 
-class CsvConfig(BaseModel):
+class CsvConnectionConfig(BaseModel):
+    """路径与 read_csv 参数（存储 ``connection`` 段）。"""
+
     path: str
-    date_column: str = "date"
-    asset_column: str | None = "asset"
-    columns: list[str] = Field(default_factory=list)
     read_csv_kwargs: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _validate(self) -> CsvConfig:
+    def _validate(self) -> CsvConnectionConfig:
         if not str(self.path).strip():
             raise ValueError("path 不能为空")
+        return self
+
+
+class CsvColumnsConfig(BaseModel):
+    """日期列、资产列与列缓存（存储 ``columns`` 段）。"""
+
+    date_column: str = "date"
+    asset_column: str | None = "asset"
+    columns: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate(self) -> CsvColumnsConfig:
         date_col = str(self.date_column).strip()
         if not date_col:
             raise ValueError("date_column 不能为空")
@@ -198,32 +209,43 @@ class CsvDataSourceSpec(DataSourceSpec):
             ),
         )
 
-    @staticmethod
-    def _validate_csv_config(config: dict[str, Any]) -> CsvConfig:
-        path = config.get("path")
-        if path is None or not str(path).strip():
-            raise ValueError("path 不能为空")
-        return CsvConfig.model_validate(config)
+    def validate_config(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
+        col = CsvColumnsConfig.model_validate(dict(columns_config or {}))
+        return {
+            "connection": conn.model_dump(mode="json"),
+            "columns": col.model_dump(mode="json"),
+        }
 
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        cfg = self._validate_csv_config(config)
-        return cfg.model_dump(mode="json")
-
-    def to_factor_datasource(self, config: dict[str, Any]):
-        cfg = self._validate_csv_config(config)
+    def to_factor_datasource(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ):
+        conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
+        col = CsvColumnsConfig.model_validate(dict(columns_config or {}))
         return CsvDataSource(
-            path=cfg.path,
-            read_csv_kwargs=dict(cfg.read_csv_kwargs),
-            date_column=cfg.date_column,
-            asset_column=cfg.asset_column,
+            path=conn.path,
+            read_csv_kwargs=dict(conn.read_csv_kwargs),
+            date_column=col.date_column,
+            asset_column=col.asset_column,
         )
 
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
+    def verify(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> VerifyResult:
+        _ = columns_config
         try:
-            cfg = self._validate_csv_config(config)
+            conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
-        p = resolve_csv_path(cfg.path)
+        p = resolve_csv_path(conn.path)
         if not p.is_file():
             return VerifyResult(ok=False, message=f"文件不存在: {p}")
         try:

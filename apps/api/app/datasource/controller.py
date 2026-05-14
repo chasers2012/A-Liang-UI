@@ -139,7 +139,10 @@ def get_datasource(id: str) -> FactorDataSource | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    ds = plugin.spec.to_factor_datasource(plain)
+    ds = plugin.spec.to_factor_datasource(
+        dict(plain.get("connection") or {}),
+        dict(plain.get("columns") or {}),
+    )
     return BoundFactorDataSource(id, ds)
 
 
@@ -204,10 +207,18 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
         config = dict(body.config or {})
 
     plugin = get_datasource_plugin(str(ds_type))
-    validated = plugin.spec.validate_config(config)
-    cols = plugin.spec.to_factor_datasource(validated).list_columns()
+    cfg = dict(config or {})
+    validated = plugin.spec.validate_config(
+        dict(cfg.get("connection") or {}),
+        dict(cfg.get("columns") or {}),
+    )
+    cols = plugin.spec.to_factor_datasource(
+        dict(validated.get("connection") or {}),
+        dict(validated.get("columns") or {}),
+    ).list_columns()
     str_cols = [str(c) for c in cols]
-    return _build_inspect_columns_response(validated, str_cols)
+    columns_meta = dict(validated.get("columns") or {})
+    return _build_inspect_columns_response(columns_meta, str_cols)
 
 
 def get_datasource_dependency_fields(ds_id: str) -> DatasourceDependencyFieldsResponse:
@@ -229,10 +240,8 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
     plugin = get_datasource_plugin(str(body.type))
     validated = plugin.spec.validate_config(
-        {
-            "connection": dict(body.connection_config or {}),
-            "columns": dict(body.columns_config or {}),
-        }
+        dict(body.connection_config or {}),
+        dict(body.columns_config or {}),
     )
     new_row = body.to_row()
     new_row.config = plugin.spec.encrypt_storage_config(validated)
@@ -256,7 +265,10 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
                 dict(row.config or {}),
                 overlay,
             )
-            validated = plugin.spec.validate_config(merged)
+            validated = plugin.spec.validate_config(
+                dict(merged.get("connection") or {}),
+                dict(merged.get("columns") or {}),
+            )
             row.config = plugin.spec.encrypt_storage_config(validated)
         row.updated_at = utc_now_iso()
 
@@ -276,4 +288,7 @@ def test_datasource(ds_id: str) -> VerifyResult | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    return plugin.spec.verify(plain)
+    return plugin.spec.verify(
+        dict(plain.get("connection") or {}),
+        dict(plain.get("columns") or {}),
+    )

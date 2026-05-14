@@ -13,7 +13,9 @@ from sqlalchemy.engine import Engine
 from sqlmodel import create_engine, inspect, text
 
 
-class SqlConfig(BaseModel):
+class SqlConnectionConfig(BaseModel):
+    """数据库连接与表（存储 ``connection`` 段）。"""
+
     db_driver: str = "postgresql"
     db_host: str = ""
     db_port: int | None = None
@@ -21,17 +23,29 @@ class SqlConfig(BaseModel):
     db_password: str = ""
     db_name: str = ""
     table: str = ""
+
+    @model_validator(mode="after")
+    def _validate(self) -> SqlConnectionConfig:
+        if not self.db_host.strip() or not self.db_name.strip():
+            raise ValueError("主机（IP）与数据库名不能为空")
+        if not self.table.strip():
+            raise ValueError("表名不能为空")
+        d = (self.db_driver or "").lower()
+        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
+            raise ValueError("db_driver 须为 postgresql 或 mysql")
+        return self
+
+
+class SqlColumnsConfig(BaseModel):
+    """日期列、资产列与列缓存（存储 ``columns`` 段）。"""
+
     date_column: str = "date"
     asset_column: str | None = "asset"
     columns: list[str] = Field(default_factory=list)
     column_map: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def _validate(self) -> SqlConfig:
-        if not self.db_host.strip() or not self.db_name.strip():
-            raise ValueError("主机（IP）与数据库名不能为空")
-        if not self.table.strip():
-            raise ValueError("表名不能为空")
+    def _validate(self) -> SqlColumnsConfig:
         date_col = str(self.date_column).strip()
         if not date_col:
             raise ValueError("date_column 不能为空")
@@ -40,9 +54,6 @@ class SqlConfig(BaseModel):
             asset_col = str(self.asset_column).strip()
             self.asset_column = asset_col or None
         self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
-        d = (self.db_driver or "").lower()
-        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
-            raise ValueError("db_driver 须为 postgresql 或 mysql")
         return self
 
 
@@ -71,7 +82,7 @@ def _auth_fragment(username: str, password: str) -> str:
     return f"{quote_plus(username)}:{quote_plus(password)}@"
 
 
-def build_sqlalchemy_url(cfg: SqlConfig) -> str:
+def build_sqlalchemy_url(cfg: SqlConnectionConfig) -> str:
     from urllib.parse import quote_plus
 
     host = (cfg.db_host or "").strip()
@@ -237,33 +248,58 @@ class SqlDataSourceSpec(DataSourceSpec):
                             "items": {"type": "string"},
                             "default": [],
                         },
+                        "column_map": {
+                            "type": "object",
+                            "title": "列名映射",
+                            "default": {},
+                            "additionalProperties": {"type": "string"},
+                        },
                     },
                     "required": ["date_column"],
                 },
                 ui_schema={
                     "columns": {"ui:widget": "hidden"},
+                    "column_map": {"ui:widget": "hidden"},
                 },
             ),
         )
 
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        cfg = SqlConfig.model_validate(config)
-        return cfg.model_dump(mode="json")
+    def validate_config(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
+        col = SqlColumnsConfig.model_validate(dict(columns_config or {}))
+        return {
+            "connection": conn.model_dump(mode="json"),
+            "columns": col.model_dump(mode="json"),
+        }
 
-    def to_factor_datasource(self, config: dict[str, Any]):
-        cfg = SqlConfig.model_validate(config)
-        url = build_sqlalchemy_url(cfg)
+    def to_factor_datasource(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ):
+        conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
+        col = SqlColumnsConfig.model_validate(dict(columns_config or {}))
+        url = build_sqlalchemy_url(conn)
         return SqlDataSource(
             engine=url,
-            table=cfg.table.strip(),
-            date_column=cfg.date_column,
-            asset_column=cfg.asset_column,
+            table=conn.table.strip(),
+            date_column=col.date_column,
+            asset_column=col.asset_column,
         )
 
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
+    def verify(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> VerifyResult:
+        _ = columns_config  # 连接探测不依赖列段
         try:
-            cfg = SqlConfig.model_validate(config)
-            url = build_sqlalchemy_url(cfg)
+            conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
+            url = build_sqlalchemy_url(conn)
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
         try:

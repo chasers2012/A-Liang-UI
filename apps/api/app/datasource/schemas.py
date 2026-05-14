@@ -109,16 +109,28 @@ class DataSourceSpec(ABC):
         }
 
     @abstractmethod
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        """Validate and normalize config. Must return a JSON-serializable dict."""
+    def validate_config(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        """校验并规范化配置，返回可 JSON 序列化的 ``{connection, columns}`` 存储形态。"""
 
     @abstractmethod
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
-        """Check connectivity or readability for the given config."""
+    def verify(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> VerifyResult:
+        """校验连接或可读性；入参为已解密的 ``connection`` / ``columns`` 配置。"""
 
     @abstractmethod
-    def to_factor_datasource(self, config: dict[str, Any]) -> FactorDataSource:
-        """Build a FactorDataSource instance from validated config."""
+    def to_factor_datasource(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> FactorDataSource:
+        """由已解密的 ``connection`` / ``columns`` 配置构建 :class:`~factor.datasource.FactorDataSource`。"""
 
 
 # --- API payloads ---

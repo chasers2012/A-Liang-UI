@@ -11,7 +11,8 @@ from app.form import FormSchema
 from factor.datasource import FactorDataSource
 
 from .common import (
-    BaoStockConfig,
+    BaoStockColumnsConfig,
+    BaoStockConnectionConfig,
     bs_session,
 )
 from .loaders import SUPPORTED_APIS
@@ -183,28 +184,42 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             ),
         )
 
-    @staticmethod
-    def _validate_baostock_config(config: dict[str, Any]) -> BaoStockConfig:
-        return BaoStockConfig.model_validate(config)
-
-    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        return self._validate_baostock_config(config).model_dump(mode="json")
-
-    def to_factor_datasource(self, config: dict[str, Any]):
-        cfg = self._validate_baostock_config(config)
-        cfg_dump = cfg.model_dump(mode="json")
-        common_keys = {
-            "api_name",
-            "date_column",
-            "asset_column",
-            "columns",
+    def validate_config(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
+        col_in = dict(columns_config or {})
+        if not str(col_in.get("api_name") or "").strip():
+            col_in["api_name"] = conn.api_name
+        col = BaoStockColumnsConfig.model_validate(col_in)
+        if col.api_name != conn.api_name:
+            raise ValueError("columns.api_name 须与 connection.api_name 一致")
+        return {
+            "connection": conn.model_dump(mode="json"),
+            "columns": col.model_dump(mode="json"),
         }
-        api_params = {k: v for k, v in cfg_dump.items() if k not in common_keys}
+
+    def to_factor_datasource(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ):
+        conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
+        col_in = dict(columns_config or {})
+        if not str(col_in.get("api_name") or "").strip():
+            col_in["api_name"] = conn.api_name
+        col = BaoStockColumnsConfig.model_validate(col_in)
+        if col.api_name != conn.api_name:
+            raise ValueError("columns.api_name 须与 connection.api_name 一致")
+        conn_dump = conn.model_dump(mode="json")
+        api_params = {k: v for k, v in conn_dump.items() if k != "api_name"}
         return BaoStockDataSource(
-            api_name=cfg.api_name,
+            api_name=conn.api_name,
             api_params=api_params,
-            date_column=cfg.date_column,
-            asset_column=cfg.asset_column,
+            date_column=col.date_column,
+            asset_column=col.asset_column,
         )
 
     def _get_verify_trade_dates(self) -> tuple[str, str]:
@@ -244,22 +259,26 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             raise ValueError("BaoStock 查询上证50成分股失败: no code found")
         return codes[:5]
 
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
+    def verify(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> VerifyResult:
         try:
-            cfg = self._validate_baostock_config(config)
-            cfg_dump = cfg.model_dump(mode="json")
-            common_keys = {
-                "api_name",
-                "date_column",
-                "asset_column",
-                "columns",
-            }
-            api_params = {k: v for k, v in cfg_dump.items() if k not in common_keys}
+            conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
+            col_in = dict(columns_config or {})
+            if not str(col_in.get("api_name") or "").strip():
+                col_in["api_name"] = conn.api_name
+            col = BaoStockColumnsConfig.model_validate(col_in)
+            if col.api_name != conn.api_name:
+                raise ValueError("columns.api_name 须与 connection.api_name 一致")
+            conn_dump = conn.model_dump(mode="json")
+            api_params = {k: v for k, v in conn_dump.items() if k != "api_name"}
             probe = BaoStockDataSource(
-                api_name=cfg.api_name,
+                api_name=conn.api_name,
                 api_params=api_params,
-                date_column=cfg.date_column,
-                asset_column=cfg.asset_column,
+                date_column=col.date_column,
+                asset_column=col.asset_column,
             )
 
             start_date, end_date = self._get_verify_trade_dates()
