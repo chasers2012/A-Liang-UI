@@ -60,20 +60,6 @@ def create_db_and_tables() -> None:
 
     engine = get_engine()
     SQLModel.metadata.create_all(engine)
-    _patch_sqlite_schema(engine)
-
-
-def _patch_sqlite_schema(engine) -> None:
-    """Lightweight additive migrations for existing SQLite files."""
-    from sqlalchemy import text
-
-    with engine.begin() as cx:
-        rows = cx.execute(text("PRAGMA table_info(datasource_sync_cursors)")).fetchall()
-        colnames = {str(r[1]) for r in rows}
-        if "source_ids_json" not in colnames:
-            cx.execute(text("ALTER TABLE datasource_sync_cursors ADD COLUMN source_ids_json TEXT"))
-        if "target_ids_json" not in colnames:
-            cx.execute(text("ALTER TABLE datasource_sync_cursors ADD COLUMN target_ids_json TEXT"))
 
 
 @contextmanager

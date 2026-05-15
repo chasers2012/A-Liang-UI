@@ -13,8 +13,6 @@ export function buildSyncPayload(args: {
   const out: Record<string, unknown> = {
     source_datasource_ids: args.sourceIds,
     target_datasource_ids: args.targetIds,
-    source_datasource_id: args.sourceIds[0],
-    target_datasource_id: args.targetIds[0],
   };
   const init = args.initialStartDate.trim();
   if (init) out.initial_start_date = init;
@@ -100,7 +98,7 @@ export function payloadSearchHaystack(task: {
   payload?: Record<string, unknown>;
 }): string {
   const p = (task.payload ?? {}) as Record<string, unknown>;
-  const sids = readPayloadIdList(p, 'source_datasource_ids', 'source_datasource_id');
-  const tids = readPayloadIdList(p, 'target_datasource_ids', 'target_datasource_id');
+  const sids = readPayloadIdList(p, 'source_datasource_ids');
+  const tids = readPayloadIdList(p, 'target_datasource_ids');
   return [task.name, task.cron_expr ?? '', ...sids, ...tids].join(' ').toLowerCase();
 }

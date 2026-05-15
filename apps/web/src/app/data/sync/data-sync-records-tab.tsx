@@ -52,7 +52,7 @@ function formatSyncResultSummary(result: unknown): string {
   if (typeof r.rows_read === 'number') parts.push(`读取 ${r.rows_read} 行`);
   if (typeof r.rows_written === 'number') parts.push(`写入 ${r.rows_written} 行`);
   if (typeof r.watermark_date === 'string' && r.watermark_date.trim()) {
-    parts.push(`游标 ${r.watermark_date}`);
+    parts.push(`目标已至 ${r.watermark_date}`);
   }
   return parts.length ? parts.join(' · ') : '—';
 }

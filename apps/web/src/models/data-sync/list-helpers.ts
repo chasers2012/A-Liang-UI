@@ -28,8 +28,8 @@ export function formatIdList(ids: string[], dsLabelLookup: Map<string, string>):
 
 export function formatTaskDescription(task: DataSyncTaskPublic, dsLabelLookup: Map<string, string>): string {
   const p = (task.payload ?? {}) as Record<string, unknown>;
-  const sids = readPayloadIdList(p, 'source_datasource_ids', 'source_datasource_id');
-  const tids = readPayloadIdList(p, 'target_datasource_ids', 'target_datasource_id');
+  const sids = readPayloadIdList(p, 'source_datasource_ids');
+  const tids = readPayloadIdList(p, 'target_datasource_ids');
   const sl = formatIdList(sids, dsLabelLookup);
   const tl = formatIdList(tids, dsLabelLookup);
   const cron = task.cron_expr?.trim() || '仅手动';

@@ -1,22 +1,28 @@
 from __future__ import annotations
 
-from sqlmodel import Field, SQLModel
+from datetime import datetime, timezone
+from typing import Any
 
-from app.common.datetime_utils import utc_now_iso
+from sqlmodel import Column, Field, SQLModel
+
+from app.persistence.sql_types import JsonText
 
 
-class DataSourceSyncCursorRow(SQLModel, table=True):
-    """Per-scheduler-task (or explicit cursor_key) watermark for incremental datasource sync."""
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
-    __tablename__ = "datasource_sync_cursors"
 
-    cursor_key: str = Field(primary_key=True, max_length=200)
-    scheduler_task_id: str | None = Field(default=None, max_length=64, index=True)
-    source_datasource_id: str = Field(max_length=64, index=True)
-    target_datasource_id: str = Field(max_length=64, index=True)
-    # JSON arrays of datasource ids (stable sorted). Null = legacy single source/target only.
-    source_ids_json: str | None = Field(default=None)
-    target_ids_json: str | None = Field(default=None)
-    # Max value of source date_column seen in the last successful batch (inclusive).
-    watermark_date: str | None = Field(default=None, max_length=64)
-    updated_at: str = Field(default_factory=utc_now_iso)
+class DataSyncTaskRow(SQLModel, table=True):
+    """Canonical storage for data sync task configuration."""
+
+    __tablename__ = "data_sync_tasks"
+
+    id: str = Field(primary_key=True, max_length=64)
+    name: str = Field(index=True, unique=True, max_length=100)
+    cron_expr: str | None = Field(default=None, index=True, max_length=200)
+    payload: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JsonText))
+    enabled: bool = Field(default=True, index=True)
+    max_retries: int = Field(default=3, ge=0)
+    timeout_seconds: int = Field(default=300, ge=1)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow, index=True)
