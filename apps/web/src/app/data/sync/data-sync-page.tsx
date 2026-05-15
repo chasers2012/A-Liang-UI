@@ -6,28 +6,27 @@ import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-li
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { Page } from '@/components/page';
 import {
-  cancelDataSyncFormAtom,
-  dataSyncAutoSelectEffectAtom,
-  dataSyncEditActiveAtom,
-  dataSyncListRefreshOnMountEffectAtom,
-  dataSyncShowEditorAtom,
-  dataSyncSyncViewFormEffectAtom,
-  dataSyncWorkflowBoundaryEffectAtom,
+  cancelFormAtom,
+  autoSelectEffectAtom,
+  isEditingAtom,
+  listRefreshOnMountEffectAtom,
+  syncViewFormEffectAtom,
+  workflowBoundaryEffectAtom,
 } from '@/models/data-sync/panel.atom';
 
 import { DataSyncDetailPane } from './data-sync-detail-pane';
 import { DataSyncListPane } from './data-sync-list-pane';
 
 export function DataSyncPage() {
-  useAtom(dataSyncListRefreshOnMountEffectAtom);
-  useAtom(dataSyncAutoSelectEffectAtom);
-  useAtom(dataSyncSyncViewFormEffectAtom);
-  useAtom(dataSyncWorkflowBoundaryEffectAtom);
+  useAtom(listRefreshOnMountEffectAtom);
+  useAtom(autoSelectEffectAtom);
+  useAtom(syncViewFormEffectAtom);
+  useAtom(workflowBoundaryEffectAtom);
 
-  const sidebarCollapsed = useAtomValue(dataSyncShowEditorAtom);
-  const cancelForm = useSetAtom(cancelDataSyncFormAtom);
+  const sidebarCollapsed = useAtomValue(isEditingAtom);
+  const cancelForm = useSetAtom(cancelFormAtom);
 
-  useNavigationEditGuard(dataSyncEditActiveAtom, {
+  useNavigationEditGuard(isEditingAtom, {
     onAbandon: () => cancelForm(),
   });
 
@@ -36,9 +35,7 @@ export function DataSyncPage() {
       <CollapsibleSearchListSidebar collapsed={sidebarCollapsed} innerWidthClassName="w-[320px]">
         <DataSyncListPane />
       </CollapsibleSearchListSidebar>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <DataSyncDetailPane />
-      </div>
+      <DataSyncDetailPane />
     </Page>
   );
 }

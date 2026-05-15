@@ -17,12 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
 import type { SchedulerJobLogPublic, SchedulerJobPublic, SchedulerJobStatus } from '@/models/scheduler/dto';
-import {
-  dataSyncLockedAtom,
-  dataSyncPanelActiveTabAtom,
-  dataSyncRecordsRefreshEpochAtom,
-  dataSyncRecordsTaskIdAtom,
-} from '@/models/data-sync/panel.atom';
+import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
@@ -69,11 +64,9 @@ function formatTriggerType(v: string): string {
 }
 
 export function DataSyncRecordsTab() {
-  const taskId = useAtomValue(dataSyncRecordsTaskIdAtom);
-  const refreshEpoch = useAtomValue(dataSyncRecordsRefreshEpochAtom);
-  const active = useAtomValue(dataSyncPanelActiveTabAtom) === 'records';
-  const locked = useAtomValue(dataSyncLockedAtom);
-
+  const taskId = useAtomValue(selectedIdAtom);
+  const refreshEpoch = useAtomValue(recordsRefreshEpochAtom);
+  const active = useAtomValue(panelActiveTabAtom) === 'records';
   const [jobs, setJobs] = useState<SchedulerJobPublic[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -134,18 +127,11 @@ export function DataSyncRecordsTab() {
     }
   };
 
-  if (!taskId) {
-    return <p className="text-sm text-muted-foreground">保存任务后，可在此查看该任务的同步执行记录。</p>;
-  }
+  if (taskId == null) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" disabled={loading || locked} onClick={() => void loadJobs()}>
-          刷新
-        </Button>
-        <span className="text-xs text-muted-foreground">共 {total} 条记录</span>
-      </div>
+      <span className="text-xs text-muted-foreground">共 {total} 条记录</span>
 
       {error ? (
         <Alert variant="destructive">

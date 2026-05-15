@@ -26,7 +26,7 @@ export function formatIdList(ids: string[], dsLabelLookup: Map<string, string>):
     .join(' + ');
 }
 
-export function formatDataSyncTaskDescription(task: SchedulerTaskPublic, dsLabelLookup: Map<string, string>): string {
+export function formatTaskDescription(task: SchedulerTaskPublic, dsLabelLookup: Map<string, string>): string {
   const p = (task.payload ?? {}) as Record<string, unknown>;
   const sids = readPayloadIdList(p, 'source_datasource_ids', 'source_datasource_id');
   const tids = readPayloadIdList(p, 'target_datasource_ids', 'target_datasource_id');
@@ -37,7 +37,7 @@ export function formatDataSyncTaskDescription(task: SchedulerTaskPublic, dsLabel
   return `${sl} → ${tl} · ${cron} · 下次 ${next}`;
 }
 
-export function filterDataSyncTasksBySearch(
+export function filterTasksBySearch(
   syncTasks: SchedulerTaskPublic[],
   listSearchQuery: string,
   describe: (t: SchedulerTaskPublic) => string,
@@ -50,7 +50,7 @@ export function filterDataSyncTasksBySearch(
   });
 }
 
-export function buildDataSyncSearchListItems(
+export function buildSearchListItems(
   filteredTasks: SchedulerTaskPublic[],
   describe: (t: SchedulerTaskPublic) => string,
 ): Array<{ id: string; label: string; description: string; category: string }> {
@@ -62,17 +62,15 @@ export function buildDataSyncSearchListItems(
   }));
 }
 
-export function buildDataSyncListNotice(args: {
+export function buildListNotice(args: {
   error: string | null;
   loading: boolean;
   syncTasksLength: number;
   filteredCount: number;
-  datasourcesCount: number;
 }): string {
-  const { error, loading, syncTasksLength, filteredCount, datasourcesCount } = args;
+  const { error, loading, syncTasksLength, filteredCount } = args;
   if (error && !syncTasksLength) return '列表加载失败，请检查网络或重试。';
   if (loading && !syncTasksLength) return '加载中…';
-  if (datasourcesCount < 2) return '请先在「数据源」中至少配置两个数据源。';
   if (syncTasksLength === 0) return '暂无同步任务。点击列表上方「新增」创建。';
   if (filteredCount === 0) return '没有符合当前搜索条件的任务。';
   return '';

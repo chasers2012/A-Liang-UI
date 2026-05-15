@@ -1,9 +1,11 @@
 'use client';
 
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 import { PreprocessingWorkflowEditorBlock } from '@/app/data/data-sets/components/panel/preprocessing-workflow-editor-block';
+import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
+import { EditablePageTitle } from '@/components/editable-page-title';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -13,29 +15,24 @@ import { Input } from '@/components/ui/input';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import {
-  cancelDataSyncFormAtom,
-  dataSyncCreatingAtom,
-  dataSyncDatasourcesAtom,
-  dataSyncErrorAtom,
-  dataSyncFormAtom,
-  dataSyncFormErrorAtom,
-  dataSyncLoadingAtom,
-  dataSyncLockedAtom,
-  dataSyncPanelActiveTabAtom,
-  dataSyncSelectedTaskAtom,
-  dataSyncShowDetailFormAtom,
-  dataSyncShowEditorAtom,
-  dataSyncWorkflowCanvasHandleAtom,
-  dataSyncWorkflowCanvasKeyAtom,
-  deleteDataSyncTaskAtom,
-  enterDataSyncEditAtom,
-  refreshDataSyncPageAtom,
-  setDataSyncDetailTabAtom,
-  submitDataSyncFormAtom,
-  toggleDataSyncEnabledAtom,
-  triggerDataSyncTaskAtom,
+  cancelFormAtom,
+  datasourcesAtom,
+  errorAtom,
+  formAtom,
+  busyIdAtom,
+  formErrorAtom,
+  isEditingAtom,
+  panelActiveTabAtom,
+  selectedIdAtom,
+  selectedTaskAtom,
+  workflowCanvasHandleAtom,
+  workflowCanvasKeyAtom,
+  deleteTaskAtom,
+  enterEditAtom,
+  setDetailTabAtom,
+  submitFormAtom,
+  triggerTaskAtom,
 } from '@/models/data-sync/panel.atom';
-import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
 import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
 import { cn } from '@/lib/utils';
 
@@ -46,86 +43,43 @@ function toLocalTime(v: string | null): string {
   return d.toLocaleString();
 }
 
-function DataSyncEmptyActions() {
-  const loading = useAtomValue(dataSyncLoadingAtom);
-  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
+function DataSyncDetailActions() {
+  const isEditing = useAtomValue(isEditingAtom);
+  const locked = useAtomValue(busyIdAtom) != null;
+  const selectedId = useAtomValue(selectedIdAtom);
+  const onEnterEdit = useSetAtom(enterEditAtom);
+  const onTrigger = useSetAtom(triggerTaskAtom);
+  const onDelete = useSetAtom(deleteTaskAtom);
+  const onCancelForm = useSetAtom(cancelFormAtom);
+  const onSubmit = useSetAtom(submitFormAtom);
+
+  if (isEditing) {
+    return (
+      <>
+        <Button type="button" variant="outline" size="sm" onClick={() => void onCancelForm()} disabled={locked}>
+          取消
+        </Button>
+        <Button type="button" size="sm" disabled={locked} onClick={() => void onSubmit()}>
+          保存
+        </Button>
+      </>
+    );
+  }
+
+  if (!selectedId) return null;
+
   return (
-    <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
-      刷新
-    </Button>
-  );
-}
-
-function DataSyncReadonlyActions() {
-  const locked = useAtomValue(dataSyncLockedAtom);
-  const loading = useAtomValue(dataSyncLoadingAtom);
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
-  const onEnterEdit = useSetAtom(enterDataSyncEditAtom);
-  const onTrigger = useSetAtom(triggerDataSyncTaskAtom);
-  const onToggleEnabled = useSetAtom(toggleDataSyncEnabledAtom);
-  const onDelete = useSetAtom(deleteDataSyncTaskAtom);
-
-  if (!selectedTask) return null;
-
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
-        刷新
-      </Button>
+    <>
       <Button type="button" variant="default" size="sm" disabled={locked} onClick={() => void onEnterEdit()}>
         编辑
       </Button>
       <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onTrigger()}>
         触发
       </Button>
-      <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onToggleEnabled()}>
-        {selectedTask.enabled ? '停用' : '启用'}
-      </Button>
       <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => void onDelete()}>
         删除
       </Button>
-    </div>
-  );
-}
-
-function DataSyncEditorActions() {
-  const creating = useAtomValue(dataSyncCreatingAtom);
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  const locked = useAtomValue(dataSyncLockedAtom);
-  const loading = useAtomValue(dataSyncLoadingAtom);
-  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
-  const onCancelForm = useSetAtom(cancelDataSyncFormAtom);
-  const onTrigger = useSetAtom(triggerDataSyncTaskAtom);
-  const onToggleEnabled = useSetAtom(toggleDataSyncEnabledAtom);
-  const onDelete = useSetAtom(deleteDataSyncTaskAtom);
-  const onSubmit = useSetAtom(submitDataSyncFormAtom);
-
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
-        刷新
-      </Button>
-      <Button type="button" variant="outline" size="sm" onClick={() => void onCancelForm()} disabled={locked}>
-        取消
-      </Button>
-      {!creating && selectedTask ? (
-        <>
-          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onTrigger()}>
-            触发
-          </Button>
-          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onToggleEnabled()}>
-            {selectedTask.enabled ? '停用' : '启用'}
-          </Button>
-          <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => void onDelete()}>
-            删除
-          </Button>
-        </>
-      ) : null}
-      <Button type="button" size="sm" disabled={locked} onClick={() => void onSubmit()}>
-        保存
-      </Button>
-    </div>
+    </>
   );
 }
 
@@ -134,10 +88,10 @@ function DatasourceCheckboxList(props: {
   datasources: DataSourcePublic[];
   selectedIds: string[];
   otherSelectedIds: string[];
-  readOnly?: boolean;
+  readOnly: boolean;
   onChange: (ids: string[]) => void;
 }) {
-  const { title, datasources, selectedIds, otherSelectedIds, readOnly = false, onChange } = props;
+  const { title, datasources, selectedIds, otherSelectedIds, readOnly, onChange } = props;
 
   const toggle = (id: string, checked: boolean) => {
     if (readOnly) return;
@@ -184,27 +138,20 @@ function DatasourceCheckboxList(props: {
   );
 }
 
-function DataSyncTaskConfigTab(props: { readOnly: boolean }) {
-  const { readOnly } = props;
-  const creating = useAtomValue(dataSyncCreatingAtom);
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  const datasources = useAtomValue(dataSyncDatasourcesAtom);
-  const [form, setForm] = useAtom(dataSyncFormAtom);
+function DataSyncConfigFields() {
+  const selectedId = useAtomValue(selectedIdAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const selectedTask = useAtomValue(selectedTaskAtom);
+  const datasources = useAtomValue(datasourcesAtom);
+  const [form, setForm] = useAtom(formAtom);
+
+  if (selectedId == null && !isEditing) return null;
+
+  const readOnly = !isEditing;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2">
       <FieldGroup className="max-w-5xl gap-6">
-        <Field className="gap-2">
-          <FieldLabel htmlFor="sync-name">任务名称</FieldLabel>
-          <Input
-            id="sync-name"
-            value={form.name}
-            readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
-          />
-        </Field>
-
         <div className="grid gap-6 md:grid-cols-2">
           <DatasourceCheckboxList
             title="源数据源"
@@ -294,7 +241,7 @@ function DataSyncTaskConfigTab(props: { readOnly: boolean }) {
           </div>
         </Field>
 
-        {!creating && selectedTask ? (
+        {selectedTask ? (
           <div className="text-xs text-muted-foreground">
             <p>任务 ID：{selectedTask.id}</p>
             <p>更新于：{toLocalTime(selectedTask.updated_at)}</p>
@@ -306,25 +253,23 @@ function DataSyncTaskConfigTab(props: { readOnly: boolean }) {
   );
 }
 
-function DataSyncTaskPaneActions(props: { readOnly: boolean }) {
-  const { readOnly } = props;
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  if (readOnly && selectedTask) return <DataSyncReadonlyActions />;
-  return <DataSyncEditorActions />;
-}
-
-function DataSyncWorkflowTab(props: { readOnly: boolean }) {
-  const { readOnly } = props;
-  const form = useAtomValue(dataSyncFormAtom);
-  const canvasKey = useAtomValue(dataSyncWorkflowCanvasKeyAtom);
-  const panelActiveTab = useAtomValue(dataSyncPanelActiveTabAtom);
+function DataSyncWorkflowFields() {
+  const selectedId = useAtomValue(selectedIdAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const form = useAtomValue(formAtom);
+  const canvasKey = useAtomValue(workflowCanvasKeyAtom);
+  const panelActiveTab = useAtomValue(panelActiveTabAtom);
   const canvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
-  const setCanvasHandle = useSetAtom(dataSyncWorkflowCanvasHandleAtom);
+  const setCanvasHandle = useSetAtom(workflowCanvasHandleAtom);
 
   useLayoutEffect(() => {
     setCanvasHandle(canvasRef.current);
     return () => setCanvasHandle(null);
   }, [canvasKey, panelActiveTab, setCanvasHandle]);
+
+  if (selectedId == null && !isEditing) return null;
+
+  const readOnly = !isEditing;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -341,102 +286,113 @@ function DataSyncWorkflowTab(props: { readOnly: boolean }) {
   );
 }
 
-function DataSyncTaskEditor(props: { readOnly: boolean }) {
-  const { readOnly } = props;
-  const creating = useAtomValue(dataSyncCreatingAtom);
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  const form = useAtomValue(dataSyncFormAtom);
-  const panelActiveTab = useAtomValue(dataSyncPanelActiveTabAtom);
-  const setDetailTab = useSetAtom(setDataSyncDetailTabAtom);
+function DataSyncDetailCardAlerts() {
+  const isEditing = useAtomValue(isEditingAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
+  const error = useAtomValue(errorAtom);
+  const formError = useAtomValue(formErrorAtom);
 
-  return (
-    <PanelDetailCard
-      className="min-h-0 flex-1"
-      title={
-        <span className="truncate text-lg font-semibold tracking-tight">
-          {creating ? '新建数据同步' : form.name || selectedTask?.name || '数据同步'}
-        </span>
-      }
-      actions={<DataSyncTaskPaneActions readOnly={readOnly} />}
-      panels={[
-        { value: 'config', label: '任务配置', content: <DataSyncTaskConfigTab readOnly={readOnly} /> },
-        { value: 'workflow', label: '同步工作流', content: <DataSyncWorkflowTab readOnly={readOnly} /> },
+  if (error) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertTitle>操作失败</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (formError && (isEditing || selectedId)) {
+    return (
+      <Alert variant="destructive" className="mb-4">
+        <AlertTitle>无法保存</AlertTitle>
+        <AlertDescription>{formError}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!isEditing && !selectedId) {
+    return (
+      <Alert>
+        <AlertDescription>请选择任务或新建。</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
+}
+
+function useDataSyncDetailPanels() {
+  const isEditing = useAtomValue(isEditingAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
+  const isCreating = isEditing && selectedId == null;
+
+  return useMemo(
+    () =>
+      [
+        { value: 'config', label: '任务配置', content: <DataSyncConfigFields /> },
+        { value: 'workflow', label: '同步工作流', content: <DataSyncWorkflowFields /> },
         {
           value: 'records',
           label: '同步记录',
           content: <DataSyncRecordsTab />,
-          disabled: creating,
+          disabled: isCreating,
         },
-      ]}
-      panelActiveTab={panelActiveTab}
-      onPanelActiveTabChange={(v) => {
-        if (v === 'config' || v === 'workflow' || v === 'records') {
-          void setDetailTab(v);
-        }
-      }}
-    />
+      ] as const,
+    [isCreating],
   );
 }
 
+/**
+ * 右侧主区：全模块仅渲染一个 {@link PanelDetailCard}。
+ * 空态 / 只读 / 编辑在 title、actions、panels 与各字段的 readOnly 上区分。
+ */
 export function DataSyncDetailPane() {
-  const showDetailForm = useAtomValue(dataSyncShowDetailFormAtom);
-  const showEditor = useAtomValue(dataSyncShowEditorAtom);
-  const creating = useAtomValue(dataSyncCreatingAtom);
-  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
-  const datasources = useAtomValue(dataSyncDatasourcesAtom);
-  const error = useAtomValue(dataSyncErrorAtom);
-  const formError = useAtomValue(dataSyncFormErrorAtom);
-  const form = useAtomValue(dataSyncFormAtom);
+  const isEditing = useAtomValue(isEditingAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
+  const isCreating = isEditing && selectedId == null;
+  const selectedTask = useAtomValue(selectedTaskAtom);
+  const [form, setForm] = useAtom(formAtom);
+  const panelActiveTab = useAtomValue(panelActiveTabAtom);
+  const setDetailTab = useSetAtom(setDetailTabAtom);
+  const detailPanels = useDataSyncDetailPanels();
 
-  const editorKey = creating
+  const pageTitleValue = isEditing ? form.name : (selectedTask?.name ?? '');
+
+  const editorKey = isCreating
     ? `create:${form.sourceIds.join(',')}:${form.targetIds.join(',')}`
-    : `${selectedTask?.id ?? 'none'}:${form.sourceIds.join(',')}:${form.targetIds.join(',')}`;
+    : `${selectedId ?? 'none'}:${form.sourceIds.join(',')}:${form.targetIds.join(',')}`;
+
+  const title = (
+    <EditablePageTitle
+      value={pageTitleValue}
+      showEdit={isEditing}
+      onChange={(v) => {
+        if (!isEditing) return;
+        setForm((prev) => ({ ...prev, name: v }));
+      }}
+      inputAriaLabel="同步任务名称"
+      placeholder={isCreating ? '新建数据同步' : '数据同步'}
+      editButtonAriaLabel="编辑任务名称"
+    />
+  );
+
+  const onPanelActiveTabChange = (v: string) => {
+    if (v === 'config' || v === 'workflow' || v === 'records') {
+      void setDetailTab(v);
+    }
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {showDetailForm ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
-          {error || formError ? (
-            <div className="flex shrink-0 flex-col gap-2">
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>操作失败</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-              {formError ? (
-                <Alert variant="destructive">
-                  <AlertTitle>无法保存</AlertTitle>
-                  <AlertDescription>{formError}</AlertDescription>
-                </Alert>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {(creating || selectedTask) && <DataSyncTaskEditor key={editorKey} readOnly={!showEditor} />}
-          </div>
-        </div>
-      ) : (
-        <PanelDetailCard
-          className="min-h-0 flex-1"
-          title={<span className="truncate text-lg font-semibold tracking-tight">数据同步</span>}
-          actions={<DataSyncEmptyActions />}
-        >
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-6">
-            {error ? (
-              <Alert variant="destructive">
-                <AlertTitle>操作失败</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <Alert>
-              <AlertDescription>
-                {datasources.length < 2 ? '至少配置两个数据源。' : '请选择任务或新建。'}
-              </AlertDescription>
-            </Alert>
-          </div>
-        </PanelDetailCard>
-      )}
-    </div>
+    <PanelDetailCard
+      key={editorKey}
+      className="min-h-0 flex-1"
+      title={title}
+      actions={<DataSyncDetailActions />}
+      panels={detailPanels}
+      panelActiveTab={panelActiveTab}
+      onPanelActiveTabChange={onPanelActiveTabChange}
+    >
+      <DataSyncDetailCardAlerts />
+    </PanelDetailCard>
   );
 }

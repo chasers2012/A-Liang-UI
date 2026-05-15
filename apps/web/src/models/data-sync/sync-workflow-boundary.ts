@@ -78,7 +78,7 @@ function buildTargetOutputs(
 }
 
 /** 将工作流边界与任务配置中的源/目标数据源列表对齐（与数据集预处理边界同步类似）。 */
-export function syncDataSyncWorkflowBoundary(
+export function syncWorkflowBoundary(
   workflow: WorkflowGraphPersisted,
   sourceIds: string[],
   targetIds: string[],

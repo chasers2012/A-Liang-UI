@@ -4,7 +4,7 @@ import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
 
 import { readPayloadIdList, readPayloadString } from './payload';
 
-export type DataSyncFormValues = {
+export type FormValues = {
   name: string;
   cronExpr: string;
   maxRetries: string;
@@ -17,7 +17,7 @@ export type DataSyncFormValues = {
   syncWorkflow: WorkflowGraphPersisted;
 };
 
-export function emptyDataSyncFormValues(): DataSyncFormValues {
+export function emptyFormValues(): FormValues {
   return {
     name: '',
     cronExpr: '',
@@ -32,7 +32,7 @@ export function emptyDataSyncFormValues(): DataSyncFormValues {
   };
 }
 
-export function taskToFormValues(task: SchedulerTaskPublic): DataSyncFormValues {
+export function taskToFormValues(task: SchedulerTaskPublic): FormValues {
   const p = (task.payload ?? {}) as Record<string, unknown>;
   const wfRaw = p.sync_workflow;
   let syncWorkflow: WorkflowGraphPersisted;
@@ -55,7 +55,7 @@ export function taskToFormValues(task: SchedulerTaskPublic): DataSyncFormValues 
   };
 }
 
-export type DataSyncFormCommitters = {
+export type FormCommitters = {
   setName: (v: string) => void;
   setCronExpr: (v: string) => void;
   setMaxRetries: (v: string) => void;
@@ -70,7 +70,7 @@ export type DataSyncFormCommitters = {
 };
 
 /** 将表单快照写入 React state（新建/选中任务同步/取消编辑）。 */
-export function commitDataSyncFormValues(v: DataSyncFormValues, c: DataSyncFormCommitters): void {
+export function commitFormValues(v: FormValues, c: FormCommitters): void {
   c.setName(v.name);
   c.setCronExpr(v.cronExpr);
   c.setMaxRetries(v.maxRetries);

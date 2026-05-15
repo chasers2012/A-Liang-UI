@@ -5,30 +5,28 @@ import { Plus } from 'lucide-react';
 
 import { SearchList, SearchListItem } from '@/components/search-list';
 import {
-  dataSyncDatasourcesAtom,
-  dataSyncListNoticeAtom,
-  dataSyncListSearchQueryAtom,
-  dataSyncLoadingAtom,
-  dataSyncSearchListItemsAtom,
-  dataSyncSelectedIdAtom,
-  dataSyncShowEditorAtom,
-  dataSyncSyncTasksAtom,
-  startCreateDataSyncAtom,
-  selectDataSyncTaskAtom,
+  listNoticeAtom,
+  listSearchQueryAtom,
+  loadingAtom,
+  searchListItemsAtom,
+  isEditingAtom,
+  selectedIdAtom,
+  syncTasksAtom,
+  startCreateAtom,
+  selectTaskAtom,
 } from '@/models/data-sync/panel.atom';
 
 export function DataSyncListPane() {
-  const [listSearchQuery, setListSearchQuery] = useAtom(dataSyncListSearchQueryAtom);
-  const sidebarCollapsed = useAtomValue(dataSyncShowEditorAtom);
-  const selectedId = useAtomValue(dataSyncSelectedIdAtom);
-  const loading = useAtomValue(dataSyncLoadingAtom);
-  const datasources = useAtomValue(dataSyncDatasourcesAtom);
-  const searchListItems = useAtomValue(dataSyncSearchListItemsAtom);
-  const syncTasksCount = useAtomValue(dataSyncSyncTasksAtom).length;
-  const listNotice = useAtomValue(dataSyncListNoticeAtom);
+  const [listSearchQuery, setListSearchQuery] = useAtom(listSearchQueryAtom);
+  const sidebarCollapsed = useAtomValue(isEditingAtom);
+  const selectedId = useAtomValue(selectedIdAtom);
+  const loading = useAtomValue(loadingAtom);
+  const searchListItems = useAtomValue(searchListItemsAtom);
+  const syncTasksCount = useAtomValue(syncTasksAtom).length;
+  const listNotice = useAtomValue(listNoticeAtom);
 
-  const onStartCreate = useSetAtom(startCreateDataSyncAtom);
-  const onSelectItem = useSetAtom(selectDataSyncTaskAtom);
+  const onStartCreate = useSetAtom(startCreateAtom);
+  const onSelectItem = useSetAtom(selectTaskAtom);
 
   return (
     <SearchList
@@ -51,7 +49,7 @@ export function DataSyncListPane() {
           variant: 'default',
           size: 'icon',
           onClick: () => void onStartCreate(),
-          disabled: loading || datasources.length < 2,
+          disabled: loading,
         },
       ]}
     >
