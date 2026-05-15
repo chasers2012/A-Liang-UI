@@ -49,7 +49,7 @@ export default function NodesPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditActive} innerWidthClassName="w-[300px]">
+      <CollapsibleSearchListSidebar collapsed={isEditActive} innerWidthClassName="w-[320px]">
         <SearchList
           className="h-full min-h-0"
           items={

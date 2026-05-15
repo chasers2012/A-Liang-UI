@@ -69,7 +69,7 @@ export function DataSetsPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[300px]">
+      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
         <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
           {listError ? (
             <Alert variant="destructive">
