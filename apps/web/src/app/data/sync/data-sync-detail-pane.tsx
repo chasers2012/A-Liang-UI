@@ -22,6 +22,7 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from '@/components/ui/combobox';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
@@ -206,28 +207,34 @@ function DataSyncConfigFields() {
           />
         </Field>
 
-        <Field className="gap-2">
-          <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
-          <Input
-            id="sync-init"
-            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
-            value={form.initialStartDate}
-            readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, initialStartDate: e.target.value }))}
-            placeholder="YYYY-MM-DD"
-          />
-        </Field>
-        <Field className="gap-2">
-          <FieldLabel htmlFor="sync-end">结束日期</FieldLabel>
-          <Input
-            id="sync-end"
-            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
-            value={form.endDate}
-            readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-            placeholder="YYYY-MM-DD"
-          />
-        </Field>
+        <FieldGroup className="grid gap-4 sm:grid-cols-2">
+          <Field className="gap-2">
+            <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
+            <DatePicker
+              id="sync-init"
+              value={form.initialStartDate}
+              onChange={(v) => {
+                if (readOnly) return;
+                setForm((prev) => ({ ...prev, initialStartDate: v }));
+              }}
+              placeholder="选择起始日期"
+              readOnly={readOnly}
+            />
+          </Field>
+          <Field className="gap-2">
+            <FieldLabel htmlFor="sync-end">结束日期</FieldLabel>
+            <DatePicker
+              id="sync-end"
+              value={form.endDate}
+              onChange={(v) => {
+                if (readOnly) return;
+                setForm((prev) => ({ ...prev, endDate: v }));
+              }}
+              placeholder="选择结束日期"
+              readOnly={readOnly}
+            />
+          </Field>
+        </FieldGroup>
 
         <Field className="gap-2">
           <FieldLabel htmlFor="sync-retries">最大重试</FieldLabel>

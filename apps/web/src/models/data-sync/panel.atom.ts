@@ -12,7 +12,6 @@ import { listDatasources } from '@/api/datasources';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
-import { buildSyncPayload } from './form-logic';
 import {
   buildListNotice,
   buildSearchListItems,
@@ -57,12 +56,7 @@ export const describeTaskAtom = atom((get) => {
   return (t: DataSyncTaskPublic) => formatTaskDescription(t, lookup);
 });
 
-export const filteredSyncTasksAtom = atom((get) => {
-  const tasks = get(tasksAtom);
-  const query = get(listSearchQueryAtom);
-  const describe = get(describeTaskAtom);
-  return filterTasksBySearch(tasks, query, describe);
-});
+export const filteredSyncTasksAtom = atom((get) => filterTasksBySearch(get(tasksAtom), get(listSearchQueryAtom)));
 
 export const searchListItemsAtom = atom((get) => {
   const filtered = get(filteredSyncTasksAtom);
@@ -189,13 +183,16 @@ export const submitFormAtom = atom(null, async (get, set) => {
   const selectedId = get(selectedIdAtom);
   if (!get(isEditingAtom)) return;
   const name = form.name.trim();
-  const payload = buildSyncPayload({
-    sourceIds: form.sourceIds.map((x) => x.trim()).filter(Boolean),
-    targetIds: form.targetIds.map((x) => x.trim()).filter(Boolean),
-    initialStartDate: form.initialStartDate,
-    endDate: form.endDate,
-    syncWorkflow: get(workflowCanvasHandleAtom)?.getGraph() ?? form.syncWorkflow,
-  });
+  const syncWorkflow = get(workflowCanvasHandleAtom)?.getGraph() ?? form.syncWorkflow;
+  const payload: Record<string, unknown> = {
+    source_datasource_ids: form.sourceIds.map((x) => x.trim()).filter(Boolean),
+    target_datasource_ids: form.targetIds.map((x) => x.trim()).filter(Boolean),
+  };
+  const initialStartDate = form.initialStartDate.trim();
+  if (initialStartDate) payload.initial_start_date = initialStartDate;
+  const endDate = form.endDate.trim();
+  if (endDate) payload.end_date = endDate;
+  if (syncWorkflow.nodes?.length) payload.sync_workflow = syncWorkflow;
   const maxRetries = Number.parseInt(form.maxRetries, 10);
   const timeoutSeconds = Number.parseInt(form.timeoutSeconds, 10);
   const cron = form.cronExpr.trim() || null;

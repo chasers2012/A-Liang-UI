@@ -1,7 +1,6 @@
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 
-import { payloadSearchHaystack } from './form-logic';
 import { readPayloadIdList } from './payload';
 
 export function toLocalTime(v: string | null): string {
@@ -37,17 +36,10 @@ export function formatTaskDescription(task: DataSyncTaskPublic, dsLabelLookup: M
   return `${sl} → ${tl} · ${cron} · 下次 ${next}`;
 }
 
-export function filterTasksBySearch(
-  syncTasks: DataSyncTaskPublic[],
-  listSearchQuery: string,
-  describe: (t: DataSyncTaskPublic) => string,
-): DataSyncTaskPublic[] {
+export function filterTasksBySearch(syncTasks: DataSyncTaskPublic[], listSearchQuery: string): DataSyncTaskPublic[] {
   const q = listSearchQuery.trim().toLowerCase();
   if (!q) return syncTasks;
-  return syncTasks.filter((t) => {
-    const hay = `${payloadSearchHaystack(t)} ${describe(t)}`.toLowerCase();
-    return hay.includes(q);
-  });
+  return syncTasks.filter((t) => t.name.toLowerCase().includes(q));
 }
 
 export function buildSearchListItems(
