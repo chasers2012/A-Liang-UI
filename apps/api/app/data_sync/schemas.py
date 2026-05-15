@@ -103,6 +103,26 @@ class DataSyncTaskPayload(BaseModel):
         return json.dumps(wf_norm, ensure_ascii=False) if wf_norm else ""
 
 
+class DataSyncTargetWriteResult(BaseModel):
+    """Per-target write stats from a single sync run."""
+
+    target_datasource_id: str
+    rows_written: int = Field(ge=0)
+
+
+class DataSyncRunResult(BaseModel):
+    """Structured result returned by datasource_sync_handler."""
+
+    rows_read: int = Field(ge=0)
+    rows_written: int = Field(ge=0)
+    rows_written_by_target: list[DataSyncTargetWriteResult] = Field(default_factory=list)
+    start_date: str | None = None
+    end_date: str
+    watermark_date: str | None = None
+    source_datasource_ids: list[str] = Field(default_factory=list)
+    target_datasource_ids: list[str] = Field(default_factory=list)
+
+
 class DataSyncTaskBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     cron_expr: str | None = None
@@ -134,9 +154,6 @@ class DataSyncTaskPublic(DataSyncTaskBase):
 
 
 class TriggerDataSyncTaskRequest(BaseModel):
-    """Per-run overrides merged into the task payload when enqueueing a job."""
-
-    payload: dict[str, Any] = Field(default_factory=dict)
     dedupe_key: str | None = Field(default=None, max_length=120)
 
 
@@ -150,6 +167,8 @@ __all__ = [
     "DataSyncJobListResponse",
     "DataSyncJobLogPublic",
     "DataSyncJobPublic",
+    "DataSyncRunResult",
+    "DataSyncTargetWriteResult",
     "DataSyncTaskPayload",
     "DataSyncTaskPublic",
     "UpdateDataSyncTaskRequest",

@@ -247,7 +247,7 @@ export const triggerTaskAtom = atom(null, async (get, set) => {
   set(busyIdAtom, selectedId);
   set(errorAtom, null);
   try {
-    await triggerDataSyncTask(selectedId, {});
+    await triggerDataSyncTask(selectedId);
     await set(refreshPageAtom);
   } catch (e) {
     set(errorAtom, e instanceof Error ? e.message : String(e));

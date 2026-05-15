@@ -39,10 +39,10 @@ export function deleteDataSyncTask(taskId: string): Promise<void> {
   });
 }
 
-export function triggerDataSyncTask(taskId: string, payload?: Record<string, unknown>): Promise<DataSyncJobPublic> {
+export function triggerDataSyncTask(taskId: string): Promise<DataSyncJobPublic> {
   return apiFetchJson<DataSyncJobPublic>(`/data-sync/tasks/${encodeURIComponent(taskId)}/trigger`, {
     method: 'POST',
-    body: JSON.stringify({ payload: payload ?? {} }),
+    body: JSON.stringify({}),
   });
 }
 
