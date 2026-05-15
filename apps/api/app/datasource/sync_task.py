@@ -8,7 +8,7 @@ import pandas as pd
 from workflow.schemas import WorkflowGraphPersisted
 
 from app.common.datetime_utils import utc_now_iso
-from app.common.frames_workflow import execute_frames_dataframe_workflow
+from app.common.frames_workflow import execute_datasource_sync_workflow
 from app.datasource.controller import get_datasource
 from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
@@ -260,6 +260,21 @@ def _compute_watermark(
     return pd.Timestamp(mx).date().isoformat()
 
 
+def _compute_watermark_from_frames(
+    frames: list[pd.DataFrame],
+    date_col: str,
+    cur: DataSourceSyncCursorRow | None,
+) -> str | None:
+    best: str | None = cur.watermark_date if cur else None
+    for df in frames:
+        if df.empty or date_col not in df.columns:
+            continue
+        wm = _compute_watermark(df, date_col, cur)
+        if wm and (best is None or wm > best):
+            best = wm
+    return best
+
+
 def _load_sources_plain(source_ids: list[str]) -> list[tuple[str, dict[str, Any]]]:
     out: list[tuple[str, dict[str, Any]]] = []
     for sid in source_ids:
@@ -304,25 +319,30 @@ def _load_raw_frames(
     return raw_frames
 
 
-def _merge_raw_frames(
+def _resolve_sync_output_frames(
     *,
     source_ids: list[str],
+    target_ids: list[str],
     wf_json: str,
     raw_frames: dict[str, pd.DataFrame],
-) -> pd.DataFrame:
+) -> dict[str, pd.DataFrame]:
     if len(source_ids) == 1 and not wf_json:
-        return raw_frames[source_ids[0]]
+        df = raw_frames[source_ids[0]]
+        return dict.fromkeys(target_ids, df)
     assert wf_json
-    return execute_frames_dataframe_workflow(wf_json, raw_frames)
+    return execute_datasource_sync_workflow(wf_json, raw_frames, target_ids)
 
 
-def _write_df_to_all_targets(
+def _write_frames_by_target(
     targets: list[tuple[str, str, dict[str, Any]]],
-    df_out: pd.DataFrame,
+    frames_by_target: dict[str, pd.DataFrame],
 ) -> tuple[list[dict[str, Any]], int]:
     rows_written_by_target: list[dict[str, Any]] = []
     rows_written = 0
     for tid, _ttype, tgt_plain in targets:
+        df_out = frames_by_target.get(tid)
+        if df_out is None:
+            raise ValueError(f"缺少目标数据源 {tid} 的同步结果")
         trow = DataSourceItemsRegistry.get_item(tid)
         if trow is None:
             raise ValueError(f"目标数据源不存在: {tid}")
@@ -415,9 +435,14 @@ def _datasource_sync_run(
             ),
         }
 
-    df_out = _merge_raw_frames(source_ids=source_ids, wf_json=wf_json, raw_frames=raw_frames)
+    frames_by_target = _resolve_sync_output_frames(
+        source_ids=source_ids,
+        target_ids=target_ids,
+        wf_json=wf_json,
+        raw_frames=raw_frames,
+    )
 
-    if df_out.empty:
+    if not any(len(f) for f in frames_by_target.values()):
         rows_read_raw = sum(len(f) for f in raw_frames.values())
         return {
             "rows_read": rows_read_raw,
@@ -433,14 +458,16 @@ def _datasource_sync_run(
             ),
         }
 
-    if date_col not in df_out.columns:
-        raise ValueError(
-            f"同步输出缺少日期列 {date_col!r}（来自主源），无法维护游标；请在 sync_workflow 中保留该列"
-        )
+    for tid, df_out in frames_by_target.items():
+        if date_col not in df_out.columns:
+            raise ValueError(
+                f"目标 {tid} 的同步结果缺少日期列 {date_col!r}（来自主源），"
+                "无法维护游标；请在 sync_workflow 中保留该列"
+            )
 
-    new_watermark = _compute_watermark(df_out, date_col, cur)
+    new_watermark = _compute_watermark_from_frames(list(frames_by_target.values()), date_col, cur)
 
-    rows_written_by_target, rows_written = _write_df_to_all_targets(targets, df_out)
+    rows_written_by_target, rows_written = _write_frames_by_target(targets, frames_by_target)
 
     _save_cursor(
         cursor_key=cursor_key,
@@ -450,8 +477,10 @@ def _datasource_sync_run(
         watermark_date=new_watermark,
     )
 
+    rows_read = sum(len(f) for f in frames_by_target.values())
+
     return {
-        "rows_read": len(df_out),
+        "rows_read": rows_read,
         "rows_written": rows_written,
         "rows_written_by_target": rows_written_by_target,
         **_sync_result_base(

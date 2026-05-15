@@ -509,7 +509,9 @@ export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
     ...formProps
   } = props;
 
-  const editorKey = creating ? 'create' : (selectedTask?.id ?? 'none');
+  const editorKey = creating
+    ? `create:${formProps.sourceIds.join(',')}:${formProps.targetIds.join(',')}`
+    : `${selectedTask?.id ?? 'none'}:${formProps.sourceIds.join(',')}:${formProps.targetIds.join(',')}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

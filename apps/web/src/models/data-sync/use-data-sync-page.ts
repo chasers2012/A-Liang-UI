@@ -32,6 +32,7 @@ import {
   type DataSyncFormCommitters,
   type DataSyncFormValues,
 } from './task-form';
+import { syncDataSyncWorkflowBoundary } from './sync-workflow-boundary';
 
 export function useDataSyncPage(workflowCanvasRef: RefObject<WorkflowGraphCanvasHandle | null>) {
   const [tasks, setTasks] = useState<SchedulerTaskPublic[]>([]);
@@ -143,6 +144,17 @@ export function useDataSyncPage(workflowCanvasRef: RefObject<WorkflowGraphCanvas
     const task = syncTasks.find((t) => t.id === selectedId);
     if (task) applyFromValues(taskToFormValues(task));
   }, [syncTasks, selectedId, creating, panelEditing, applyFromValues]);
+
+  const datasourceNameById = useMemo(() => Object.fromEntries(datasources.map((d) => [d.id, d.name])), [datasources]);
+
+  useEffect(() => {
+    const live = workflowCanvasRef.current?.getGraph() ?? null;
+    setSyncWorkflow((prev) => {
+      const base = live ?? prev;
+      const synced = syncDataSyncWorkflowBoundary(base, sourceIds, targetIds, datasourceNameById);
+      return JSON.stringify(synced) === JSON.stringify(prev) ? prev : synced;
+    });
+  }, [sourceIds, targetIds, datasourceNameById, workflowCanvasRef]);
 
   const resetForm = useCallback(() => {
     setFormError(null);
