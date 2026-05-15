@@ -154,7 +154,7 @@ class CsvDataSource(FactorDataSource):
 class CsvDataSourceSpec(DataSourceSpec):
     def __init__(self) -> None:
         super().__init__(
-            connection_config=FormSchema(
+            connection_schema=FormSchema(
                 title="CSV 数据源",
                 description="路径可为绝对路径，或相对于 workspace 根目录的相对路径。",
                 json_schema={
@@ -182,7 +182,7 @@ class CsvDataSourceSpec(DataSourceSpec):
                     },
                 },
             ),
-            columns_config=FormSchema(
+            columns_schema=FormSchema(
                 title="CSV 字段配置",
                 description="根据连接探测到的列，选择日期列和资产列。",
                 json_schema={

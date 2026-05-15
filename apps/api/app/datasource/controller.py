@@ -154,8 +154,8 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
     reg = PluginRegistry.instance()
     out: list[DatasourcePluginPublic] = []
     for ds_type, plugin in reg.list_registered_by_category("datasource"):
-        connection_schema = plugin.spec.connection_config
-        columns_schema = plugin.spec.columns_config
+        connection_schema = plugin.spec.connection_schema
+        columns_schema = plugin.spec.columns_schema
         title = (
             (connection_schema.title if connection_schema else None)
             or (columns_schema.title if columns_schema else None)

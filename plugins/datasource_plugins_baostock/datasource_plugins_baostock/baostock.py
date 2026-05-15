@@ -91,7 +91,7 @@ class BaoStockDataSource(FactorDataSource):
 class BaoStockDataSourceSpec(DataSourceSpec):
     def __init__(self) -> None:
         super().__init__(
-            connection_config=FormSchema(
+            connection_schema=FormSchema(
                 title="BaoStock 数据源",
                 description="通过 baostock 拉取 A 股数据（参数由数据集时间和资产过滤驱动）。",
                 json_schema={
@@ -117,7 +117,7 @@ class BaoStockDataSourceSpec(DataSourceSpec):
                     # Per-api connection widgets are defined by each loader's config schema.
                 },
             ),
-            columns_config=FormSchema(
+            columns_schema=FormSchema(
                 title="BaoStock 字段配置",
                 description="配置日期列和资产列。",
                 json_schema={

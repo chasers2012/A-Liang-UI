@@ -197,7 +197,7 @@ class SqlDataSource(FactorDataSource):
 class SqlDataSourceSpec(DataSourceSpec):
     def __init__(self) -> None:
         super().__init__(
-            connection_config=FormSchema(
+            connection_schema=FormSchema(
                 title="SQL 数据源",
                 description="配置数据库连接和数据表信息。",
                 json_schema={
@@ -230,7 +230,7 @@ class SqlDataSourceSpec(DataSourceSpec):
                     },
                 },
             ),
-            columns_config=FormSchema(
+            columns_schema=FormSchema(
                 title="SQL 字段配置",
                 description="根据连接探测到的列，选择日期列和资产列。",
                 json_schema={

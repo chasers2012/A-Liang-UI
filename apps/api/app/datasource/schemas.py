@@ -28,24 +28,24 @@ class DataSourceSpec(ABC):
 
     def __init__(
         self,
-        connection_config: FormSchema | None = None,
-        columns_config: FormSchema | None = None,
+        connection_schema: FormSchema | None = None,
+        columns_schema: FormSchema | None = None,
     ) -> None:
-        self.connection_config = connection_config
-        self.columns_config = columns_config
+        self.connection_schema = connection_schema
+        self.columns_schema = columns_schema
 
     def resolved_connection_secret_keys(self) -> list[str]:
-        connection_schema = self.connection_config
-        return connection_schema.resolved_secret_keys() if connection_schema is not None else []
+        schema = self.connection_schema
+        return schema.resolved_secret_keys() if schema is not None else []
 
     def resolved_columns_secret_keys(self) -> list[str]:
-        columns_schema = self.columns_config
-        return columns_schema.resolved_secret_keys() if columns_schema is not None else []
+        schema = self.columns_schema
+        return schema.resolved_secret_keys() if schema is not None else []
 
     def decrypt_storage_config(self, stored_config: dict[str, Any]) -> dict[str, Any]:
         raw = dict(stored_config or {})
-        connection_schema = self.connection_config
-        columns_schema = self.columns_config
+        connection_schema = self.connection_schema
+        columns_schema = self.columns_schema
         connection = dict(raw.get("connection") or {})
         columns = dict(raw.get("columns") or {})
         return {
@@ -61,8 +61,8 @@ class DataSourceSpec(ABC):
 
     def encrypt_storage_config(self, storage_config: dict[str, Any]) -> dict[str, Any]:
         raw = dict(storage_config or {})
-        connection_schema = self.connection_config
-        columns_schema = self.columns_config
+        connection_schema = self.connection_schema
+        columns_schema = self.columns_schema
         connection = dict(raw.get("connection") or {})
         columns = dict(raw.get("columns") or {})
         return {
@@ -97,12 +97,12 @@ class DataSourceSpec(ABC):
 
         return {
             "connection": _merge_part(
-                self.connection_config,
+                self.connection_schema,
                 dict(saved_plain.get("connection") or {}),
                 connection_overlay,
             ),
             "columns": _merge_part(
-                self.columns_config,
+                self.columns_schema,
                 dict(saved_plain.get("columns") or {}),
                 columns_overlay,
             ),
@@ -191,8 +191,8 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
     from app.datasource.plugins import get_datasource_plugin
 
     plugin = get_datasource_plugin(str(row.type))
-    connection_schema = plugin.spec.connection_config
-    columns_schema = plugin.spec.columns_config
+    connection_schema = plugin.spec.connection_schema
+    columns_schema = plugin.spec.columns_schema
     raw_config = dict(row.config or {})
     public_config = deepcopy(raw_config)
     if not isinstance(public_config.get("connection"), dict):
