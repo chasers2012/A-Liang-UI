@@ -118,7 +118,6 @@ class DataSyncRunResult(BaseModel):
     rows_written_by_target: list[DataSyncTargetWriteResult] = Field(default_factory=list)
     start_date: str | None = None
     end_date: str
-    watermark_date: str | None = None
     source_datasource_ids: list[str] = Field(default_factory=list)
     target_datasource_ids: list[str] = Field(default_factory=list)
 

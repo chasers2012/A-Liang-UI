@@ -85,26 +85,6 @@ class DataSourceSpec(ABC):
         """从扁平 ``write_*`` 字典解析并校验通用写入语义（插件可从 ``connection`` 等段组装该字典）。"""
         return DataSourceWriteConfig.model_validate(dict(write_config or {}))
 
-    def list_sync_target_physical_columns(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> list[str] | None:
-        """若该类型可作为同步目标并枚举物理列，返回列名；否则返回 ``None``。"""
-        _ = connection_config, columns_config
-        return None
-
-    def write_sync_dataframe(
-        self,
-        *,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-        df: Any,
-    ) -> int:
-        """将同步得到的 DataFrame 写入目标；不支持则抛出 ``NotImplementedError``。"""
-        _ = connection_config, columns_config, df
-        raise NotImplementedError("该数据源类型不支持作为同步写入目标")
-
     def decrypt_storage_config(self, stored_config: dict[str, Any]) -> dict[str, Any]:
         raw = dict(stored_config or {})
         connection_schema = self.connection_schema

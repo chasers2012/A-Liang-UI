@@ -52,7 +52,6 @@ class SqlColumnsConfig(BaseModel):
     date_column: str = "date"
     asset_column: str | None = "asset"
     columns: list[str] = Field(default_factory=list)
-    column_map: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _validate(self) -> SqlColumnsConfig:
@@ -78,6 +77,22 @@ def _quote_ident(engine: Engine, name: str) -> str:
     if "." in name:
         return ".".join(prep.quote(p) for p in name.split("."))
     return prep.quote(name)
+
+
+def _nan_to_none_records(df: pd.DataFrame) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for row in df.replace({pd.NA: None}).to_dict(orient="records"):
+        rec = {k: (None if pd.isna(v) else v) for k, v in row.items()}
+        out.append(rec)
+    return out
+
+
+def _execute_insert_loop(engine: Engine, sql: str, records: list[dict[str, Any]]) -> int:
+    stmt = text(sql)
+    with engine.begin() as cx:
+        for rec in records:
+            cx.execute(stmt, rec)
+    return len(records)
 
 
 def _auth_fragment(username: str, password: str) -> str:
@@ -129,6 +144,7 @@ class SqlDataSource(FactorDataSource):
         table: str,
         date_column: str = "date",
         asset_column: str | None = "asset",
+        write_enabled: bool = False,
     ) -> None:
         self._engine = _as_engine(engine)
         self._table = str(table)
@@ -139,6 +155,7 @@ class SqlDataSource(FactorDataSource):
             if asset_column is not None and str(asset_column).strip()
             else None
         )
+        self._write_enabled = bool(write_enabled)
 
     @property
     def date_column(self) -> str:
@@ -157,6 +174,28 @@ class SqlDataSource(FactorDataSource):
         cols = [c.get("name") for c in insp.get_columns(table, schema=schema)]
         cols = [str(c) for c in cols if c]
         return sorted(set(cols), key=lambda x: (x.lower(), x))
+
+    def list_sync_target_physical_columns(self) -> list[str]:
+        return self.list_columns()
+
+    def write_sync_dataframe(self, df: pd.DataFrame) -> int:
+        if df.empty:
+            return 0
+        if not self._write_enabled:
+            raise ValueError("目标数据源未开启 write_enabled，拒绝写入")
+
+        engine = self._engine
+        table_sql = self._table_sql
+        db_cols = list(df.columns)
+        if not db_cols:
+            return 0
+
+        quoted_cols = [_quote_ident(engine, c) for c in db_cols]
+        col_list_sql = ", ".join(quoted_cols)
+        placeholders = ", ".join(f":{c}" for c in db_cols)
+        records = _nan_to_none_records(df)
+        sql = f"INSERT INTO {table_sql} ({col_list_sql}) VALUES ({placeholders})"
+        return _execute_insert_loop(engine, sql, records)
 
     def load_frame(
         self,
@@ -303,31 +342,6 @@ class SqlDataSourceSpec(DataSourceSpec):
             "columns": col.model_dump(mode="json"),
         }
 
-    def list_sync_target_physical_columns(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> list[str] | None:
-        _ = columns_config
-        from datasource_plugins_builtin.sql_sync import list_sql_table_physical_columns
-
-        return list_sql_table_physical_columns(connection_config)
-
-    def write_sync_dataframe(
-        self,
-        *,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-        df: pd.DataFrame,
-    ) -> int:
-        from datasource_plugins_builtin.sql_sync import write_dataframe_to_sql_table
-
-        return write_dataframe_to_sql_table(
-            connection_config=connection_config,
-            columns_config=columns_config,
-            df=df,
-        )
-
     def to_factor_datasource(
         self,
         connection_config: dict[str, Any],
@@ -346,6 +360,7 @@ class SqlDataSourceSpec(DataSourceSpec):
             table=conn.table.strip(),
             date_column=col.date_column,
             asset_column=col.asset_column,
+            write_enabled=conn.write_enabled,
         )
 
     def verify(
