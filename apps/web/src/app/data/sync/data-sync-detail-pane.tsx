@@ -13,6 +13,7 @@ import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
+import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
 import { cn } from '@/lib/utils';
 
 type SyncDetailTab = 'config' | 'workflow';
@@ -30,7 +31,6 @@ export type DataSyncDetailPaneProps = {
   showDetailForm: boolean;
   /** 与数据源页一致：仅新建或点击「编辑」后为 true，侧栏收起 */
   showEditor: boolean;
-  taskSummary: string;
   datasources: DataSourcePublic[];
   locked: boolean;
   error: string | null;
@@ -164,11 +164,13 @@ function DatasourceCheckboxList(props: {
   datasources: DataSourcePublic[];
   selectedIds: string[];
   otherSelectedIds: string[];
+  readOnly?: boolean;
   onChange: (ids: string[]) => void;
 }) {
-  const { title, datasources, selectedIds, otherSelectedIds, onChange } = props;
+  const { title, datasources, selectedIds, otherSelectedIds, readOnly = false, onChange } = props;
 
   const toggle = (id: string, checked: boolean) => {
+    if (readOnly) return;
     if (checked) {
       const next = [...selectedIds.filter((x) => x !== id), id];
       onChange(next);
@@ -184,19 +186,21 @@ function DatasourceCheckboxList(props: {
         {datasources.map((d) => {
           const disabledAsOther = otherSelectedIds.includes(d.id);
           const checked = selectedIds.includes(d.id);
+          const disabled = readOnly || disabledAsOther;
           return (
             <label
               key={d.id}
               className={cn(
-                'flex cursor-pointer items-center gap-2 text-sm',
-                disabledAsOther && 'cursor-not-allowed opacity-50',
+                'flex items-center gap-2 text-sm',
+                readOnly ? 'cursor-default' : 'cursor-pointer',
+                disabledAsOther && !readOnly && 'cursor-not-allowed opacity-50',
               )}
             >
               <Checkbox
                 checked={checked}
-                disabled={disabledAsOther}
+                disabled={disabled}
                 onCheckedChange={(v) => {
-                  if (disabledAsOther) return;
+                  if (disabled) return;
                   toggle(d.id, Boolean(v));
                 }}
               />
@@ -213,13 +217,74 @@ function DatasourceCheckboxList(props: {
 
 type DataSyncTaskEditorProps = Omit<
   DataSyncDetailPaneProps,
-  'showDetailForm' | 'error' | 'formError' | 'showEditor' | 'taskSummary' | 'onEnterEdit'
->;
+  'showDetailForm' | 'error' | 'formError' | 'showEditor'
+> & {
+  readOnly: boolean;
+};
+
+function DataSyncTaskPaneActions(props: {
+  readOnly: boolean;
+  creating: boolean;
+  selectedTask: SchedulerTaskPublic | undefined;
+  locked: boolean;
+  loading: boolean;
+  onRefresh: () => void;
+  onEnterEdit: () => void;
+  onCancelForm: () => void;
+  onTrigger: () => void;
+  onToggleEnabled: () => void;
+  onDelete: () => void;
+  onSubmit: () => void;
+}) {
+  const {
+    readOnly,
+    creating,
+    selectedTask,
+    locked,
+    loading,
+    onRefresh,
+    onEnterEdit,
+    onCancelForm,
+    onTrigger,
+    onToggleEnabled,
+    onDelete,
+    onSubmit,
+  } = props;
+  if (readOnly && selectedTask) {
+    return (
+      <DataSyncReadonlyActions
+        locked={locked}
+        loading={loading}
+        selectedTask={selectedTask}
+        onRefresh={onRefresh}
+        onEnterEdit={onEnterEdit}
+        onTrigger={onTrigger}
+        onToggleEnabled={onToggleEnabled}
+        onDelete={onDelete}
+      />
+    );
+  }
+  return (
+    <DataSyncEditorActions
+      creating={creating}
+      selectedTask={selectedTask}
+      locked={locked}
+      loading={loading}
+      onRefresh={onRefresh}
+      onCancelForm={onCancelForm}
+      onTrigger={onTrigger}
+      onToggleEnabled={onToggleEnabled}
+      onDelete={onDelete}
+      onSubmit={onSubmit}
+    />
+  );
+}
 
 function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
   const {
     creating,
     selectedTask,
+    readOnly,
     datasources,
     locked,
     loading,
@@ -237,6 +302,7 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
     workflowCanvasRef,
     onCancelForm,
     onRefresh,
+    onEnterEdit,
     onTrigger,
     onToggleEnabled,
     onDelete,
@@ -259,7 +325,13 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
       <FieldGroup className="max-w-5xl gap-6">
         <Field className="gap-2">
           <FieldLabel htmlFor="sync-name">任务名称</FieldLabel>
-          <Input id="sync-name" value={name} onChange={(e) => onNameChange(e.target.value)} />
+          <Input
+            id="sync-name"
+            value={name}
+            readOnly={readOnly}
+            onChange={(e) => onNameChange(e.target.value)}
+            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
+          />
         </Field>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -268,6 +340,7 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
             datasources={datasources}
             selectedIds={sourceIds}
             otherSelectedIds={targetIds}
+            readOnly={readOnly}
             onChange={onSourceIdsChange}
           />
           <DatasourceCheckboxList
@@ -275,6 +348,7 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
             datasources={datasources}
             selectedIds={targetIds}
             otherSelectedIds={sourceIds}
+            readOnly={readOnly}
             onChange={onTargetIdsChange}
           />
         </div>
@@ -283,8 +357,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <FieldLabel htmlFor="sync-cron">Cron</FieldLabel>
           <Input
             id="sync-cron"
-            className="font-mono text-sm"
+            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
             value={cronExpr}
+            readOnly={readOnly}
             onChange={(e) => onCronChange(e.target.value)}
             placeholder="0 2 * * *"
           />
@@ -294,8 +369,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
           <Input
             id="sync-init"
-            className="font-mono text-sm"
+            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
             value={initialStartDate}
+            readOnly={readOnly}
             onChange={(e) => onInitialChange(e.target.value)}
             placeholder="YYYY-MM-DD"
           />
@@ -304,8 +380,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <FieldLabel htmlFor="sync-end">结束日期</FieldLabel>
           <Input
             id="sync-end"
-            className="font-mono text-sm"
+            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
             value={endDate}
+            readOnly={readOnly}
             onChange={(e) => onEndDateChange(e.target.value)}
             placeholder="YYYY-MM-DD"
           />
@@ -313,16 +390,33 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
 
         <Field className="gap-2">
           <FieldLabel htmlFor="sync-retries">最大重试</FieldLabel>
-          <Input id="sync-retries" value={maxRetries} onChange={(e) => onMaxRetriesChange(e.target.value)} />
+          <Input
+            id="sync-retries"
+            value={maxRetries}
+            readOnly={readOnly}
+            onChange={(e) => onMaxRetriesChange(e.target.value)}
+            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
+          />
         </Field>
         <Field className="gap-2">
           <FieldLabel htmlFor="sync-timeout">超时（秒）</FieldLabel>
-          <Input id="sync-timeout" value={timeoutSeconds} onChange={(e) => onTimeoutChange(e.target.value)} />
+          <Input
+            id="sync-timeout"
+            value={timeoutSeconds}
+            readOnly={readOnly}
+            onChange={(e) => onTimeoutChange(e.target.value)}
+            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
+          />
         </Field>
 
         <Field className="gap-2">
           <div className="flex items-center gap-2">
-            <Checkbox checked={enabled} onCheckedChange={(v) => onEnabledChange(Boolean(v))} id="sync-enabled" />
+            <Checkbox
+              checked={enabled}
+              disabled={readOnly}
+              onCheckedChange={(v) => onEnabledChange(Boolean(v))}
+              id="sync-enabled"
+            />
             <FieldLabel htmlFor="sync-enabled" className="font-normal">
               启用调度
             </FieldLabel>
@@ -333,6 +427,7 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <div className="text-xs text-muted-foreground">
             <p>任务 ID：{selectedTask.id}</p>
             <p>更新于：{toLocalTime(selectedTask.updated_at)}</p>
+            {readOnly ? <p>下次运行：{toLocalTime(selectedTask.next_run_at)}</p> : null}
           </div>
         ) : null}
       </FieldGroup>
@@ -347,6 +442,7 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           workflow={syncWorkflow}
           canvasKey={syncWorkflowCanvasKey}
           canvasRef={workflowCanvasRef}
+          readOnly={readOnly}
         />
       </div>
     </div>
@@ -361,12 +457,14 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
         </span>
       }
       actions={
-        <DataSyncEditorActions
+        <DataSyncTaskPaneActions
+          readOnly={readOnly}
           creating={creating}
           selectedTask={selectedTask}
           locked={locked}
           loading={loading}
           onRefresh={onRefresh}
+          onEnterEdit={onEnterEdit}
           onCancelForm={onCancelForm}
           onTrigger={onTrigger}
           onToggleEnabled={onToggleEnabled}
@@ -390,61 +488,12 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
   );
 }
 
-function DataSyncReadonlyPane(props: {
-  selectedTask: SchedulerTaskPublic;
-  taskSummary: string;
-  locked: boolean;
-  loading: boolean;
-  onRefresh: () => void;
-  onEnterEdit: () => void;
-  onTrigger: () => void;
-  onToggleEnabled: () => void;
-  onDelete: () => void;
-}) {
-  const { selectedTask, taskSummary, locked, loading, onRefresh, onEnterEdit, onTrigger, onToggleEnabled, onDelete } =
-    props;
-  return (
-    <PanelDetailCard
-      className="min-h-0 flex-1"
-      title={<span className="truncate text-lg font-semibold tracking-tight">{selectedTask.name}</span>}
-      actions={
-        <DataSyncReadonlyActions
-          locked={locked}
-          loading={loading}
-          selectedTask={selectedTask}
-          onRefresh={onRefresh}
-          onEnterEdit={onEnterEdit}
-          onTrigger={onTrigger}
-          onToggleEnabled={onToggleEnabled}
-          onDelete={onDelete}
-        />
-      }
-    >
-      <div className="flex max-w-2xl flex-col gap-4 text-sm">
-        <div>
-          <span className="text-muted-foreground">同步</span>
-          <p className="mt-1 font-mono text-xs leading-relaxed">{taskSummary}</p>
-        </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-          <span className="text-muted-foreground">Cron</span>
-          <span className="font-mono">{selectedTask.cron_expr?.trim() || '—'}</span>
-          <span className="text-muted-foreground">调度</span>
-          <span>{selectedTask.enabled ? '启用' : '停用'}</span>
-          <span className="text-muted-foreground">下次运行</span>
-          <span>{toLocalTime(selectedTask.next_run_at)}</span>
-        </div>
-      </div>
-    </PanelDetailCard>
-  );
-}
-
 export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
   const {
     creating,
     selectedTask,
     showDetailForm,
     showEditor,
-    taskSummary,
     datasources,
     locked,
     error,
@@ -483,9 +532,10 @@ export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
             </div>
           ) : null}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {showEditor ? (
+            {(creating || selectedTask) && (
               <DataSyncTaskEditor
                 key={editorKey}
+                readOnly={!showEditor}
                 creating={creating}
                 selectedTask={selectedTask}
                 datasources={datasources}
@@ -493,25 +543,14 @@ export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
                 loading={loading}
                 {...formProps}
                 onRefresh={onRefresh}
+                onEnterEdit={onEnterEdit}
                 onCancelForm={onCancelForm}
                 onTrigger={onTrigger}
                 onToggleEnabled={onToggleEnabled}
                 onDelete={onDelete}
                 onSubmit={onSubmit}
               />
-            ) : selectedTask ? (
-              <DataSyncReadonlyPane
-                selectedTask={selectedTask}
-                taskSummary={taskSummary}
-                locked={locked}
-                loading={loading}
-                onRefresh={onRefresh}
-                onEnterEdit={onEnterEdit}
-                onTrigger={onTrigger}
-                onToggleEnabled={onToggleEnabled}
-                onDelete={onDelete}
-              />
-            ) : null}
+            )}
           </div>
         </div>
       ) : (

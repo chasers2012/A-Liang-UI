@@ -310,7 +310,6 @@ export function useDataSyncPage(workflowCanvasRef: RefObject<WorkflowGraphCanvas
   const showDetailForm = creating || Boolean(selectedTask);
   const showEditor = creating || panelEditing;
   const sidebarCollapsed = showEditor;
-  const taskSummary = useMemo(() => (selectedTask ? describeTask(selectedTask) : ''), [selectedTask, describeTask]);
   const locked = busyId != null;
 
   return {
@@ -336,7 +335,6 @@ export function useDataSyncPage(workflowCanvasRef: RefObject<WorkflowGraphCanvas
       selectedTask,
       showDetailForm,
       showEditor,
-      taskSummary,
       datasources,
       locked,
       error,
