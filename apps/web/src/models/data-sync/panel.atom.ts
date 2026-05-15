@@ -12,7 +12,7 @@ import { listDatasources } from '@/api/datasources';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
-import { parseSyncFormForSubmit } from './form-logic';
+import { buildSyncPayload } from './form-logic';
 import {
   buildListNotice,
   buildSearchListItems,
@@ -29,7 +29,7 @@ export const tasksAtom = atom<DataSyncTaskPublic[]>([]);
 export const datasourcesAtom = atom<DataSourcePublic[]>([]);
 export const loadingAtom = atom(true);
 export const errorAtom = atom<string | null>(null);
-export const busyIdAtom = atom<string | null>(null);
+export const isBusyAtom = atom(false);
 export const recordsRefreshEpochAtom = atom(0);
 
 export const isEditingAtom = atom(false);
@@ -186,49 +186,41 @@ export const cancelFormAtom = atom(null, (get, set) => {
 export const submitFormAtom = atom(null, async (get, set) => {
   set(formErrorAtom, null);
   const form = get(formAtom);
-  const isCreating = get(isEditingAtom) && get(selectedIdAtom) == null;
   const selectedId = get(selectedIdAtom);
-  const handle = get(workflowCanvasHandleAtom);
-
-  const parsed = parseSyncFormForSubmit({
-    name: form.name,
-    sourceIds: form.sourceIds,
-    targetIds: form.targetIds,
+  if (!get(isEditingAtom)) return;
+  const name = form.name.trim();
+  const payload = buildSyncPayload({
+    sourceIds: form.sourceIds.map((x) => x.trim()).filter(Boolean),
+    targetIds: form.targetIds.map((x) => x.trim()).filter(Boolean),
     initialStartDate: form.initialStartDate,
     endDate: form.endDate,
-    maxRetries: form.maxRetries,
-    timeoutSeconds: form.timeoutSeconds,
-    syncWorkflow: form.syncWorkflow,
-    getLiveWorkflow: () => handle?.getGraph() ?? null,
+    syncWorkflow: get(workflowCanvasHandleAtom)?.getGraph() ?? form.syncWorkflow,
   });
-  if (!parsed.ok) {
-    set(formErrorAtom, parsed.error);
-    return;
-  }
-
+  const maxRetries = Number.parseInt(form.maxRetries, 10);
+  const timeoutSeconds = Number.parseInt(form.timeoutSeconds, 10);
   const cron = form.cronExpr.trim() || null;
-  set(busyIdAtom, '__save__');
+  set(isBusyAtom, true);
   try {
-    if (isCreating) {
+    if (selectedId == null) {
       const created = await createDataSyncTask({
-        name: parsed.name,
+        name,
         cron_expr: cron,
-        payload: parsed.payload,
+        payload,
         enabled: form.enabled,
-        max_retries: parsed.maxRetries,
-        timeout_seconds: parsed.timeoutSeconds,
+        max_retries: maxRetries,
+        timeout_seconds: timeoutSeconds,
       });
       set(isEditingAtom, false);
       set(selectedIdAtom, created.id);
       await set(refreshPageAtom);
-    } else if (selectedId) {
+    } else {
       const updated = await updateDataSyncTask(selectedId, {
-        name: parsed.name,
+        name,
         cron_expr: cron,
-        payload: parsed.payload,
+        payload,
         enabled: form.enabled,
-        max_retries: parsed.maxRetries,
-        timeout_seconds: parsed.timeoutSeconds,
+        max_retries: maxRetries,
+        timeout_seconds: timeoutSeconds,
       });
       set(applyFormAtom, taskToFormValues(updated));
       set(isEditingAtom, false);
@@ -237,14 +229,14 @@ export const submitFormAtom = atom(null, async (get, set) => {
   } catch (e) {
     set(formErrorAtom, e instanceof Error ? e.message : String(e));
   } finally {
-    set(busyIdAtom, null);
+    set(isBusyAtom, false);
   }
 });
 
 export const triggerTaskAtom = atom(null, async (get, set) => {
   const selectedId = get(selectedIdAtom);
   if (!selectedId) return;
-  set(busyIdAtom, selectedId);
+  set(isBusyAtom, true);
   set(errorAtom, null);
   try {
     await triggerDataSyncTask(selectedId);
@@ -252,7 +244,7 @@ export const triggerTaskAtom = atom(null, async (get, set) => {
   } catch (e) {
     set(errorAtom, e instanceof Error ? e.message : String(e));
   } finally {
-    set(busyIdAtom, null);
+    set(isBusyAtom, false);
   }
 });
 
@@ -260,7 +252,7 @@ export const deleteTaskAtom = atom(null, async (get, set) => {
   const selectedId = get(selectedIdAtom);
   if (!selectedId) return;
   if (!window.confirm('确定删除该同步任务？游标记录将保留在服务端数据库中，直至你手动清理。')) return;
-  set(busyIdAtom, selectedId);
+  set(isBusyAtom, true);
   set(errorAtom, null);
   try {
     await deleteDataSyncTask(selectedId);
@@ -270,7 +262,7 @@ export const deleteTaskAtom = atom(null, async (get, set) => {
   } catch (e) {
     set(errorAtom, e instanceof Error ? e.message : String(e));
   } finally {
-    set(busyIdAtom, null);
+    set(isBusyAtom, false);
   }
 });
 

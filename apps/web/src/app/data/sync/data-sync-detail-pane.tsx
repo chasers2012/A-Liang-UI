@@ -31,7 +31,7 @@ import {
   datasourcesAtom,
   errorAtom,
   formAtom,
-  busyIdAtom,
+  isBusyAtom,
   formErrorAtom,
   isEditingAtom,
   panelActiveTabAtom,
@@ -50,7 +50,7 @@ import { cn } from '@/lib/utils';
 
 function DataSyncDetailActions() {
   const isEditing = useAtomValue(isEditingAtom);
-  const locked = useAtomValue(busyIdAtom) != null;
+  const locked = useAtomValue(isBusyAtom);
   const selectedId = useAtomValue(selectedIdAtom);
   const onEnterEdit = useSetAtom(enterEditAtom);
   const onTrigger = useSetAtom(triggerTaskAtom);
