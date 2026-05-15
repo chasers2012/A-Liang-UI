@@ -9,11 +9,12 @@ from workflow.schemas import WorkflowGraphPersisted
 
 from app.common.datetime_utils import utc_now_iso
 from app.common.frames_workflow import execute_datasource_sync_workflow
+from app.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
+from app.data_sync.models import DataSourceSyncCursorRow
 from app.datasource.controller import get_datasource
 from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
 from app.datasource.schemas import merged_write_flat_dict_from_storage
-from app.datasource.sync_models import DataSourceSyncCursorRow
 from app.persistence.sqlite_db import get_session
 from app.scheduler.handlers import register_task_handler
 
@@ -517,4 +518,4 @@ def datasource_sync_handler(payload: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-register_task_handler("datasource.sync", datasource_sync_handler)
+register_task_handler(DATASOURCE_SYNC_TASK_TYPE, datasource_sync_handler)

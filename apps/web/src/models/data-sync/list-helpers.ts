@@ -1,5 +1,5 @@
 import type { DataSourcePublic } from '@/models/datasource/dto';
-import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
+import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 
 import { payloadSearchHaystack } from './form-logic';
 import { readPayloadIdList } from './payload';
@@ -26,7 +26,7 @@ export function formatIdList(ids: string[], dsLabelLookup: Map<string, string>):
     .join(' + ');
 }
 
-export function formatTaskDescription(task: SchedulerTaskPublic, dsLabelLookup: Map<string, string>): string {
+export function formatTaskDescription(task: DataSyncTaskPublic, dsLabelLookup: Map<string, string>): string {
   const p = (task.payload ?? {}) as Record<string, unknown>;
   const sids = readPayloadIdList(p, 'source_datasource_ids', 'source_datasource_id');
   const tids = readPayloadIdList(p, 'target_datasource_ids', 'target_datasource_id');
@@ -38,10 +38,10 @@ export function formatTaskDescription(task: SchedulerTaskPublic, dsLabelLookup: 
 }
 
 export function filterTasksBySearch(
-  syncTasks: SchedulerTaskPublic[],
+  syncTasks: DataSyncTaskPublic[],
   listSearchQuery: string,
-  describe: (t: SchedulerTaskPublic) => string,
-): SchedulerTaskPublic[] {
+  describe: (t: DataSyncTaskPublic) => string,
+): DataSyncTaskPublic[] {
   const q = listSearchQuery.trim().toLowerCase();
   if (!q) return syncTasks;
   return syncTasks.filter((t) => {
@@ -51,8 +51,8 @@ export function filterTasksBySearch(
 }
 
 export function buildSearchListItems(
-  filteredTasks: SchedulerTaskPublic[],
-  describe: (t: SchedulerTaskPublic) => string,
+  filteredTasks: DataSyncTaskPublic[],
+  describe: (t: DataSyncTaskPublic) => string,
 ): Array<{ id: string; label: string; description: string; category: string }> {
   return filteredTasks.map((t) => ({
     id: t.id,

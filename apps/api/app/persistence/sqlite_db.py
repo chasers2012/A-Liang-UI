@@ -46,8 +46,8 @@ def create_db_and_tables() -> None:
     from app.backtest import models as _backtest_models  # noqa: F401
     from app.chat import models as _chat_models  # noqa: F401
     from app.data_set import models as _dataset_models  # noqa: F401
+    from app.data_sync import models as _data_sync_models  # noqa: F401
     from app.datasource import models as _datasource_models  # noqa: F401
-    from app.datasource import sync_models as _datasource_sync_models  # noqa: F401
     from app.evaluation.profile import models as _evaluation_profile_models  # noqa: F401
     from app.evaluation.run import models as _evaluation_run_models  # noqa: F401
     from app.factors import models as _factor_models  # noqa: F401

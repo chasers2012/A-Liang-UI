@@ -1,1 +1,1 @@
-export const DATASOURCE_SYNC_TASK_TYPE = 'datasource.sync';
+export { DATASOURCE_SYNC_TASK_TYPE } from './dto';

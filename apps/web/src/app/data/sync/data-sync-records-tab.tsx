@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useAtomValue } from 'jotai';
 
-import { listSchedulerJobLogs, listSchedulerJobs } from '@/api/scheduler';
+import { listDataSyncJobLogs, listDataSyncJobs } from '@/api/data-sync';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
-import type { SchedulerJobLogPublic, SchedulerJobPublic, SchedulerJobStatus } from '@/models/scheduler/dto';
+import type { DataSyncJobLogPublic, DataSyncJobPublic, DataSyncJobStatus } from '@/models/data-sync/dto';
 import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +29,7 @@ function toLocalTime(v: string | null): string {
   return d.toLocaleString();
 }
 
-const STATUS_LABEL: Record<SchedulerJobStatus, string> = {
+const STATUS_LABEL: Record<DataSyncJobStatus, string> = {
   queued: '排队中',
   running: '运行中',
   succeeded: '成功',
@@ -38,7 +38,7 @@ const STATUS_LABEL: Record<SchedulerJobStatus, string> = {
   cancelled: '已取消',
 };
 
-function statusBadgeVariant(status: SchedulerJobStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
+function statusBadgeVariant(status: DataSyncJobStatus): 'default' | 'destructive' | 'secondary' | 'outline' {
   if (status === 'succeeded') return 'default';
   if (status === 'failed') return 'destructive';
   if (status === 'running' || status === 'retrying') return 'outline';
@@ -67,13 +67,13 @@ export function DataSyncRecordsTab() {
   const taskId = useAtomValue(selectedIdAtom);
   const refreshEpoch = useAtomValue(recordsRefreshEpochAtom);
   const active = useAtomValue(panelActiveTabAtom) === 'records';
-  const [jobs, setJobs] = useState<SchedulerJobPublic[]>([]);
+  const [jobs, setJobs] = useState<DataSyncJobPublic[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const [logsByJobId, setLogsByJobId] = useState<Record<string, SchedulerJobLogPublic[]>>({});
+  const [logsByJobId, setLogsByJobId] = useState<Record<string, DataSyncJobLogPublic[]>>({});
   const [logsLoadingId, setLogsLoadingId] = useState<string | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -87,7 +87,7 @@ export function DataSyncRecordsTab() {
     setError(null);
     setLoading(true);
     try {
-      const res = await listSchedulerJobs({ taskId, page, pageSize: PAGE_SIZE });
+      const res = await listDataSyncJobs({ taskId, page, pageSize: PAGE_SIZE });
       setJobs(res.items);
       setTotal(res.total);
     } catch (e) {
@@ -117,7 +117,7 @@ export function DataSyncRecordsTab() {
     if (logsByJobId[jobId]) return;
     setLogsLoadingId(jobId);
     try {
-      const logs = await listSchedulerJobLogs(jobId, 50);
+      const logs = await listDataSyncJobLogs(jobId, 50);
       setLogsByJobId((prev) => ({ ...prev, [jobId]: logs }));
     } catch (e) {
       setLogsByJobId((prev) => ({ ...prev, [jobId]: [] }));

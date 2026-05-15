@@ -2,18 +2,16 @@ import { atom } from 'jotai';
 import { atomEffect } from 'jotai-effect';
 
 import {
-  createSchedulerTask,
-  deleteSchedulerTask,
-  listSchedulerTasks,
-  triggerSchedulerTask,
-  updateSchedulerTask,
-} from '@/api/scheduler';
+  createDataSyncTask,
+  deleteDataSyncTask,
+  listDataSyncTasks,
+  triggerDataSyncTask,
+  updateDataSyncTask,
+} from '@/api/data-sync';
 import { listDatasources } from '@/api/datasources';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
-import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
-
-import { DATASOURCE_SYNC_TASK_TYPE } from './constants';
+import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 import { parseSyncFormForSubmit } from './form-logic';
 import {
   buildListNotice,
@@ -27,7 +25,7 @@ import { emptyFormValues, taskToFormValues, type FormValues } from './task-form'
 
 export type DetailTab = 'config' | 'workflow' | 'records';
 
-export const tasksAtom = atom<SchedulerTaskPublic[]>([]);
+export const tasksAtom = atom<DataSyncTaskPublic[]>([]);
 export const datasourcesAtom = atom<DataSourcePublic[]>([]);
 export const loadingAtom = atom(true);
 export const errorAtom = atom<string | null>(null);
@@ -52,20 +50,18 @@ export const applyFormAtom = atom(null, (_get, set, v: FormValues) => {
   set(workflowCanvasKeyAtom, (k) => k + 1);
 });
 
-export const syncTasksAtom = atom((get) => get(tasksAtom).filter((x) => x.task_type === DATASOURCE_SYNC_TASK_TYPE));
-
 export const datasourceLabelLookupAtom = atom((get) => buildDatasourceLabelLookup(get(datasourcesAtom)));
 
 export const describeTaskAtom = atom((get) => {
   const lookup = get(datasourceLabelLookupAtom);
-  return (t: SchedulerTaskPublic) => formatTaskDescription(t, lookup);
+  return (t: DataSyncTaskPublic) => formatTaskDescription(t, lookup);
 });
 
 export const filteredSyncTasksAtom = atom((get) => {
-  const syncTasks = get(syncTasksAtom);
+  const tasks = get(tasksAtom);
   const query = get(listSearchQueryAtom);
   const describe = get(describeTaskAtom);
-  return filterTasksBySearch(syncTasks, query, describe);
+  return filterTasksBySearch(tasks, query, describe);
 });
 
 export const searchListItemsAtom = atom((get) => {
@@ -74,17 +70,17 @@ export const searchListItemsAtom = atom((get) => {
   return buildSearchListItems(filtered, describe);
 });
 
-export const selectedTaskAtom = atom((get): SchedulerTaskPublic | undefined => {
+export const selectedTaskAtom = atom((get): DataSyncTaskPublic | undefined => {
   const selectedId = get(selectedIdAtom);
   if (!selectedId) return undefined;
-  return get(syncTasksAtom).find((t) => t.id === selectedId);
+  return get(tasksAtom).find((t) => t.id === selectedId);
 });
 
 export const listNoticeAtom = atom((get) =>
   buildListNotice({
     error: get(errorAtom),
     loading: get(loadingAtom),
-    syncTasksLength: get(syncTasksAtom).length,
+    syncTasksLength: get(tasksAtom).length,
     filteredCount: get(filteredSyncTasksAtom).length,
   }),
 );
@@ -103,7 +99,7 @@ export const refreshPageAtom = atom(null, async (_get, set) => {
   set(errorAtom, null);
   set(loadingAtom, true);
   try {
-    const [tasks, datasources] = await Promise.all([listSchedulerTasks(), listDatasources()]);
+    const [tasks, datasources] = await Promise.all([listDataSyncTasks(), listDatasources()]);
     set(tasksAtom, tasks);
     set(datasourcesAtom, datasources);
     set(recordsRefreshEpochAtom, (n) => n + 1);
@@ -120,18 +116,18 @@ export const listRefreshOnMountEffectAtom = atomEffect((_get, set) => {
 
 export const autoSelectEffectAtom = atomEffect((get, set) => {
   if (get(isEditingAtom) && get(selectedIdAtom) == null) return;
-  const syncTasks = get(syncTasksAtom);
+  const tasks = get(tasksAtom);
   const selectedId = get(selectedIdAtom);
-  if (syncTasks.length === 0) {
+  if (tasks.length === 0) {
     if (selectedId != null) set(selectedIdAtom, null);
     return;
   }
   if (selectedId == null) {
-    set(selectedIdAtom, syncTasks[0].id);
+    set(selectedIdAtom, tasks[0].id);
     return;
   }
-  if (!syncTasks.some((t) => t.id === selectedId)) {
-    set(selectedIdAtom, syncTasks[0].id);
+  if (!tasks.some((t) => t.id === selectedId)) {
+    set(selectedIdAtom, tasks[0].id);
   }
 });
 
@@ -139,7 +135,7 @@ export const syncViewFormEffectAtom = atomEffect((get, set) => {
   if (get(isEditingAtom)) return;
   const selectedId = get(selectedIdAtom);
   if (!selectedId) return;
-  const task = get(syncTasksAtom).find((t) => t.id === selectedId);
+  const task = get(tasksAtom).find((t) => t.id === selectedId);
   if (task) set(applyFormAtom, taskToFormValues(task));
 });
 
@@ -178,12 +174,12 @@ export const cancelFormAtom = atom(null, (get, set) => {
   const isCreating = get(isEditingAtom) && get(selectedIdAtom) == null;
   set(isEditingAtom, false);
   if (isCreating) {
-    const syncTasks = get(syncTasksAtom);
-    if (syncTasks.length) set(selectedIdAtom, syncTasks[0].id);
+    const tasks = get(tasksAtom);
+    if (tasks.length) set(selectedIdAtom, tasks[0].id);
     return;
   }
   const selectedId = get(selectedIdAtom);
-  const task = selectedId ? get(syncTasksAtom).find((x) => x.id === selectedId) : undefined;
+  const task = selectedId ? get(tasksAtom).find((x) => x.id === selectedId) : undefined;
   if (task) set(applyFormAtom, taskToFormValues(task));
 });
 
@@ -214,9 +210,8 @@ export const submitFormAtom = atom(null, async (get, set) => {
   set(busyIdAtom, '__save__');
   try {
     if (isCreating) {
-      const created = await createSchedulerTask({
+      const created = await createDataSyncTask({
         name: parsed.name,
-        task_type: DATASOURCE_SYNC_TASK_TYPE,
         cron_expr: cron,
         payload: parsed.payload,
         enabled: form.enabled,
@@ -227,7 +222,7 @@ export const submitFormAtom = atom(null, async (get, set) => {
       set(selectedIdAtom, created.id);
       await set(refreshPageAtom);
     } else if (selectedId) {
-      const updated = await updateSchedulerTask(selectedId, {
+      const updated = await updateDataSyncTask(selectedId, {
         name: parsed.name,
         cron_expr: cron,
         payload: parsed.payload,
@@ -252,7 +247,7 @@ export const triggerTaskAtom = atom(null, async (get, set) => {
   set(busyIdAtom, selectedId);
   set(errorAtom, null);
   try {
-    await triggerSchedulerTask(selectedId, {});
+    await triggerDataSyncTask(selectedId, {});
     await set(refreshPageAtom);
   } catch (e) {
     set(errorAtom, e instanceof Error ? e.message : String(e));
@@ -268,7 +263,7 @@ export const deleteTaskAtom = atom(null, async (get, set) => {
   set(busyIdAtom, selectedId);
   set(errorAtom, null);
   try {
-    await deleteSchedulerTask(selectedId);
+    await deleteDataSyncTask(selectedId);
     set(selectedIdAtom, null);
     set(isEditingAtom, false);
     await set(refreshPageAtom);

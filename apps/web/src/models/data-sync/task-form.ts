@@ -1,6 +1,6 @@
 import { parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
+import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 
 import { readPayloadIdList, readPayloadString } from './payload';
 
@@ -32,7 +32,7 @@ export function emptyFormValues(): FormValues {
   };
 }
 
-export function taskToFormValues(task: SchedulerTaskPublic): FormValues {
+export function taskToFormValues(task: DataSyncTaskPublic): FormValues {
   const p = (task.payload ?? {}) as Record<string, unknown>;
   const wfRaw = p.sync_workflow;
   let syncWorkflow: WorkflowGraphPersisted;

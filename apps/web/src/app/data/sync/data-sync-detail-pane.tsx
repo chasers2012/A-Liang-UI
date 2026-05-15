@@ -36,13 +36,6 @@ import {
 import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
 import { cn } from '@/lib/utils';
 
-function toLocalTime(v: string | null): string {
-  if (!v) return '—';
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return v;
-  return d.toLocaleString();
-}
-
 function DataSyncDetailActions() {
   const isEditing = useAtomValue(isEditingAtom);
   const locked = useAtomValue(busyIdAtom) != null;
@@ -141,7 +134,6 @@ function DatasourceCheckboxList(props: {
 function DataSyncConfigFields() {
   const selectedId = useAtomValue(selectedIdAtom);
   const isEditing = useAtomValue(isEditingAtom);
-  const selectedTask = useAtomValue(selectedTaskAtom);
   const datasources = useAtomValue(datasourcesAtom);
   const [form, setForm] = useAtom(formAtom);
 
@@ -240,14 +232,6 @@ function DataSyncConfigFields() {
             </FieldLabel>
           </div>
         </Field>
-
-        {selectedTask ? (
-          <div className="text-xs text-muted-foreground">
-            <p>任务 ID：{selectedTask.id}</p>
-            <p>更新于：{toLocalTime(selectedTask.updated_at)}</p>
-            {readOnly ? <p>下次运行：{toLocalTime(selectedTask.next_run_at)}</p> : null}
-          </div>
-        ) : null}
       </FieldGroup>
     </div>
   );

@@ -11,7 +11,7 @@ import {
   searchListItemsAtom,
   isEditingAtom,
   selectedIdAtom,
-  syncTasksAtom,
+  tasksAtom,
   startCreateAtom,
   selectTaskAtom,
 } from '@/models/data-sync/panel.atom';
@@ -22,7 +22,7 @@ export function DataSyncListPane() {
   const selectedId = useAtomValue(selectedIdAtom);
   const loading = useAtomValue(loadingAtom);
   const searchListItems = useAtomValue(searchListItemsAtom);
-  const syncTasksCount = useAtomValue(syncTasksAtom).length;
+  const syncTasksCount = useAtomValue(tasksAtom).length;
   const listNotice = useAtomValue(listNoticeAtom);
 
   const onStartCreate = useSetAtom(startCreateAtom);

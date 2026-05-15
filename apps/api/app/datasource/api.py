@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-import app.datasource.sync_task  # noqa: F401  — register datasource.sync scheduler handler
 from app.datasource import controller as datasource_controller
 from app.datasource.schemas import (
     DataSourceCreate,
