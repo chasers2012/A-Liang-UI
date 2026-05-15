@@ -10,6 +10,18 @@ import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from '@/components/ui/combobox';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
@@ -76,7 +88,7 @@ function DataSyncDetailActions() {
   );
 }
 
-function DatasourceCheckboxList(props: {
+function DatasourceComboboxField(props: {
   title: string;
   datasources: DataSourcePublic[];
   selectedIds: string[];
@@ -85,48 +97,67 @@ function DatasourceCheckboxList(props: {
   onChange: (ids: string[]) => void;
 }) {
   const { title, datasources, selectedIds, otherSelectedIds, readOnly, onChange } = props;
+  const anchor = useComboboxAnchor();
 
-  const toggle = (id: string, checked: boolean) => {
-    if (readOnly) return;
-    if (checked) {
-      onChange([...selectedIds.filter((x) => x !== id), id]);
-    } else {
-      onChange(selectedIds.filter((x) => x !== id));
-    }
-  };
+  const items = useMemo(() => datasources.map((d) => d.id), [datasources]);
 
   return (
     <Field className="gap-2">
       <FieldLabel>{title}</FieldLabel>
-      <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border border-border/60 bg-background p-3">
-        {datasources.map((d) => {
-          const disabledAsOther = otherSelectedIds.includes(d.id);
-          const checked = selectedIds.includes(d.id);
-          const disabled = readOnly || disabledAsOther;
-          return (
-            <label
-              key={d.id}
-              className={cn(
-                'flex items-center gap-2 text-sm',
-                readOnly ? 'cursor-default' : 'cursor-pointer',
-                disabledAsOther && !readOnly && 'cursor-not-allowed opacity-50',
-              )}
-            >
-              <Checkbox
-                checked={checked}
-                disabled={disabled}
-                onCheckedChange={(v) => {
-                  if (disabled) return;
-                  toggle(d.id, Boolean(v));
-                }}
-              />
-              <span className="min-w-0 truncate">
-                {d.name} <span className="text-muted-foreground">({d.type})</span>
-              </span>
-            </label>
-          );
-        })}
-      </div>
+      <Combobox
+        items={items}
+        multiple
+        value={selectedIds}
+        onValueChange={onChange}
+        openOnInputClick
+        disabled={readOnly}
+      >
+        <ComboboxChips ref={anchor} className="w-full min-w-0">
+          <ComboboxValue>
+            {(value: string[]) => (
+              <>
+                {value.map((id) => {
+                  const datasource = datasources.find((d) => d.id === id);
+                  if (!datasource) return null;
+                  return (
+                    <ComboboxChip key={id}>
+                      {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
+                    </ComboboxChip>
+                  );
+                })}
+                <ComboboxChipsInput placeholder={readOnly ? '只读' : '选择数据源'} />
+              </>
+            )}
+          </ComboboxValue>
+        </ComboboxChips>
+        <ComboboxContent
+          anchor={anchor}
+          sideOffset={4}
+          align="start"
+          className="w-max max-w-[min(28rem,var(--available-width))]"
+        >
+          <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">没有可选数据源</ComboboxEmpty>
+          <ComboboxList className="outline-none">
+            {(item: string) => {
+              const datasource = datasources.find((d) => d.id === item);
+              if (!datasource) return null;
+              const disabledAsOther = otherSelectedIds.includes(datasource.id);
+              return (
+                <ComboboxItem
+                  key={datasource.id}
+                  value={datasource.id}
+                  disabled={disabledAsOther}
+                  className="items-start"
+                >
+                  <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">
+                    {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
+                  </span>
+                </ComboboxItem>
+              );
+            }}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </Field>
   );
 }
@@ -144,8 +175,8 @@ function DataSyncConfigFields() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2">
       <FieldGroup className="max-w-5xl gap-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <DatasourceCheckboxList
+        <div className="grid gap-6">
+          <DatasourceComboboxField
             title="源数据源"
             datasources={datasources}
             selectedIds={form.sourceIds}
@@ -153,7 +184,7 @@ function DataSyncConfigFields() {
             readOnly={readOnly}
             onChange={(sourceIds) => setForm((prev) => ({ ...prev, sourceIds }))}
           />
-          <DatasourceCheckboxList
+          <DatasourceComboboxField
             title="目标数据源"
             datasources={datasources}
             selectedIds={form.targetIds}
