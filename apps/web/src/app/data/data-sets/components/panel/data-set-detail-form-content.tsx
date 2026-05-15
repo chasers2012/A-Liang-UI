@@ -31,8 +31,6 @@ import {
   updateDataSetEditorBindingAtom,
 } from '@/models/data-set/editor/form-state.atom';
 import { Section } from '@/components/section';
-import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
-import { cn } from '@/lib/utils';
 
 export function DataSetDetailFormContent(props: {
   form: DataSetFormState;
@@ -284,10 +282,7 @@ function DataSetBindingRowBlock({
               updateBinding(index, { columns: v ?? [] });
             }}
           >
-            <ComboboxChips
-              ref={columnsAnchor}
-              className={cn('w-full min-w-0', readOnly && READONLY_CONTROL_SURFACE, readOnly && 'font-normal')}
-            >
+            <ComboboxChips ref={columnsAnchor} data-readonly={readOnly ? '' : undefined} className="w-full min-w-0">
               <ComboboxValue>
                 {(value: string[]) => (
                   <>
@@ -297,7 +292,7 @@ function DataSetBindingRowBlock({
                     {value.map((c) => (
                       <ComboboxChip
                         key={c}
-                        className={cn('font-mono text-xs', readOnly && 'opacity-70')}
+                        className="font-mono text-xs"
                         aria-label={readOnly ? c : `移除 ${c}`}
                         showRemove={!readOnly}
                       >

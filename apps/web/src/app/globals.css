@@ -253,6 +253,26 @@ textarea[data-slot='input-group-control']:read-only:not(:disabled) {
   display: none !important;
 }
 
+[data-slot='combobox-chips'][data-readonly] {
+  pointer-events: none !important;
+  cursor: default !important;
+  min-height: 2rem !important;
+  border-style: none !important;
+  border-width: 0 !important;
+  border-radius: var(--radius-md) !important;
+  background-color: color-mix(in oklch, var(--muted) 30%, transparent) !important;
+  padding-inline: 0.75rem !important;
+  padding-block: 0.5rem !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-width: 0 !important;
+  --tw-ring-offset-width: 0 !important;
+}
+
+[data-slot='combobox-chips'][data-readonly] [data-slot='combobox-chip'] {
+  background: transparent !important;
+}
+
 [data-slot='switch'][data-readonly],
 [data-slot='checkbox'][data-readonly] {
   pointer-events: none !important;

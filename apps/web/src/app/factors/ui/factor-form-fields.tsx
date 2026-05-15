@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus, Trash2 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
 import {
   factorsEditDependenciesAtom,
   factorsEditDescriptionAtom,
@@ -20,7 +19,6 @@ import {
   factorsEditParamSpecsAtom,
 } from '@/models/factor';
 import { CodeJar } from '@/components/ui/code-jar';
-import { READONLY_CONTROL_SURFACE, READONLY_VALUE_MONO_CLASSNAME } from '@/lib/readonly-field';
 import { FactorDependenciesCombobox } from './factor-dependencies-combobox';
 import { FactorGroupCombobox } from './factor-group-combobox';
 
@@ -47,7 +45,7 @@ function FactorParamsField({
     <Field className="gap-2">
       <FieldLabel htmlFor={pid('params')}>参数 params</FieldLabel>
       {paramSpecs.length > 0 ? (
-        <div id={pid('params')} className={cn(READONLY_CONTROL_SURFACE, 'text-sm')}>
+        <div id={pid('params')} className="text-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
               <thead>
@@ -189,10 +187,7 @@ function FactorParamsField({
           </div>
         </div>
       ) : (
-        <div
-          id={pid('params')}
-          className={cn(READONLY_VALUE_MONO_CLASSNAME, 'flex h-8 items-center text-muted-foreground')}
-        >
+        <div id={pid('params')} className="flex h-8 items-center text-muted-foreground">
           -
         </div>
       )}
@@ -312,7 +307,7 @@ export function FactorMetaFields(props: FactorMetaFieldsProps) {
               ))}
             </div>
           ) : (
-            <div className={cn(READONLY_VALUE_MONO_CLASSNAME, 'flex h-8 items-center text-muted-foreground')}>-</div>
+            <div className="flex h-8 items-center text-muted-foreground">-</div>
           )
         ) : (
           <FactorDependenciesCombobox

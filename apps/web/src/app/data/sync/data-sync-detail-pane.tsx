@@ -46,7 +46,6 @@ import {
   submitFormAtom,
   triggerTaskAtom,
 } from '@/models/data-sync/panel.atom';
-import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
 import { cn } from '@/lib/utils';
 
 function DataSyncDetailActions() {
@@ -113,15 +112,27 @@ function DatasourceComboboxField(props: {
         openOnInputClick
         disabled={readOnly}
       >
-        <ComboboxChips ref={anchor} className="w-full min-w-0">
+        <ComboboxChips
+          ref={anchor}
+          data-readonly={readOnly ? '' : undefined}
+          className={cn('w-full min-w-0', readOnly && 'font-normal')}
+        >
           <ComboboxValue>
             {(value: string[]) => (
               <>
+                {readOnly && value.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">（未选择）</span>
+                ) : null}
                 {value.map((id) => {
                   const datasource = datasources.find((d) => d.id === id);
                   if (!datasource) return null;
                   return (
-                    <ComboboxChip key={id}>
+                    <ComboboxChip
+                      key={id}
+                      className={cn('font-medium text-xs', readOnly && 'opacity-70')}
+                      aria-label={readOnly ? `${datasource.name} (${datasource.type})` : `移除 ${datasource.name}`}
+                      showRemove={!readOnly}
+                    >
                       {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
                     </ComboboxChip>
                   );
@@ -148,7 +159,7 @@ function DatasourceComboboxField(props: {
                   key={datasource.id}
                   value={datasource.id}
                   disabled={disabledAsOther}
-                  className="items-start"
+                  className="items-start text-sm"
                 >
                   <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">
                     {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
@@ -199,7 +210,7 @@ function DataSyncConfigFields() {
           <FieldLabel htmlFor="sync-cron">Cron</FieldLabel>
           <Input
             id="sync-cron"
-            className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
+            className={cn('font-mono text-sm')}
             value={form.cronExpr}
             readOnly={readOnly}
             onChange={(e) => setForm((prev) => ({ ...prev, cronExpr: e.target.value }))}
@@ -243,7 +254,6 @@ function DataSyncConfigFields() {
             value={form.maxRetries}
             readOnly={readOnly}
             onChange={(e) => setForm((prev) => ({ ...prev, maxRetries: e.target.value }))}
-            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
           />
         </Field>
         <Field className="gap-2">
@@ -253,7 +263,7 @@ function DataSyncConfigFields() {
             value={form.timeoutSeconds}
             readOnly={readOnly}
             onChange={(e) => setForm((prev) => ({ ...prev, timeoutSeconds: e.target.value }))}
-            className={cn(readOnly && READONLY_CONTROL_SURFACE)}
+            className={cn()}
           />
         </Field>
 
