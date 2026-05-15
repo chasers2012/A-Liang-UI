@@ -117,8 +117,11 @@ def update_task(task_id: str, body: UpdateDataSyncTaskRequest) -> DataSyncTaskPu
         sched.cron_expr = cron_expr
         sched.next_run_at = next_cron_time(cron_expr, base_time=utcnow()) if cron_expr else None
     if "payload" in patch and patch["payload"] is not None:
-        patch["payload"].validate_sync_rules()
-        ds.payload = patch["payload"]
+        payload = patch["payload"]
+        if isinstance(payload, dict):
+            payload = DataSyncTaskPayload.model_validate(payload)
+        payload.validate_sync_rules()
+        ds.payload = payload
         sched.payload = _payload_dict(ds.payload)
     if "enabled" in patch and patch["enabled"] is not None:
         sched.enabled = patch["enabled"]

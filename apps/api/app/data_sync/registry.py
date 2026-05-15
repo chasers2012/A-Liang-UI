@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import outerjoin
 from sqlmodel import select
 
 from app.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
@@ -14,18 +15,21 @@ class DataSyncRegistry:
         cls, *, enabled: bool | None = None
     ) -> list[tuple[SchedulerTaskRow, DataSyncTaskRow]]:
         with get_session() as session:
-            stmt = (
+            task_pairs = (
                 select(SchedulerTaskRow, DataSyncTaskRow)
-                .join(
-                    DataSyncTaskRow,
-                    DataSyncTaskRow.scheduler_task_id == SchedulerTaskRow.id,
+                .select_from(
+                    outerjoin(
+                        SchedulerTaskRow,
+                        DataSyncTaskRow,
+                        DataSyncTaskRow.scheduler_task_id == SchedulerTaskRow.id,
+                    )
                 )
                 .where(SchedulerTaskRow.task_type == DATASOURCE_SYNC_TASK_TYPE)
                 .order_by(SchedulerTaskRow.created_at.desc())
             )
             if enabled is not None:
-                stmt = stmt.where(SchedulerTaskRow.enabled == enabled)
-            return list(session.exec(stmt).all())
+                task_pairs = task_pairs.where(SchedulerTaskRow.enabled == enabled)
+            return list(session.exec(task_pairs).all())
 
     @classmethod
     def get_task(cls, scheduler_task_id: str) -> DataSyncTaskRow | None:
