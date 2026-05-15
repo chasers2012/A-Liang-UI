@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
@@ -33,14 +32,10 @@ class SqlConnectionConfig(BaseModel):
         if not self.table.strip():
             raise ValueError("表名不能为空")
         d = (self.db_driver or "").lower()
-        if d == "sqlite":
-            if not (self.db_name or "").strip():
-                raise ValueError("sqlite 须配置 db_name 为文件路径或 :memory:")
-        else:
-            if not self.db_host.strip() or not self.db_name.strip():
-                raise ValueError("主机（IP）与数据库名不能为空")
-            if d not in ("postgres", "postgresql", "mysql", "mariadb"):
-                raise ValueError("db_driver 须为 postgresql、mysql 或 sqlite")
+        if not self.db_host.strip() or not self.db_name.strip():
+            raise ValueError("主机（IP）与数据库名不能为空")
+        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
+            raise ValueError("db_driver 须为 postgresql、mysql 或 mysql/mariadb")
         return self
 
 
@@ -125,13 +120,7 @@ def build_sqlalchemy_url(cfg: SqlConnectionConfig) -> str:
     if driver in ("mysql", "mariadb"):
         p = int(port) if port is not None else 3306
         return f"mysql+pymysql://{auth}{host}:{p}/{db_path}"
-    if driver == "sqlite":
-        name = (cfg.db_name or "").strip()
-        if name == ":memory:":
-            return "sqlite:///:memory:"
-        pth = Path(name).expanduser().resolve()
-        return f"sqlite:///{pth.as_posix()}"
-    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql、mysql 或 sqlite")
+    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
 
 
 class SqlDataSource(FactorDataSource):
@@ -265,10 +254,9 @@ class SqlDataSourceSpec(DataSourceSpec):
                             "oneOf": [
                                 {"const": "postgresql", "title": "PostgreSQL"},
                                 {"const": "mysql", "title": "MySQL / MariaDB"},
-                                {"const": "sqlite", "title": "SQLite（测试/本地）"},
                             ],
                         },
-                        "db_host": {"type": "string", "title": "主机（IP）"},
+                        "db_host": {"type": "string", "title": "主机（IP）", "minLength": 1},
                         "db_port": {"type": ["integer", "null"], "title": "端口"},
                         "db_username": {"type": "string", "title": "用户名"},
                         "db_password": {"type": "string", "title": "密码"},
