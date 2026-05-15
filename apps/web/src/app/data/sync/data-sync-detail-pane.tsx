@@ -1,22 +1,43 @@
 'use client';
 
-import { useState, type RefObject } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
-import { PanelDetailCard } from '@/components/panel-detail-card';
 import { PreprocessingWorkflowEditorBlock } from '@/app/data/data-sets/components/panel/preprocessing-workflow-editor-block';
+import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
-import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import type { DataSourcePublic } from '@/models/datasource/dto';
-import type { SchedulerTaskPublic } from '@/models/scheduler/dto';
+import {
+  cancelDataSyncFormAtom,
+  dataSyncCreatingAtom,
+  dataSyncDatasourcesAtom,
+  dataSyncErrorAtom,
+  dataSyncFormAtom,
+  dataSyncFormErrorAtom,
+  dataSyncLoadingAtom,
+  dataSyncLockedAtom,
+  dataSyncPanelActiveTabAtom,
+  dataSyncSelectedTaskAtom,
+  dataSyncShowDetailFormAtom,
+  dataSyncShowEditorAtom,
+  dataSyncWorkflowCanvasHandleAtom,
+  dataSyncWorkflowCanvasKeyAtom,
+  deleteDataSyncTaskAtom,
+  enterDataSyncEditAtom,
+  refreshDataSyncPageAtom,
+  setDataSyncDetailTabAtom,
+  submitDataSyncFormAtom,
+  toggleDataSyncEnabledAtom,
+  triggerDataSyncTaskAtom,
+} from '@/models/data-sync/panel.atom';
+import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
 import { READONLY_CONTROL_SURFACE } from '@/lib/readonly-field';
 import { cn } from '@/lib/utils';
-
-type SyncDetailTab = 'config' | 'workflow';
 
 function toLocalTime(v: string | null): string {
   if (!v) return '—';
@@ -25,134 +46,83 @@ function toLocalTime(v: string | null): string {
   return d.toLocaleString();
 }
 
-export type DataSyncDetailPaneProps = {
-  creating: boolean;
-  selectedTask: SchedulerTaskPublic | undefined;
-  showDetailForm: boolean;
-  /** 与数据源页一致：仅新建或点击「编辑」后为 true，侧栏收起 */
-  showEditor: boolean;
-  datasources: DataSourcePublic[];
-  locked: boolean;
-  error: string | null;
-  formError: string | null;
-  name: string;
-  sourceIds: string[];
-  targetIds: string[];
-  cronExpr: string;
-  initialStartDate: string;
-  endDate: string;
-  maxRetries: string;
-  timeoutSeconds: string;
-  enabled: boolean;
-  loading: boolean;
-  syncWorkflow: WorkflowGraphPersisted;
-  syncWorkflowCanvasKey: number;
-  workflowCanvasRef: RefObject<WorkflowGraphCanvasHandle | null>;
-  onRefresh: () => void;
-  onEnterEdit: () => void;
-  onCancelForm: () => void;
-  onTrigger: () => void;
-  onToggleEnabled: () => void;
-  onDelete: () => void;
-  onSubmit: () => void;
-  onNameChange: (v: string) => void;
-  onSourceIdsChange: (ids: string[]) => void;
-  onTargetIdsChange: (ids: string[]) => void;
-  onCronChange: (v: string) => void;
-  onInitialChange: (v: string) => void;
-  onEndDateChange: (v: string) => void;
-  onMaxRetriesChange: (v: string) => void;
-  onTimeoutChange: (v: string) => void;
-  onEnabledChange: (v: boolean) => void;
-};
-
-function DataSyncEmptyActions(props: { loading: boolean; onRefresh: () => void }) {
-  const { loading, onRefresh } = props;
+function DataSyncEmptyActions() {
+  const loading = useAtomValue(dataSyncLoadingAtom);
+  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
   return (
-    <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => onRefresh()}>
+    <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
       刷新
     </Button>
   );
 }
 
-function DataSyncReadonlyActions(props: {
-  locked: boolean;
-  loading: boolean;
-  selectedTask: SchedulerTaskPublic;
-  onRefresh: () => void;
-  onEnterEdit: () => void;
-  onTrigger: () => void;
-  onToggleEnabled: () => void;
-  onDelete: () => void;
-}) {
-  const { locked, loading, selectedTask, onRefresh, onEnterEdit, onTrigger, onToggleEnabled, onDelete } = props;
+function DataSyncReadonlyActions() {
+  const locked = useAtomValue(dataSyncLockedAtom);
+  const loading = useAtomValue(dataSyncLoadingAtom);
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
+  const onEnterEdit = useSetAtom(enterDataSyncEditAtom);
+  const onTrigger = useSetAtom(triggerDataSyncTaskAtom);
+  const onToggleEnabled = useSetAtom(toggleDataSyncEnabledAtom);
+  const onDelete = useSetAtom(deleteDataSyncTaskAtom);
+
+  if (!selectedTask) return null;
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => onRefresh()}>
+      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
         刷新
       </Button>
-      <Button type="button" variant="default" size="sm" disabled={locked} onClick={() => onEnterEdit()}>
+      <Button type="button" variant="default" size="sm" disabled={locked} onClick={() => void onEnterEdit()}>
         编辑
       </Button>
-      <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => onTrigger()}>
+      <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onTrigger()}>
         触发
       </Button>
-      <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => onToggleEnabled()}>
+      <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onToggleEnabled()}>
         {selectedTask.enabled ? '停用' : '启用'}
       </Button>
-      <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => onDelete()}>
+      <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => void onDelete()}>
         删除
       </Button>
     </div>
   );
 }
 
-function DataSyncEditorActions(props: {
-  creating: boolean;
-  selectedTask: SchedulerTaskPublic | undefined;
-  locked: boolean;
-  loading: boolean;
-  onRefresh: () => void;
-  onCancelForm: () => void;
-  onTrigger: () => void;
-  onToggleEnabled: () => void;
-  onDelete: () => void;
-  onSubmit: () => void;
-}) {
-  const {
-    creating,
-    selectedTask,
-    locked,
-    loading,
-    onRefresh,
-    onCancelForm,
-    onTrigger,
-    onToggleEnabled,
-    onDelete,
-    onSubmit,
-  } = props;
+function DataSyncEditorActions() {
+  const creating = useAtomValue(dataSyncCreatingAtom);
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  const locked = useAtomValue(dataSyncLockedAtom);
+  const loading = useAtomValue(dataSyncLoadingAtom);
+  const onRefresh = useSetAtom(refreshDataSyncPageAtom);
+  const onCancelForm = useSetAtom(cancelDataSyncFormAtom);
+  const onTrigger = useSetAtom(triggerDataSyncTaskAtom);
+  const onToggleEnabled = useSetAtom(toggleDataSyncEnabledAtom);
+  const onDelete = useSetAtom(deleteDataSyncTaskAtom);
+  const onSubmit = useSetAtom(submitDataSyncFormAtom);
+
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => onRefresh()}>
+      <Button type="button" variant="outline" size="sm" disabled={loading} onClick={() => void onRefresh()}>
         刷新
       </Button>
-      <Button type="button" variant="outline" size="sm" onClick={() => onCancelForm()} disabled={locked}>
+      <Button type="button" variant="outline" size="sm" onClick={() => void onCancelForm()} disabled={locked}>
         取消
       </Button>
       {!creating && selectedTask ? (
         <>
-          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => onTrigger()}>
+          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onTrigger()}>
             触发
           </Button>
-          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => onToggleEnabled()}>
+          <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void onToggleEnabled()}>
             {selectedTask.enabled ? '停用' : '启用'}
           </Button>
-          <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => onDelete()}>
+          <Button type="button" variant="destructive" size="sm" disabled={locked} onClick={() => void onDelete()}>
             删除
           </Button>
         </>
       ) : null}
-      <Button type="button" size="sm" disabled={locked} onClick={() => onSubmit()}>
+      <Button type="button" size="sm" disabled={locked} onClick={() => void onSubmit()}>
         保存
       </Button>
     </div>
@@ -172,8 +142,7 @@ function DatasourceCheckboxList(props: {
   const toggle = (id: string, checked: boolean) => {
     if (readOnly) return;
     if (checked) {
-      const next = [...selectedIds.filter((x) => x !== id), id];
-      onChange(next);
+      onChange([...selectedIds.filter((x) => x !== id), id]);
     } else {
       onChange(selectedIds.filter((x) => x !== id));
     }
@@ -215,121 +184,23 @@ function DatasourceCheckboxList(props: {
   );
 }
 
-type DataSyncTaskEditorProps = Omit<
-  DataSyncDetailPaneProps,
-  'showDetailForm' | 'error' | 'formError' | 'showEditor'
-> & {
-  readOnly: boolean;
-};
+function DataSyncTaskConfigTab(props: { readOnly: boolean }) {
+  const { readOnly } = props;
+  const creating = useAtomValue(dataSyncCreatingAtom);
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  const datasources = useAtomValue(dataSyncDatasourcesAtom);
+  const [form, setForm] = useAtom(dataSyncFormAtom);
 
-function DataSyncTaskPaneActions(props: {
-  readOnly: boolean;
-  creating: boolean;
-  selectedTask: SchedulerTaskPublic | undefined;
-  locked: boolean;
-  loading: boolean;
-  onRefresh: () => void;
-  onEnterEdit: () => void;
-  onCancelForm: () => void;
-  onTrigger: () => void;
-  onToggleEnabled: () => void;
-  onDelete: () => void;
-  onSubmit: () => void;
-}) {
-  const {
-    readOnly,
-    creating,
-    selectedTask,
-    locked,
-    loading,
-    onRefresh,
-    onEnterEdit,
-    onCancelForm,
-    onTrigger,
-    onToggleEnabled,
-    onDelete,
-    onSubmit,
-  } = props;
-  if (readOnly && selectedTask) {
-    return (
-      <DataSyncReadonlyActions
-        locked={locked}
-        loading={loading}
-        selectedTask={selectedTask}
-        onRefresh={onRefresh}
-        onEnterEdit={onEnterEdit}
-        onTrigger={onTrigger}
-        onToggleEnabled={onToggleEnabled}
-        onDelete={onDelete}
-      />
-    );
-  }
   return (
-    <DataSyncEditorActions
-      creating={creating}
-      selectedTask={selectedTask}
-      locked={locked}
-      loading={loading}
-      onRefresh={onRefresh}
-      onCancelForm={onCancelForm}
-      onTrigger={onTrigger}
-      onToggleEnabled={onToggleEnabled}
-      onDelete={onDelete}
-      onSubmit={onSubmit}
-    />
-  );
-}
-
-function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
-  const {
-    creating,
-    selectedTask,
-    readOnly,
-    datasources,
-    locked,
-    loading,
-    name,
-    sourceIds,
-    targetIds,
-    cronExpr,
-    initialStartDate,
-    endDate,
-    maxRetries,
-    timeoutSeconds,
-    enabled,
-    syncWorkflow,
-    syncWorkflowCanvasKey,
-    workflowCanvasRef,
-    onCancelForm,
-    onRefresh,
-    onEnterEdit,
-    onTrigger,
-    onToggleEnabled,
-    onDelete,
-    onSubmit,
-    onNameChange,
-    onSourceIdsChange,
-    onTargetIdsChange,
-    onCronChange,
-    onInitialChange,
-    onEndDateChange,
-    onMaxRetriesChange,
-    onTimeoutChange,
-    onEnabledChange,
-  } = props;
-
-  const [activeTab, setActiveTab] = useState<SyncDetailTab>('config');
-
-  const configTabContent = (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2">
       <FieldGroup className="max-w-5xl gap-6">
         <Field className="gap-2">
           <FieldLabel htmlFor="sync-name">任务名称</FieldLabel>
           <Input
             id="sync-name"
-            value={name}
+            value={form.name}
             readOnly={readOnly}
-            onChange={(e) => onNameChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
             className={cn(readOnly && READONLY_CONTROL_SURFACE)}
           />
         </Field>
@@ -338,18 +209,18 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <DatasourceCheckboxList
             title="源数据源"
             datasources={datasources}
-            selectedIds={sourceIds}
-            otherSelectedIds={targetIds}
+            selectedIds={form.sourceIds}
+            otherSelectedIds={form.targetIds}
             readOnly={readOnly}
-            onChange={onSourceIdsChange}
+            onChange={(sourceIds) => setForm((prev) => ({ ...prev, sourceIds }))}
           />
           <DatasourceCheckboxList
             title="目标数据源"
             datasources={datasources}
-            selectedIds={targetIds}
-            otherSelectedIds={sourceIds}
+            selectedIds={form.targetIds}
+            otherSelectedIds={form.sourceIds}
             readOnly={readOnly}
-            onChange={onTargetIdsChange}
+            onChange={(targetIds) => setForm((prev) => ({ ...prev, targetIds }))}
           />
         </div>
 
@@ -358,9 +229,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <Input
             id="sync-cron"
             className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
-            value={cronExpr}
+            value={form.cronExpr}
             readOnly={readOnly}
-            onChange={(e) => onCronChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, cronExpr: e.target.value }))}
             placeholder="0 2 * * *"
           />
         </Field>
@@ -370,9 +241,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <Input
             id="sync-init"
             className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
-            value={initialStartDate}
+            value={form.initialStartDate}
             readOnly={readOnly}
-            onChange={(e) => onInitialChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, initialStartDate: e.target.value }))}
             placeholder="YYYY-MM-DD"
           />
         </Field>
@@ -381,9 +252,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <Input
             id="sync-end"
             className={cn('font-mono text-sm', readOnly && READONLY_CONTROL_SURFACE)}
-            value={endDate}
+            value={form.endDate}
             readOnly={readOnly}
-            onChange={(e) => onEndDateChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
             placeholder="YYYY-MM-DD"
           />
         </Field>
@@ -392,9 +263,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <FieldLabel htmlFor="sync-retries">最大重试</FieldLabel>
           <Input
             id="sync-retries"
-            value={maxRetries}
+            value={form.maxRetries}
             readOnly={readOnly}
-            onChange={(e) => onMaxRetriesChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, maxRetries: e.target.value }))}
             className={cn(readOnly && READONLY_CONTROL_SURFACE)}
           />
         </Field>
@@ -402,9 +273,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
           <FieldLabel htmlFor="sync-timeout">超时（秒）</FieldLabel>
           <Input
             id="sync-timeout"
-            value={timeoutSeconds}
+            value={form.timeoutSeconds}
             readOnly={readOnly}
-            onChange={(e) => onTimeoutChange(e.target.value)}
+            onChange={(e) => setForm((prev) => ({ ...prev, timeoutSeconds: e.target.value }))}
             className={cn(readOnly && READONLY_CONTROL_SURFACE)}
           />
         </Field>
@@ -412,9 +283,9 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
         <Field className="gap-2">
           <div className="flex items-center gap-2">
             <Checkbox
-              checked={enabled}
+              checked={form.enabled}
               disabled={readOnly}
-              onCheckedChange={(v) => onEnabledChange(Boolean(v))}
+              onCheckedChange={(v) => setForm((prev) => ({ ...prev, enabled: Boolean(v) }))}
               id="sync-enabled"
             />
             <FieldLabel htmlFor="sync-enabled" className="font-normal">
@@ -433,85 +304,93 @@ function DataSyncTaskEditor(props: DataSyncTaskEditorProps) {
       </FieldGroup>
     </div>
   );
+}
 
-  const workflowTabContent = (
+function DataSyncTaskPaneActions(props: { readOnly: boolean }) {
+  const { readOnly } = props;
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  if (readOnly && selectedTask) return <DataSyncReadonlyActions />;
+  return <DataSyncEditorActions />;
+}
+
+function DataSyncWorkflowTab(props: { readOnly: boolean }) {
+  const { readOnly } = props;
+  const form = useAtomValue(dataSyncFormAtom);
+  const canvasKey = useAtomValue(dataSyncWorkflowCanvasKeyAtom);
+  const panelActiveTab = useAtomValue(dataSyncPanelActiveTabAtom);
+  const canvasRef = useRef<WorkflowGraphCanvasHandle | null>(null);
+  const setCanvasHandle = useSetAtom(dataSyncWorkflowCanvasHandleAtom);
+
+  useLayoutEffect(() => {
+    setCanvasHandle(canvasRef.current);
+    return () => setCanvasHandle(null);
+  }, [canvasKey, panelActiveTab, setCanvasHandle]);
+
+  return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border/60">
         <PreprocessingWorkflowEditorBlock
           className="h-full min-h-[480px]"
-          workflow={syncWorkflow}
-          canvasKey={syncWorkflowCanvasKey}
-          canvasRef={workflowCanvasRef}
+          workflow={form.syncWorkflow}
+          canvasKey={canvasKey}
+          canvasRef={canvasRef}
           readOnly={readOnly}
         />
       </div>
     </div>
   );
+}
+
+function DataSyncTaskEditor(props: { readOnly: boolean }) {
+  const { readOnly } = props;
+  const creating = useAtomValue(dataSyncCreatingAtom);
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  const form = useAtomValue(dataSyncFormAtom);
+  const panelActiveTab = useAtomValue(dataSyncPanelActiveTabAtom);
+  const setDetailTab = useSetAtom(setDataSyncDetailTabAtom);
 
   return (
     <PanelDetailCard
       className="min-h-0 flex-1"
       title={
         <span className="truncate text-lg font-semibold tracking-tight">
-          {creating ? '新建数据同步' : name || selectedTask?.name || '数据同步'}
+          {creating ? '新建数据同步' : form.name || selectedTask?.name || '数据同步'}
         </span>
       }
-      actions={
-        <DataSyncTaskPaneActions
-          readOnly={readOnly}
-          creating={creating}
-          selectedTask={selectedTask}
-          locked={locked}
-          loading={loading}
-          onRefresh={onRefresh}
-          onEnterEdit={onEnterEdit}
-          onCancelForm={onCancelForm}
-          onTrigger={onTrigger}
-          onToggleEnabled={onToggleEnabled}
-          onDelete={onDelete}
-          onSubmit={onSubmit}
-        />
-      }
+      actions={<DataSyncTaskPaneActions readOnly={readOnly} />}
       panels={[
-        { value: 'config', label: '任务配置', content: configTabContent },
+        { value: 'config', label: '任务配置', content: <DataSyncTaskConfigTab readOnly={readOnly} /> },
+        { value: 'workflow', label: '同步工作流', content: <DataSyncWorkflowTab readOnly={readOnly} /> },
         {
-          value: 'workflow',
-          label: '同步工作流',
-          content: workflowTabContent,
+          value: 'records',
+          label: '同步记录',
+          content: <DataSyncRecordsTab />,
+          disabled: creating,
         },
       ]}
-      panelActiveTab={activeTab}
+      panelActiveTab={panelActiveTab}
       onPanelActiveTabChange={(v) => {
-        if (v === 'config' || v === 'workflow') setActiveTab(v);
+        if (v === 'config' || v === 'workflow' || v === 'records') {
+          void setDetailTab(v);
+        }
       }}
     />
   );
 }
 
-export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
-  const {
-    creating,
-    selectedTask,
-    showDetailForm,
-    showEditor,
-    datasources,
-    locked,
-    error,
-    formError,
-    loading,
-    onRefresh,
-    onEnterEdit,
-    onCancelForm,
-    onTrigger,
-    onToggleEnabled,
-    onDelete,
-    onSubmit,
-    ...formProps
-  } = props;
+export function DataSyncDetailPane() {
+  const showDetailForm = useAtomValue(dataSyncShowDetailFormAtom);
+  const showEditor = useAtomValue(dataSyncShowEditorAtom);
+  const creating = useAtomValue(dataSyncCreatingAtom);
+  const selectedTask = useAtomValue(dataSyncSelectedTaskAtom);
+  const datasources = useAtomValue(dataSyncDatasourcesAtom);
+  const error = useAtomValue(dataSyncErrorAtom);
+  const formError = useAtomValue(dataSyncFormErrorAtom);
+  const form = useAtomValue(dataSyncFormAtom);
 
   const editorKey = creating
-    ? `create:${formProps.sourceIds.join(',')}:${formProps.targetIds.join(',')}`
-    : `${selectedTask?.id ?? 'none'}:${formProps.sourceIds.join(',')}:${formProps.targetIds.join(',')}`;
+    ? `create:${form.sourceIds.join(',')}:${form.targetIds.join(',')}`
+    : `${selectedTask?.id ?? 'none'}:${form.sourceIds.join(',')}:${form.targetIds.join(',')}`;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -534,32 +413,14 @@ export function DataSyncDetailPane(props: DataSyncDetailPaneProps) {
             </div>
           ) : null}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {(creating || selectedTask) && (
-              <DataSyncTaskEditor
-                key={editorKey}
-                readOnly={!showEditor}
-                creating={creating}
-                selectedTask={selectedTask}
-                datasources={datasources}
-                locked={locked}
-                loading={loading}
-                {...formProps}
-                onRefresh={onRefresh}
-                onEnterEdit={onEnterEdit}
-                onCancelForm={onCancelForm}
-                onTrigger={onTrigger}
-                onToggleEnabled={onToggleEnabled}
-                onDelete={onDelete}
-                onSubmit={onSubmit}
-              />
-            )}
+            {(creating || selectedTask) && <DataSyncTaskEditor key={editorKey} readOnly={!showEditor} />}
           </div>
         </div>
       ) : (
         <PanelDetailCard
           className="min-h-0 flex-1"
           title={<span className="truncate text-lg font-semibold tracking-tight">数据同步</span>}
-          actions={<DataSyncEmptyActions loading={loading} onRefresh={onRefresh} />}
+          actions={<DataSyncEmptyActions />}
         >
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-6">
             {error ? (
