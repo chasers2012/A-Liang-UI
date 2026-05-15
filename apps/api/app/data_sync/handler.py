@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pandas as pd
+from workflow import WorkflowExecutor
 
-from app.common.frames_workflow import execute_frames_workflow
 from app.data_sync.schemas import (
     DataSyncRunResult,
     DataSyncTargetWriteResult,
@@ -112,7 +112,15 @@ def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult
             target_datasource_ids=target_ids,
         )
 
-    workflow_out = execute_frames_workflow(wf_json, raw_frames)
+    executor = WorkflowExecutor()
+    node_results = executor.execute(
+        wf_json,
+        workflow_inputs=raw_frames,
+    )
+    workflow_out = (
+        (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
+    )
+    workflow_out = workflow_out if isinstance(workflow_out, dict) else {}
     frames_by_target = _frames_by_target_from_workflow(workflow_out, targets)
     rows_written_by_target, rows_written = _write_sync_to_targets(frames_by_target, targets)
     return DataSyncRunResult(
