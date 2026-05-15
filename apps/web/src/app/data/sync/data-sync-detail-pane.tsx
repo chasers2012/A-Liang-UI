@@ -126,7 +126,7 @@ function DatasourceComboboxField(props: {
                     </ComboboxChip>
                   );
                 })}
-                <ComboboxChipsInput placeholder={readOnly ? '只读' : '选择数据源'} />
+                <ComboboxChipsInput placeholder={readOnly ? '' : '选择数据源'} />
               </>
             )}
           </ComboboxValue>

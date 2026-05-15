@@ -1,55 +1,55 @@
 from __future__ import annotations
 
-from sqlalchemy import outerjoin
-from sqlmodel import select
-
 from app.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
-from app.data_sync.models import DataSyncTaskRow
-from app.persistence.sqlite_db import get_session
-from app.scheduler.models import SchedulerTaskRow
+from app.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
+from app.scheduler.registry import SchedulerRegistry
 
 
 class DataSyncRegistry:
     @classmethod
-    def list_task_pairs(
-        cls, *, enabled: bool | None = None
-    ) -> list[tuple[SchedulerTaskRow, DataSyncTaskRow]]:
-        with get_session() as session:
-            task_pairs = (
-                select(SchedulerTaskRow, DataSyncTaskRow)
-                .select_from(
-                    outerjoin(
-                        SchedulerTaskRow,
-                        DataSyncTaskRow,
-                        DataSyncTaskRow.scheduler_task_id == SchedulerTaskRow.id,
-                    )
-                )
-                .where(SchedulerTaskRow.task_type == DATASOURCE_SYNC_TASK_TYPE)
-                .order_by(SchedulerTaskRow.created_at.desc())
-            )
-            if enabled is not None:
-                task_pairs = task_pairs.where(SchedulerTaskRow.enabled == enabled)
-            return list(session.exec(task_pairs).all())
+    def task_name_exists(cls, name: str, *, exclude_task_id: str | None = None) -> bool:
+        return SchedulerRegistry.task_name_exists(name, exclude_task_id=exclude_task_id)
 
     @classmethod
-    def get_task(cls, scheduler_task_id: str) -> DataSyncTaskRow | None:
-        with get_session() as session:
-            return session.get(DataSyncTaskRow, scheduler_task_id)
+    def list_tasks(cls, *, enabled: bool | None = None) -> list[SchedulerTaskRow]:
+        tasks = SchedulerRegistry.list_tasks(enabled=enabled)
+        return [task for task in tasks if task.task_type == DATASOURCE_SYNC_TASK_TYPE]
 
     @classmethod
-    def save_task(cls, row: DataSyncTaskRow) -> DataSyncTaskRow:
-        with get_session() as session:
-            session.add(row)
-            session.commit()
-            session.refresh(row)
-            return row
+    def get_task(cls, scheduler_task_id: str) -> SchedulerTaskRow | None:
+        row = SchedulerRegistry.get_task(scheduler_task_id)
+        if row is None or row.task_type != DATASOURCE_SYNC_TASK_TYPE:
+            return None
+        return row
+
+    @classmethod
+    def create_task(cls, row: SchedulerTaskRow) -> SchedulerTaskRow:
+        return SchedulerRegistry.create_task(row)
+
+    @classmethod
+    def save_task(cls, row: SchedulerTaskRow) -> SchedulerTaskRow:
+        return SchedulerRegistry.save_task(row)
 
     @classmethod
     def delete_task(cls, scheduler_task_id: str) -> bool:
-        with get_session() as session:
-            row = session.get(DataSyncTaskRow, scheduler_task_id)
-            if row is None:
-                return False
-            session.delete(row)
-            session.commit()
-            return True
+        return SchedulerRegistry.delete_task(scheduler_task_id)
+
+    @classmethod
+    def list_jobs(
+        cls,
+        *,
+        task_id: str,
+        status: str | None = None,
+        page: int = 1,
+        page_size: int = 50,
+    ) -> tuple[int, list[SchedulerJobRow]]:
+        return SchedulerRegistry.list_jobs(
+            task_id=task_id,
+            status=status,
+            offset=(page - 1) * page_size,
+            limit=page_size,
+        )
+
+    @classmethod
+    def list_job_logs(cls, job_id: str, *, limit: int | None = 100) -> list[SchedulerJobLogRow]:
+        return SchedulerRegistry.list_job_logs(job_id, limit=limit)

@@ -40,13 +40,6 @@ class DataSyncTaskPayload(BaseModel):
             out.append(s)
         return out
 
-    @staticmethod
-    def _workflow_nodes_empty(workflow: dict[str, Any]) -> bool:
-        nodes = workflow.get("nodes")
-        if not isinstance(nodes, list):
-            return True
-        return len(nodes) == 0
-
     @field_validator("source_datasource_ids", "target_datasource_ids", mode="before")
     @classmethod
     def _normalize_id_lists(cls, v: object) -> list[str]:
@@ -66,10 +59,8 @@ class DataSyncTaskPayload(BaseModel):
         if v is None:
             return None
         if isinstance(v, WorkflowGraphPersisted):
-            return None if cls._workflow_nodes_empty(v.model_dump(by_alias=True)) else v
+            return v
         if isinstance(v, dict):
-            if not v or cls._workflow_nodes_empty(v):
-                return None
             return WorkflowGraphPersisted.model_validate(v)
         raise ValueError("sync_workflow 必须是对象")
 
