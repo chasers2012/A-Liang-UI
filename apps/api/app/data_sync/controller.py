@@ -6,7 +6,6 @@ from uuid import uuid4
 
 from app.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
 from app.data_sync.models import DataSyncTaskRow
-from app.data_sync.payload import normalize_sync_payload, validate_sync_payload
 from app.data_sync.registry import DataSyncRegistry
 from app.data_sync.schemas import (
     CreateDataSyncTaskRequest,
@@ -101,8 +100,7 @@ def create_task(body: CreateDataSyncTaskRequest) -> DataSyncTaskPublic:
     validate_cron_expr(cron_expr)
     _ensure_task_name_unique(body.name)
 
-    payload = normalize_sync_payload(dict(body.payload))
-    validate_sync_payload(payload)
+    body.payload.validate_sync_rules()
 
     now = utcnow()
     task_id = uuid4().hex
@@ -110,7 +108,7 @@ def create_task(body: CreateDataSyncTaskRequest) -> DataSyncTaskPublic:
         id=task_id,
         name=body.name,
         cron_expr=cron_expr,
-        payload=payload,
+        payload=body.payload,
         enabled=body.enabled,
         max_retries=body.max_retries,
         timeout_seconds=body.timeout_seconds,
@@ -140,9 +138,8 @@ def update_task(task_id: str, body: UpdateDataSyncTaskRequest) -> DataSyncTaskPu
         validate_cron_expr(cron_expr)
         row.cron_expr = cron_expr
     if "payload" in patch and patch["payload"] is not None:
-        payload = normalize_sync_payload(dict(patch["payload"]))
-        validate_sync_payload(payload)
-        row.payload = payload
+        patch["payload"].validate_sync_rules()
+        row.payload = patch["payload"]
     if "enabled" in patch and patch["enabled"] is not None:
         row.enabled = patch["enabled"]
     if "max_retries" in patch and patch["max_retries"] is not None:
@@ -166,7 +163,9 @@ def delete_task(task_id: str) -> None:
 
 def trigger_task(task_id: str, body: TriggerDataSyncTaskRequest) -> DataSyncJobPublic:
     row = _get_task_or_raise(task_id)
-    merged_payload: dict[str, object] = dict(row.payload)
+    merged_payload: dict[str, object] = {
+        **row.payload.model_dump(mode="json", by_alias=True, exclude_none=True),
+    }
     if body.payload:
         merged_payload.update(body.payload)
     try:

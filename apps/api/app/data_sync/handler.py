@@ -6,8 +6,8 @@ from typing import Any
 import pandas as pd
 
 from app.common.frames_workflow import execute_datasource_sync_workflow
-from app.data_sync.payload import prepare_sync_run
 from app.data_sync.registry import DataSyncRegistry
+from app.data_sync.schemas import DataSyncTaskPayload
 from app.datasource.controller import get_datasource
 from app.datasource.plugins import get_datasource_plugin
 from app.datasource.registry import DataSourceItemsRegistry
@@ -26,7 +26,7 @@ def _effective_sync_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if task_id:
         row = DataSyncRegistry.get_task(task_id)
         if row is not None:
-            stored = dict(row.payload or {})
+            stored = row.payload.model_dump(mode="json", by_alias=True, exclude_none=True)
     overrides = {k: v for k, v in payload.items() if k != "_scheduler"}
     return {**stored, **overrides}
 
@@ -316,7 +316,11 @@ def _datasource_sync_run(
 
 def datasource_sync_handler(payload: dict[str, Any]) -> dict[str, Any]:
     effective = _effective_sync_payload(payload)
-    source_ids, target_ids, wf_json = prepare_sync_run(effective)
+    sync_payload = DataSyncTaskPayload.model_validate(effective)
+    sync_payload.validate_sync_rules()
+    source_ids = sync_payload.source_ids
+    target_ids = sync_payload.target_ids
+    wf_json = sync_payload.workflow_json()
     return _datasource_sync_run(
         effective, source_ids=source_ids, target_ids=target_ids, wf_json=wf_json
     )
