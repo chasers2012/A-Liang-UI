@@ -14,6 +14,13 @@ export type FormState = {
   config: Record<string, unknown>;
 };
 
+const WRITE_KEYS = ['write_enabled'] as const;
+
+function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return v as Record<string, unknown>;
+}
+
 export function emptyForm(): FormState {
   return {
     name: '',
@@ -24,17 +31,23 @@ export function emptyForm(): FormState {
 
 export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
   const c = dictLikeOrEmpty(ds.config);
+  const connection = dictLikeOrEmpty(c.connection);
+  const columns = dictLikeOrEmpty(c.columns);
+  const legacyWrite = dictLikeOrEmpty(c.write);
+  for (const k of WRITE_KEYS) {
+    const fromTop = legacyWrite[k];
+    const fromCol = columns[k];
+    if (connection[k] === undefined) {
+      if (fromTop !== undefined) connection[k] = fromTop;
+      else if (fromCol !== undefined) connection[k] = fromCol;
+    }
+  }
   return {
     name: ds.name,
     type: String(ds.type),
     config: {
-      connection: dictLikeOrEmpty(c.connection),
-      columns: dictLikeOrEmpty(c.columns),
+      connection,
+      columns,
     },
   };
-}
-
-function dictLikeOrEmpty(v: unknown): Record<string, unknown> {
-  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
-  return v as Record<string, unknown>;
 }

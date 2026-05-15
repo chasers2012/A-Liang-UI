@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
+  ArrowRightLeft,
   Bot,
   BookOpen,
   Database,
@@ -43,6 +44,7 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
     items: [
       { title: '数据源', url: '/data/datasources', icon: Database },
       { title: '数据集', url: '/data/data-sets', icon: Table2 },
+      { title: '数据同步', url: '/data/sync', icon: ArrowRightLeft },
     ],
   },
   { title: '评价方案', url: '/profiles', icon: Table2 },

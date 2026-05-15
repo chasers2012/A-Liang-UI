@@ -47,6 +47,7 @@ def create_db_and_tables() -> None:
     from app.chat import models as _chat_models  # noqa: F401
     from app.data_set import models as _dataset_models  # noqa: F401
     from app.datasource import models as _datasource_models  # noqa: F401
+    from app.datasource import sync_models as _datasource_sync_models  # noqa: F401
     from app.evaluation.profile import models as _evaluation_profile_models  # noqa: F401
     from app.evaluation.run import models as _evaluation_run_models  # noqa: F401
     from app.factors import models as _factor_models  # noqa: F401
@@ -59,6 +60,20 @@ def create_db_and_tables() -> None:
 
     engine = get_engine()
     SQLModel.metadata.create_all(engine)
+    _patch_sqlite_schema(engine)
+
+
+def _patch_sqlite_schema(engine) -> None:
+    """Lightweight additive migrations for existing SQLite files."""
+    from sqlalchemy import text
+
+    with engine.begin() as cx:
+        rows = cx.execute(text("PRAGMA table_info(datasource_sync_cursors)")).fetchall()
+        colnames = {str(r[1]) for r in rows}
+        if "source_ids_json" not in colnames:
+            cx.execute(text("ALTER TABLE datasource_sync_cursors ADD COLUMN source_ids_json TEXT"))
+        if "target_ids_json" not in colnames:
+            cx.execute(text("ALTER TABLE datasource_sync_cursors ADD COLUMN target_ids_json TEXT"))
 
 
 @contextmanager

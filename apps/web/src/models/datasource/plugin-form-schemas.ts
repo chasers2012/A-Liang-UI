@@ -70,6 +70,16 @@ function buildFieldsFormSchemaWithColumnEnums(
   return { ...base, properties };
 }
 
+function persistedColumnNames(columnsConfig: Record<string, unknown>): string[] {
+  return Array.from(
+    new Set(
+      (Array.isArray(columnsConfig.columns) ? columnsConfig.columns : [])
+        .map((x) => String(x).trim())
+        .filter((x) => x.length > 0),
+    ),
+  );
+}
+
 /** 由插件定义 + 当前表单 config 推导 RJSF schema（供派生 atom / 测试复用） */
 export function computeDatasourcePluginFormSchemas(
   form: FormState,
@@ -81,13 +91,7 @@ export function computeDatasourcePluginFormSchemas(
   const rawColumnsUiSchema = (plugin?.columns_ui_schema ?? {}) as Record<string, unknown>;
   const columnsConfig = getDatasourceColumnsConfig(form);
   const hasSplitColumnsConfig = Object.keys(rawColumnsSchema).length > 0;
-  const persistedColumns = Array.from(
-    new Set(
-      (Array.isArray(columnsConfig.columns) ? columnsConfig.columns : [])
-        .map((x) => String(x).trim())
-        .filter((x) => x.length > 0),
-    ),
-  );
+  const persistedColumns = persistedColumnNames(columnsConfig);
 
   const fieldsFormSchema = hasSplitColumnsConfig
     ? buildFieldsFormSchemaWithColumnEnums(rawColumnsSchema, persistedColumns)

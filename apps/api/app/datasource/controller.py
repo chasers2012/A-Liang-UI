@@ -255,12 +255,13 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
         if "name" in data:
             _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
             row.name = data["name"]
-        if "connection_config" in data or "columns_config" in data:
+        if any(k in data for k in ("connection_config", "columns_config")):
             plugin = get_datasource_plugin(str(row.type))
-            overlay = {
-                "connection": dict(data.get("connection_config") or {}),
-                "columns": dict(data.get("columns_config") or {}),
-            }
+            overlay: dict[str, Any] = {}
+            if "connection_config" in data:
+                overlay["connection"] = dict(data.get("connection_config") or {})
+            if "columns_config" in data:
+                overlay["columns"] = dict(data.get("columns_config") or {})
             merged = plugin.spec.merge_overlay_with_saved_secrets(
                 dict(row.config or {}),
                 overlay,

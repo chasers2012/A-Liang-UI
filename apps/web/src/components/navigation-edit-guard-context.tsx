@@ -85,6 +85,32 @@ export function useNavigationEditGuard(editingAtom: Atom<boolean>, options: { on
   }, [assignGuard, releaseGuard, store, editingAtom]);
 }
 
+/**
+ * 与 {@link useNavigationEditGuard} 相同，但用 React state 表达「是否编辑中」（未用 jotai 管理编辑态的页面使用）。
+ */
+export function useNavigationEditGuardState(isEditing: boolean, options: { onAbandon: () => void }) {
+  const ctx = useContext(NavigationEditGuardContext);
+  if (!ctx) {
+    throw new Error('useNavigationEditGuardState 必须在 NavigationEditGuardProvider 内使用');
+  }
+  const { assignGuard, releaseGuard } = ctx;
+  const idRef = useRef(Symbol('navigation-edit-guard-state'));
+  const isEditingRef = useRef(isEditing);
+  isEditingRef.current = isEditing;
+  const onAbandonRef = useRef(options.onAbandon);
+  onAbandonRef.current = options.onAbandon;
+
+  useEffect(() => {
+    const id = idRef.current;
+    assignGuard({
+      id,
+      isEditing: () => isEditingRef.current,
+      onAbandon: () => onAbandonRef.current(),
+    });
+    return () => releaseGuard(id);
+  }, [assignGuard, releaseGuard]);
+}
+
 export function useNavigationEditGuardShell(): NavigationEditGuardContextValue | null {
   return useContext(NavigationEditGuardContext);
 }

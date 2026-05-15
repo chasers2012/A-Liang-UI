@@ -5,8 +5,8 @@ from collections.abc import Callable
 import pandas as pd
 from factor.data_set import DataSet, DataSourceBinding
 from fastapi import HTTPException
-from workflow import WorkflowExecutor
 
+from app.common.frames_workflow import execute_frames_dataframe_workflow
 from app.data_set.constants import empty_preprocessing_workflow_dict
 from app.data_set.models import DataSetRow
 from app.data_set.redistry import DataSetsStore
@@ -41,24 +41,10 @@ def _build_preprocessor_from_workflow(
     if not workflow:
         return None
 
-    executor = WorkflowExecutor()
-
     def _preprocessor(
         raw_frames: dict[str, pd.DataFrame],
     ) -> pd.DataFrame:
-        node_results = executor.execute(
-            workflow,
-            workflow_inputs={"frames": raw_frames, **raw_frames},
-        )
-        workflow_out = (
-            (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
-        )
-        frames_out = (workflow_out or {}).get("frames")
-        if frames_out is None:
-            raise ValueError("数据集预处理工作流没有输出")
-        if not isinstance(frames_out, pd.DataFrame):
-            raise ValueError("数据集预处理工作流必须返回一个DataFrame")
-        return frames_out
+        return execute_frames_dataframe_workflow(workflow, raw_frames)
 
     return _preprocessor
 

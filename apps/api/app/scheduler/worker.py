@@ -43,7 +43,12 @@ def run_worker_loop(
             continue
 
         try:
-            result = run_task_handler(job.task_type, job.payload)
+            effective_payload: dict = dict(job.payload or {})
+            effective_payload["_scheduler"] = {
+                "job_id": job.id,
+                "task_id": job.task_id,
+            }
+            result = run_task_handler(job.task_type, effective_payload)
             controller.mark_job_succeeded(job.id, result)
             logger.info("job %s succeeded", job.id)
         except Exception as exc:

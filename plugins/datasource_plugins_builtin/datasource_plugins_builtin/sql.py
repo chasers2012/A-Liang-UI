@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin
-from app.datasource.schemas import DataSourceSpec, VerifyResult
+from app.datasource.schemas import DataSourceSpec, VerifyResult, pop_write_flat_keys_from_mapping
 from app.form import FormSchema
 from factor.datasource import FactorDataSource
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import bindparam
 from sqlalchemy.engine import Engine
 from sqlmodel import create_engine, inspect, text
 
 
 class SqlConnectionConfig(BaseModel):
-    """数据库连接与表（存储 ``connection`` 段）。"""
+    """数据库连接、表与可选的同步写入选项（均存于 ``connection`` 段）。"""
+
+    model_config = ConfigDict(extra="ignore")
 
     db_driver: str = "postgresql"
     db_host: str = ""
@@ -23,21 +26,28 @@ class SqlConnectionConfig(BaseModel):
     db_password: str = ""
     db_name: str = ""
     table: str = ""
+    write_enabled: bool = False
 
     @model_validator(mode="after")
     def _validate(self) -> SqlConnectionConfig:
-        if not self.db_host.strip() or not self.db_name.strip():
-            raise ValueError("主机（IP）与数据库名不能为空")
         if not self.table.strip():
             raise ValueError("表名不能为空")
         d = (self.db_driver or "").lower()
-        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
-            raise ValueError("db_driver 须为 postgresql 或 mysql")
+        if d == "sqlite":
+            if not (self.db_name or "").strip():
+                raise ValueError("sqlite 须配置 db_name 为文件路径或 :memory:")
+        else:
+            if not self.db_host.strip() or not self.db_name.strip():
+                raise ValueError("主机（IP）与数据库名不能为空")
+            if d not in ("postgres", "postgresql", "mysql", "mariadb"):
+                raise ValueError("db_driver 须为 postgresql、mysql 或 sqlite")
         return self
 
 
 class SqlColumnsConfig(BaseModel):
     """日期列、资产列与列缓存（存储 ``columns`` 段）。"""
+
+    model_config = ConfigDict(extra="ignore")
 
     date_column: str = "date"
     asset_column: str | None = "asset"
@@ -100,7 +110,13 @@ def build_sqlalchemy_url(cfg: SqlConnectionConfig) -> str:
     if driver in ("mysql", "mariadb"):
         p = int(port) if port is not None else 3306
         return f"mysql+pymysql://{auth}{host}:{p}/{db_path}"
-    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
+    if driver == "sqlite":
+        name = (cfg.db_name or "").strip()
+        if name == ":memory:":
+            return "sqlite:///:memory:"
+        pth = Path(name).expanduser().resolve()
+        return f"sqlite:///{pth.as_posix()}"
+    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql、mysql 或 sqlite")
 
 
 class SqlDataSource(FactorDataSource):
@@ -199,7 +215,7 @@ class SqlDataSourceSpec(DataSourceSpec):
         super().__init__(
             connection_schema=FormSchema(
                 title="SQL 数据源",
-                description="配置数据库连接和数据表信息。",
+                description="配置数据库连接、数据表及可选的同步追加写入。",
                 json_schema={
                     "type": "object",
                     "properties": {
@@ -210,6 +226,7 @@ class SqlDataSourceSpec(DataSourceSpec):
                             "oneOf": [
                                 {"const": "postgresql", "title": "PostgreSQL"},
                                 {"const": "mysql", "title": "MySQL / MariaDB"},
+                                {"const": "sqlite", "title": "SQLite（测试/本地）"},
                             ],
                         },
                         "db_host": {"type": "string", "title": "主机（IP）"},
@@ -218,6 +235,11 @@ class SqlDataSourceSpec(DataSourceSpec):
                         "db_password": {"type": "string", "title": "密码"},
                         "db_name": {"type": "string", "title": "数据库名"},
                         "table": {"type": "string", "title": "表名"},
+                        "write_enabled": {
+                            "type": "boolean",
+                            "title": "允许同步写入（追加行）",
+                            "default": False,
+                        },
                     },
                     "required": ["db_driver", "db_host", "db_name", "table"],
                 },
@@ -269,12 +291,42 @@ class SqlDataSourceSpec(DataSourceSpec):
         connection_config: dict[str, Any],
         columns_config: dict[str, Any],
     ) -> dict[str, Any]:
-        conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
-        col = SqlColumnsConfig.model_validate(dict(columns_config or {}))
+        conn_raw = dict(connection_config or {})
+        cols_only, legacy_write = pop_write_flat_keys_from_mapping(dict(columns_config or {}))
+        for k, v in legacy_write.items():
+            if k not in conn_raw:
+                conn_raw[k] = v
+        conn = SqlConnectionConfig.model_validate(conn_raw)
+        col = SqlColumnsConfig.model_validate(cols_only)
         return {
             "connection": conn.model_dump(mode="json"),
             "columns": col.model_dump(mode="json"),
         }
+
+    def list_sync_target_physical_columns(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> list[str] | None:
+        _ = columns_config
+        from datasource_plugins_builtin.sql_sync import list_sql_table_physical_columns
+
+        return list_sql_table_physical_columns(connection_config)
+
+    def write_sync_dataframe(
+        self,
+        *,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+        df: pd.DataFrame,
+    ) -> int:
+        from datasource_plugins_builtin.sql_sync import write_dataframe_to_sql_table
+
+        return write_dataframe_to_sql_table(
+            connection_config=connection_config,
+            columns_config=columns_config,
+            df=df,
+        )
 
     def to_factor_datasource(
         self,
@@ -284,8 +336,13 @@ class SqlDataSourceSpec(DataSourceSpec):
         conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
         col = SqlColumnsConfig.model_validate(dict(columns_config or {}))
         url = build_sqlalchemy_url(conn)
+        eng = (
+            create_engine(url, connect_args={"check_same_thread": False})
+            if ":memory:" in url
+            else create_engine(url)
+        )
         return SqlDataSource(
-            engine=url,
+            engine=eng,
             table=conn.table.strip(),
             date_column=col.date_column,
             asset_column=col.asset_column,
@@ -303,7 +360,8 @@ class SqlDataSourceSpec(DataSourceSpec):
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
         try:
-            engine = create_engine(url)
+            connect_args = {} if ":memory:" not in url else {"check_same_thread": False}
+            engine = create_engine(url, connect_args=connect_args)
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
         except Exception as e:

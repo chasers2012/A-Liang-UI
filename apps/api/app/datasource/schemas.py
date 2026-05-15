@@ -23,6 +23,45 @@ class VerifyResult(BaseModel):
     message: str
 
 
+DATASOURCE_WRITE_FLAT_KEYS = frozenset({"write_enabled"})
+
+
+def pop_write_flat_keys_from_mapping(
+    columns_like: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """从仍含扁平 ``write_*`` 键的 ``columns`` 片段中拆出写入配置（兼容旧存储）。"""
+    rest = dict(columns_like or {})
+    w: dict[str, Any] = {}
+    for k in DATASOURCE_WRITE_FLAT_KEYS:
+        if k in rest:
+            w[k] = rest.pop(k)
+    return rest, w
+
+
+def merged_write_flat_dict_from_storage(plain: dict[str, Any]) -> dict[str, Any]:
+    """从 ``connection``、旧版 ``columns`` 或顶层 ``write`` 合并出扁平 ``write_*`` 配置（供同步校验）。"""
+    conn = dict(plain.get("connection") or {})
+    w = {k: conn[k] for k in DATASOURCE_WRITE_FLAT_KEYS if k in conn}
+    cols = dict(plain.get("columns") or {})
+    top = dict(plain.get("write") or {})
+    for src in (cols, top):
+        for k in DATASOURCE_WRITE_FLAT_KEYS:
+            if k not in w and k in src:
+                w[k] = src[k]
+    return w
+
+
+class DataSourceWriteConfig(BaseModel):
+    """
+    通用「可写入 / 同步落地」语义模型；各插件可将对应字段存于 ``connection`` 或其它段，
+    由插件在 ``validate_write_config`` 中从扁平字典解析。
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    write_enabled: bool = False
+
+
 class DataSourceSpec(ABC):
     """Form schemas and config/datasource behavior for a datasource plugin."""
 
@@ -42,22 +81,50 @@ class DataSourceSpec(ABC):
         schema = self.columns_schema
         return schema.resolved_secret_keys() if schema is not None else []
 
+    def validate_write_config(self, write_config: dict[str, Any]) -> DataSourceWriteConfig:
+        """从扁平 ``write_*`` 字典解析并校验通用写入语义（插件可从 ``connection`` 等段组装该字典）。"""
+        return DataSourceWriteConfig.model_validate(dict(write_config or {}))
+
+    def list_sync_target_physical_columns(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+    ) -> list[str] | None:
+        """若该类型可作为同步目标并枚举物理列，返回列名；否则返回 ``None``。"""
+        _ = connection_config, columns_config
+        return None
+
+    def write_sync_dataframe(
+        self,
+        *,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+        df: Any,
+    ) -> int:
+        """将同步得到的 DataFrame 写入目标；不支持则抛出 ``NotImplementedError``。"""
+        _ = connection_config, columns_config, df
+        raise NotImplementedError("该数据源类型不支持作为同步写入目标")
+
     def decrypt_storage_config(self, stored_config: dict[str, Any]) -> dict[str, Any]:
         raw = dict(stored_config or {})
         connection_schema = self.connection_schema
         columns_schema = self.columns_schema
         connection = dict(raw.get("connection") or {})
         columns = dict(raw.get("columns") or {})
-        return {
-            "connection": (
-                connection_schema.decrypt_form(connection)
-                if connection_schema is not None
-                else connection
-            ),
-            "columns": (
-                columns_schema.decrypt_form(columns) if columns_schema is not None else columns
-            ),
-        }
+        connection = (
+            connection_schema.decrypt_form(connection)
+            if connection_schema is not None
+            else connection
+        )
+        columns = columns_schema.decrypt_form(columns) if columns_schema is not None else columns
+        for k in DATASOURCE_WRITE_FLAT_KEYS:
+            if k in columns and k not in connection:
+                connection[k] = columns.pop(k)
+        legacy_write = dict(raw.get("write") or {})
+        for k, v in legacy_write.items():
+            if k not in connection:
+                connection[k] = v
+        return {"connection": connection, "columns": columns}
 
     def encrypt_storage_config(self, storage_config: dict[str, Any]) -> dict[str, Any]:
         raw = dict(storage_config or {})
@@ -205,6 +272,7 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
         )
     if columns_schema is not None:
         public_config["columns"] = columns_schema.redact(dict(public_config.get("columns") or {}))
+    public_config.pop("write", None)
     return DataSourcePublic(
         id=row.id,
         name=row.name,
