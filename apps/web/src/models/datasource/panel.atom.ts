@@ -250,12 +250,34 @@ export const saveDatasourceEditorAtom = atom(null, async (get, set) => {
 export const confirmDeleteDatasourceAtom = atom(null, async (get, set) => {
   const target = get(datasourcesDeleteTargetAtom);
   if (!target) return;
+
+  const deletedId = target.id;
+  const selectedId = get(datasourcesSelectedIdAtom);
+  const itemsBefore = get(datasourcesListAtoms.valueAtom) ?? [];
+  const deletedIndex = itemsBefore.findIndex((d) => d.id === deletedId);
+
   set(datasourcesDeletingAtom, true);
   set(datasourcesDeleteErrorAtom, null);
   try {
-    await deleteDatasource(target.id);
+    await deleteDatasource(deletedId);
     set(datasourcesDeleteTargetAtom, null);
     set(datasourcesListAtoms.refreshAtom);
+    await get(datasourcesListAtoms.asyncAtom);
+
+    if (selectedId === deletedId) {
+      set(clearDatasourceTransientAlertsAtom);
+      set(datasourcesIsEditingAtom, false);
+      set(datasourcesDetailActiveTabAtom, 'base');
+
+      const itemsAfter = get(datasourcesListAtoms.valueAtom) ?? [];
+      if (itemsAfter.length === 0) {
+        set(datasourcesSelectedIdAtom, null);
+        set(datasourcesEditorFormAtom, emptyForm());
+      } else {
+        const nextIndex = Math.min(deletedIndex >= 0 ? deletedIndex : 0, itemsAfter.length - 1);
+        set(datasourcesSelectedIdAtom, itemsAfter[nextIndex]!.id);
+      }
+    }
   } catch (e) {
     set(datasourcesDeleteErrorAtom, e instanceof Error ? e.message : String(e));
   } finally {
@@ -289,10 +311,18 @@ export const datasourcesSyncViewFormEffectAtom = atomEffect((get, set) => {
   const isEditing = get(datasourcesIsEditingAtom);
   if (isEditing) return;
   const selectedId = get(datasourcesSelectedIdAtom);
-  if (!selectedId) return;
+  if (!selectedId) {
+    set(datasourcesEditorFormAtom, emptyForm());
+    return;
+  }
   const items = get(datasourcesListAtoms.valueAtom);
-  const item = items?.find((d) => d.id === selectedId) ?? null;
-  if (!item) return;
+  if (items == null) return;
+  const item = items.find((d) => d.id === selectedId) ?? null;
+  if (!item) {
+    set(datasourcesSelectedIdAtom, null);
+    set(datasourcesEditorFormAtom, emptyForm());
+    return;
+  }
   set(datasourcesEditorFormAtom, hydrateFormFromDataSource(item));
 });
 

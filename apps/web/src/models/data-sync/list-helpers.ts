@@ -1,7 +1,7 @@
-import type { DataSourcePublic } from '@/models/datasource/dto';
-import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
+import type { DataSyncDatasourceRef, DataSyncTaskPublic } from '@/models/data-sync/dto';
 
 import { readPayloadIdList } from './payload';
+import { datasourceDisplayLabel, refsToLabelMap } from './task-form';
 
 export function toLocalTime(v: string | null): string {
   if (!v) return '—';
@@ -10,27 +10,39 @@ export function toLocalTime(v: string | null): string {
   return d.toLocaleString();
 }
 
-export function buildDatasourceLabelLookup(datasources: DataSourcePublic[]): Map<string, string> {
-  const m = new Map<string, string>();
-  for (const d of datasources) {
-    m.set(d.id, `${d.name} (${d.type})`);
-  }
-  return m;
+export function buildDatasourceLabelLookup(
+  refs: DataSyncDatasourceRef[] | undefined,
+): Record<string, { name: string; type: string }> {
+  return refsToLabelMap(refs);
 }
 
-export function formatIdList(ids: string[], dsLabelLookup: Map<string, string>): string {
+export function formatIdList(
+  ids: string[],
+  labels: Record<string, { name: string; type: string }>,
+  refs?: DataSyncDatasourceRef[],
+): string {
   return ids
-    .map((id) => dsLabelLookup.get(id) ?? id.slice(0, 8))
+    .map((id) => {
+      const fromRef = refs?.find((r) => r.id === id);
+      if (fromRef?.name?.trim()) {
+        const t = fromRef.type?.trim();
+        return t ? `${fromRef.name} (${t})` : fromRef.name;
+      }
+      return datasourceDisplayLabel(id, [], labels) || id.slice(0, 8);
+    })
     .filter(Boolean)
     .join(' + ');
 }
 
-export function formatTaskDescription(task: DataSyncTaskPublic, dsLabelLookup: Map<string, string>): string {
+export function formatTaskDescription(
+  task: DataSyncTaskPublic,
+  labels: Record<string, { name: string; type: string }>,
+): string {
   const p = (task.payload ?? {}) as Record<string, unknown>;
   const sids = readPayloadIdList(p, 'source_datasource_ids');
   const tids = readPayloadIdList(p, 'target_datasource_ids');
-  const sl = formatIdList(sids, dsLabelLookup);
-  const tl = formatIdList(tids, dsLabelLookup);
+  const sl = formatIdList(sids, labels, task.source_datasource_refs);
+  const tl = formatIdList(tids, labels, task.target_datasource_refs);
   const cron = task.cron_expr?.trim() || '仅手动';
   const next = toLocalTime(task.next_run_at);
   return `${sl} → ${tl} · ${cron} · 下次 ${next}`;

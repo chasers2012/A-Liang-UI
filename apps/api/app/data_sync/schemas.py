@@ -189,12 +189,22 @@ class UpdateDataSyncTaskRequest(BaseModel):
     timeout_seconds: int | None = Field(default=None, ge=1, le=86400)
 
 
+class DataSyncDatasourceRef(BaseModel):
+    """Resolved datasource metadata for API responses (not persisted on task rows)."""
+
+    id: str
+    name: str = ""
+    type: str = ""
+
+
 class DataSyncTaskPublic(DataSyncTaskBase):
     id: str
     task_type: str = Field(default=DATASOURCE_SYNC_TASK_TYPE)
     next_run_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    source_datasource_refs: list[DataSyncDatasourceRef] = Field(default_factory=list)
+    target_datasource_refs: list[DataSyncDatasourceRef] = Field(default_factory=list)
 
 
 class TriggerDataSyncTaskRequest(BaseModel):
@@ -208,6 +218,7 @@ DataSyncJobLogPublic = SchedulerJobLogPublic
 
 __all__ = [
     "CreateDataSyncTaskRequest",
+    "DataSyncDatasourceRef",
     "DataSyncJobListResponse",
     "DataSyncJobLogPublic",
     "DataSyncJobPublic",

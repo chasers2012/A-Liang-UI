@@ -171,7 +171,7 @@ export function DatasourceDetailPanel() {
   const selectedId = useAtomValue(datasourcesSelectedIdAtom);
   const [deleteError] = useAtom(datasourcesDeleteErrorAtom);
   const [testHint] = useAtom(datasourcesTestHintAtom);
-  const [form] = useAtom(datasourcesEditorFormAtom);
+  const [form, setForm] = useAtom(datasourcesEditorFormAtom);
   const selectedItem = useAtomValue(datasourcesSelectedListItemAtom);
   const [detailTab, setDetailTab] = useAtom(datasourcesDetailActiveTabAtom);
   const [inspectColumnsError] = useAtom(datasourcesInspectColumnsErrorAtom);
@@ -220,8 +220,9 @@ export function DatasourceDetailPanel() {
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <EditablePageTitle
             value={form.name}
-            onChange={() => {
-              /* view mode: no rename */
+            onChange={(v) => {
+              if (!isEditing) return;
+              setForm((prev) => ({ ...prev, name: v }));
             }}
             showEdit={isEditing}
             inputAriaLabel="数据源显示名称"

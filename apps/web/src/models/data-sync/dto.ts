@@ -1,5 +1,11 @@
 export const DATASOURCE_SYNC_TASK_TYPE = 'datasource.sync';
 
+export interface DataSyncDatasourceRef {
+  id: string;
+  name: string;
+  type: string;
+}
+
 export type DataSyncJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'retrying' | 'cancelled';
 
 export type DataSyncTriggerType = 'cron' | 'manual';
@@ -16,6 +22,8 @@ export interface DataSyncTaskPublic {
   next_run_at: string | null;
   created_at: string;
   updated_at: string;
+  source_datasource_refs?: DataSyncDatasourceRef[];
+  target_datasource_refs?: DataSyncDatasourceRef[];
 }
 
 export interface DataSyncJobPublic {

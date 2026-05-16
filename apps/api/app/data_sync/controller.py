@@ -6,6 +6,7 @@ from app.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
 from app.data_sync.registry import DataSyncRegistry
 from app.data_sync.schemas import (
     CreateDataSyncTaskRequest,
+    DataSyncDatasourceRef,
     DataSyncJobListResponse,
     DataSyncJobLogPublic,
     DataSyncJobPublic,
@@ -15,6 +16,7 @@ from app.data_sync.schemas import (
     TriggerDataSyncTaskRequest,
     UpdateDataSyncTaskRequest,
 )
+from app.datasource.registry import DataSourceItemsRegistry
 from app.scheduler import controller as scheduler_controller
 from app.scheduler.models import SchedulerTaskRow
 from app.scheduler.schemas import SchedulerJobPublic
@@ -25,19 +27,33 @@ def _payload_dict(payload: DataSyncTaskPayload) -> dict[str, object]:
     return payload.model_dump(mode="json", by_alias=True, exclude_none=True)
 
 
+def _datasource_refs(ids: list[str]) -> list[DataSyncDatasourceRef]:
+    out: list[DataSyncDatasourceRef] = []
+    for ds_id in ids:
+        row = DataSourceItemsRegistry.get_item(ds_id)
+        if row is None:
+            out.append(DataSyncDatasourceRef(id=ds_id))
+            continue
+        out.append(DataSyncDatasourceRef(id=ds_id, name=row.name, type=row.type))
+    return out
+
+
 def _task_to_public(sched: SchedulerTaskRow) -> DataSyncTaskPublic:
+    payload = DataSyncTaskPayload.model_validate(sched.payload)
     return DataSyncTaskPublic(
         id=sched.id,
         name=sched.name,
         task_type=DATASOURCE_SYNC_TASK_TYPE,
         cron_expr=sched.cron_expr,
-        payload=DataSyncTaskPayload.model_validate(sched.payload),
+        payload=payload,
         enabled=sched.enabled,
         max_retries=sched.max_retries,
         timeout_seconds=sched.timeout_seconds,
         next_run_at=sched.next_run_at,
         created_at=sched.created_at,
         updated_at=sched.updated_at,
+        source_datasource_refs=_datasource_refs(payload.source_ids),
+        target_datasource_refs=_datasource_refs(payload.target_ids),
     )
 
 

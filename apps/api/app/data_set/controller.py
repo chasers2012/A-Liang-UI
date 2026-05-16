@@ -78,6 +78,7 @@ def get_data_set(id: str) -> DataSet | None:
             DataSourceBinding(
                 datasource=ds,
                 columns=b.columns,
+                datasource_id=b.datasource_id,
             )
         )
 

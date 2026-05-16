@@ -47,9 +47,38 @@ import {
   submitFormAtom,
   triggerTaskAtom,
 } from '@/models/data-sync/panel.atom';
-import { targetDatasourceOptions } from '@/models/data-sync/task-form';
+import {
+  datasourceDisplayLabel,
+  isDatasourceDeleted,
+  targetDatasourceOptions,
+  type DatasourceLabelSnapshot,
+} from '@/models/data-sync/task-form';
 import { cn } from '@/lib/utils';
 import { Section } from '@/components/section';
+
+function DeletedDatasourceBadge() {
+  return (
+    <span className="shrink-0 rounded-md border border-destructive/30 bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive">
+      已删除
+    </span>
+  );
+}
+
+function DatasourceChipLabel(props: {
+  id: string;
+  live: DataSourcePublic[];
+  labels: Record<string, DatasourceLabelSnapshot>;
+}) {
+  const { id, live, labels } = props;
+  const deleted = isDatasourceDeleted(id, live);
+  const text = datasourceDisplayLabel(id, live, labels);
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className="min-w-0 truncate">{text}</span>
+      {deleted ? <DeletedDatasourceBadge /> : null}
+    </span>
+  );
+}
 
 function DataSyncDetailActions() {
   const isEditing = useAtomValue(isEditingAtom);
@@ -96,6 +125,7 @@ function DatasourceComboboxField(props: {
   required?: boolean;
   datasources: DataSourcePublic[];
   optionDatasources?: DataSourcePublic[];
+  labelSnapshots: Record<string, DatasourceLabelSnapshot>;
   emptyLabel?: string;
   selectedIds: string[];
   otherSelectedIds: string[];
@@ -107,6 +137,7 @@ function DatasourceComboboxField(props: {
     required,
     datasources,
     optionDatasources,
+    labelSnapshots,
     emptyLabel = '没有可选数据源',
     selectedIds,
     otherSelectedIds,
@@ -116,7 +147,17 @@ function DatasourceComboboxField(props: {
   const anchor = useComboboxAnchor();
   const options = optionDatasources ?? datasources;
 
-  const items = useMemo(() => options.map((d) => d.id), [options]);
+  const items = useMemo(() => {
+    const ids = options.map((d) => d.id);
+    const seen = new Set(ids);
+    for (const id of selectedIds) {
+      if (!seen.has(id)) {
+        seen.add(id);
+        ids.push(id);
+      }
+    }
+    return ids;
+  }, [options, selectedIds]);
 
   return (
     <Field className="gap-2">
@@ -144,16 +185,15 @@ function DatasourceComboboxField(props: {
                   <span className="text-xs text-muted-foreground">（未选择）</span>
                 ) : null}
                 {value.map((id) => {
-                  const datasource = datasources.find((d) => d.id === id);
-                  if (!datasource) return null;
+                  const label = datasourceDisplayLabel(id, datasources, labelSnapshots);
                   return (
                     <ComboboxChip
                       key={id}
                       className={cn('font-medium text-xs', readOnly && 'opacity-70')}
-                      aria-label={readOnly ? `${datasource.name} (${datasource.type})` : `移除 ${datasource.name}`}
+                      aria-label={readOnly ? label : `移除 ${label}`}
                       showRemove={!readOnly}
                     >
-                      {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
+                      <DatasourceChipLabel id={id} live={datasources} labels={labelSnapshots} />
                     </ComboboxChip>
                   );
                 })}
@@ -172,17 +212,16 @@ function DatasourceComboboxField(props: {
           <ComboboxList className="outline-none">
             {(item: string) => {
               const datasource = options.find((d) => d.id === item);
-              if (!datasource) return null;
-              const disabledAsOther = otherSelectedIds.includes(datasource.id);
+              const disabledAsOther = otherSelectedIds.includes(item);
+              const deleted = isDatasourceDeleted(item, datasources);
+              const label = datasource
+                ? `${datasource.name} (${datasource.type})`
+                : datasourceDisplayLabel(item, datasources, labelSnapshots);
               return (
-                <ComboboxItem
-                  key={datasource.id}
-                  value={datasource.id}
-                  disabled={disabledAsOther}
-                  className="items-start text-sm"
-                >
-                  <span className="min-w-0 flex-1 whitespace-normal wrap-break-word">
-                    {datasource.name} <span className="text-muted-foreground">({datasource.type})</span>
+                <ComboboxItem key={item} value={item} disabled={disabledAsOther} className="items-start text-sm">
+                  <span className="flex min-w-0 flex-1 items-center gap-2 whitespace-normal wrap-break-word">
+                    <span className="min-w-0 flex-1">{label}</span>
+                    {deleted ? <DeletedDatasourceBadge /> : null}
                   </span>
                 </ComboboxItem>
               );
@@ -206,6 +245,15 @@ function DataSyncConfigFields() {
     [datasources, form.targetIds, readOnly],
   );
 
+  const patchDatasourceLabels = (ids: string[], prevLabels: Record<string, DatasourceLabelSnapshot>) => {
+    const nextLabels = { ...prevLabels };
+    for (const id of ids) {
+      const picked = datasources.find((d) => d.id === id);
+      if (picked) nextLabels[id] = { name: picked.name, type: picked.type };
+    }
+    return nextLabels;
+  };
+
   if (selectedId == null && !isEditing) return null;
 
   return (
@@ -216,21 +264,35 @@ function DataSyncConfigFields() {
             title="源数据源"
             required
             datasources={datasources}
+            labelSnapshots={form.datasourceLabels}
             selectedIds={form.sourceIds}
             otherSelectedIds={form.targetIds}
             readOnly={readOnly}
-            onChange={(sourceIds) => setForm((prev) => ({ ...prev, sourceIds }))}
+            onChange={(sourceIds) =>
+              setForm((prev) => ({
+                ...prev,
+                sourceIds,
+                datasourceLabels: patchDatasourceLabels(sourceIds, prev.datasourceLabels),
+              }))
+            }
           />
           <DatasourceComboboxField
             title="目标数据源"
             required
             datasources={datasources}
             optionDatasources={targetOptions}
+            labelSnapshots={form.datasourceLabels}
             emptyLabel="没有可写入的数据源（请在 SQL 数据源中开启写入）"
             selectedIds={form.targetIds}
             otherSelectedIds={form.sourceIds}
             readOnly={readOnly}
-            onChange={(targetIds) => setForm((prev) => ({ ...prev, targetIds }))}
+            onChange={(targetIds) =>
+              setForm((prev) => ({
+                ...prev,
+                targetIds,
+                datasourceLabels: patchDatasourceLabels(targetIds, prev.datasourceLabels),
+              }))
+            }
           />
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
             <Field className="gap-2">

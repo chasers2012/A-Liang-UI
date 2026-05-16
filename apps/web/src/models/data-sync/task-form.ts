@@ -1,9 +1,46 @@
 import { parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
+import type { DataSyncDatasourceRef, DataSyncTaskPublic } from '@/models/data-sync/dto';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 
 import { readPayloadIdList, readPayloadString } from './payload';
+
+export type DatasourceLabelSnapshot = { name: string; type: string };
+
+export function refsToLabelMap(refs: DataSyncDatasourceRef[] | undefined): Record<string, DatasourceLabelSnapshot> {
+  const m: Record<string, DatasourceLabelSnapshot> = {};
+  for (const r of refs ?? []) {
+    const id = r.id.trim();
+    if (!id) continue;
+    m[id] = { name: r.name ?? '', type: r.type ?? '' };
+  }
+  return m;
+}
+
+export function isDatasourceDeleted(id: string, live: DataSourcePublic[]): boolean {
+  return !live.some((d) => d.id === id);
+}
+
+export function datasourceDisplayLabel(
+  id: string,
+  live: DataSourcePublic[],
+  labels: Record<string, DatasourceLabelSnapshot>,
+): string {
+  const d = live.find((x) => x.id === id);
+  if (d) return `${d.name} (${d.type})`;
+  const snap = labels[id];
+  const n = snap?.name?.trim();
+  const t = snap?.type?.trim();
+  if (n && t) return `${n} (${t})`;
+  if (n) return n;
+  return id;
+}
+
+export function mergeDatasourceLabelMaps(
+  ...maps: Record<string, DatasourceLabelSnapshot>[]
+): Record<string, DatasourceLabelSnapshot> {
+  return Object.assign({}, ...maps);
+}
 
 export function filterWritableDatasources(datasources: DataSourcePublic[]): DataSourcePublic[] {
   return datasources.filter((d) => d.write_enabled);
@@ -30,6 +67,8 @@ export type FormValues = {
   enabled: boolean;
   sourceIds: string[];
   targetIds: string[];
+  /** 任务详情快照；目录未包含该 id 时用于展示名称 */
+  datasourceLabels: Record<string, DatasourceLabelSnapshot>;
   startDate: string;
   endDate: string;
   syncWorkflow: WorkflowGraphPersisted;
@@ -44,6 +83,7 @@ export function emptyFormValues(): FormValues {
     enabled: true,
     sourceIds: [],
     targetIds: [],
+    datasourceLabels: {},
     startDate: '',
     endDate: '',
     syncWorkflow: parsePersistedWorkflowGraphPayload({}),
@@ -59,8 +99,9 @@ export function validateDataSyncForm(form: FormValues, datasources: DataSourcePu
   if (targetIds.length === 0) {
     return '请至少选择一个目标数据源。';
   }
+  const liveIds = new Set(datasources.map((d) => d.id));
   const writableIds = new Set(filterWritableDatasources(datasources).map((d) => d.id));
-  if (targetIds.some((id) => !writableIds.has(id))) {
+  if (targetIds.some((id) => liveIds.has(id) && !writableIds.has(id))) {
     return '目标数据源须为已开启写入的数据源。';
   }
   if (sourceIds.some((id) => targetIds.includes(id))) {
@@ -89,6 +130,10 @@ export function taskToFormValues(task: DataSyncTaskPublic): FormValues {
     enabled: task.enabled,
     sourceIds: readPayloadIdList(p, 'source_datasource_ids'),
     targetIds: readPayloadIdList(p, 'target_datasource_ids'),
+    datasourceLabels: mergeDatasourceLabelMaps(
+      refsToLabelMap(task.source_datasource_refs),
+      refsToLabelMap(task.target_datasource_refs),
+    ),
     startDate: readPayloadString(p, 'start_date') || readPayloadString(p, 'initial_start_date'),
     endDate: readPayloadString(p, 'end_date'),
     syncWorkflow,

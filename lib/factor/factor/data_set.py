@@ -12,14 +12,18 @@ class DataSourceBinding:
     datasource: FactorDataSource
     # 物理列选择：为空表示加载 datasource 的所有列
     columns: list[str]
+    datasource_id: str | None
 
     def __init__(
         self,
         datasource: FactorDataSource,
         columns: list[str] | None = None,
+        *,
+        datasource_id: str | None = None,
     ):
         self.datasource = datasource
         self.columns = [str(c).strip() for c in (columns or []) if str(c).strip()]
+        self.datasource_id = str(datasource_id).strip() if datasource_id else None
 
 
 def _norm_opt_date(value: str | None) -> str | None:
@@ -224,8 +228,7 @@ class DataSet:
                     )
                 # instrument_codes 默认按资产列（asset_column）进行匹配
                 asset_values = [str(c) for c in instrument_codes]
-            key = getattr(b.datasource, "id", None)
-            ds_key = str(key) if key is not None else str(id(b.datasource))
+            ds_key = b.datasource_id if b.datasource_id is not None else str(id(b.datasource))
             raw = b.datasource.load_frame(
                 columns=cols,
                 start_date=start_date,

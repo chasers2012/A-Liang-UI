@@ -20,7 +20,13 @@ import {
   formatTaskDescription,
 } from './list-helpers';
 import { syncWorkflowBoundary } from './sync-workflow-boundary';
-import { emptyFormValues, taskToFormValues, validateDataSyncForm, type FormValues } from './task-form';
+import {
+  emptyFormValues,
+  mergeDatasourceLabelMaps,
+  taskToFormValues,
+  validateDataSyncForm,
+  type FormValues,
+} from './task-form';
 
 export type DetailTab = 'config' | 'workflow' | 'records';
 
@@ -49,11 +55,18 @@ export const applyFormAtom = atom(null, (_get, set, v: FormValues) => {
   set(workflowCanvasKeyAtom, (k) => k + 1);
 });
 
-export const datasourceLabelLookupAtom = atom((get) => buildDatasourceLabelLookup(get(datasourcesAtom)));
-
 export const describeTaskAtom = atom((get) => {
-  const lookup = get(datasourceLabelLookupAtom);
-  return (t: DataSyncTaskPublic) => formatTaskDescription(t, lookup);
+  const live = get(datasourcesAtom);
+  return (t: DataSyncTaskPublic) => {
+    const labels = mergeDatasourceLabelMaps(
+      buildDatasourceLabelLookup(t.source_datasource_refs),
+      buildDatasourceLabelLookup(t.target_datasource_refs),
+    );
+    for (const d of live) {
+      labels[d.id] = { name: d.name, type: d.type };
+    }
+    return formatTaskDescription(t, labels);
+  };
 });
 
 export const filteredSyncTasksAtom = atom((get) => filterTasksBySearch(get(tasksAtom), get(listSearchQueryAtom)));

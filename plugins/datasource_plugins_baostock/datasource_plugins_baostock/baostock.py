@@ -11,9 +11,10 @@ from app.form import FormSchema
 from factor.datasource import FactorDataSource
 
 from .common import (
+    BaostockIOBusyError,
     BaoStockColumnsConfig,
     BaoStockConnectionConfig,
-    bs_session,
+    run_baostock_io,
 )
 from .loaders import SUPPORTED_APIS
 from .loaders import (
@@ -57,7 +58,6 @@ class BaoStockDataSource(FactorDataSource):
             if asset_column is not None and str(asset_column).strip()
             else None
         )
-        bs_session()
 
     @property
     def date_column(self) -> str:
@@ -75,7 +75,7 @@ class BaoStockDataSource(FactorDataSource):
         fixed_columns = API_FIXED_COLUMNS.get(self._api_name, [])
         return sorted({str(col).strip() for col in fixed_columns if str(col).strip()})
 
-    def load_frame(
+    def _load_frame_core(
         self,
         *,
         columns: list[str],
@@ -94,6 +94,23 @@ class BaoStockDataSource(FactorDataSource):
             asset_column=self._asset_column,
             asset_values=asset_values,
             config=self._api_params,
+        )
+
+    def load_frame(
+        self,
+        *,
+        columns: list[str],
+        start_date: str | None = None,
+        end_date: str | None = None,
+        asset_values: list[str] | None = None,
+    ) -> pd.DataFrame:
+        return run_baostock_io(
+            lambda: self._load_frame_core(
+                columns=columns,
+                start_date=start_date,
+                end_date=end_date,
+                asset_values=asset_values,
+            )
         )
 
 
@@ -281,16 +298,21 @@ class BaoStockDataSourceSpec(DataSourceSpec):
                 asset_column=col.asset_column,
             )
 
-            start_date, end_date = self._get_verify_trade_dates()
-            codes = self._get_top5_sz50_codes(end_date)
-            df = probe.load_frame(
-                columns=[],
-                start_date=start_date,
-                end_date=end_date,
-                asset_values=codes,
-            )
+            def _verify_load() -> pd.DataFrame:
+                start_date, end_date = self._get_verify_trade_dates()
+                codes = self._get_top5_sz50_codes(end_date)
+                return probe._load_frame_core(
+                    columns=[],
+                    start_date=start_date,
+                    end_date=end_date,
+                    asset_values=codes,
+                )
+
+            df = run_baostock_io(_verify_load, blocking=False)
             if df.empty:
                 return VerifyResult(ok=False, message="BaoStock 查询失败: empty result")
+        except BaostockIOBusyError as e:
+            return VerifyResult(ok=False, message=str(e))
         except Exception as e:
             return VerifyResult(ok=False, message=f"BaoStock 校验失败: {e}")
         return VerifyResult(ok=True, message="BaoStock 连接与查询成功。")

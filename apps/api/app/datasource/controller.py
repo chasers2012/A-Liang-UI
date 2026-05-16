@@ -99,40 +99,6 @@ def _ensure_unique_name(name: str, *, exclude_id: str | None = None) -> None:
             raise ValueError(f"数据源名称已存在: {name}")
 
 
-class BoundFactorDataSource(FactorDataSource):
-    """Attach datasource id for downstream cross-source preprocessing."""
-
-    def __init__(self, datasource_id: str, inner: FactorDataSource) -> None:
-        self.id = str(datasource_id)
-        self._inner = inner
-
-    def list_columns(self) -> list[str]:
-        return self._inner.list_columns()
-
-    @property
-    def date_column(self) -> str:
-        return self._inner.date_column
-
-    @property
-    def asset_column(self) -> str | None:
-        return self._inner.asset_column
-
-    def load_frame(
-        self,
-        *,
-        columns: list[str],
-        start_date: str | None = None,
-        end_date: str | None = None,
-        asset_values: list[str] | None = None,
-    ):  # type: ignore[no-untyped-def]
-        return self._inner.load_frame(
-            columns=columns,
-            start_date=start_date,
-            end_date=end_date,
-            asset_values=asset_values,
-        )
-
-
 def _validate_datasource_storage(
     plugin_type: str,
     connection_config: dict[str, Any],
@@ -157,8 +123,7 @@ def get_datasource(id: str) -> FactorDataSource | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    ds = plugin.spec.to_factor_datasource(plain)
-    return BoundFactorDataSource(id, ds)
+    return plugin.spec.to_factor_datasource(plain)
 
 
 def list_datasources() -> list[DataSourcePublic]:
