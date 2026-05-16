@@ -18,6 +18,7 @@
     "@incremark/react": "^1.0.2",
     "@incremark/theme": "^1.0.2",
     "@phosphor-icons/react": "^2.1.10",
+    "@radix-ui/react-toggle-group": "^1.1.11",
     "@rjsf/core": "^6.4.2",
     "@rjsf/shadcn": "^6.4.2",
     "@rjsf/utils": "^6.4.2",
@@ -62,6 +63,7 @@
     "eslint-module-utils": "^2.12.1",
     "jotai-devtools": "^0.13.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }

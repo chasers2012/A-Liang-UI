@@ -1,9 +1,10 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type SetStateAction } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 import { PreprocessingWorkflowEditorBlock } from '@/app/data/data-sets/components/panel/preprocessing-workflow-editor-block';
+import { DataSyncCronField } from '@/app/data/sync/data-sync-cron-field';
 import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { PanelDetailCard } from '@/components/panel-detail-card';
@@ -207,14 +208,18 @@ function DataSyncConfigFields() {
         </div>
 
         <Field className="gap-2">
-          <FieldLabel htmlFor="sync-cron">Cron</FieldLabel>
-          <Input
+          <FieldLabel id="sync-cron-label">Cron 表达式</FieldLabel>
+          <DataSyncCronField
             id="sync-cron"
-            className={cn('font-mono text-sm')}
+            ariaLabelledBy="sync-cron-label"
             value={form.cronExpr}
+            setValue={(v: SetStateAction<string>) =>
+              setForm((prev) => ({
+                ...prev,
+                cronExpr: typeof v === 'function' ? v(prev.cronExpr) : v,
+              }))
+            }
             readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, cronExpr: e.target.value }))}
-            placeholder="0 2 * * *"
           />
         </Field>
 

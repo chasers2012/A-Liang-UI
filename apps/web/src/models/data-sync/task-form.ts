@@ -20,7 +20,7 @@ export type FormValues = {
 export function emptyFormValues(): FormValues {
   return {
     name: '',
-    cronExpr: '',
+    cronExpr: '0 20 * * 1-5',
     maxRetries: '3',
     timeoutSeconds: '300',
     enabled: true,
