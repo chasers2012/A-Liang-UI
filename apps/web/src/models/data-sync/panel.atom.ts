@@ -20,7 +20,7 @@ import {
   formatTaskDescription,
 } from './list-helpers';
 import { syncWorkflowBoundary } from './sync-workflow-boundary';
-import { emptyFormValues, taskToFormValues, type FormValues } from './task-form';
+import { emptyFormValues, taskToFormValues, validateDataSyncForm, type FormValues } from './task-form';
 
 export type DetailTab = 'config' | 'workflow' | 'records';
 
@@ -183,16 +183,28 @@ export const submitFormAtom = atom(null, async (get, set) => {
   const selectedId = get(selectedIdAtom);
   if (!get(isEditingAtom)) return;
   const name = form.name.trim();
-  const syncWorkflow = get(workflowCanvasHandleAtom)?.getGraph() ?? form.syncWorkflow;
+  const formValidationError = validateDataSyncForm(form, get(datasourcesAtom));
+  if (formValidationError) {
+    set(formErrorAtom, formValidationError);
+    return;
+  }
+  const liveGraph = get(workflowCanvasHandleAtom)?.getGraph();
+  const syncWorkflow =
+    liveGraph &&
+    (liveGraph.nodes.length > 0 ||
+      liveGraph.links.length > 0 ||
+      liveGraph.workflow_inputs.length > 0 ||
+      liveGraph.workflow_outputs.length > 0)
+      ? liveGraph
+      : form.syncWorkflow;
   const payload: Record<string, unknown> = {
     source_datasource_ids: form.sourceIds.map((x) => x.trim()).filter(Boolean),
     target_datasource_ids: form.targetIds.map((x) => x.trim()).filter(Boolean),
+    sync_workflow: syncWorkflow,
   };
-  const initialStartDate = form.initialStartDate.trim();
-  if (initialStartDate) payload.initial_start_date = initialStartDate;
+  payload.start_date = form.startDate.trim();
   const endDate = form.endDate.trim();
   if (endDate) payload.end_date = endDate;
-  if (syncWorkflow.nodes?.length) payload.sync_workflow = syncWorkflow;
   const maxRetries = Number.parseInt(form.maxRetries, 10);
   const timeoutSeconds = Number.parseInt(form.timeoutSeconds, 10);
   const cron = form.cronExpr.trim() || null;

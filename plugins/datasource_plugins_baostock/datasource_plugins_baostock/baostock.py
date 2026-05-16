@@ -33,6 +33,11 @@ API_OPTIONS = [
 API_CONFIG_SCHEMAS = {api.get("key"): api.get("config", {}) for api in SUPPORTED_APIS}
 API_LOADERS = {api.get("key"): api.get("loader") for api in SUPPORTED_APIS}
 API_FIXED_COLUMNS = {api.get("key"): api.get("columns", []) for api in SUPPORTED_APIS}
+API_COLUMNS_FOR_CONFIG = {
+    str(api.get("key")): api.get("columns_for_config")
+    for api in SUPPORTED_APIS
+    if api.get("key") and callable(api.get("columns_for_config"))
+}
 
 
 class BaoStockDataSource(FactorDataSource):
@@ -63,6 +68,10 @@ class BaoStockDataSource(FactorDataSource):
         return self._asset_column
 
     def list_columns(self) -> list[str]:
+        resolver = API_COLUMNS_FOR_CONFIG.get(self._api_name)
+        if resolver is not None:
+            cols = resolver(self._api_params)
+            return sorted({str(col).strip() for col in cols if str(col).strip()})
         fixed_columns = API_FIXED_COLUMNS.get(self._api_name, [])
         return sorted({str(col).strip() for col in fixed_columns if str(col).strip()})
 
@@ -184,13 +193,10 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             ),
         )
 
-    def validate_config(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> dict[str, Any]:
-        conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
-        col_in = dict(columns_config or {})
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(config or {})
+        conn = BaoStockConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col_in = dict(raw.get("columns") or {})
         if not str(col_in.get("api_name") or "").strip():
             col_in["api_name"] = conn.api_name
         col = BaoStockColumnsConfig.model_validate(col_in)
@@ -201,13 +207,10 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             "columns": col.model_dump(mode="json"),
         }
 
-    def to_factor_datasource(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ):
-        conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
-        col_in = dict(columns_config or {})
+    def to_factor_datasource(self, config: dict[str, Any]):
+        raw = dict(config or {})
+        conn = BaoStockConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col_in = dict(raw.get("columns") or {})
         if not str(col_in.get("api_name") or "").strip():
             col_in["api_name"] = conn.api_name
         col = BaoStockColumnsConfig.model_validate(col_in)
@@ -259,14 +262,11 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             raise ValueError("BaoStock 查询上证50成分股失败: no code found")
         return codes[:5]
 
-    def verify(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> VerifyResult:
+    def verify(self, config: dict[str, Any]) -> VerifyResult:
+        raw = dict(config or {})
         try:
-            conn = BaoStockConnectionConfig.model_validate(dict(connection_config or {}))
-            col_in = dict(columns_config or {})
+            conn = BaoStockConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+            col_in = dict(raw.get("columns") or {})
             if not str(col_in.get("api_name") or "").strip():
                 col_in["api_name"] = conn.api_name
             col = BaoStockColumnsConfig.model_validate(col_in)

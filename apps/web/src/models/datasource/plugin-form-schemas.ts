@@ -14,12 +14,28 @@ export function getDatasourceColumnsConfig(form: FormState): Record<string, unkn
   return dictLikeOrEmpty(dictLikeOrEmpty(form.config).columns);
 }
 
-/** Body shape for ``inspect-columns`` and internal merges: ``{ connection, columns }``. */
+export function getDatasourceWriteConfig(form: FormState): Record<string, unknown> {
+  return dictLikeOrEmpty(dictLikeOrEmpty(form.config).write);
+}
+
+/** Body shape for ``inspect-columns`` and internal merges: ``{ connection, columns[, write] }``. */
 export function nestDatasourceConfigForApi(form: FormState): Record<string, unknown> {
-  return {
+  const nested: Record<string, unknown> = {
     connection: getDatasourceConnectionConfig(form),
     columns: getDatasourceColumnsConfig(form),
   };
+  const write = getDatasourceWriteConfig(form);
+  if (Object.keys(write).length > 0) {
+    nested.write = write;
+  }
+  return nested;
+}
+
+export function pluginHasWriteSchema(plugin: DatasourcePluginPublic | null): boolean {
+  const schema = plugin?.write_json_schema;
+  if (!schema || typeof schema !== 'object') return false;
+  const props = (schema as Record<string, unknown>).properties;
+  return props != null && typeof props === 'object' && Object.keys(props as object).length > 0;
 }
 
 export type DatasourcePluginFormSchemas = {
@@ -27,6 +43,8 @@ export type DatasourcePluginFormSchemas = {
   baseFormUiSchema: Record<string, unknown>;
   fieldsFormSchema: Record<string, unknown> | null;
   fieldsFormUiSchema: Record<string, unknown>;
+  writeFormSchema: Record<string, unknown> | null;
+  writeFormUiSchema: Record<string, unknown>;
 };
 
 function isValueFilled(value: unknown): boolean {
@@ -97,6 +115,11 @@ export function computeDatasourcePluginFormSchemas(
     ? buildFieldsFormSchemaWithColumnEnums(rawColumnsSchema, persistedColumns)
     : null;
 
+  const rawWriteSchema = (plugin?.write_json_schema ?? {}) as Record<string, unknown>;
+  const rawWriteUiSchema = (plugin?.write_ui_schema ?? {}) as Record<string, unknown>;
+  const hasWriteConfig = pluginHasWriteSchema(plugin);
+  const writeFormSchema = hasWriteConfig ? rawWriteSchema : null;
+
   return {
     baseFormSchema: connectionSchema,
     baseFormUiSchema: {
@@ -108,15 +131,21 @@ export function computeDatasourcePluginFormSchemas(
       ...rawColumnsUiSchema,
       'ui:submitButtonOptions': { norender: true },
     },
+    writeFormSchema,
+    writeFormUiSchema: {
+      ...rawWriteUiSchema,
+      'ui:submitButtonOptions': { norender: true },
+    },
   };
 }
 
 export function computeDatasourcePluginConfigValid(form: FormState, plugin: DatasourcePluginPublic | null): boolean {
   if (!plugin) return false;
-  const { baseFormSchema, fieldsFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
+  const { baseFormSchema, fieldsFormSchema, writeFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
   const baseValid = areRequiredFieldsFilled(baseFormSchema, getDatasourceConnectionConfig(form));
   const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, getDatasourceColumnsConfig(form));
-  return baseValid && fieldsValid;
+  const writeValid = !writeFormSchema || areRequiredFieldsFilled(writeFormSchema, getDatasourceWriteConfig(form));
+  return baseValid && fieldsValid && writeValid;
 }
 
 export function computeDatasourcePluginBaseConfigValid(

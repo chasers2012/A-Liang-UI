@@ -18,11 +18,13 @@ async function createDatasourceFromForm(form: FormState): Promise<DataSourcePubl
   const container = dictLikeOrEmpty(form.config);
   const connection = dictLikeOrEmpty(container.connection);
   const columns = dictLikeOrEmpty(container.columns);
+  const write = dictLikeOrEmpty(container.write);
   return await createDatasource({
     name: form.name.trim(),
     type: form.type,
     connection_config: connection,
     columns_config: columns,
+    write_config: write,
   });
 }
 
@@ -35,14 +37,20 @@ function buildEditPatch(form: FormState, orig: DataSourcePublic): Record<string,
   const next = {
     connection: dictLikeOrEmpty(container.connection),
     columns: dictLikeOrEmpty(container.columns),
+    write: dictLikeOrEmpty(container.write),
   };
-  const oc = dictLikeOrEmpty(dictLikeOrEmpty(orig.config).connection);
-  const ocol = dictLikeOrEmpty(dictLikeOrEmpty(orig.config).columns);
+  const origConfig = dictLikeOrEmpty(orig.config);
+  const oc = dictLikeOrEmpty(origConfig.connection);
+  const ocol = dictLikeOrEmpty(origConfig.columns);
+  const ow = dictLikeOrEmpty(origConfig.write);
   if (JSON.stringify(next.connection) !== JSON.stringify(oc)) {
     patch.connection_config = next.connection;
   }
   if (JSON.stringify(next.columns) !== JSON.stringify(ocol)) {
     patch.columns_config = next.columns;
+  }
+  if (JSON.stringify(next.write) !== JSON.stringify(ow)) {
+    patch.write_config = next.write;
   }
 
   return patch;

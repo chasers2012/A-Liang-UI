@@ -25,7 +25,7 @@ export function emptyForm(): FormState {
   return {
     name: '',
     type: '',
-    config: { connection: {}, columns: {} },
+    config: { connection: {}, columns: {}, write: {} },
   };
 }
 
@@ -33,14 +33,15 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
   const c = dictLikeOrEmpty(ds.config);
   const connection = dictLikeOrEmpty(c.connection);
   const columns = dictLikeOrEmpty(c.columns);
-  const legacyWrite = dictLikeOrEmpty(c.write);
+  const write = dictLikeOrEmpty(c.write);
   for (const k of WRITE_KEYS) {
-    const fromTop = legacyWrite[k];
+    if (write[k] !== undefined) continue;
+    const fromConn = connection[k];
     const fromCol = columns[k];
-    if (connection[k] === undefined) {
-      if (fromTop !== undefined) connection[k] = fromTop;
-      else if (fromCol !== undefined) connection[k] = fromCol;
-    }
+    if (fromConn !== undefined) write[k] = fromConn;
+    else if (fromCol !== undefined) write[k] = fromCol;
+    delete connection[k];
+    delete columns[k];
   }
   return {
     name: ds.name,
@@ -48,6 +49,7 @@ export function hydrateFormFromDataSource(ds: DataSourcePublic): FormState {
     config: {
       connection,
       columns,
+      write,
     },
   };
 }

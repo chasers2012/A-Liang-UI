@@ -57,7 +57,7 @@ export function DatasourceBasePanelContent() {
               onValueChange={(v) => {
                 if (v == null || v === '') return;
                 if (!isEditing || !!selectedId) return;
-                setForm((f) => ({ ...f, type: v, config: { connection: {}, columns: {} } }));
+                setForm((f) => ({ ...f, type: v, config: { connection: {}, columns: {}, write: {} } }));
               }}
             >
               <SelectTrigger id="ds-type" className="w-full">

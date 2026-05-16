@@ -10,6 +10,7 @@ from app.data_sync.schemas import (
     DataSyncJobLogPublic,
     DataSyncJobPublic,
     DataSyncTaskPayload,
+    DataSyncTaskPayloadPatch,
     DataSyncTaskPublic,
     TriggerDataSyncTaskRequest,
     UpdateDataSyncTaskRequest,
@@ -96,11 +97,14 @@ def update_task(task_id: str, body: UpdateDataSyncTaskRequest) -> DataSyncTaskPu
         sched.cron_expr = cron_expr
         sched.next_run_at = next_cron_time(cron_expr, base_time=utcnow()) if cron_expr else None
     if "payload" in patch and patch["payload"] is not None:
-        payload = patch["payload"]
-        if isinstance(payload, dict):
-            payload = DataSyncTaskPayload.model_validate(payload)
-        payload.validate_sync_rules()
-        sched.payload = _payload_dict(payload)
+        payload_patch = patch["payload"]
+        if isinstance(payload_patch, dict):
+            payload_patch = DataSyncTaskPayloadPatch.model_validate(payload_patch)
+        existing = DataSyncTaskPayload.model_validate(sched.payload or {})
+        updates = {field: getattr(payload_patch, field) for field in payload_patch.model_fields_set}
+        merged = existing.model_copy(update=updates)
+        merged.validate_sync_rules()
+        sched.payload = _payload_dict(merged)
     if "enabled" in patch and patch["enabled"] is not None:
         sched.enabled = patch["enabled"]
     if "max_retries" in patch and patch["max_retries"] is not None:
@@ -122,6 +126,7 @@ def trigger_task(task_id: str, body: TriggerDataSyncTaskRequest) -> DataSyncJobP
     sched = DataSyncRegistry.get_task(task_id)
     if sched is None:
         raise scheduler_controller.SchedulerTaskNotFoundError(f"数据同步任务不存在: {task_id}")
+    DataSyncTaskPayload.model_validate(sched.payload or {}).validate_sync_rules()
     return scheduler_controller.enqueue_job(
         task_id,
         trigger_type="manual",

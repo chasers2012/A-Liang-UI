@@ -47,6 +47,7 @@ import {
   submitFormAtom,
   triggerTaskAtom,
 } from '@/models/data-sync/panel.atom';
+import { targetDatasourceOptions } from '@/models/data-sync/task-form';
 import { cn } from '@/lib/utils';
 import { Section } from '@/components/section';
 
@@ -92,20 +93,37 @@ function DataSyncDetailActions() {
 
 function DatasourceComboboxField(props: {
   title: string;
+  required?: boolean;
   datasources: DataSourcePublic[];
+  optionDatasources?: DataSourcePublic[];
+  emptyLabel?: string;
   selectedIds: string[];
   otherSelectedIds: string[];
   readOnly: boolean;
   onChange: (ids: string[]) => void;
 }) {
-  const { title, datasources, selectedIds, otherSelectedIds, readOnly, onChange } = props;
+  const {
+    title,
+    required,
+    datasources,
+    optionDatasources,
+    emptyLabel = '没有可选数据源',
+    selectedIds,
+    otherSelectedIds,
+    readOnly,
+    onChange,
+  } = props;
   const anchor = useComboboxAnchor();
+  const options = optionDatasources ?? datasources;
 
-  const items = useMemo(() => datasources.map((d) => d.id), [datasources]);
+  const items = useMemo(() => options.map((d) => d.id), [options]);
 
   return (
     <Field className="gap-2">
-      <FieldLabel>{title}</FieldLabel>
+      <FieldLabel>
+        {title}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </FieldLabel>
       <Combobox
         items={items}
         multiple
@@ -150,10 +168,10 @@ function DatasourceComboboxField(props: {
           align="start"
           className="w-max max-w-[min(28rem,var(--available-width))]"
         >
-          <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">没有可选数据源</ComboboxEmpty>
+          <ComboboxEmpty className="px-2.5 py-2 text-sm text-muted-foreground">{emptyLabel}</ComboboxEmpty>
           <ComboboxList className="outline-none">
             {(item: string) => {
-              const datasource = datasources.find((d) => d.id === item);
+              const datasource = options.find((d) => d.id === item);
               if (!datasource) return null;
               const disabledAsOther = otherSelectedIds.includes(datasource.id);
               return (
@@ -182,9 +200,13 @@ function DataSyncConfigFields() {
   const datasources = useAtomValue(datasourcesAtom);
   const [form, setForm] = useAtom(formAtom);
 
-  if (selectedId == null && !isEditing) return null;
-
   const readOnly = !isEditing;
+  const targetOptions = useMemo(
+    () => targetDatasourceOptions(datasources, form.targetIds, readOnly),
+    [datasources, form.targetIds, readOnly],
+  );
+
+  if (selectedId == null && !isEditing) return null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2 max-w-5xl ">
@@ -192,6 +214,7 @@ function DataSyncConfigFields() {
         <FieldGroup className="mt-6 gap-6">
           <DatasourceComboboxField
             title="源数据源"
+            required
             datasources={datasources}
             selectedIds={form.sourceIds}
             otherSelectedIds={form.targetIds}
@@ -200,7 +223,10 @@ function DataSyncConfigFields() {
           />
           <DatasourceComboboxField
             title="目标数据源"
+            required
             datasources={datasources}
+            optionDatasources={targetOptions}
+            emptyLabel="没有可写入的数据源（请在 SQL 数据源中开启写入）"
             selectedIds={form.targetIds}
             otherSelectedIds={form.sourceIds}
             readOnly={readOnly}
@@ -208,15 +234,18 @@ function DataSyncConfigFields() {
           />
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
             <Field className="gap-2">
-              <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
+              <FieldLabel htmlFor="sync-init">
+                起始日期 <span className="text-destructive">*</span>
+              </FieldLabel>
               <DatePicker
                 id="sync-init"
-                value={form.initialStartDate}
+                value={form.startDate}
                 onChange={(v) => {
                   if (readOnly) return;
-                  setForm((prev) => ({ ...prev, initialStartDate: v }));
+                  setForm((prev) => ({ ...prev, startDate: v }));
                 }}
                 placeholder="选择起始日期"
+                required
                 readOnly={readOnly}
               />
             </Field>

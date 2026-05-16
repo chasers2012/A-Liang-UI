@@ -209,25 +209,19 @@ class CsvDataSourceSpec(DataSourceSpec):
             ),
         )
 
-    def validate_config(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> dict[str, Any]:
-        conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
-        col = CsvColumnsConfig.model_validate(dict(columns_config or {}))
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(config or {})
+        conn = CsvConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col = CsvColumnsConfig.model_validate(dict(raw.get("columns") or {}))
         return {
             "connection": conn.model_dump(mode="json"),
             "columns": col.model_dump(mode="json"),
         }
 
-    def to_factor_datasource(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ):
-        conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
-        col = CsvColumnsConfig.model_validate(dict(columns_config or {}))
+    def to_factor_datasource(self, config: dict[str, Any]):
+        raw = dict(config or {})
+        conn = CsvConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col = CsvColumnsConfig.model_validate(dict(raw.get("columns") or {}))
         return CsvDataSource(
             path=conn.path,
             read_csv_kwargs=dict(conn.read_csv_kwargs),
@@ -235,14 +229,10 @@ class CsvDataSourceSpec(DataSourceSpec):
             asset_column=col.asset_column,
         )
 
-    def verify(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> VerifyResult:
-        _ = columns_config
+    def verify(self, config: dict[str, Any]) -> VerifyResult:
+        raw = dict(config or {})
         try:
-            conn = CsvConnectionConfig.model_validate(dict(connection_config or {}))
+            conn = CsvConnectionConfig.model_validate(dict(raw.get("connection") or {}))
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
         p = resolve_csv_path(conn.path)

@@ -7,6 +7,8 @@ export interface DataSourcePublic {
   name: string;
   type: DataSourceType;
   config: Record<string, unknown>;
+  /** 是否允许作为数据同步的写入目标（如 SQL 数据源开启 write_enabled）。 */
+  write_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +48,8 @@ export interface DatasourcePluginPublic {
   connection_ui_schema: Record<string, unknown>;
   columns_json_schema: Record<string, unknown>;
   columns_ui_schema: Record<string, unknown>;
+  write_json_schema: Record<string, unknown>;
+  write_ui_schema: Record<string, unknown>;
 }
 
 /** `/uploads/file` 响应。 */

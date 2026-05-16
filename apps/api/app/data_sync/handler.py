@@ -82,6 +82,7 @@ def _write_sync_to_targets(
 
 
 def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult:
+    sync_payload.validate_sync_rules()
     source_ids = sync_payload.source_ids
     target_ids = sync_payload.target_ids
     wf_json = sync_payload.workflow_json()
@@ -92,14 +93,18 @@ def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult
 
     earliest_target_date = _earliest_latest_date_from_targets(targets)
     end_date = sync_payload.end_date or datetime.now(timezone.utc).date().isoformat()
-    start_date = earliest_target_date or sync_payload.initial_start_date
+    start_date = earliest_target_date or sync_payload.start_date
 
     raw_frames: dict[str, pd.DataFrame] = {}
     for sid in source_ids:
         inst = get_datasource(sid)
         if inst is None:
             raise ValueError(f"源数据源不存在: {sid}")
-        raw_frames[sid] = inst.load_frame(start_date=start_date, end_date=end_date)
+        raw_frames[sid] = inst.load_frame(
+            columns=inst.list_columns(),
+            start_date=start_date,
+            end_date=end_date,
+        )
     rows_read = sum(len(df) for df in raw_frames.values())
     if rows_read == 0:
         return DataSyncRunResult(

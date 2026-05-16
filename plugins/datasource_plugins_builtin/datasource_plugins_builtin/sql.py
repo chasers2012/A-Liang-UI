@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 import pandas as pd
 from app.datasource.plugins import DataSourcePlugin
-from app.datasource.schemas import DataSourceSpec, VerifyResult, pop_write_flat_keys_from_mapping
+from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
 from factor.datasource import FactorDataSource
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -13,8 +13,16 @@ from sqlalchemy.engine import Engine
 from sqlmodel import create_engine, inspect, text
 
 
+class SqlWriteConfig(BaseModel):
+    """同步写入选项（存于 ``write`` 段）。"""
+
+    model_config = ConfigDict(extra="ignore")
+
+    write_enabled: bool = False
+
+
 class SqlConnectionConfig(BaseModel):
-    """数据库连接、表与可选的同步写入选项（均存于 ``connection`` 段）。"""
+    """数据库连接与表（存于 ``connection`` 段）。"""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -25,7 +33,6 @@ class SqlConnectionConfig(BaseModel):
     db_password: str = ""
     db_name: str = ""
     table: str = ""
-    write_enabled: bool = False
 
     @model_validator(mode="after")
     def _validate(self) -> SqlConnectionConfig:
@@ -243,7 +250,7 @@ class SqlDataSourceSpec(DataSourceSpec):
         super().__init__(
             connection_schema=FormSchema(
                 title="SQL 数据源",
-                description="配置数据库连接、数据表及可选的同步追加写入。",
+                description="配置数据库连接与数据表。",
                 json_schema={
                     "type": "object",
                     "properties": {
@@ -262,11 +269,6 @@ class SqlDataSourceSpec(DataSourceSpec):
                         "db_password": {"type": "string", "title": "密码"},
                         "db_name": {"type": "string", "title": "数据库名"},
                         "table": {"type": "string", "title": "表名"},
-                        "write_enabled": {
-                            "type": "boolean",
-                            "title": "允许同步写入（追加行）",
-                            "default": False,
-                        },
                     },
                     "required": ["db_driver", "db_host", "db_name", "table"],
                 },
@@ -276,6 +278,21 @@ class SqlDataSourceSpec(DataSourceSpec):
                     "db_password": {
                         "ui:widget": "password",
                         "ui:help": "编辑时留空表示保持原密码。",
+                    },
+                },
+            ),
+            write_schema=FormSchema(
+                title="SQL 数据写入",
+                description="配置是否允许数据同步任务向该表追加写入。",
+                json_schema={
+                    "type": "object",
+                    "properties": {
+                        "write_enabled": {
+                            "type": "boolean",
+                            "title": "允许写入",
+                            "default": False,
+                            "description": "勾选后该数据源可作为数据同步的目标数据源",
+                        },
                     },
                 },
             ),
@@ -313,30 +330,22 @@ class SqlDataSourceSpec(DataSourceSpec):
             ),
         )
 
-    def validate_config(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> dict[str, Any]:
-        conn_raw = dict(connection_config or {})
-        cols_only, legacy_write = pop_write_flat_keys_from_mapping(dict(columns_config or {}))
-        for k, v in legacy_write.items():
-            if k not in conn_raw:
-                conn_raw[k] = v
-        conn = SqlConnectionConfig.model_validate(conn_raw)
-        col = SqlColumnsConfig.model_validate(cols_only)
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(config or {})
+        conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col = SqlColumnsConfig.model_validate(dict(raw.get("columns") or {}))
+        write = SqlWriteConfig.model_validate(dict(raw.get("write") or {}))
         return {
             "connection": conn.model_dump(mode="json"),
             "columns": col.model_dump(mode="json"),
+            "write": write.model_dump(mode="json"),
         }
 
-    def to_factor_datasource(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ):
-        conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
-        col = SqlColumnsConfig.model_validate(dict(columns_config or {}))
+    def to_factor_datasource(self, config: dict[str, Any]):
+        raw = dict(config or {})
+        conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
+        col = SqlColumnsConfig.model_validate(dict(raw.get("columns") or {}))
+        write = SqlWriteConfig.model_validate(dict(raw.get("write") or {}))
         url = build_sqlalchemy_url(conn)
         eng = (
             create_engine(url, connect_args={"check_same_thread": False})
@@ -348,17 +357,13 @@ class SqlDataSourceSpec(DataSourceSpec):
             table=conn.table.strip(),
             date_column=col.date_column,
             asset_column=col.asset_column,
-            write_enabled=conn.write_enabled,
+            write_enabled=write.write_enabled,
         )
 
-    def verify(
-        self,
-        connection_config: dict[str, Any],
-        columns_config: dict[str, Any],
-    ) -> VerifyResult:
-        _ = columns_config  # 连接探测不依赖列段
+    def verify(self, config: dict[str, Any]) -> VerifyResult:
+        raw = dict(config or {})
         try:
-            conn = SqlConnectionConfig.model_validate(dict(connection_config or {}))
+            conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
             url = build_sqlalchemy_url(conn)
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))

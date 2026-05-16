@@ -133,16 +133,31 @@ class BoundFactorDataSource(FactorDataSource):
         )
 
 
+def _validate_datasource_storage(
+    plugin_type: str,
+    connection_config: dict[str, Any],
+    columns_config: dict[str, Any],
+    write_config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    plugin = get_datasource_plugin(plugin_type)
+    connection, columns, write = plugin.spec.split_write_config_for_validation(
+        dict(connection_config or {}),
+        dict(columns_config or {}),
+        dict(write_config or {}) if write_config is not None else None,
+    )
+    validated = plugin.spec.validate_config(
+        {"connection": connection, "columns": columns, "write": write}
+    )
+    return plugin.spec.encrypt_storage_config(validated)
+
+
 def get_datasource(id: str) -> FactorDataSource | None:
     rec = DataSourceItemsRegistry.get_item(id)
     if rec is None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    ds = plugin.spec.to_factor_datasource(
-        dict(plain.get("connection") or {}),
-        dict(plain.get("columns") or {}),
-    )
+    ds = plugin.spec.to_factor_datasource(plain)
     return BoundFactorDataSource(id, ds)
 
 
@@ -164,6 +179,7 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
         description = (connection_schema.description if connection_schema else None) or (
             columns_schema.description if columns_schema else None
         )
+        write_schema = plugin.spec.write_schema
         out.append(
             DatasourcePluginPublic(
                 type=ds_type,
@@ -179,6 +195,8 @@ def list_datasource_plugins() -> list[DatasourcePluginPublic]:
                 if columns_schema
                 else {},
                 columns_ui_schema=dict(columns_schema.ui_schema or {}) if columns_schema else {},
+                write_json_schema=dict(write_schema.json_schema or {}) if write_schema else {},
+                write_ui_schema=dict(write_schema.ui_schema or {}) if write_schema else {},
             )
         )
     return out
@@ -208,14 +226,15 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
 
     plugin = get_datasource_plugin(str(ds_type))
     cfg = dict(config or {})
-    validated = plugin.spec.validate_config(
+    connection, columns, write = plugin.spec.split_write_config_for_validation(
         dict(cfg.get("connection") or {}),
         dict(cfg.get("columns") or {}),
+        dict(cfg.get("write") or {}),
     )
-    cols = plugin.spec.to_factor_datasource(
-        dict(validated.get("connection") or {}),
-        dict(validated.get("columns") or {}),
-    ).list_columns()
+    validated = plugin.spec.validate_config(
+        {"connection": connection, "columns": columns, "write": write}
+    )
+    cols = plugin.spec.to_factor_datasource(validated).list_columns()
     str_cols = [str(c) for c in cols]
     columns_meta = dict(validated.get("columns") or {})
     return _build_inspect_columns_response(columns_meta, str_cols)
@@ -238,13 +257,13 @@ def get_datasource_public(ds_id: str) -> DataSourcePublic | None:
 
 def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
     _ensure_unique_name(body.name)
-    plugin = get_datasource_plugin(str(body.type))
-    validated = plugin.spec.validate_config(
+    new_row = body.to_row()
+    new_row.config = _validate_datasource_storage(
+        str(body.type),
         dict(body.connection_config or {}),
         dict(body.columns_config or {}),
+        dict(body.write_config or {}),
     )
-    new_row = body.to_row()
-    new_row.config = plugin.spec.encrypt_storage_config(validated)
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row)
 
@@ -255,22 +274,25 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
         if "name" in data:
             _ensure_unique_name(str(data["name"]), exclude_id=ds_id)
             row.name = data["name"]
-        if any(k in data for k in ("connection_config", "columns_config")):
+        if any(k in data for k in ("connection_config", "columns_config", "write_config")):
             plugin = get_datasource_plugin(str(row.type))
             overlay: dict[str, Any] = {}
             if "connection_config" in data:
                 overlay["connection"] = dict(data.get("connection_config") or {})
             if "columns_config" in data:
                 overlay["columns"] = dict(data.get("columns_config") or {})
+            if "write_config" in data:
+                overlay["write"] = dict(data.get("write_config") or {})
             merged = plugin.spec.merge_overlay_with_saved_secrets(
                 dict(row.config or {}),
                 overlay,
             )
-            validated = plugin.spec.validate_config(
+            row.config = _validate_datasource_storage(
+                str(row.type),
                 dict(merged.get("connection") or {}),
                 dict(merged.get("columns") or {}),
+                dict(merged.get("write") or {}),
             )
-            row.config = plugin.spec.encrypt_storage_config(validated)
         row.updated_at = utc_now_iso()
 
     row = DataSourceItemsRegistry.update_item(ds_id, _apply)
@@ -289,7 +311,4 @@ def test_datasource(ds_id: str) -> VerifyResult | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    return plugin.spec.verify(
-        dict(plain.get("connection") or {}),
-        dict(plain.get("columns") or {}),
-    )
+    return plugin.spec.verify(plain)

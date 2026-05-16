@@ -18,6 +18,7 @@ import {
   computeDatasourcePluginFormSchemas,
   nestDatasourceConfigForApi,
   getDatasourceColumnsConfig,
+  pluginHasWriteSchema,
   type DatasourcePluginFormSchemas,
 } from './plugin-form-schemas';
 
@@ -31,8 +32,8 @@ export const datasourcesTestHintAtom = atom<{ id: string; ok: boolean; message: 
 export const datasourcesSelectedIdAtom = atom<string | null>(null);
 export const datasourcesIsEditingAtom = atom<boolean>(false);
 
-/** 数据源详情卡「基础配置 / 字段映射」当前 tab（受控于页面） */
-export type DatasourceDetailTab = 'base' | 'fields';
+/** 数据源详情卡当前 tab（受控于页面） */
+export type DatasourceDetailTab = 'base' | 'fields' | 'write';
 export const datasourcesDetailActiveTabAtom = atom<DatasourceDetailTab>('base');
 export const datasourcesDeleteTargetAtom = atom<DataSourcePublic | null>(null);
 export const datasourcesDeletingAtom = atom<boolean>(false);
@@ -100,7 +101,12 @@ const datasourcesSelectedPluginAtom = atom((get): DatasourcePluginPublic | null 
   return plugins.find((p) => p.type === form.type) ?? null;
 });
 
-/** 插件连接 + 字段映射 RJSF 是否满足 required */
+export const datasourcesSelectedPluginHasWriteTabAtom = atom((get) => {
+  const plugin = get(datasourcesSelectedPluginAtom);
+  return pluginHasWriteSchema(plugin);
+});
+
+/** 插件连接 + 字段映射 + 数据写入 RJSF 是否满足 required */
 export const datasourcesPluginConfigValidAtom = atom((get) => {
   const form = get(datasourcesEditorFormAtom);
   const plugin = get(datasourcesSelectedPluginAtom);
@@ -113,8 +119,13 @@ export const datasourcesPluginConfigValidAtom = atom((get) => {
     schemas.fieldsFormSchema && Array.isArray(schemas.fieldsFormSchema.required)
       ? (schemas.fieldsFormSchema.required as unknown[])
       : [];
+  const writeRequired =
+    schemas.writeFormSchema && Array.isArray(schemas.writeFormSchema.required)
+      ? (schemas.writeFormSchema.required as unknown[])
+      : [];
   const connection = (form.config?.connection as Record<string, unknown> | undefined) ?? {};
   const columns = (form.config?.columns as Record<string, unknown> | undefined) ?? {};
+  const write = (form.config?.write as Record<string, unknown> | undefined) ?? {};
   const isFilled = (value: unknown): boolean => {
     if (value == null) return false;
     if (typeof value === 'string') return value.trim().length > 0;
@@ -123,7 +134,8 @@ export const datasourcesPluginConfigValidAtom = atom((get) => {
   };
   const baseValid = baseRequired.every((key) => (typeof key === 'string' ? isFilled(connection[key]) : true));
   const fieldsValid = fieldsRequired.every((key) => (typeof key === 'string' ? isFilled(columns[key]) : true));
-  return baseValid && fieldsValid;
+  const writeValid = writeRequired.every((key) => (typeof key === 'string' ? isFilled(write[key]) : true));
+  return baseValid && fieldsValid && writeValid;
 });
 
 export const datasourcesPluginBaseConfigValidAtom = atom((get) => {
@@ -198,6 +210,11 @@ export const inspectDatasourceColumnsAtom = atom(null, async (get, set): Promise
 export const datasourceEditorProceedFromBaseTabAtom = atom(null, async (_get, set) => {
   const ok = await set(inspectDatasourceColumnsAtom);
   if (ok) set(datasourcesDetailActiveTabAtom, 'fields');
+});
+
+/** 从字段映射进入数据写入 tab（仅当插件配置了 write_schema）。 */
+export const datasourceEditorProceedFromFieldsTabAtom = atom(null, (_get, set) => {
+  set(datasourcesDetailActiveTabAtom, 'write');
 });
 
 /**
@@ -293,7 +310,12 @@ export const datasourcesEditorLoadEffectAtom = atomEffect((get, set) => {
   // Entering edit mode should not trigger a detail refetch; current form is already synced from selected item.
   if (!selectedId) {
     const nextName = defaultNewName('新数据源');
-    set(datasourcesEditorFormAtom, { ...emptyForm(), name: nextName, type: plugins[0]?.type ?? '', config: {} });
+    set(datasourcesEditorFormAtom, {
+      ...emptyForm(),
+      name: nextName,
+      type: plugins[0]?.type ?? '',
+      config: { connection: {}, columns: {}, write: {} },
+    });
   }
 });
 
