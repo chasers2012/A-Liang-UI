@@ -12,20 +12,21 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 function PopoverTrigger({
   asChild,
   children,
+  nativeButton = true,
   ...props
 }: PopoverPrimitive.Trigger.Props & { asChild?: boolean; children?: React.ReactNode }) {
   if (asChild) {
     return (
       <PopoverPrimitive.Trigger
         data-slot="popover-trigger"
-        nativeButton={false}
-        {...(props as unknown as PopoverPrimitive.Trigger.Props)}
+        nativeButton={nativeButton}
+        {...props}
         render={children as never}
       />
     );
   }
   return (
-    <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props}>
+    <PopoverPrimitive.Trigger data-slot="popover-trigger" nativeButton={nativeButton} {...props}>
       {children}
     </PopoverPrimitive.Trigger>
   );

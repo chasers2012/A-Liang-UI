@@ -136,7 +136,7 @@ export const ChatMessageUserContent = memo(function ChatMessageUserContent({
         setIsActionOpen(nextOpen);
       }}
     >
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild nativeButton={false}>
         <div
           className="group-hover/trigger:bg-muted/70 flex min-w-0 flex-1 overflow-hidden rounded-lg border border-border/70 bg-muted/50 text-sm leading-relaxed text-foreground z-20"
           onMouseEnter={openActionPopover}
