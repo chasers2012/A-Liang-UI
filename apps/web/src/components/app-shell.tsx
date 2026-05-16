@@ -6,6 +6,7 @@ import { NavigationEditGuardDialog } from '@/components/navigation-edit-guard-di
 import { NavigationEditGuardProvider } from '@/components/navigation-edit-guard-context';
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { usePathname } from 'next/navigation';
+import { SchedulerActiveJobsPoller, SchedulerActiveStatus } from '@/components/scheduler-active-status';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
@@ -133,11 +134,15 @@ function AppSidebar() {
       </SidebarContent>
       <SidebarFooter
         className={cn(
-          'mt-auto shrink-0 flex-row items-center border-t border-sidebar-border',
-          collapsed ? 'justify-center' : 'justify-end',
+          'mt-auto shrink-0 flex-col gap-1 border-t border-sidebar-border py-2',
+          collapsed ? 'items-center px-0' : 'items-stretch px-2',
         )}
       >
-        <ThemeToggle />
+        <SchedulerActiveJobsPoller />
+        <SchedulerActiveStatus />
+        <div className={cn('flex shrink-0', collapsed ? 'justify-center' : 'justify-end')}>
+          <ThemeToggle />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

@@ -71,3 +71,30 @@ export function listSchedulerJobLogs(jobId: string, limit?: number): Promise<Sch
     `/scheduler/jobs/${encodeURIComponent(jobId)}/logs${suffix ? `?${suffix}` : ''}`,
   );
 }
+
+const ACTIVE_JOB_STATUSES = ['queued', 'running', 'retrying'] as const;
+
+export type SchedulerActiveJob = SchedulerJobPublic & {
+  taskName?: string;
+};
+
+function dedupeJobsByQueuedAt(jobs: SchedulerJobPublic[], limit: number): SchedulerJobPublic[] {
+  const byId = new Map<string, SchedulerJobPublic>();
+  for (const job of jobs) {
+    byId.set(job.id, job);
+  }
+  return [...byId.values()].sort((a, b) => b.queued_at.localeCompare(a.queued_at)).slice(0, limit);
+}
+
+export async function listActiveSchedulerJobs(pageSize = 10): Promise<SchedulerActiveJob[]> {
+  const [tasks, ...pages] = await Promise.all([
+    listSchedulerTasks(),
+    ...ACTIVE_JOB_STATUSES.map((status) => listSchedulerJobs({ status, page: 1, pageSize })),
+  ]);
+  const taskNameById = Object.fromEntries(tasks.map((t) => [t.id, t.name]));
+  const merged = pages.flatMap((p) => p.items);
+  return dedupeJobsByQueuedAt(merged, pageSize).map((job) => ({
+    ...job,
+    taskName: job.task_id ? taskNameById[job.task_id] : undefined,
+  }));
+}
