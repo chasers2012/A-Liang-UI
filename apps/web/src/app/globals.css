@@ -279,9 +279,8 @@ textarea[data-slot='input-group-control']:read-only:not(:disabled) {
   cursor: default !important;
 }
 
-/* DatePicker / DateTimePicker：`popover-trigger` + `aria-readonly`；CronField 只读摘要：`cron-field-readonly` + `data-readonly`（button 不宜用 aria-readonly） */
-button[data-slot='popover-trigger'][aria-readonly]:not(:disabled),
-button[data-slot='cron-field-readonly'][data-readonly]:not(:disabled) {
+/* DatePicker / DateTimePicker / CronField：`popover-trigger` + `aria-readonly` */
+button[data-slot='popover-trigger'][aria-readonly]:not(:disabled) {
   pointer-events: none !important;
   cursor: default !important;
   height: auto !important;
@@ -309,16 +308,14 @@ button[data-slot='popover-trigger'][aria-readonly]:not(:disabled) svg {
   display: none !important;
 }
 
-button[data-slot='popover-trigger'][aria-readonly][data-size='sm']:not(:disabled),
-button[data-slot='cron-field-readonly'][data-readonly][data-size='sm']:not(:disabled) {
+button[data-slot='popover-trigger'][aria-readonly][data-size='sm']:not(:disabled) {
   min-height: 1.75rem !important;
   padding-block: 0.375rem !important;
   font-size: 0.75rem !important;
   line-height: 1rem !important;
 }
 
-button[data-slot='popover-trigger'][aria-readonly][data-empty]:not(:disabled),
-button[data-slot='cron-field-readonly'][data-readonly][data-empty]:not(:disabled) {
+button[data-slot='popover-trigger'][aria-readonly][data-empty]:not(:disabled) {
   color: color-mix(in oklch, var(--muted-foreground) 85%, transparent) !important;
 }
 

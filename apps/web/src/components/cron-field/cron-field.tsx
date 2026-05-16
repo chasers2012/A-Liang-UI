@@ -230,42 +230,32 @@ export function CronField(props: CronFieldProps) {
     onValueChange(joinCronParts(mergePartsForPreset('advanced', tuple)));
   };
 
-  if (readOnly) {
-    return (
-      <div role="group" aria-labelledby={ariaLabelledBy} className={cn('flex min-w-0 flex-col gap-3', className)}>
-        <button
-          id={id}
-          type="button"
-          data-slot="cron-field-readonly"
-          data-readonly=""
-          data-size="sm"
-          data-empty={isUnset ? '' : undefined}
-          className="inline-flex w-full min-w-0 cursor-default items-center gap-2 text-left font-normal select-none"
-        >
-          <span className="min-w-0 flex-1 truncate">{summary}</span>
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div role="group" aria-labelledby={ariaLabelledBy} className={cn('flex min-w-0 flex-col gap-3', className)}>
-      <Collapsible open={expanded} onOpenChange={setExpanded}>
+      <Collapsible
+        open={readOnly ? false : expanded}
+        onOpenChange={(next) => {
+          if (readOnly && next) return;
+          setExpanded(next);
+        }}
+      >
         <CollapsibleTrigger
           id={id}
           type="button"
+          data-slot="popover-trigger"
+          aria-readonly={readOnly || undefined}
           data-empty={isUnset ? 'true' : undefined}
           className={cn(
             buttonVariants({ variant: 'outline', size: 'sm' }),
             'h-8 w-full justify-between gap-2 px-2.5 font-normal data-empty:text-muted-foreground',
           )}
-          aria-expanded={expanded}
+          aria-expanded={readOnly ? false : expanded}
         >
           <span className="min-w-0 flex-1 truncate text-left text-sm">{summary}</span>
           <ChevronDownIcon
             className={cn(
               'size-3.5 shrink-0 text-muted-foreground opacity-70 transition-transform',
-              expanded ? 'rotate-180' : undefined,
+              !readOnly && expanded ? 'rotate-180' : undefined,
             )}
             aria-hidden
           />
@@ -273,7 +263,7 @@ export function CronField(props: CronFieldProps) {
         <CollapsibleContent className="flex flex-col gap-3 rounded-lg border border-border/80 bg-muted/15 p-3 pt-3">
           <CronScheduleEditorInner
             value={value}
-            readOnly={false}
+            readOnly={readOnly}
             parsed={parsed}
             uiPreset={uiPreset}
             setUiPreset={setUiPreset}

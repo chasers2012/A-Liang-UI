@@ -48,6 +48,7 @@ import {
   triggerTaskAtom,
 } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
+import { Section } from '@/components/section';
 
 function DataSyncDetailActions() {
   const isEditing = useAtomValue(isEditingAtom);
@@ -186,9 +187,9 @@ function DataSyncConfigFields() {
   const readOnly = !isEditing;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2">
-      <FieldGroup className="max-w-5xl gap-6">
-        <div className="grid gap-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto pb-2 max-w-5xl ">
+      <Section title="数据源">
+        <FieldGroup className="mt-6 gap-6">
           <DatasourceComboboxField
             title="源数据源"
             datasources={datasources}
@@ -205,87 +206,88 @@ function DataSyncConfigFields() {
             readOnly={readOnly}
             onChange={(targetIds) => setForm((prev) => ({ ...prev, targetIds }))}
           />
-        </div>
-
-        <Field className="gap-2">
-          <FieldLabel id="sync-cron-label">Cron 表达式</FieldLabel>
-          <DataSyncCronField
-            id="sync-cron"
-            ariaLabelledBy="sync-cron-label"
-            value={form.cronExpr}
-            setValue={(v: SetStateAction<string>) =>
-              setForm((prev) => ({
-                ...prev,
-                cronExpr: typeof v === 'function' ? v(prev.cronExpr) : v,
-              }))
-            }
-            readOnly={readOnly}
-          />
-        </Field>
-
-        <FieldGroup className="grid gap-4 sm:grid-cols-2">
+          <FieldGroup className="grid gap-4 sm:grid-cols-2">
+            <Field className="gap-2">
+              <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
+              <DatePicker
+                id="sync-init"
+                value={form.initialStartDate}
+                onChange={(v) => {
+                  if (readOnly) return;
+                  setForm((prev) => ({ ...prev, initialStartDate: v }));
+                }}
+                placeholder="选择起始日期"
+                readOnly={readOnly}
+              />
+            </Field>
+            <Field className="gap-2">
+              <FieldLabel htmlFor="sync-end">结束日期</FieldLabel>
+              <DatePicker
+                id="sync-end"
+                value={form.endDate}
+                onChange={(v) => {
+                  if (readOnly) return;
+                  setForm((prev) => ({ ...prev, endDate: v }));
+                }}
+                placeholder="选择结束日期"
+                readOnly={readOnly}
+              />
+            </Field>
+          </FieldGroup>
+        </FieldGroup>
+      </Section>
+      <Section title="自动触发">
+        <FieldGroup className="mt-6 gap-6">
           <Field className="gap-2">
-            <FieldLabel htmlFor="sync-init">起始日期</FieldLabel>
-            <DatePicker
-              id="sync-init"
-              value={form.initialStartDate}
-              onChange={(v) => {
-                if (readOnly) return;
-                setForm((prev) => ({ ...prev, initialStartDate: v }));
-              }}
-              placeholder="选择起始日期"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={form.enabled}
+                disabled={readOnly}
+                onCheckedChange={(v) => setForm((prev) => ({ ...prev, enabled: Boolean(v) }))}
+                id="sync-enabled"
+              />
+              <FieldLabel htmlFor="sync-enabled" className="font-normal">
+                启用自动触发
+              </FieldLabel>
+            </div>
+          </Field>
+          <Field className="gap-2">
+            <FieldLabel id="sync-cron-label">触发于</FieldLabel>
+            <DataSyncCronField
+              id="sync-cron"
+              ariaLabelledBy="sync-cron-label"
+              value={form.cronExpr}
+              setValue={(v: SetStateAction<string>) =>
+                setForm((prev) => ({
+                  ...prev,
+                  cronExpr: typeof v === 'function' ? v(prev.cronExpr) : v,
+                }))
+              }
               readOnly={readOnly}
             />
           </Field>
+
           <Field className="gap-2">
-            <FieldLabel htmlFor="sync-end">结束日期</FieldLabel>
-            <DatePicker
-              id="sync-end"
-              value={form.endDate}
-              onChange={(v) => {
-                if (readOnly) return;
-                setForm((prev) => ({ ...prev, endDate: v }));
-              }}
-              placeholder="选择结束日期"
+            <FieldLabel htmlFor="sync-retries">最大重试次数</FieldLabel>
+            <Input
+              id="sync-retries"
+              value={form.maxRetries}
               readOnly={readOnly}
+              onChange={(e) => setForm((prev) => ({ ...prev, maxRetries: e.target.value }))}
+            />
+          </Field>
+          <Field className="gap-2">
+            <FieldLabel htmlFor="sync-timeout">超时（秒）</FieldLabel>
+            <Input
+              id="sync-timeout"
+              value={form.timeoutSeconds}
+              readOnly={readOnly}
+              onChange={(e) => setForm((prev) => ({ ...prev, timeoutSeconds: e.target.value }))}
+              className={cn()}
             />
           </Field>
         </FieldGroup>
-
-        <Field className="gap-2">
-          <FieldLabel htmlFor="sync-retries">最大重试</FieldLabel>
-          <Input
-            id="sync-retries"
-            value={form.maxRetries}
-            readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, maxRetries: e.target.value }))}
-          />
-        </Field>
-        <Field className="gap-2">
-          <FieldLabel htmlFor="sync-timeout">超时（秒）</FieldLabel>
-          <Input
-            id="sync-timeout"
-            value={form.timeoutSeconds}
-            readOnly={readOnly}
-            onChange={(e) => setForm((prev) => ({ ...prev, timeoutSeconds: e.target.value }))}
-            className={cn()}
-          />
-        </Field>
-
-        <Field className="gap-2">
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={form.enabled}
-              disabled={readOnly}
-              onCheckedChange={(v) => setForm((prev) => ({ ...prev, enabled: Boolean(v) }))}
-              id="sync-enabled"
-            />
-            <FieldLabel htmlFor="sync-enabled" className="font-normal">
-              启用调度
-            </FieldLabel>
-          </div>
-        </Field>
-      </FieldGroup>
+      </Section>
     </div>
   );
 }
