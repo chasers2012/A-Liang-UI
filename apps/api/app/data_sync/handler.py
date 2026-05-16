@@ -13,6 +13,7 @@ from app.data_sync.schemas import (
 )
 from app.datasource.controller import get_datasource
 from app.datasource.registry import DataSourceItemsRegistry
+from app.scheduler import controller as scheduler_controller
 
 
 def _earliest_latest_date_from_targets(targets: list[Any]) -> str | None:
@@ -81,7 +82,17 @@ def _write_sync_to_targets(
     return rows_written_by_target, rows_written
 
 
-def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult:
+def _maybe_raise_if_cancelled(job_id: str | None) -> None:
+    if job_id:
+        scheduler_controller.ensure_job_not_cancelled(job_id)
+
+
+def _datasource_sync_run(
+    sync_payload: DataSyncTaskPayload,
+    *,
+    job_id: str | None = None,
+) -> DataSyncRunResult:
+    _maybe_raise_if_cancelled(job_id)
     sync_payload.validate_sync_rules()
     source_ids = sync_payload.source_ids
     target_ids = sync_payload.target_ids
@@ -97,6 +108,7 @@ def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult
 
     raw_frames: dict[str, pd.DataFrame] = {}
     for sid in source_ids:
+        _maybe_raise_if_cancelled(job_id)
         inst = get_datasource(sid)
         if inst is None:
             raise ValueError(f"源数据源不存在: {sid}")
@@ -117,16 +129,19 @@ def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult
             target_datasource_ids=target_ids,
         )
 
+    _maybe_raise_if_cancelled(job_id)
     executor = WorkflowExecutor()
     node_results = executor.execute(
         wf_json,
         workflow_inputs=raw_frames,
     )
+    _maybe_raise_if_cancelled(job_id)
     workflow_out = (
         (node_results.get("workflow_outputs") or {}) if isinstance(node_results, dict) else {}
     )
     workflow_out = workflow_out if isinstance(workflow_out, dict) else {}
     frames_by_target = _frames_by_target_from_workflow(workflow_out, targets)
+    _maybe_raise_if_cancelled(job_id)
     rows_written_by_target, rows_written = _write_sync_to_targets(frames_by_target, targets)
     return DataSyncRunResult(
         rows_read=rows_read,
@@ -139,9 +154,19 @@ def _datasource_sync_run(sync_payload: DataSyncTaskPayload) -> DataSyncRunResult
     )
 
 
+def _job_id_from_payload(payload: dict[str, Any]) -> str | None:
+    sched = payload.get("_scheduler")
+    if not isinstance(sched, dict):
+        return None
+    job_id = sched.get("job_id")
+    return job_id if isinstance(job_id, str) and job_id else None
+
+
 def datasource_sync_handler(payload: dict[str, Any]) -> dict[str, Any]:
+    job_id = _job_id_from_payload(payload)
+    _maybe_raise_if_cancelled(job_id)
     job_payload = {k: v for k, v in payload.items() if k != "_scheduler"}
     if not job_payload:
         raise ValueError("数据同步任务 payload 不能为空")
     sync_payload = DataSyncTaskPayload.model_validate(job_payload)
-    return _datasource_sync_run(sync_payload).model_dump(mode="json")
+    return _datasource_sync_run(sync_payload, job_id=job_id).model_dump(mode="json")

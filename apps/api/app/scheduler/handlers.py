@@ -27,3 +27,11 @@ def run_task_handler(task_type: str, payload: dict[str, Any]) -> Any:
 
 def list_task_types() -> list[str]:
     return sorted(_HANDLERS.keys())
+
+
+def bootstrap_task_handlers() -> None:
+    """Import modules that register task handlers (for isolated worker processes)."""
+    import app.backtest.controller
+    import app.data_sync
+    import app.evaluation.run.controller
+    import app.knowledge.controller  # noqa: F401

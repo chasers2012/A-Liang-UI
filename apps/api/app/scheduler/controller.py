@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
+from app.scheduler.exceptions import JobCancelledError
 from app.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
 from app.scheduler.registry import SchedulerRegistry
 from app.scheduler.schemas import (
@@ -266,11 +267,23 @@ def claim_next_job(worker_id: str) -> SchedulerJobPublic | None:
     return _job_to_public(running_row)
 
 
+def is_job_cancelled(job_id: str) -> bool:
+    row = SchedulerRegistry.get_job(job_id)
+    return row is not None and row.status == "cancelled"
+
+
+def ensure_job_not_cancelled(job_id: str) -> None:
+    if is_job_cancelled(job_id):
+        raise JobCancelledError(f"任务已取消: {job_id}")
+
+
 def mark_job_succeeded(job_id: str, result_payload: object) -> SchedulerJobPublic:
     now = utcnow()
     row = SchedulerRegistry.get_job(job_id)
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
+    if row.status == "cancelled":
+        return _job_to_public(row)
     row.status = "succeeded"
     row.finished_at = now
     row.result = result_payload
@@ -285,6 +298,8 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
     row = SchedulerRegistry.get_job(job_id)
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
+    if row.status == "cancelled":
+        return _job_to_public(row)
 
     row.last_error = error_message
     if row.attempt <= row.max_retries:
@@ -312,15 +327,20 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
 
 
 def cancel_job(job_id: str) -> SchedulerJobPublic:
+    from app.scheduler import execution
+
     row = SchedulerRegistry.get_job(job_id)
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
     if row.status in {"succeeded", "failed", "cancelled"}:
         return _job_to_public(row)
+    was_running = row.status == "running"
     row.status = "cancelled"
     row.finished_at = utcnow()
     result = _job_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "cancelled")
+    if was_running:
+        execution.terminate_running_job(job_id)
     return result
 
 

@@ -8,10 +8,11 @@ import time
 from collections.abc import Callable
 from uuid import uuid4
 
+from app.scheduler.exceptions import JobCancelledError
 from app.scheduler.handlers import run_task_handler
 from app.startup_jobs import register_startup_job
 
-from . import controller
+from . import controller, execution
 
 logger = logging.getLogger(__name__)
 _WORKER_THREAD: threading.Thread | None = None
@@ -48,12 +49,27 @@ def run_worker_loop(
                 "job_id": job.id,
                 "task_id": job.task_id,
             }
-            result = run_task_handler(job.task_type, effective_payload)
-            controller.mark_job_succeeded(job.id, result)
-            logger.info("job %s succeeded", job.id)
+            task_type = job.task_type
+            payload = effective_payload
+            result = execution.run_job(
+                job.id,
+                task_type,
+                payload,
+                lambda tt=task_type, pl=payload: run_task_handler(tt, pl),
+            )
+            final_job = controller.mark_job_succeeded(job.id, result)
+            if final_job.status == "cancelled":
+                logger.info("job %s finished after cancel; result discarded", job.id)
+            else:
+                logger.info("job %s succeeded", job.id)
+        except JobCancelledError:
+            logger.info("job %s cancelled during execution", job.id)
         except Exception as exc:
-            controller.mark_job_failed_or_retrying(job.id, str(exc))
-            logger.exception("job %s failed: %s", job.id, exc)
+            final_job = controller.mark_job_failed_or_retrying(job.id, str(exc))
+            if final_job.status == "cancelled":
+                logger.info("job %s failed after cancel; retry suppressed", job.id)
+            else:
+                logger.exception("job %s failed: %s", job.id, exc)
 
 
 def main() -> None:
