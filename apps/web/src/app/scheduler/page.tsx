@@ -96,19 +96,18 @@ export default function SchedulerPage() {
   }, [jobPage, totalPages]);
 
   return (
-    <Page title="任务调度" description="查看与管理 scheduler 作业状态（排队、运行、取消等）。">
-      {jobError ? (
-        <Alert variant="destructive">
-          <AlertTitle>作业操作失败</AlertTitle>
-          <AlertDescription>{jobError}</AlertDescription>
-        </Alert>
-      ) : null}
-
+    <Page>
       <Card>
         <CardHeader>
           <CardTitle>作业列表</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {jobError ? (
+            <Alert variant="destructive">
+              <AlertTitle>作业操作失败</AlertTitle>
+              <AlertDescription>{jobError}</AlertDescription>
+            </Alert>
+          ) : null}
           <div className="flex flex-wrap items-end gap-2">
             <Button type="button" variant="outline" onClick={() => void refreshJobs()} disabled={jobsLoading}>
               刷新

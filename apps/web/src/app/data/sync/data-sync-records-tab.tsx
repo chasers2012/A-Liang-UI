@@ -239,7 +239,7 @@ export function DataSyncRecordsTab() {
                                 <span className="font-mono">{job.id}</span>
                               </p>
                               <p>
-                                <span className="text-muted-foreground">重试：</span>
+                                <span className="text-muted-foreground">执行：</span>
                                 {job.attempt}/{job.max_retries}
                               </p>
                               <p>

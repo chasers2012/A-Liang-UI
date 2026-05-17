@@ -374,7 +374,7 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
         return _job_row_to_public(row)
 
     row.last_error = error_message
-    if row.attempt <= row.max_retries:
+    if row.attempt < row.max_retries:
         row.status = "retrying"
         row.next_run_at = next_retry_time(row.attempt, base_time=now)
         row.finished_at = None

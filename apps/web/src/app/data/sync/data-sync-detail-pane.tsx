@@ -359,7 +359,7 @@ function DataSyncConfigFields() {
           </Field>
 
           <Field className="gap-2">
-            <FieldLabel htmlFor="sync-retries">最大重试次数</FieldLabel>
+            <FieldLabel htmlFor="sync-retries">最大执行次数</FieldLabel>
             <Input
               id="sync-retries"
               value={form.maxRetries}
