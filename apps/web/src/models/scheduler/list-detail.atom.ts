@@ -9,6 +9,7 @@ import {
   updateSchedulerTask,
 } from '@/api/scheduler';
 import type { SchedulerJobPublic, SchedulerTaskPublic } from '@/models/scheduler/dto';
+import { syncActiveSchedulerJobsFromPageAtom } from '@/models/scheduler/active-jobs.atom';
 
 export type SchedulerPageState = {
   tasks: SchedulerTaskPublic[];
@@ -57,6 +58,7 @@ export const refreshSchedulerPageAtom = atom(null, async (get, set) => {
       loading: false,
       error: null,
     }));
+    set(syncActiveSchedulerJobsFromPageAtom, { jobs: jobs.items, tasks });
   } catch (e) {
     set(schedulerPageAtom, (s) => ({
       ...s,

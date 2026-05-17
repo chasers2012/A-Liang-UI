@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from app.startup_jobs import register_startup_job
 
 from .engine.runner import run_backtest_and_persist
+from .events import emit_run_event
 from .registry import BacktestRunsStore
 
 _QUEUE: queue.Queue[str] = queue.Queue()
@@ -35,6 +36,7 @@ def _worker_loop() -> None:
                 rec.error = str(e)
                 rec.end_at = datetime.now(timezone.utc)
                 BacktestRunsStore.save(rec)
+                emit_run_event(rec)
         finally:
             with suppress(Exception):
                 _QUEUE.task_done()

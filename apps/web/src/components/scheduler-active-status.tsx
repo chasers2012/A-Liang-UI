@@ -1,19 +1,20 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Loader2 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
-import { usePolling } from '@/hooks/use-polling';
+import { eventBus, type EventEnvelope } from '@/events';
 import type { SchedulerActiveJob } from '@/api/scheduler';
-import type { SchedulerJobStatus } from '@/models/scheduler/dto';
+import type { SchedulerJobPublic, SchedulerJobStatus, SchedulerTaskPublic } from '@/models/scheduler/dto';
 import {
   activeSchedulerJobsAtom,
-  hasActiveSchedulerJobsAtom,
-  refreshActiveSchedulerJobsAtom,
+  applySchedulerJobEventAtom,
+  applySchedulerTaskEventAtom,
 } from '@/models/scheduler/active-jobs.atom';
 import { cn } from '@/lib/utils';
 
@@ -26,8 +27,9 @@ const STATUS_LABEL: Record<SchedulerJobStatus, string> = {
   cancelled: '已取消',
 };
 
-const ACTIVE_POLL_MS = 3000;
-const IDLE_POLL_MS = 10000;
+function isSchedulerPath(pathname: string): boolean {
+  return pathname === '/scheduler' || pathname.startsWith('/scheduler/');
+}
 
 function jobLabel(job: SchedulerActiveJob): string {
   const name = job.taskName ?? job.task_type;
@@ -47,15 +49,28 @@ const chipClassName =
   'inline-flex max-w-full items-center gap-2 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted/60';
 
 export function SchedulerActiveJobsPoller() {
-  const hasActive = useAtomValue(hasActiveSchedulerJobsAtom);
-  const refresh = useSetAtom(refreshActiveSchedulerJobsAtom);
-  const onPoll = useCallback(() => refresh(), [refresh]);
+  const pathname = usePathname();
+  const applyJob = useSetAtom(applySchedulerJobEventAtom);
+  const applyTask = useSetAtom(applySchedulerTaskEventAtom);
+  const onSchedulerPage = isSchedulerPath(pathname);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    if (onSchedulerPage) return;
 
-  usePolling(onPoll, true, hasActive ? ACTIVE_POLL_MS : IDLE_POLL_MS);
+    const onJobUpdated = (envelope: EventEnvelope<SchedulerJobPublic>) => {
+      applyJob(envelope.data);
+    };
+    const onTaskUpdated = (envelope: EventEnvelope<SchedulerTaskPublic & { deleted?: boolean }>) => {
+      applyTask(envelope.data);
+    };
+
+    const offJob = eventBus.on('scheduler.job.updated', onJobUpdated);
+    const offTask = eventBus.on('scheduler.task.updated', onTaskUpdated);
+    return () => {
+      offJob();
+      offTask();
+    };
+  }, [applyJob, applyTask, onSchedulerPage]);
 
   return null;
 }

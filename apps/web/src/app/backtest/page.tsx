@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BacktestRunForm } from './ui/backtest-run-form';
 import { backtestsListAtoms } from '@/models/backtest/list.atom';
-import { useBacktestsPolling } from '@/models/backtest/use-backtests-polling';
+import { useBacktestEvents } from '@/models/backtest/use-backtest-events';
 
 export default function BacktestPage() {
   const items = useAtomValue(backtestsListAtoms.valueAtom);
@@ -20,7 +20,7 @@ export default function BacktestPage() {
     void refreshList();
   }, [refreshList]);
 
-  useBacktestsPolling(refreshList);
+  useBacktestEvents(refreshList);
 
   return (
     <Page title="回测" description="历史回测与结果分析。">

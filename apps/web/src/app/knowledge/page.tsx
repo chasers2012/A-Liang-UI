@@ -22,7 +22,7 @@ import {
   searchKnowledgeAtom,
   setKnowledgeSearchQueryAtom,
 } from '@/models/knowledge/list-detail.atom';
-import { useKnowledgeDocumentsPolling } from '@/models/knowledge/use-knowledge-documents-polling';
+import { useKnowledgeEvents } from '@/models/knowledge/use-knowledge-events';
 import { Trash } from 'lucide-react';
 
 function toLocalTime(v: string): string {
@@ -272,7 +272,7 @@ export default function KnowledgePage() {
     void refresh();
   }, [refresh]);
 
-  useKnowledgeDocumentsPolling(refresh);
+  useKnowledgeEvents(refresh);
 
   const actions: KnowledgeActions = {
     createDoc: () => void createDoc(),

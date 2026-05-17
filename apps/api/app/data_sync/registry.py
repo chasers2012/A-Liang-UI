@@ -39,13 +39,13 @@ class DataSyncRegistry:
         cls,
         *,
         task_id: str,
-        status: str | None = None,
+        statuses: list[str] | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[int, list[SchedulerJobRow]]:
         return SchedulerRegistry.list_jobs(
             task_id=task_id,
-            status=status,
+            statuses=statuses,
             offset=(page - 1) * page_size,
             limit=page_size,
         )

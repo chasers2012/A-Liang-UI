@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
+from app.events import event_bus
 from app.scheduler.exceptions import JobCancelledError
 from app.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
 from app.scheduler.registry import SchedulerRegistry
@@ -22,6 +23,19 @@ from app.scheduler.utils import (
     utcnow,
     validate_cron_expr,
 )
+
+_JOB_TOPIC = "scheduler.job.updated"
+_TASK_TOPIC = "scheduler.task.updated"
+
+
+def _emit_job_event(job: SchedulerJobPublic) -> None:
+    event_bus.publish_threadsafe(_JOB_TOPIC, job.model_dump(mode="json"))
+
+
+def _emit_task_event(task: SchedulerTaskPublic, *, deleted: bool = False) -> None:
+    payload = task.model_dump(mode="json")
+    payload["deleted"] = deleted
+    event_bus.publish_threadsafe(_TASK_TOPIC, payload)
 
 
 class SchedulerTaskNotFoundError(ValueError):
@@ -90,7 +104,9 @@ def create_task(body: CreateSchedulerTaskRequest) -> SchedulerTaskPublic:
         created_at=now,
         updated_at=now,
     )
-    return _task_to_public(SchedulerRegistry.create_task(row))
+    created = _task_to_public(SchedulerRegistry.create_task(row))
+    _emit_task_event(created)
+    return created
 
 
 def list_tasks(*, enabled: bool | None = None) -> list[SchedulerTaskPublic]:
@@ -131,12 +147,17 @@ def update_task(task_id: str, body: UpdateSchedulerTaskRequest) -> SchedulerTask
         row.timeout_seconds = patch["timeout_seconds"]
     row.updated_at = utcnow()
 
-    return _task_to_public(SchedulerRegistry.save_task(row))
+    updated = _task_to_public(SchedulerRegistry.save_task(row))
+    _emit_task_event(updated)
+    return updated
 
 
 def delete_task(task_id: str) -> None:
+    row = SchedulerRegistry.get_task(task_id)
     if not SchedulerRegistry.delete_task(task_id):
         raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
+    if row is not None:
+        _emit_task_event(_task_to_public(row), deleted=True)
 
 
 def enqueue_job(
@@ -180,7 +201,9 @@ def enqueue_job(
     )
 
     _append_job_log(row.id, "queued", message=f"job queued by {trigger_type}")
-    return _job_to_public(row)
+    job = _job_to_public(row)
+    _emit_job_event(job)
+    return job
 
 
 def enqueue_oneoff_job(
@@ -218,7 +241,9 @@ def enqueue_oneoff_job(
     )
 
     _append_job_log(row.id, "queued", message=f"one-off job queued by {trigger_type}")
-    return _job_to_public(row)
+    job = _job_to_public(row)
+    _emit_job_event(job)
+    return job
 
 
 def trigger_task(task_id: str, body: TriggerSchedulerTaskRequest) -> SchedulerJobPublic:
@@ -233,14 +258,14 @@ def trigger_task(task_id: str, body: TriggerSchedulerTaskRequest) -> SchedulerJo
 def list_jobs(
     *,
     task_id: str | None = None,
-    status: str | None = None,
+    statuses: list[str] | None = None,
     page: int = 1,
     page_size: int = 50,
 ) -> SchedulerJobListResponse:
     offset = (page - 1) * page_size
     total, rows = SchedulerRegistry.list_jobs(
         task_id=task_id,
-        status=status,
+        statuses=statuses,
         offset=offset,
         limit=page_size,
     )
@@ -264,7 +289,9 @@ def claim_next_job(worker_id: str) -> SchedulerJobPublic | None:
         return None
 
     _append_job_log(running_row.id, "running", message=f"claimed by worker {worker_id}")
-    return _job_to_public(running_row)
+    job = _job_to_public(running_row)
+    _emit_job_event(job)
+    return job
 
 
 def is_job_cancelled(job_id: str) -> bool:
@@ -290,6 +317,7 @@ def mark_job_succeeded(job_id: str, result_payload: object) -> SchedulerJobPubli
     row.last_error = None
     result = _job_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "succeeded")
+    _emit_job_event(result)
     return result
 
 
@@ -323,6 +351,7 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
         )
     else:
         _append_job_log(job_id, "failed", message=error_message)
+    _emit_job_event(result)
     return result
 
 
@@ -339,6 +368,7 @@ def cancel_job(job_id: str) -> SchedulerJobPublic:
     row.finished_at = utcnow()
     result = _job_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "cancelled")
+    _emit_job_event(result)
     if was_running:
         execution.terminate_running_job(job_id)
     return result

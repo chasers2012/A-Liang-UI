@@ -44,13 +44,16 @@ export function triggerSchedulerTask(taskId: string, payload?: Record<string, un
 
 export function listSchedulerJobs(params?: {
   taskId?: string;
-  status?: string;
+  status?: string | string[];
   page?: number;
   pageSize?: number;
 }): Promise<SchedulerJobListResponse> {
   const qs = new URLSearchParams();
   if (params?.taskId) qs.set('task_id', params.taskId);
-  if (params?.status) qs.set('status', params.status);
+  if (params?.status) {
+    const status = Array.isArray(params.status) ? params.status.join(',') : params.status;
+    qs.set('status', status);
+  }
   if (params?.page != null) qs.set('page', String(params.page));
   if (params?.pageSize != null) qs.set('page_size', String(params.pageSize));
   const suffix = qs.toString();
@@ -87,13 +90,17 @@ function dedupeJobsByQueuedAt(jobs: SchedulerJobPublic[], limit: number): Schedu
 }
 
 export async function listActiveSchedulerJobs(pageSize = 10): Promise<SchedulerActiveJob[]> {
-  const [tasks, ...pages] = await Promise.all([
-    listSchedulerTasks(),
-    ...ACTIVE_JOB_STATUSES.map((status) => listSchedulerJobs({ status, page: 1, pageSize })),
-  ]);
+  const page = await listSchedulerJobs({
+    status: [...ACTIVE_JOB_STATUSES],
+    page: 1,
+    pageSize,
+  });
+  const jobs = dedupeJobsByQueuedAt(page.items, pageSize);
+  if (jobs.length === 0) return [];
+
+  const tasks = await listSchedulerTasks();
   const taskNameById = Object.fromEntries(tasks.map((t) => [t.id, t.name]));
-  const merged = pages.flatMap((p) => p.items);
-  return dedupeJobsByQueuedAt(merged, pageSize).map((job) => ({
+  return jobs.map((job) => ({
     ...job,
     taskName: job.task_id ? taskNameById[job.task_id] : undefined,
   }));

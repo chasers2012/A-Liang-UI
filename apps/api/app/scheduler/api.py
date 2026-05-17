@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from app.http_errors import http_bad_request
+from app.query_params import parse_csv_query
 from app.scheduler.schemas import (
     CreateSchedulerTaskRequest,
     SchedulerJobListResponse,
@@ -70,11 +71,19 @@ def trigger_scheduler_task(task_id: str, body: TriggerSchedulerTaskRequest) -> S
 @router.get("/jobs", response_model=SchedulerJobListResponse)
 def get_scheduler_jobs(
     task_id: str | None = None,
-    status: str | None = None,
+    status: str | None = Query(
+        default=None,
+        description="任务状态，支持逗号分隔多个值，如 queued,running,retrying",
+    ),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1),
 ) -> SchedulerJobListResponse:
-    return controller.list_jobs(task_id=task_id, status=status, page=page, page_size=page_size)
+    return controller.list_jobs(
+        task_id=task_id,
+        statuses=parse_csv_query(status),
+        page=page,
+        page_size=page_size,
+    )
 
 
 @router.post("/jobs/{job_id}/cancel", response_model=SchedulerJobPublic)

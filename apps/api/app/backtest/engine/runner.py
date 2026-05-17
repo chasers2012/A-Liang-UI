@@ -10,10 +10,23 @@ from workflow import WorkflowExecutor
 from app.data_set.controller import get_data_set
 from app.strategy.registry import StrategyRegistry
 
+from ..events import emit_run_event
 from ..registry import BacktestRunsStore
 from ..result_manager import BacktestResultManager
 from .market_data import load_market_data
 from .vectorbt_runner import run_portfolio_from_signals
+
+
+def _mark_backtest_failed(run_id: str, exc: Exception) -> None:
+    error_message = f"{type(exc).__name__}: {exc}\n\n{traceback.format_exc().rstrip()}"
+    failed = BacktestRunsStore.update_item(
+        run_id,
+        status="failed",
+        end_at=datetime.now(timezone.utc),
+        error=error_message,
+    )
+    if failed is not None:
+        emit_run_event(failed)
 
 
 def run_backtest_and_persist(run_id: str) -> None:
@@ -31,6 +44,7 @@ def run_backtest_and_persist(run_id: str) -> None:
     )
     if rec is None:
         return
+    emit_run_event(rec)
 
     try:
         strategy = StrategyRegistry.get_by_id(rec.strategy_id)
@@ -78,18 +92,14 @@ def run_backtest_and_persist(run_id: str) -> None:
         )
         results_dir = results.write_node_results(run_id, node_results)
         results.write_portfolio_results(run_id, pf)
-        BacktestRunsStore.update_item(
+        updated = BacktestRunsStore.update_item(
             run_id,
             results_path=results_dir,
             status="success",
             end_at=datetime.now(timezone.utc),
             error=None,
         )
+        if updated is not None:
+            emit_run_event(updated)
     except Exception as e:
-        error_message = f"{type(e).__name__}: {e}\n\n{traceback.format_exc().rstrip()}"
-        BacktestRunsStore.update_item(
-            run_id,
-            status="failed",
-            end_at=datetime.now(timezone.utc),
-            error=error_message,
-        )
+        _mark_backtest_failed(run_id, e)

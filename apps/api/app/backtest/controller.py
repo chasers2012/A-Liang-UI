@@ -9,6 +9,7 @@ from app.scheduler.handlers import register_task_handler
 from app.strategy.registry import StrategyRegistry
 
 from .engine.runner import run_backtest_and_persist
+from .events import emit_run_event
 from .models import BacktestRunRow
 from .registry import BacktestRunsStore
 from .result_manager import BacktestResultManager
@@ -78,6 +79,7 @@ def enqueue_backtest_run(body: RunBacktestRequest) -> BacktestRunSummary:
         params=body.params,
     )
     created_row = BacktestRunsStore.append(row)
+    emit_run_event(created_row)
     enqueue_oneoff_job(
         task_type="backtest.run",
         trigger_type="manual",
@@ -161,8 +163,11 @@ def get_backtest_node_output_page(
 
 
 def delete_backtest_run(run_id: str) -> None:
+    row = BacktestRunsStore.get_item(run_id)
     if not BacktestRunsStore.delete_by_id(run_id):
         raise BacktestRunNotFoundError(run_id)
+    if row is not None:
+        emit_run_event(row, deleted=True)
 
 
 def _backtest_run_handler(payload: dict[str, object]) -> dict[str, object]:

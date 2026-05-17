@@ -111,7 +111,7 @@ class SchedulerRegistry:
         cls,
         *,
         task_id: str | None = None,
-        status: str | None = None,
+        statuses: list[str] | None = None,
         offset: int = 0,
         limit: int = 50,
     ) -> tuple[int, list[SchedulerJobRow]]:
@@ -119,8 +119,8 @@ class SchedulerRegistry:
             filters = []
             if task_id is not None:
                 filters.append(SchedulerJobRow.task_id == task_id)
-            if status is not None:
-                filters.append(SchedulerJobRow.status == status)
+            if statuses:
+                filters.append(SchedulerJobRow.status.in_(statuses))
 
             stmt = select(SchedulerJobRow).order_by(SchedulerJobRow.queued_at.desc())
             if filters:

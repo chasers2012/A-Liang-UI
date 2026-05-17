@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from workspace import workspace_path
 
+from app.events import event_bus
 from app.scheduler.controller import enqueue_oneoff_job
 from app.scheduler.handlers import register_task_handler
 from app.scheduler.schemas import SchedulerJobPublic
@@ -25,10 +26,17 @@ from .schemas import (
 from .store import KnowledgeStore
 
 _KNOWLEDGE_INDEX_TASK_TYPE = "knowledge.index"
+_KNOWLEDGE_DOC_TOPIC = "knowledge.document.updated"
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _emit_document_event(doc: KnowledgeDocumentPublic, *, deleted: bool = False) -> None:
+    payload = doc.model_dump(mode="json")
+    payload["deleted"] = deleted
+    event_bus.publish_threadsafe(_KNOWLEDGE_DOC_TOPIC, payload)
 
 
 def get_settings() -> KnowledgeSettings:
@@ -77,8 +85,10 @@ def create_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPu
         updated_at=now,
     )
     created = KnowledgeStore.add_document(row)
+    public = _to_public(created)
+    _emit_document_event(public)
     enqueue_index_document(created.id, uploaded_path=body.uploaded_path, content=body.content)
-    return _to_public(created)
+    return public
 
 
 def enqueue_index_document(
@@ -101,9 +111,13 @@ def enqueue_index_document(
 
 
 def delete_document(document_id: str) -> bool:
+    row = KnowledgeStore.get_document(document_id)
     chunk_ids = [row.id for row in KnowledgeStore.list_chunks_by_document(document_id)]
     _adapter().delete_document(chunk_ids=chunk_ids)
-    return KnowledgeStore.delete_document(document_id)
+    removed = KnowledgeStore.delete_document(document_id)
+    if removed and row is not None:
+        _emit_document_event(_to_public(row), deleted=True)
+    return removed
 
 
 def _mark_document_status(document_id: str, *, status: str, error: str | None = None) -> None:
@@ -115,6 +129,9 @@ def _mark_document_status(document_id: str, *, status: str, error: str | None = 
         row.updated_at = now
 
     KnowledgeStore.update_document(document_id, _apply)
+    updated = KnowledgeStore.get_document(document_id)
+    if updated is not None:
+        _emit_document_event(_to_public(updated))
 
 
 def index_document(

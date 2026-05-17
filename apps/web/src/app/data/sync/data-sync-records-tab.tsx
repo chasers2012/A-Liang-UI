@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useState } from 'react';
-import { useAtomValue } from 'jotai';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useAtomValue, useSetAtom } from 'jotai';
 
 import { listDataSyncJobLogs, listDataSyncJobs } from '@/api/data-sync';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -16,9 +16,18 @@ import {
 } from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
+import { eventBus, useEventReconnect, type EventEnvelope } from '@/events';
 import type { DataSyncJobLogPublic, DataSyncJobPublic, DataSyncJobStatus } from '@/models/data-sync/dto';
 import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
+
+const DATASOURCE_SYNC_TASK_TYPE = 'datasource.sync';
+const EVENT_REFRESH_DEBOUNCE_MS = 200;
+
+type SchedulerJobEventPayload = {
+  task_id?: string | null;
+  task_type?: string;
+};
 
 const PAGE_SIZE = 20;
 
@@ -67,6 +76,7 @@ export function DataSyncRecordsTab() {
   const taskId = useAtomValue(selectedIdAtom);
   const refreshEpoch = useAtomValue(recordsRefreshEpochAtom);
   const active = useAtomValue(panelActiveTabAtom) === 'records';
+  const bumpRefreshEpoch = useSetAtom(recordsRefreshEpochAtom);
   const [jobs, setJobs] = useState<DataSyncJobPublic[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -107,6 +117,39 @@ export function DataSyncRecordsTab() {
     setExpandedJobId(null);
     setLogsByJobId({});
   }, [taskId]);
+
+  const refreshTimerRef = useRef<number | null>(null);
+  const scheduleRecordsRefresh = useCallback(() => {
+    if (refreshTimerRef.current !== null) return;
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      bumpRefreshEpoch((n) => n + 1);
+    }, EVENT_REFRESH_DEBOUNCE_MS);
+  }, [bumpRefreshEpoch]);
+
+  useEffect(() => {
+    if (!active || !taskId) return;
+    const onJob = (envelope: EventEnvelope<SchedulerJobEventPayload>) => {
+      const payload = envelope.data;
+      if (payload.task_type !== DATASOURCE_SYNC_TASK_TYPE) return;
+      if (payload.task_id !== taskId) return;
+      scheduleRecordsRefresh();
+    };
+    const off = eventBus.on('scheduler.job.updated', onJob);
+    return () => {
+      off();
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [active, taskId, scheduleRecordsRefresh]);
+
+  useEventReconnect(
+    useCallback(() => {
+      if (active && taskId) scheduleRecordsRefresh();
+    }, [active, taskId, scheduleRecordsRefresh]),
+  );
 
   const toggleLogs = async (jobId: string) => {
     if (expandedJobId === jobId) {

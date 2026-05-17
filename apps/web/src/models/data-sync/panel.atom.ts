@@ -12,6 +12,7 @@ import { listDatasources } from '@/api/datasources';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
+import { refreshActiveSchedulerJobsAtom } from '@/models/scheduler/active-jobs.atom';
 import {
   buildListNotice,
   buildSearchListItems,
@@ -263,6 +264,7 @@ export const triggerTaskAtom = atom(null, async (get, set) => {
   try {
     await triggerDataSyncTask(selectedId);
     await set(refreshPageAtom);
+    await set(refreshActiveSchedulerJobsAtom);
   } catch (e) {
     set(errorAtom, e instanceof Error ? e.message : String(e));
   } finally {
