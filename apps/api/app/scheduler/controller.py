@@ -12,6 +12,7 @@ from app.scheduler.schemas import (
     SchedulerJobListResponse,
     SchedulerJobLogPublic,
     SchedulerJobPublic,
+    SchedulerJobTaskPublic,
     SchedulerTaskPublic,
     TriggerSchedulerTaskRequest,
     UpdateSchedulerTaskRequest,
@@ -54,8 +55,51 @@ def _task_to_public(row: SchedulerTaskRow) -> SchedulerTaskPublic:
     return SchedulerTaskPublic.model_validate(row, from_attributes=True)
 
 
-def _job_to_public(row: SchedulerJobRow) -> SchedulerJobPublic:
-    return SchedulerJobPublic.model_validate(row, from_attributes=True)
+def _task_to_job_task_public(task: SchedulerTaskRow) -> SchedulerJobTaskPublic:
+    return SchedulerJobTaskPublic(
+        id=task.id,
+        name=task.name,
+        task_type=task.task_type,
+        enabled=task.enabled,
+    )
+
+
+def _job_to_public(
+    row: SchedulerJobRow, *, task: SchedulerTaskRow | None = None
+) -> SchedulerJobPublic:
+    return SchedulerJobPublic(
+        id=row.id,
+        task=_task_to_job_task_public(task) if task is not None else None,
+        task_type=row.task_type if task is None else None,
+        trigger_type=row.trigger_type,
+        status=row.status,
+        attempt=row.attempt,
+        max_retries=row.max_retries,
+        queued_at=row.queued_at,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+        next_run_at=row.next_run_at,
+        dedupe_key=row.dedupe_key,
+        worker_id=row.worker_id,
+        timeout_seconds=row.timeout_seconds,
+        payload=row.payload,
+        result=row.result,
+        last_error=row.last_error,
+    )
+
+
+def _job_row_to_public(row: SchedulerJobRow) -> SchedulerJobPublic:
+    linked_task = SchedulerRegistry.get_task(row.task_id) if row.task_id else None
+    return _job_to_public(row, task=linked_task)
+
+
+def _job_rows_to_public(rows: list[SchedulerJobRow]) -> list[SchedulerJobPublic]:
+    task_ids = [row.task_id for row in rows if row.task_id]
+    tasks_by_id = SchedulerRegistry.get_tasks_by_ids(task_ids)
+    return [
+        _job_to_public(row, task=tasks_by_id.get(row.task_id) if row.task_id else None)
+        for row in rows
+    ]
 
 
 def _log_to_public(row: SchedulerJobLogRow) -> SchedulerJobLogPublic:
@@ -181,7 +225,7 @@ def enqueue_job(
             task_id=task_id, dedupe_key=dedupe_key
         )
         if existing is not None:
-            return _job_to_public(existing)
+            return _job_row_to_public(existing)
 
     row = SchedulerRegistry.create_job(
         SchedulerJobRow(
@@ -201,7 +245,7 @@ def enqueue_job(
     )
 
     _append_job_log(row.id, "queued", message=f"job queued by {trigger_type}")
-    job = _job_to_public(row)
+    job = _job_to_public(row, task=task)
     _emit_job_event(job)
     return job
 
@@ -221,7 +265,7 @@ def enqueue_oneoff_job(
             task_type=task_type, dedupe_key=dedupe_key
         )
         if existing is not None:
-            return _job_to_public(existing)
+            return _job_row_to_public(existing)
 
     row = SchedulerRegistry.create_job(
         SchedulerJobRow(
@@ -241,7 +285,7 @@ def enqueue_oneoff_job(
     )
 
     _append_job_log(row.id, "queued", message=f"one-off job queued by {trigger_type}")
-    job = _job_to_public(row)
+    job = _job_row_to_public(row)
     _emit_job_event(job)
     return job
 
@@ -270,7 +314,7 @@ def list_jobs(
         limit=page_size,
     )
     return SchedulerJobListResponse(
-        items=[_job_to_public(r) for r in rows],
+        items=_job_rows_to_public(rows),
         total=total,
         page=page,
         page_size=page_size,
@@ -289,7 +333,7 @@ def claim_next_job(worker_id: str) -> SchedulerJobPublic | None:
         return None
 
     _append_job_log(running_row.id, "running", message=f"claimed by worker {worker_id}")
-    job = _job_to_public(running_row)
+    job = _job_row_to_public(running_row)
     _emit_job_event(job)
     return job
 
@@ -310,12 +354,12 @@ def mark_job_succeeded(job_id: str, result_payload: object) -> SchedulerJobPubli
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
     if row.status == "cancelled":
-        return _job_to_public(row)
+        return _job_row_to_public(row)
     row.status = "succeeded"
     row.finished_at = now
     row.result = result_payload
     row.last_error = None
-    result = _job_to_public(SchedulerRegistry.save_job(row))
+    result = _job_row_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "succeeded")
     _emit_job_event(result)
     return result
@@ -327,7 +371,7 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
     if row.status == "cancelled":
-        return _job_to_public(row)
+        return _job_row_to_public(row)
 
     row.last_error = error_message
     if row.attempt <= row.max_retries:
@@ -337,7 +381,7 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
     else:
         row.status = "failed"
         row.finished_at = now
-    result = _job_to_public(SchedulerRegistry.save_job(row))
+    result = _job_row_to_public(SchedulerRegistry.save_job(row))
 
     if result.status == "retrying":
         _append_job_log(
@@ -362,11 +406,11 @@ def cancel_job(job_id: str) -> SchedulerJobPublic:
     if row is None:
         raise SchedulerJobNotFoundError(f"任务实例不存在: {job_id}")
     if row.status in {"succeeded", "failed", "cancelled"}:
-        return _job_to_public(row)
+        return _job_row_to_public(row)
     was_running = row.status == "running"
     row.status = "cancelled"
     row.finished_at = utcnow()
-    result = _job_to_public(SchedulerRegistry.save_job(row))
+    result = _job_row_to_public(SchedulerRegistry.save_job(row))
     _append_job_log(job_id, "cancelled")
     _emit_job_event(result)
     if was_running:

@@ -19,7 +19,6 @@ from app.data_sync.schemas import (
 from app.datasource.registry import DataSourceItemsRegistry
 from app.scheduler import controller as scheduler_controller
 from app.scheduler.models import SchedulerTaskRow
-from app.scheduler.schemas import SchedulerJobPublic
 from app.scheduler.utils import next_cron_time, normalize_cron_expr, utcnow, validate_cron_expr
 
 
@@ -165,7 +164,7 @@ def list_jobs(
         page_size=page_size,
     )
     return DataSyncJobListResponse(
-        items=[SchedulerJobPublic.model_validate(r, from_attributes=True) for r in rows],
+        items=scheduler_controller._job_rows_to_public(rows),
         total=total,
         page=page,
         page_size=page_size,

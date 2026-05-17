@@ -52,10 +52,17 @@ class TriggerSchedulerTaskRequest(BaseModel):
     dedupe_key: str | None = Field(default=None, max_length=120)
 
 
+class SchedulerJobTaskPublic(BaseModel):
+    id: str
+    name: str
+    task_type: str
+    enabled: bool
+
+
 class SchedulerJobPublic(BaseModel):
     id: str
-    task_id: str | None = None
-    task_type: str
+    task: SchedulerJobTaskPublic | None = None
+    task_type: str | None = None
     trigger_type: SchedulerTriggerType
     status: SchedulerJobStatus
     attempt: int

@@ -9,13 +9,13 @@ import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
 import { eventBus, type EventHandler } from '@/api/events';
-import type { SchedulerActiveJob } from '@/api/scheduler';
-import type { SchedulerJobPublic, SchedulerJobStatus, SchedulerTaskPublic } from '@/models/scheduler/dto';
+import { schedulerJobTaskType, type SchedulerJobPublic, type SchedulerJobStatus } from '@/models/scheduler/jobs/dto';
 import {
   activeSchedulerJobsAtom,
   applySchedulerJobEventAtom,
   applySchedulerTaskEventAtom,
-} from '@/models/scheduler/active-jobs.atom';
+} from '@/models/scheduler/jobs/active.atom';
+import type { SchedulerTaskPublic } from '@/models/scheduler/tasks/dto';
 import { cn } from '@/lib/utils';
 
 const STATUS_LABEL: Record<SchedulerJobStatus, string> = {
@@ -31,17 +31,17 @@ function isSchedulerPath(pathname: string): boolean {
   return pathname === '/scheduler' || pathname.startsWith('/scheduler/');
 }
 
-function jobLabel(job: SchedulerActiveJob): string {
-  const name = job.taskName ?? job.task_type;
+function jobLabel(job: SchedulerJobPublic): string {
+  const name = job.task?.name ?? schedulerJobTaskType(job);
   return `${name} · ${STATUS_LABEL[job.status]}`;
 }
 
-function summaryLabel(jobs: SchedulerActiveJob[]): string {
+function summaryLabel(jobs: SchedulerJobPublic[]): string {
   if (jobs.length === 1) return jobLabel(jobs[0]);
   return `${jobs.length} 个任务进行中`;
 }
 
-function tooltipContent(jobs: SchedulerActiveJob[]): string {
+function tooltipContent(jobs: SchedulerJobPublic[]): string {
   return jobs.map((job) => jobLabel(job)).join('\n');
 }
 

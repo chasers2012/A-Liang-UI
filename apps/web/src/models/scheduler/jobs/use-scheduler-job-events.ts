@@ -3,14 +3,10 @@ import { useCallback, useEffect, useRef } from 'react';
 import { CONNECTION, eventBus } from '@/api/events';
 
 /**
- * Subscribe scheduler page state to SSE events.
- *
- * Replaces the previous 3s polling: when ``scheduler.job.updated`` or
- * ``scheduler.task.updated`` arrives we coalesce within a short window and
- * issue a single ``refresh()``. The same refresh is fired on SSE reconnect
- * to re-align after a drop.
+ * Subscribe job list to ``scheduler.job.updated`` SSE events (debounced).
+ * Also refreshes on SSE reconnect after the initial connection.
  */
-export function useSchedulerEvents(refresh: () => Promise<unknown> | void, debounceMs = 200) {
+export function useSchedulerJobEvents(refresh: () => void | Promise<unknown>, debounceMs = 200) {
   const timerRef = useRef<number | null>(null);
 
   const scheduleRefresh = useCallback(() => {
@@ -23,13 +19,11 @@ export function useSchedulerEvents(refresh: () => Promise<unknown> | void, debou
 
   useEffect(() => {
     const offJob = eventBus.on('scheduler.job.updated', scheduleRefresh);
-    const offTask = eventBus.on('scheduler.task.updated', scheduleRefresh);
     const offConnected = eventBus.on(CONNECTION.CONNECTED, (connectCount: number) => {
       if (connectCount > 1) scheduleRefresh();
     });
     return () => {
       offJob();
-      offTask();
       offConnected();
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);

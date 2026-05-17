@@ -47,6 +47,16 @@ class SchedulerRegistry:
             return session.get(SchedulerTaskRow, task_id)
 
     @classmethod
+    def get_tasks_by_ids(cls, task_ids: list[str]) -> dict[str, SchedulerTaskRow]:
+        if not task_ids:
+            return {}
+        unique_ids = list(dict.fromkeys(task_ids))
+        with get_session() as session:
+            stmt = select(SchedulerTaskRow).where(SchedulerTaskRow.id.in_(unique_ids))
+            rows = session.exec(stmt).all()
+            return {row.id: row for row in rows}
+
+    @classmethod
     def save_task(cls, row: SchedulerTaskRow) -> SchedulerTaskRow:
         with get_session() as session:
             session.add(row)

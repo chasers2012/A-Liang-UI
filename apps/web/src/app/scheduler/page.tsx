@@ -19,14 +19,16 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   cancelSchedulerJobAtom,
-  deleteSchedulerTaskAtom,
-  refreshSchedulerPageAtom,
-  schedulerPageAtom,
+  schedulerBusyJobIdAtom,
+  schedulerJobActionErrorAtom,
+  schedulerJobLimitAtom,
+  schedulerJobPageAtom,
+  schedulerJobsListAtoms,
   setSchedulerJobPageAtom,
-  toggleSchedulerTaskEnabledAtom,
-  triggerSchedulerTaskAtom,
-} from '@/models/scheduler/list-detail.atom';
-import { useSchedulerEvents } from '@/models/scheduler/use-scheduler-events';
+} from '@/models/scheduler/jobs/list.atom';
+import { schedulerActiveJobsAtoms } from '@/models/scheduler/jobs/active.atom';
+import { schedulerJobTaskId } from '@/models/scheduler/jobs/dto';
+import { useSchedulerJobEvents } from '@/models/scheduler/jobs/use-scheduler-job-events';
 
 function toLocalTime(v: string | null): string {
   if (!v) return '-';
@@ -36,29 +38,33 @@ function toLocalTime(v: string | null): string {
 }
 
 export default function SchedulerPage() {
-  const { tasks, jobs, loading, error, busyTaskId, busyJobId, jobLimit, jobPage, jobTotal } =
-    useAtomValue(schedulerPageAtom);
-  const refreshAll = useSetAtom(refreshSchedulerPageAtom);
+  const jobsData = useAtomValue(schedulerJobsListAtoms.valueAtom);
+  const jobsLoading = useAtomValue(schedulerJobsListAtoms.loadingAtom);
+  const jobFetchError = useAtomValue(schedulerJobsListAtoms.errorAtom);
+  const jobActionError = useAtomValue(schedulerJobActionErrorAtom);
+  const busyJobId = useAtomValue(schedulerBusyJobIdAtom);
+  const jobLimit = useAtomValue(schedulerJobLimitAtom);
+  const jobPage = useAtomValue(schedulerJobPageAtom);
+
+  const refreshJobs = useSetAtom(schedulerJobsListAtoms.refreshAtom);
+  const refreshActiveJobs = useSetAtom(schedulerActiveJobsAtoms.refreshAtom);
   const setJobPage = useSetAtom(setSchedulerJobPageAtom);
-  const triggerTask = useSetAtom(triggerSchedulerTaskAtom);
-  const toggleTaskEnabled = useSetAtom(toggleSchedulerTaskEnabledAtom);
-  const deleteTask = useSetAtom(deleteSchedulerTaskAtom);
   const cancelJob = useSetAtom(cancelSchedulerJobAtom);
 
+  const jobError = jobActionError ?? jobFetchError;
+  const jobs = jobsData.jobs;
+  const jobTotal = jobsData.total;
+
   useEffect(() => {
-    void refreshAll();
-  }, [refreshAll]);
+    void refreshJobs();
+    void refreshActiveJobs();
+  }, [refreshActiveJobs, refreshJobs]);
 
-  useSchedulerEvents(refreshAll);
+  useSchedulerJobEvents(() => {
+    void refreshJobs();
+    void refreshActiveJobs();
+  });
 
-  const sortedTasks = useMemo(
-    () =>
-      tasks
-        .slice()
-        .sort((a, b) => a.created_at.localeCompare(b.created_at))
-        .reverse(),
-    [tasks],
-  );
   const pageSize = useMemo(() => {
     const parsed = Number(jobLimit);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
@@ -89,81 +95,13 @@ export default function SchedulerPage() {
   }, [jobPage, totalPages]);
 
   return (
-    <Page title="任务调度" description="管理 scheduler 任务，支持手动触发、Cron 定时与作业状态查询。">
-      {error ? (
+    <Page title="任务调度" description="查看与管理 scheduler 作业状态（排队、运行、取消等）。">
+      {jobError ? (
         <Alert variant="destructive">
-          <AlertTitle>操作失败</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertTitle>作业操作失败</AlertTitle>
+          <AlertDescription>{jobError}</AlertDescription>
         </Alert>
       ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>任务列表</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading && !sortedTasks.length ? (
-            <p className="p-6 text-sm text-muted-foreground">加载中...</p>
-          ) : !sortedTasks.length ? (
-            <p className="p-6 text-sm text-muted-foreground">暂无任务。</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Cron</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead>Next Run</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedTasks.map((task) => {
-                  const isBusy = busyTaskId === task.id;
-                  return (
-                    <TableRow key={task.id}>
-                      <TableCell className="font-medium">{task.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{task.task_type}</TableCell>
-                      <TableCell className="font-mono text-xs">{task.cron_expr || '-'}</TableCell>
-                      <TableCell>{task.enabled ? 'yes' : 'no'}</TableCell>
-                      <TableCell>{toLocalTime(task.next_run_at)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isBusy}
-                            onClick={() => void triggerTask(task.id)}
-                          >
-                            触发
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={isBusy}
-                            onClick={() => void toggleTaskEnabled({ taskId: task.id, enabled: task.enabled })}
-                          >
-                            {task.enabled ? '停用' : '启用'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            disabled={isBusy}
-                            onClick={() => void deleteTask(task.id)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -171,7 +109,7 @@ export default function SchedulerPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-end gap-2">
-            <Button type="button" variant="outline" onClick={() => void refreshAll()} disabled={loading}>
+            <Button type="button" variant="outline" onClick={() => void refreshJobs()} disabled={jobsLoading}>
               刷新
             </Button>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
@@ -180,13 +118,13 @@ export default function SchedulerPage() {
                   <PaginationItem>
                     <PaginationPrevious
                       href="#"
-                      aria-disabled={!canPrevPage || loading}
-                      className={!canPrevPage || loading ? 'pointer-events-none opacity-50' : undefined}
+                      aria-disabled={!canPrevPage || jobsLoading}
+                      className={!canPrevPage || jobsLoading ? 'pointer-events-none opacity-50' : undefined}
                       onClick={(e) => {
                         e.preventDefault();
-                        if (!canPrevPage || loading) return;
+                        if (!canPrevPage || jobsLoading) return;
                         setJobPage(jobPage - 1);
-                        void refreshAll();
+                        void refreshJobs();
                       }}
                     />
                   </PaginationItem>
@@ -202,9 +140,9 @@ export default function SchedulerPage() {
                           isActive={item === jobPage}
                           onClick={(e) => {
                             e.preventDefault();
-                            if (item === jobPage || loading) return;
+                            if (item === jobPage || jobsLoading) return;
                             setJobPage(item);
-                            void refreshAll();
+                            void refreshJobs();
                           }}
                         >
                           {item}
@@ -215,13 +153,13 @@ export default function SchedulerPage() {
                   <PaginationItem>
                     <PaginationNext
                       href="#"
-                      aria-disabled={!canNextPage || loading}
-                      className={!canNextPage || loading ? 'pointer-events-none opacity-50' : undefined}
+                      aria-disabled={!canNextPage || jobsLoading}
+                      className={!canNextPage || jobsLoading ? 'pointer-events-none opacity-50' : undefined}
                       onClick={(e) => {
                         e.preventDefault();
-                        if (!canNextPage || loading) return;
+                        if (!canNextPage || jobsLoading) return;
                         setJobPage(jobPage + 1);
-                        void refreshAll();
+                        void refreshJobs();
                       }}
                     />
                   </PaginationItem>
@@ -233,7 +171,9 @@ export default function SchedulerPage() {
             </div>
           </div>
 
-          {!jobs.length ? (
+          {jobsLoading && !jobs.length ? (
+            <p className="text-sm text-muted-foreground">加载中...</p>
+          ) : !jobs.length ? (
             <p className="text-sm text-muted-foreground">暂无作业。</p>
           ) : (
             <div className="overflow-x-auto">
@@ -255,7 +195,7 @@ export default function SchedulerPage() {
                     return (
                       <TableRow key={job.id}>
                         <TableCell className="font-mono text-xs">{job.id}</TableCell>
-                        <TableCell className="font-mono text-xs">{job.task_id ?? '-'}</TableCell>
+                        <TableCell className="font-mono text-xs">{schedulerJobTaskId(job) ?? '-'}</TableCell>
                         <TableCell>{job.status}</TableCell>
                         <TableCell>{job.trigger_type}</TableCell>
                         <TableCell>
