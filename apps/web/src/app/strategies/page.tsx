@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { toWorkflowNodeTypes } from '@/components/workflow-graph';
+import { useHydrated } from '@/lib/use-hydrated';
 import {
   refreshStrategyNodeTypesAtom,
   strategiesListAtoms,
@@ -28,20 +30,16 @@ import {
 
 import { StrategyDetailPanel } from './ui/strategy-detail-panel';
 
-function getEmptyText(error: string | null, itemCount: number): string {
-  if (error) return '策略列表加载失败。';
-  if (itemCount === 0) return '暂无策略。请使用上方「新增策略」创建。';
-  return '没有符合当前筛选条件的策略。';
-}
-
 function StrategiesPageContent() {
   useAtom(strategiesListRefreshOnMountEffectAtom);
 
+  const hydrated = useHydrated();
   const searchParams = useSearchParams();
   const router = useRouter();
   const urlInitDone = useRef(false);
 
   const items = useAtomValue(strategiesListAtoms.valueAtom);
+  const listLoading = useAtomValue(strategiesListAtoms.loadingAtom);
   const error = useAtomValue(strategiesListAtoms.errorAtom);
   const refreshList = useSetAtom(strategiesListAtoms.refreshAtom);
   const refreshNodeTypes = useSetAtom(refreshStrategyNodeTypesAtom);
@@ -109,15 +107,25 @@ function StrategiesPageContent() {
     }
   }, [selectedId, isEditing, router]);
 
-  const strategiesSearchListLoading = items == null && !error;
-  const strategiesSearchListNotice = strategiesSearchListLoading ? '加载中…' : getEmptyText(error, items?.length ?? 0);
+  const strategiesSearchListPending = !hydrated || (listLoading && !error);
+  const strategiesSearchListEmpty = resolveAsyncListEmptyState({
+    loading: strategiesSearchListPending,
+    error: error ? '策略列表加载失败。' : null,
+    itemCount: items?.length ?? 0,
+    emptyTitle: '暂无策略',
+    emptyDescription: '请使用上方「新增策略」创建。',
+    filterEmptyDescription: '没有符合当前筛选条件的策略。',
+  });
+  const strategiesSearchListItems = strategiesSearchListPending
+    ? null
+    : (items?.map((s) => ({ ...s, category: '策略' })) ?? null);
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
       <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
         <SearchList
           className="h-full min-h-0"
-          items={items?.map((s) => ({ ...s, category: '策略' })) ?? null}
+          items={strategiesSearchListItems}
           getGroupKey={(item) => item.category}
           renderTitle={(item) => item.name}
           renderDescription={(item) => item.description ?? ''}
@@ -136,7 +144,7 @@ function StrategiesPageContent() {
             },
           ]}
         >
-          <p className="p-6 text-sm text-muted-foreground">{strategiesSearchListNotice}</p>
+          <SearchListEmpty {...strategiesSearchListEmpty} />
         </SearchList>
       </CollapsibleSearchListSidebar>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -152,7 +160,7 @@ export default function StrategiesPage() {
       fallback={
         <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
           <PanelDetailCard title={null}>
-            <div className="p-6 text-sm text-muted-foreground">加载中…</div>
+            <SearchListEmpty variant="loading" title="加载中" />
           </PanelDetailCard>
         </Page>
       }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -123,7 +124,7 @@ function CreateDocumentDialog({
                     </div>
                   ))
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">暂无文件</div>
+                  <EmptyState title="暂无文件" description="选择或拖拽文件到上方区域。" compact className="h-full" />
                 )}
               </div>
             </div>
@@ -188,7 +189,7 @@ function DocumentsCard({
       </CardHeader>
       <CardContent className="p-0">
         {!documents.length ? (
-          <p className="p-6 text-sm text-muted-foreground">暂无文档。</p>
+          <EmptyState title="暂无文档" description="点击「新增文档」上传知识库文件。" />
         ) : (
           <div className="space-y-4 p-2">
             {pendingDocuments.length ? (
@@ -237,7 +238,7 @@ function SearchCard({
           </Button>
         </div>
         {!hits.length ? (
-          <p className="text-sm text-muted-foreground">暂无命中结果。</p>
+          <EmptyState title="暂无命中结果" description="输入检索词后点击「检索」。" compact />
         ) : (
           <div className="space-y-2">
             {hits.map((hit, index) => (

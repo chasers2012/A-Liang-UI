@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { listDataSyncJobLogs, listDataSyncJobs } from '@/api/data-sync';
+import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -180,9 +181,9 @@ export function DataSyncRecordsTab() {
       ) : null}
 
       {loading && jobs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">加载中…</p>
+        <EmptyState variant="loading" title="加载中" compact />
       ) : !jobs.length ? (
-        <p className="text-sm text-muted-foreground">暂无同步记录，可点击「触发」执行一次同步。</p>
+        <EmptyState title="暂无同步记录" description="可点击「触发」执行一次同步。" compact />
       ) : (
         <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border/60">
           <Table>
@@ -257,9 +258,9 @@ export function DataSyncRecordsTab() {
                             <div>
                               <p className="mb-1 font-medium text-muted-foreground">运行日志</p>
                               {logsLoadingId === job.id ? (
-                                <p className="text-muted-foreground">加载日志…</p>
+                                <EmptyState variant="loading" title="加载日志" compact className="items-start p-0" />
                               ) : !logs?.length ? (
-                                <p className="text-muted-foreground">暂无日志</p>
+                                <EmptyState title="暂无日志" compact className="items-start p-0" />
                               ) : (
                                 <ul className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-border/50 bg-background p-2">
                                   {logs.map((log) => (

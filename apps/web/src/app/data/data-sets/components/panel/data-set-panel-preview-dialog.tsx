@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { previewDataSetPanel, type DataSetPanelPreviewCsvResponse } from '@/api/data-sets';
 
@@ -144,13 +145,13 @@ export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string
   const table = useMemo(() => (preview ? parseCsvToTable(preview.csv) : null), [preview]);
 
   if (!dataSetId) {
-    return <p className="text-sm text-muted-foreground">从左侧选择一个数据集后可查看预览。</p>;
+    return <PanelPlaceholder title="请选择数据集" description="从左侧选择一个数据集后可查看预览。" />;
   }
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {previewLoading ? (
-        <p className="text-sm text-muted-foreground">加载预处理后的数据中…</p>
+        <EmptyState variant="loading" title="加载中" description="正在加载预处理后的数据…" compact />
       ) : previewError ? (
         <Alert variant="destructive">
           <AlertTitle>预览失败</AlertTitle>
@@ -190,7 +191,7 @@ export function DataSetPanelPreviewTabContent({ dataSetId }: { dataSetId: string
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">暂无预览数据。</p>
+        <EmptyState title="暂无预览数据" compact />
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { useAtomValue, useSetAtom, useStore } from 'jotai';
 
 import { batchDeleteAgentChats, batchUpdateAgentChats } from '@/api/chat';
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -234,10 +235,10 @@ function SessionsTable(props: {
   onToggleSelectOne: (id: string, checked: boolean) => void;
 }) {
   if (props.loading) {
-    return <p className="py-6 text-sm text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" />;
   }
   if (props.items.length === 0) {
-    return <p className="py-6 text-sm text-muted-foreground">{props.emptyText}</p>;
+    return <EmptyState title="暂无会话" description={props.emptyText} />;
   }
   return (
     <Table>

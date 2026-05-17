@@ -1,5 +1,6 @@
 'use client';
 
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -25,7 +26,7 @@ export function resolveBacktestStateView({
   if (!run && !error) {
     return (
       <Page title="回测详情">
-        <p className="text-sm text-muted-foreground">加载中…</p>
+        <EmptyState variant="loading" title="加载中" compact />
       </Page>
     );
   }

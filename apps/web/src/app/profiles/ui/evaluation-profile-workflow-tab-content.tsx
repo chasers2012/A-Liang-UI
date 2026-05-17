@@ -12,6 +12,7 @@ import {
   toWorkflowNodeType,
   toWorkflowNodeTypes,
 } from '@/components/workflow-graph';
+import { SearchListEmpty } from '@/components/empty-state';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 import { nodeTypesAtom, refreshNodeTypesAtom } from '@/models/evaluation-profile/list-detail.atom';
@@ -35,8 +36,6 @@ export function EvaluationProfileWorkflowTabContent(props: {
   const refreshProfileNodes = useSetAtom(refreshNodesByDomainAtomFamily('evaluation-profile'));
   const catalogPending = catalog === null;
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog ?? []), [catalog]);
-
-  const evaluationWorkflowSearchListNotice = nodeTypes.length === 0 ? '暂无可用节点' : '没有符合搜索条件的节点';
 
   if (panelLoading) return null;
 
@@ -71,7 +70,10 @@ export function EvaluationProfileWorkflowTabContent(props: {
             />
           )}
         >
-          <p className="p-6 text-sm text-muted-foreground">{evaluationWorkflowSearchListNotice}</p>
+          <SearchListEmpty
+            title={nodeTypes.length === 0 ? '暂无可用节点' : '无匹配结果'}
+            description={nodeTypes.length === 0 ? undefined : '没有符合搜索条件的节点'}
+          />
         </SearchList>
       ) : null}
       <WorkflowGraphCanvas

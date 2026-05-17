@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import type { DataSourcePublic } from '@/models/datasource/dto';
@@ -51,13 +52,13 @@ export function DataSetDetailTabContent(props: { isEditing: boolean }) {
   if (!dataSetId && !isEditing) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-4">
-        <p className="text-sm text-muted-foreground">从左侧选择一个数据集，或点击「新增数据集」。</p>
+        <PanelPlaceholder title="请选择数据集" description="从左侧选择一个数据集，或点击「新增数据集」。" />
       </div>
     );
   }
 
   if ((isEditing && editorLoading) || (!isEditing && loading)) {
-    return <p className="text-sm text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" compact />;
   }
 
   if (!isEditing && dataSetId && (error || !row)) {

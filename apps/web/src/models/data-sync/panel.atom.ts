@@ -15,7 +15,7 @@ import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 import { schedulerActiveJobsAtoms } from '@/models/scheduler/jobs/active.atom';
 import { schedulerJobsListAtoms } from '@/models/scheduler/jobs/list.atom';
 import {
-  buildListNotice,
+  buildListEmptyState,
   buildSearchListItems,
   buildDatasourceLabelLookup,
   filterTasksBySearch,
@@ -85,8 +85,8 @@ export const selectedTaskAtom = atom((get): DataSyncTaskPublic | undefined => {
   return get(tasksAtom).find((t) => t.id === selectedId);
 });
 
-export const listNoticeAtom = atom((get) =>
-  buildListNotice({
+export const listEmptyStateAtom = atom((get) =>
+  buildListEmptyState({
     error: get(errorAtom),
     loading: get(loadingAtom),
     syncTasksLength: get(tasksAtom).length,

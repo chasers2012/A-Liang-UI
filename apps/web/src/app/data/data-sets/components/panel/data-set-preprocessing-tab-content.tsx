@@ -3,6 +3,7 @@
 import type { RefObject } from 'react';
 import { useAtomValue } from 'jotai';
 
+import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { dataSetsIsEditingAtom } from '@/models/data-set/panel-ui.atom';
 import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
@@ -31,15 +32,15 @@ export function DataSetPreprocessingTabContent(props: {
   const { editorLoading, editorLoadError, formError, form } = useAtomValue(dataSetEditorStateAtom);
 
   if (!isEditing && !idForForm) {
-    return <p className="text-sm text-muted-foreground">从左侧选择一个数据集后可查看预处理工作流。</p>;
+    return <PanelPlaceholder title="请选择数据集" description="从左侧选择一个数据集后可查看预处理工作流。" />;
   }
 
   if (!isEditing && loading) {
-    return <p className="text-sm text-muted-foreground">加载完成后可在此查看预处理工作流。</p>;
+    return <EmptyState variant="loading" title="加载中" description="加载完成后可在此查看预处理工作流。" compact />;
   }
 
   if (isEditing && editorLoading) {
-    return <p className="text-sm text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" compact />;
   }
 
   if (!isEditing && (error || !row)) {

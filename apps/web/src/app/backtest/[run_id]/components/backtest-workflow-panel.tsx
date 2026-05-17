@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { getBacktestNodeOutput } from '@/api/backtests';
+import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { WorkflowGraphCanvas, toWorkflowNodeTypes } from '@/components/workflow-graph';
 import type { WorkflowSocketDefinition } from '@/components/workflow-graph/types';
@@ -93,9 +94,9 @@ export function BacktestWorkflowPanel({
       </div>
       <div className="rounded-md border bg-background p-3">
         {!selectedNode ? (
-          <p className="text-sm text-muted-foreground">请选择一个节点以查看后端保存的输出。</p>
+          <PanelPlaceholder title="请选择节点" description="选择一个节点以查看后端保存的输出。" />
         ) : loadingOutput ? (
-          <p className="text-sm text-muted-foreground">加载节点输出中…</p>
+          <EmptyState variant="loading" title="加载中" description="正在加载节点输出…" compact />
         ) : outputError ? (
           <Alert variant="destructive">
             <AlertTitle>加载失败</AlertTitle>
@@ -115,7 +116,7 @@ export function BacktestWorkflowPanel({
             />
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">该节点暂无已保存输出。</p>
+          <EmptyState title="暂无输出" description="该节点暂无已保存输出。" compact />
         )}
       </div>
     </div>

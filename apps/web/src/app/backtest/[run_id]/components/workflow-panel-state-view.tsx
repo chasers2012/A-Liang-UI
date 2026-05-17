@@ -1,5 +1,6 @@
 'use client';
 
+import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { StrategyDetailPanelData } from '../types';
 
@@ -16,7 +17,9 @@ export function resolveWorkflowPanelStateView({
   strategyNodeCatalog: unknown[] | null;
   strategyNodeCatalogError: string | null;
 }) {
-  if (!strategyId) return <p className="text-sm text-muted-foreground">该回测未关联策略工作流。</p>;
+  if (!strategyId) {
+    return <EmptyState title="无工作流" description="该回测未关联策略工作流。" compact />;
+  }
   if (strategyError) {
     return (
       <Alert variant="destructive">
@@ -25,9 +28,11 @@ export function resolveWorkflowPanelStateView({
       </Alert>
     );
   }
-  if (!strategyDetail) return <p className="text-sm text-muted-foreground">加载工作流中…</p>;
+  if (!strategyDetail) {
+    return <EmptyState variant="loading" title="加载中" description="正在加载工作流…" compact />;
+  }
   if (!strategyNodeCatalog && !strategyNodeCatalogError) {
-    return <p className="text-sm text-muted-foreground">加载节点类型中…</p>;
+    return <EmptyState variant="loading" title="加载中" description="正在加载节点类型…" compact />;
   }
   if (strategyNodeCatalogError) {
     return (

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,7 +29,7 @@ function EvaluationProfileDetailPanelAlerts() {
   const selectedId = useAtomValue(selectedIdAtom);
 
   if (panelLoading) {
-    return <p className="mb-4 text-sm text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" compact className="mb-4 flex-none" />;
   }
 
   if (!isEditing && !selectedId) {

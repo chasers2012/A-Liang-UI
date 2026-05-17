@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
 import { BacktestWorkflowPanel } from './components/backtest-workflow-panel';
@@ -192,7 +193,7 @@ export default function BacktestRunDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">暂无统计数据</p>
+            <EmptyState title="暂无统计数据" compact />
           )}
         </BacktestTabCard>
 
@@ -219,7 +220,7 @@ export default function BacktestRunDetailPage() {
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">暂无交易记录</p>
+            <EmptyState title="暂无交易记录" compact />
           )}
         </BacktestTabCard>
       </Tabs>

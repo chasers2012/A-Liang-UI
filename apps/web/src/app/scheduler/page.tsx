@@ -3,6 +3,7 @@
 import { useEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -172,9 +173,9 @@ export default function SchedulerPage() {
           </div>
 
           {jobsLoading && !jobs.length ? (
-            <p className="text-sm text-muted-foreground">加载中...</p>
+            <EmptyState variant="loading" title="加载中" compact />
           ) : !jobs.length ? (
-            <p className="text-sm text-muted-foreground">暂无作业。</p>
+            <EmptyState title="暂无作业" description="调度器运行后，作业记录将显示在此处。" compact />
           ) : (
             <div className="overflow-x-auto">
               <Table>

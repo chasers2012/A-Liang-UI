@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState, SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -101,7 +102,14 @@ export default function SubagentsPage() {
     [data, effectiveSelectedId],
   );
 
-  const subagentsSearchListNotice = loading ? '正在加载子代理配置...' : error ? `加载失败：${error}` : '暂无子代理配置';
+  const subagentsSearchListEmpty = resolveAsyncListEmptyState({
+    loading,
+    error: error ?? null,
+    itemCount: data?.subagents.length ?? 0,
+    emptyTitle: '暂无子代理配置',
+    emptyDescription: '请先在服务端配置子代理。',
+    loadingTitle: '加载中',
+  });
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -126,15 +134,12 @@ export default function SubagentsPage() {
         selectedId={effectiveSelectedId}
         renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => setSelectedId(item.id)} />}
       >
-        <p className="p-6 text-sm text-muted-foreground">{subagentsSearchListNotice}</p>
+        <SearchListEmpty {...subagentsSearchListEmpty} />
       </SearchList>
 
       <Card className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto p-4">
         {loading ? (
-          <Alert>
-            <AlertTitle>加载中</AlertTitle>
-            <AlertDescription>正在加载子代理配置...</AlertDescription>
-          </Alert>
+          <EmptyState variant="loading" title="加载中" description="正在加载子代理配置…" />
         ) : error ? (
           <Alert variant="destructive">
             <AlertTitle>加载失败</AlertTitle>

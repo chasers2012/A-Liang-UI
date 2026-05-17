@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
@@ -23,7 +24,7 @@ export function NodesNodeDetailPanel() {
   const showStatus = (detailState.loading && selectedId) || (selectedId && detailState.error);
   const status =
     detailState.loading && selectedId ? (
-      <div className="flex min-h-0 flex-1 flex-col">加载中…</div>
+      <EmptyState variant="loading" title="加载中" className="flex min-h-0 flex-1" />
     ) : selectedId && detailState.error ? (
       <div className="flex min-h-0 flex-1 flex-col">
         <Alert variant="destructive">

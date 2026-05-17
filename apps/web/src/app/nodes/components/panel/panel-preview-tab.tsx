@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAtom } from 'jotai';
 import { useAtomValue } from 'jotai';
 
+import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { ParamItem, SocketItem } from '../node-preview-meta';
 import { PreviewDescriptionSection } from '../preview-description-section';
 import { WorkflowStepNodePreview } from '../preview/workflow-step-node-preview';
@@ -114,10 +115,10 @@ function NodeDomainsSection(props: { nodeId: string }) {
   };
 
   if (domainsLoading) {
-    return <p className="text-xs text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" compact className="flex-none p-2" />;
   }
   if (domainRows.length === 0) {
-    return <p className="text-xs text-muted-foreground">暂无领域配置</p>;
+    return <EmptyState title="暂无领域配置" compact className="flex-none p-2" />;
   }
   return (
     <>
@@ -175,10 +176,14 @@ export function PanelPreviewTab() {
   const detail = useAtomValue(nodesVisibleDetailAtom);
   const editable = useAtomValue(nodesEditActiveAtom);
   const [, setEditDescription] = useAtom(nodesEditDescriptionAtom);
-  const placeholder = !selectedId ? '请从左侧选择一个节点。' : '加载中…';
-
   if (!detail) {
-    return <p className="py-8 text-sm text-muted-foreground">{placeholder}</p>;
+    return (
+      <PanelPlaceholder
+        loading={Boolean(selectedId)}
+        title="请选择节点"
+        description={selectedId ? undefined : '请从左侧选择一个节点。'}
+      />
+    );
   }
   const label = detail.name;
   const description = detail.description;

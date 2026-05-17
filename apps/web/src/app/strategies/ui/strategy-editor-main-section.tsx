@@ -15,6 +15,7 @@ import {
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
+import { EmptyState, SearchListEmpty } from '@/components/empty-state';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
@@ -38,12 +39,10 @@ export function StrategyWorkflowEditorBlock(props: {
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
-  const strategyNodesSearchListNotice = nodeTypes.length === 0 ? '暂无策略节点' : '没有符合搜索条件的节点';
-
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col gap-3 overflow-hidden', className)}>
       {loading ? (
-        <p className="text-sm text-muted-foreground">正在加载策略节点…</p>
+        <EmptyState variant="loading" title="加载中" description="正在加载策略节点…" compact />
       ) : (
         <div className="flex min-h-0 flex-1 items-stretch gap-3 overflow-hidden">
           <SearchList
@@ -66,7 +65,10 @@ export function StrategyWorkflowEditorBlock(props: {
               />
             )}
           >
-            <p className="p-6 text-sm text-muted-foreground">{strategyNodesSearchListNotice}</p>
+            <SearchListEmpty
+              title={nodeTypes.length === 0 ? '暂无策略节点' : '无匹配结果'}
+              description={nodeTypes.length === 0 ? undefined : '没有符合搜索条件的节点'}
+            />
           </SearchList>
           <WorkflowGraphCanvas
             key={canvasKey}

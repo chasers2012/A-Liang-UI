@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -30,12 +31,14 @@ function FactorsListPane() {
   const filteredItems = useAtomValue(filteredFactorsAtom);
   const browseState = useAtomValue(factorsBrowseStateAtom);
 
-  const factorsSearchListNotice = (() => {
-    if (listError) return '因子列表加载失败。';
-    if (listItems == null) return '加载中…';
-    if (listItems.length === 0) return '暂无因子。请使用右上角「新增因子」创建。';
-    return '没有符合当前筛选条件的因子。';
-  })();
+  const factorsSearchListEmpty = resolveAsyncListEmptyState({
+    loading: listItems == null,
+    error: listError ? '因子列表加载失败。' : null,
+    itemCount: listItems?.length ?? 0,
+    emptyTitle: '暂无因子',
+    emptyDescription: '请使用右上角「新增因子」创建。',
+    filterEmptyDescription: '没有符合当前筛选条件的因子。',
+  });
 
   return (
     <CollapsibleSearchListSidebar collapsed={editing} innerWidthClassName="w-[320px]">
@@ -81,7 +84,7 @@ function FactorsListPane() {
           },
         ]}
       >
-        <p className="p-6 text-sm text-muted-foreground">{factorsSearchListNotice}</p>
+        <SearchListEmpty {...factorsSearchListEmpty} />
       </SearchList>
     </CollapsibleSearchListSidebar>
   );

@@ -15,6 +15,7 @@ import {
 } from '@/components/workflow-graph';
 import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 import { NodeSummaryPublic } from '@/models/nodes/dto';
+import { SearchListEmpty } from '@/components/empty-state';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { refreshNodesByDomainAtomFamily } from '@/models/nodes/list-detail.atom';
 
@@ -39,11 +40,11 @@ export function PreprocessingWorkflowEditorBlock(props: {
 
   const nodeTypes = useMemo(() => toWorkflowNodeTypes(catalog), [catalog]);
 
-  const preprocessorSearchListNotice = catalogLoading
-    ? '正在加载预处理器节点…'
+  const preprocessorSearchListEmpty = catalogLoading
+    ? { variant: 'loading' as const, title: '加载中', description: '正在加载预处理器节点…' }
     : nodeTypes.length === 0
-      ? '暂无预处理器节点'
-      : '没有符合搜索条件的节点';
+      ? { title: '暂无预处理器节点' }
+      : { title: '无匹配结果', description: '没有符合搜索条件的节点' };
 
   return (
     <div className={cn('flex h-full min-h-0 flex-1 flex-col gap-3', className)}>
@@ -69,7 +70,7 @@ export function PreprocessingWorkflowEditorBlock(props: {
               />
             )}
           >
-            <p className="p-6 text-sm text-muted-foreground">{preprocessorSearchListNotice}</p>
+            <SearchListEmpty {...preprocessorSearchListEmpty} />
           </SearchList>
         ) : null}
         <WorkflowGraphCanvas

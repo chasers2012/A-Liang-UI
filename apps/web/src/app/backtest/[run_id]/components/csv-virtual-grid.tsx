@@ -12,6 +12,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 import { getBacktestNodeCsvPage } from '@/api/backtests';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DataGrid, DataGridContainer } from '@/components/reui/data-grid/data-grid';
 import { DataGridPagination } from '@/components/reui/data-grid/data-grid-pagination';
@@ -166,7 +167,7 @@ export function CsvVirtualGrid({
   const canShiftRight = normalizedWindowStart + COLUMN_WINDOW_SIZE < totalColumns;
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">加载中…</p>;
+    return <EmptyState variant="loading" title="加载中" compact />;
   }
   if (error) {
     return (
@@ -177,7 +178,7 @@ export function CsvVirtualGrid({
     );
   }
   if (headers.length === 0) {
-    return <p className="text-sm text-muted-foreground">文件为空。</p>;
+    return <EmptyState title="文件为空" compact />;
   }
 
   return (

@@ -3,9 +3,10 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
+import { SearchListEmpty } from '@/components/empty-state';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import {
-  listNoticeAtom,
+  listEmptyStateAtom,
   listSearchQueryAtom,
   loadingAtom,
   searchListItemsAtom,
@@ -23,7 +24,7 @@ export function DataSyncListPane() {
   const loading = useAtomValue(loadingAtom);
   const searchListItems = useAtomValue(searchListItemsAtom);
   const syncTasksCount = useAtomValue(tasksAtom).length;
-  const listNotice = useAtomValue(listNoticeAtom);
+  const listEmptyState = useAtomValue(listEmptyStateAtom);
 
   const onStartCreate = useSetAtom(startCreateAtom);
   const onSelectItem = useSetAtom(selectTaskAtom);
@@ -53,7 +54,7 @@ export function DataSyncListPane() {
         },
       ]}
     >
-      <p className="p-6 text-sm text-muted-foreground">{listNotice}</p>
+      <SearchListEmpty {...listEmptyState} />
     </SearchList>
   );
 }

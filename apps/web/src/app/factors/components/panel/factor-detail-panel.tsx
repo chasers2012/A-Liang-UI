@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
@@ -33,11 +34,7 @@ function FactorDetailStatus() {
   }
 
   if (loading) {
-    return (
-      <Alert>
-        <AlertDescription>详情加载中…</AlertDescription>
-      </Alert>
-    );
+    return <EmptyState variant="loading" title="加载中" description="正在加载因子详情…" compact />;
   }
 
   if (loadError) {

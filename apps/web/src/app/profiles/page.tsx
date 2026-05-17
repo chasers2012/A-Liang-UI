@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -18,11 +19,6 @@ import {
 } from '@/models/evaluation-profile/scope.atom';
 
 import { EvaluationProfileDetailPanel } from './ui/evaluation-profile-detail-panel';
-
-function listEmptyText(itemCount: number): string {
-  if (itemCount === 0) return '暂无评价方案。请使用上方「新增方案」开始配置。';
-  return '没有符合当前筛选条件的评价方案。';
-}
 
 export default function EvaluationProfilesPage() {
   const items = useAtomValue(listAtoms.valueAtom);
@@ -56,10 +52,13 @@ export default function EvaluationProfilesPage() {
 
   const sidebarItems = useMemo(() => items?.map((p) => ({ ...p, category: '评价方案' })) ?? null, [items]);
 
-  const evaluationProfilesSearchListLoading = items == null;
-  const evaluationProfilesSearchListNotice = evaluationProfilesSearchListLoading
-    ? '加载中…'
-    : listEmptyText(items.length);
+  const evaluationProfilesSearchListEmpty = resolveAsyncListEmptyState({
+    loading: items == null,
+    itemCount: items?.length ?? 0,
+    emptyTitle: '暂无评价方案',
+    emptyDescription: '请使用上方「新增方案」开始配置。',
+    filterEmptyDescription: '没有符合当前筛选条件的评价方案。',
+  });
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -85,7 +84,7 @@ export default function EvaluationProfilesPage() {
             },
           ]}
         >
-          <p className="p-6 text-sm text-muted-foreground">{evaluationProfilesSearchListNotice}</p>
+          <SearchListEmpty {...evaluationProfilesSearchListEmpty} />
         </SearchList>
       </CollapsibleSearchListSidebar>
 

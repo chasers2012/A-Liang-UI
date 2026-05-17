@@ -4,6 +4,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -35,11 +36,14 @@ function DatasourceListPanel() {
   const selectItem = useSetAtom(selectDatasourceFromListAtom);
   const startCreate = useSetAtom(startCreateNewDatasourceAtom);
 
-  const datasourceSearchListNotice = (() => {
-    if (listError) return '数据源列表加载失败。';
-    if (listItems == null) return '加载中…';
-    return (count ?? 0) === 0 ? '暂无数据源。请使用上方「新增数据源」开始配置。' : '没有符合当前搜索条件的数据源。';
-  })();
+  const datasourceSearchListEmpty = resolveAsyncListEmptyState({
+    loading: listItems == null,
+    error: listError ? '数据源列表加载失败。' : null,
+    itemCount: count ?? 0,
+    emptyTitle: '暂无数据源',
+    emptyDescription: '请使用上方「新增数据源」开始配置。',
+    filterEmptyDescription: '没有符合当前搜索条件的数据源。',
+  });
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col gap-2">
@@ -72,7 +76,7 @@ function DatasourceListPanel() {
           },
         ]}
       >
-        <p className="p-6 text-sm text-muted-foreground">{datasourceSearchListNotice}</p>
+        <SearchListEmpty {...datasourceSearchListEmpty} />
       </SearchList>
     </div>
   );

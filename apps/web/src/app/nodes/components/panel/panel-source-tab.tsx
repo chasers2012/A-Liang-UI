@@ -3,6 +3,7 @@
 import { useAtom } from 'jotai';
 import { useAtomValue } from 'jotai';
 
+import { PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CodeJar } from '@/components/ui/code-jar';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -20,9 +21,14 @@ export function PanelSourceTab() {
   const editable = useAtomValue(nodesEditActiveAtom);
   const [sourceDraft, setSourceDraft] = useAtom(nodesSourceDraftAtom);
   const saveError = useAtomValue(nodesSaveErrorAtom);
-  const placeholder = !selectedId ? '请从左侧选择一个节点。' : '加载中…';
   if (!detail) {
-    return <p className="py-8 text-sm text-muted-foreground">{placeholder}</p>;
+    return (
+      <PanelPlaceholder
+        loading={Boolean(selectedId)}
+        title="请选择节点"
+        description={selectedId ? undefined : '请从左侧选择一个节点。'}
+      />
+    );
   }
   const canEditSource = editable;
   const codeJarId = `nodes-detail-source-${detail.id}`;

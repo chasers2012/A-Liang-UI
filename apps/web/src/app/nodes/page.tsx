@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -41,11 +42,13 @@ export default function NodesPage() {
     [setSelectedId],
   );
 
-  const nodesSearchListNotice = (() => {
-    if (filteredItems == null) return '加载中…';
-    if ((items?.length ?? 0) === 0) return '暂无节点。请使用上方「新增节点」开始配置。';
-    return '没有符合当前筛选条件的节点。';
-  })();
+  const nodesSearchListEmpty = resolveAsyncListEmptyState({
+    loading: filteredItems == null,
+    itemCount: items?.length ?? 0,
+    emptyTitle: '暂无节点',
+    emptyDescription: '请使用上方「新增节点」开始配置。',
+    filterEmptyDescription: '没有符合当前筛选条件的节点。',
+  });
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -81,7 +84,7 @@ export default function NodesPage() {
             },
           ]}
         >
-          <p className="p-6 text-sm text-muted-foreground">{nodesSearchListNotice}</p>
+          <SearchListEmpty {...nodesSearchListEmpty} />
         </SearchList>
       </CollapsibleSearchListSidebar>
 

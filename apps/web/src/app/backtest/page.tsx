@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -32,9 +33,9 @@ export default function BacktestPage() {
         </CardHeader>
         <CardContent className="p-0">
           {!items ? (
-            <p className="p-6 text-sm text-muted-foreground">加载中…</p>
+            <EmptyState variant="loading" title="加载中" />
           ) : items.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">暂无回测记录。</p>
+            <EmptyState title="暂无回测记录" description="提交回测后，记录将显示在此处。" />
           ) : (
             <Table>
               <TableHeader>

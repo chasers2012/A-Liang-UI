@@ -6,6 +6,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 
 import { ApiError } from '@/api/client';
 import { getConfig, getConfigSpecs, putConfig } from '@/api/config';
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { RjsfStyledForm } from '@/components/rjsf-styled-form';
 import { Button } from '@/components/ui/button';
@@ -112,7 +113,7 @@ export default function AgentConfigPage() {
         ) : null}
 
         {!globalError && specs.length === 0 && !allLoading ? (
-          <p className="text-sm text-muted-foreground">暂无可配置模块。</p>
+          <EmptyState title="暂无可配置模块" description="后端未返回可编辑的配置定义。" compact />
         ) : null}
 
         {specs.map((module) => {

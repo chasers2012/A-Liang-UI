@@ -6,6 +6,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { WorkflowGraphCanvas, toWorkflowNodeTypes, type WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
+import { EmptyState } from '@/components/empty-state';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -105,9 +106,7 @@ function buildStrategyViewPanels(args: {
                 className="flex-1 w-full"
               />
             ) : (
-              <Alert>
-                <AlertDescription>暂无可展示的工作流。</AlertDescription>
-              </Alert>
+              <EmptyState title="暂无工作流" description="暂无可展示的工作流。" compact />
             )
           ) : null}
         </div>
@@ -239,7 +238,7 @@ function StrategyDetailPanelEditor() {
   if (formState.loading || formState.templateLoading) {
     return (
       <PanelDetailCard title={isCreate ? '新增策略' : '编辑策略'}>
-        <p className="text-sm text-muted-foreground">加载中…</p>
+        <EmptyState variant="loading" title="加载中" compact />
       </PanelDetailCard>
     );
   }

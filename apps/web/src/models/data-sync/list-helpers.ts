@@ -1,3 +1,4 @@
+import type { EmptyStateProps } from '@/components/empty-state';
 import type { DataSyncDatasourceRef, DataSyncTaskPublic } from '@/models/data-sync/dto';
 
 import { readPayloadIdList } from './payload';
@@ -66,16 +67,28 @@ export function buildSearchListItems(
   }));
 }
 
-export function buildListNotice(args: {
+export function buildListEmptyState(args: {
   error: string | null;
   loading: boolean;
   syncTasksLength: number;
   filteredCount: number;
-}): string {
+}): EmptyStateProps {
   const { error, loading, syncTasksLength, filteredCount } = args;
-  if (error && !syncTasksLength) return '列表加载失败，请检查网络或重试。';
-  if (loading && !syncTasksLength) return '加载中…';
-  if (syncTasksLength === 0) return '暂无同步任务。点击列表上方「新增」创建。';
-  if (filteredCount === 0) return '没有符合当前搜索条件的任务。';
-  return '';
+  if (error && !syncTasksLength) {
+    return { variant: 'error', title: '加载失败', description: '列表加载失败，请检查网络或重试。' };
+  }
+  if (loading && !syncTasksLength) {
+    return { variant: 'loading', title: '加载中' };
+  }
+  if (syncTasksLength === 0) {
+    return { variant: 'default', title: '暂无同步任务', description: '点击列表上方「新增」创建。' };
+  }
+  if (filteredCount === 0) {
+    return {
+      variant: 'default',
+      title: '无匹配结果',
+      description: '没有符合当前搜索条件的任务。',
+    };
+  }
+  return { variant: 'loading', title: '加载中' };
 }

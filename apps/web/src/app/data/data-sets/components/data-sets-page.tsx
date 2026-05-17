@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
+import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -58,14 +59,14 @@ export function DataSetsPage() {
     [selectDetail],
   );
 
-  const listEmptyMessage =
-    (items?.length ?? 0) === 0 ? '暂无数据集。请使用上方「新增数据集」开始配置。' : '没有符合搜索条件的数据集。';
-
-  const dataSetsSearchListNotice = (() => {
-    if (listError) return '数据集列表加载失败。';
-    if (filteredItems == null) return '加载中…';
-    return listEmptyMessage;
-  })();
+  const dataSetsSearchListEmpty = resolveAsyncListEmptyState({
+    loading: filteredItems == null,
+    error: listError ? '数据集列表加载失败。' : null,
+    itemCount: items?.length ?? 0,
+    emptyTitle: '暂无数据集',
+    emptyDescription: '请使用上方「新增数据集」开始配置。',
+    filterEmptyDescription: '没有符合搜索条件的数据集。',
+  });
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
@@ -107,7 +108,7 @@ export function DataSetsPage() {
               },
             ]}
           >
-            <p className="p-6 text-sm text-muted-foreground">{dataSetsSearchListNotice}</p>
+            <SearchListEmpty {...dataSetsSearchListEmpty} />
           </SearchList>
         </div>
       </CollapsibleSearchListSidebar>

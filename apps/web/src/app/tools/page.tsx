@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import type { ToolRecord } from '@/api/tools';
+import { EmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   refreshToolsAtom,
@@ -113,15 +113,9 @@ export default function ToolsPage() {
       <div className="min-w-0">
         <section className="space-y-4">
           {loading ? (
-            <Alert>
-              <AlertTitle>加载中</AlertTitle>
-              <AlertDescription>正在加载工具列表…</AlertDescription>
-            </Alert>
+            <EmptyState variant="loading" title="加载中" description="正在加载工具列表…" />
           ) : error ? (
-            <Alert variant="destructive">
-              <AlertTitle>加载失败</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+            <EmptyState variant="error" title="加载失败" description={error} />
           ) : categoryGroups.length ? (
             <div className="space-y-4">
               {categoryGroups.map((group) => (
@@ -129,9 +123,7 @@ export default function ToolsPage() {
               ))}
             </div>
           ) : (
-            <Alert>
-              <AlertDescription>暂无</AlertDescription>
-            </Alert>
+            <EmptyState title="暂无工具" description="当前没有可管理的工具权限。" />
           )}
         </section>
       </div>
