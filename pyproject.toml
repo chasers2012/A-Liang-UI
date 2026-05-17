@@ -7,6 +7,7 @@ dependencies = [
     "quant-agent-api",
     "datasource-plugins-builtin",
     "datasource-plugins-baostock",
+    "datasource-plugins-tushare",
     "llm-plugins-builtin",
     "echarts-nodes",
     "common-nodes",
@@ -23,6 +24,7 @@ dependencies = [
 quant-agent-api = { workspace = true }
 datasource-plugins-builtin = { workspace = true }
 datasource-plugins-baostock = { workspace = true }
+datasource-plugins-tushare = { workspace = true }
 llm-plugins-builtin = { workspace = true }
 echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
@@ -38,7 +40,7 @@ custom-code = { workspace = true }
 workflow = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/llm_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
 
 [dependency-groups]
 dev = [
@@ -53,7 +55,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["lib", "apps/api/tests"]
-pythonpath = ["apps/api", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/llm_plugins_builtin"]
+pythonpath = ["apps/api", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin"]
 addopts = ["-ra"]
 
 [tool.ruff]
