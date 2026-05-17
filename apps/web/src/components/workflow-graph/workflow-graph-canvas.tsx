@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Maximize2, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   Background,
@@ -19,6 +19,7 @@ import 'reactflow/dist/style.css';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { WorkflowGraphFitViewButton } from './workflow-graph-fit-view-button';
 
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
@@ -53,7 +54,7 @@ export function WorkflowGraphZoomToolbar(props: {
   refreshingNodeDefinitions?: boolean;
 }) {
   const { readOnly: readOnlyFromProps, onRefreshNodeDefinitions, refreshingNodeDefinitions = false } = props;
-  const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } = useReactFlow();
+  const { zoomIn, zoomOut, getNodes, getEdges, deleteElements } = useReactFlow();
   const { readOnly: readOnlyFromContext } = useWorkflowGraphContext();
   const readOnly = readOnlyFromProps ?? readOnlyFromContext;
   const hasDeletableSelection = useStore(
@@ -128,18 +129,7 @@ export function WorkflowGraphZoomToolbar(props: {
         >
           <Minus className="size-4" />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none"
-          onClick={() => {
-            fitView({ padding: 0.18, duration: 200 });
-          }}
-          aria-label="适应画布"
-        >
-          <Maximize2 className="size-4" />
-        </Button>
+        <WorkflowGraphFitViewButton />
       </div>
     </Panel>
   );

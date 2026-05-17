@@ -13,6 +13,12 @@ export {
   type WorkflowGraphCanvasProps,
 } from './workflow-graph-canvas';
 
+export {
+  WorkflowGraphFitViewButton,
+  WORKFLOW_GRAPH_DEFAULT_FIT_VIEW,
+  type WorkflowGraphFitViewButtonProps,
+} from './workflow-graph-fit-view-button';
+
 export function toWorkflowNodeTypes(catalog: NodeSummaryPublic[]): WorkflowNodeTypeDefinition[] {
   return catalog.map((c) => ({
     id: c.id,

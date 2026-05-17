@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAtom } from 'jotai';
 import { useAtomValue } from 'jotai';
 
 import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { ParamItem, SocketItem } from '../node-preview-meta';
 import { PreviewDescriptionSection } from '../preview-description-section';
 import { WorkflowStepNodePreview } from '../preview/workflow-step-node-preview';
-import type { WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
+import type { NodeDetailPublic, WorkflowDomainNodeVisibilityPublic } from '@/models/nodes/dto';
 import { isWireInputSpec } from '@/components/workflow-graph/workflow-node-input-spec';
 import { SectionHeader } from '@/components/section';
 import { mergePreviewParamModels } from './shared';
@@ -27,6 +28,9 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from '@/components/ui/combobox';
+
+/** 右侧详情 panel 宽度低于此值时，改为纵向平铺（预览在上、单滚动区域） */
+const PANEL_PREVIEW_NARROW_WIDTH_PX = 768;
 
 const domainComboboxInputClassName = 'text-sm placeholder:text-muted-foreground';
 const domainChipClassName = 'text-xs';
@@ -171,11 +175,102 @@ function NodeDomainsSection(props: { nodeId: string }) {
   );
 }
 
+type PanelPreviewMetadataSectionsProps = {
+  detail: NodeDetailPublic;
+  editable: boolean;
+  description: string | null | undefined;
+  onDescriptionChange: (value: string) => void;
+};
+
+function PanelPreviewMetadataSections(props: PanelPreviewMetadataSectionsProps) {
+  const { detail, editable, description, onDescriptionChange } = props;
+  const wireInputs = detail.inputs.filter(isWireInputSpec);
+  const mergedParamModels = mergePreviewParamModels(detail);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionHeader>可用领域</SectionHeader>
+      <NodeDomainsSection nodeId={detail.id} />
+      <SectionHeader>节点简介</SectionHeader>
+      <PreviewDescriptionSection
+        readonly={!editable}
+        description={description}
+        onDescriptionChange={onDescriptionChange}
+      />
+      <SectionHeader>输入接口</SectionHeader>
+      {wireInputs.length === 0 ? (
+        <p className="text-xs text-muted-foreground">无</p>
+      ) : (
+        <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
+          {wireInputs.map((s) => (
+            <SocketItem key={s.name} socket={s} />
+          ))}
+        </ul>
+      )}
+      <SectionHeader>输出接口</SectionHeader>
+      {detail.outputs.length === 0 ? (
+        <p className="text-xs text-muted-foreground">无</p>
+      ) : (
+        <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
+          {detail.outputs.map((s) => (
+            <SocketItem key={s.name} socket={s} />
+          ))}
+        </ul>
+      )}
+      <SectionHeader>节点参数</SectionHeader>
+      {mergedParamModels.length === 0 ? (
+        <p className="text-xs text-muted-foreground">无</p>
+      ) : (
+        <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
+          {mergedParamModels.map((p) => (
+            <ParamItem key={p.key} item={p} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+type PanelPreviewNodeCanvasProps = {
+  detail: NodeDetailPublic;
+  label: string;
+  description: string | null | undefined;
+  className?: string;
+};
+
+function PanelPreviewNodeCanvas(props: PanelPreviewNodeCanvasProps) {
+  const { detail, label, description, className } = props;
+  return (
+    <WorkflowStepNodePreview
+      label={label}
+      description={description}
+      inputs={detail.inputs}
+      outputs={detail.outputs}
+      params={{}}
+      selected
+      className={className}
+    />
+  );
+}
+
 export function PanelPreviewTab() {
   const [selectedId] = useAtom(nodesSelectedIdAtom);
   const detail = useAtomValue(nodesVisibleDetailAtom);
   const editable = useAtomValue(nodesEditActiveAtom);
   const [, setEditDescription] = useAtom(nodesEditDescriptionAtom);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setIsNarrow(el.clientWidth < PANEL_PREVIEW_NARROW_WIDTH_PX);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [detail]);
+
   if (!detail) {
     return (
       <PanelPlaceholder
@@ -187,62 +282,50 @@ export function PanelPreviewTab() {
   }
   const label = detail.name;
   const description = detail.description;
-  const wireInputs = detail.inputs.filter(isWireInputSpec);
-  const mergedParamModels = mergePreviewParamModels(detail);
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 pb-2 pt-2 lg:flex-row lg:items-stretch lg:gap-8">
-      <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
-        <SectionHeader>可用领域</SectionHeader>
-        <NodeDomainsSection nodeId={detail.id} />
-        <SectionHeader>节点简介</SectionHeader>
-        <PreviewDescriptionSection
-          readonly={!editable}
-          description={description}
-          onDescriptionChange={(v) => setEditDescription(v)}
-        />
-        <SectionHeader>输入接口</SectionHeader>
-        {wireInputs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">无</p>
-        ) : (
-          <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
-            {wireInputs.map((s) => (
-              <SocketItem key={s.name} socket={s} />
-            ))}
-          </ul>
-        )}
-        <SectionHeader>输出接口</SectionHeader>
-        {detail.outputs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">无</p>
-        ) : (
-          <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
-            {detail.outputs.map((s) => (
-              <SocketItem key={s.name} socket={s} />
-            ))}
-          </ul>
-        )}
-        <SectionHeader>节点参数</SectionHeader>
-        {mergedParamModels.length === 0 ? (
-          <p className="text-xs text-muted-foreground">无</p>
-        ) : (
-          <ul className="flex list-none flex-col gap-2.5 p-0 text-sm">
-            {mergedParamModels.map((p) => (
-              <ParamItem key={p.key} item={p} />
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="flex w-[500px] max-w-[500px] flex-col">
-        <WorkflowStepNodePreview
-          label={label}
-          description={description}
-          inputs={detail.inputs}
-          outputs={detail.outputs}
-          params={{}}
-          selected
-          className="h-full min-h-[280px] flex-1 max-lg:min-h-[min(400px,55vh)]"
-        />
-      </div>
+    <div ref={containerRef} className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {isNarrow ? (
+        <div className="min-h-0 flex-1 overflow-y-auto pb-2 pt-2">
+          <div className="flex flex-col gap-6 pr-1">
+            <PanelPreviewNodeCanvas
+              detail={detail}
+              label={label}
+              description={description}
+              className="min-h-[min(400px,55vh)] w-full shrink-0"
+            />
+            <PanelPreviewMetadataSections
+              detail={detail}
+              editable={editable}
+              description={description}
+              onDescriptionChange={(v) => setEditDescription(v)}
+            />
+          </div>
+        </div>
+      ) : (
+        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1 pb-2 pt-2">
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0 min-w-0">
+            <div className="flex h-full min-h-0 flex-col overflow-y-auto pr-2">
+              <PanelPreviewMetadataSections
+                detail={detail}
+                editable={editable}
+                description={description}
+                onDescriptionChange={(v) => setEditDescription(v)}
+              />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle className="mx-1" />
+          <ResizablePanel defaultSize="50%" minSize="25%" className="min-h-0 min-w-0">
+            <div className="flex h-full min-h-0 flex-col">
+              <PanelPreviewNodeCanvas
+                detail={detail}
+                label={label}
+                description={description}
+                className="h-full min-h-[200px] flex-1"
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </div>
   );
 }

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type WheelEvent } from 'react';
 import {
   Background,
   BackgroundVariant,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useNodesInitialized,
@@ -13,8 +14,8 @@ import {
   type Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
 import { cn } from '@/lib/utils';
+import { WorkflowGraphFitViewButton } from '@/components/workflow-graph/workflow-graph-fit-view-button';
 import { WorkflowGraphContextProvider } from '@/components/workflow-graph/workflow-graph-context';
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
@@ -32,6 +33,31 @@ const PREVIEW_FIT_VIEW: FitViewOptions = {
   includeHiddenNodes: false,
   nodes: [{ id: PREVIEW_NODE_ID }],
 };
+
+function findScrollableAncestor(start: HTMLElement | null): HTMLElement | null {
+  let el = start?.parentElement ?? null;
+  while (el) {
+    const { overflowY, overflowX } = getComputedStyle(el);
+    const canScrollY =
+      (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') &&
+      el.scrollHeight > el.clientHeight + 1;
+    const canScrollX =
+      (overflowX === 'auto' || overflowX === 'scroll' || overflowX === 'overlay') &&
+      el.scrollWidth > el.clientWidth + 1;
+    if (canScrollY || canScrollX) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function handlePreviewWheelCapture(event: WheelEvent<HTMLDivElement>) {
+  const scrollParent = findScrollableAncestor(event.currentTarget);
+  if (!scrollParent) return;
+  if (event.deltaY !== 0) scrollParent.scrollTop += event.deltaY;
+  if (event.deltaX !== 0) scrollParent.scrollLeft += event.deltaX;
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 export type WorkflowStepNodePreviewProps = {
   label: string;
@@ -59,6 +85,19 @@ function PreviewFitViewOnReady({ fitKey }: { fitKey: string }) {
     };
   }, [fitView, fitKey, nodesInitialized]);
   return null;
+}
+
+function PreviewFitViewToolbar() {
+  return (
+    <Panel position="bottom-left" className="m-3!">
+      <div
+        data-slot="workflow-graph-zoom"
+        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md"
+      >
+        <WorkflowGraphFitViewButton fitViewOptions={PREVIEW_FIT_VIEW} />
+      </div>
+    </Panel>
+  );
 }
 
 function Flow(props: WorkflowStepNodePreviewProps) {
@@ -104,11 +143,12 @@ function Flow(props: WorkflowStepNodePreviewProps) {
       zoomOnPinch={false}
       panOnDrag={false}
       panOnScroll={false}
-      preventScrolling
+      preventScrolling={false}
       proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
       className="h-full min-h-0 w-full bg-transparent!"
     >
       <PreviewFitViewOnReady fitKey={fitKey} />
+      <PreviewFitViewToolbar />
       <Background
         id="workflow-node-preview-bg"
         gap={22}
@@ -126,8 +166,10 @@ export function WorkflowStepNodePreview(props: WorkflowStepNodePreviewProps) {
     <div
       className={cn(
         'workflow-step-node-preview relative h-[min(400px,55vh)] w-full min-h-[200px] overflow-hidden rounded-lg border border-dashed border-border/60 bg-muted/15',
+        '[&_.react-flow__pane]:pointer-events-none [&_.react-flow__panel]:pointer-events-auto',
         className,
       )}
+      onWheelCapture={handlePreviewWheelCapture}
     >
       <ReactFlowProvider>
         <WorkflowGraphContextProvider readOnly>

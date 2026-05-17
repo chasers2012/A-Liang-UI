@@ -53,7 +53,6 @@ export const managedSessionsAsyncAtom = atom(async (get): Promise<ManagedSession
 export const managedSessionsAtom = toAsyncValueStateAtom(managedSessionsAsyncAtom);
 
 export const refreshManagedSessionsAtom = atom(null, (_get, set) => {
-  console.log('refresh');
   set(chatSessionsAtoms.refreshAtom);
   set(archivedSessionsAtoms.refreshAtom);
 });
