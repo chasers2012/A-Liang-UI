@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { CONNECTION, eventBus } from '@/events';
+import { CONNECTION, eventBus } from '@/api/events';
 
 /**
  * Subscribe knowledge page state to SSE events.

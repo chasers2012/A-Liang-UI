@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { CONNECTION, eventBus } from '@/events';
+import { CONNECTION, eventBus } from '@/api/events';
 
 /**
  * Subscribe the backtests list to SSE events.

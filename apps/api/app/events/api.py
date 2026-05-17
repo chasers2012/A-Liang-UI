@@ -28,7 +28,7 @@ async def stream_events(request: Request) -> EventSourceResponse:
     """SSE stream that broadcasts every business event.
 
     Wire format: ``event:`` = topic, ``data:`` = JSON-serialized
-    :class:`EventEnvelope` so browser ``EventSource`` can dispatch by topic.
+    :class:`EventEnvelope` (id, ts, data). Browser ``EventSource`` dispatches by ``event``.
     """
 
     async def event_generator():
@@ -36,13 +36,13 @@ async def stream_events(request: Request) -> EventSourceResponse:
         # the first business event (sse-starlette ping sleeps 15s before its first send).
         yield {"comment": "connected"}
 
-        async for envelope in event_bus.subscribe():
+        async for message in event_bus.subscribe():
             if await request.is_disconnected():
                 break
             yield {
-                "event": envelope.topic,
-                "id": str(envelope.id),
-                "data": envelope.model_dump_json(),
+                "event": message.topic,
+                "id": str(message.envelope.id),
+                "data": message.envelope.model_dump_json(),
             }
 
     return EventSourceResponse(

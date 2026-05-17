@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
-import { eventBus, type EventHandler } from '@/events';
+import { eventBus, type EventHandler } from '@/api/events';
 import type { SchedulerActiveJob } from '@/api/scheduler';
 import type { SchedulerJobPublic, SchedulerJobStatus, SchedulerTaskPublic } from '@/models/scheduler/dto';
 import {

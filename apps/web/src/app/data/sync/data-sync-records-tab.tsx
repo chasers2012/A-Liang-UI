@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
-import { CONNECTION, eventBus, type EventHandler } from '@/events';
+import { CONNECTION, eventBus, type EventHandler } from '@/api/events';
 import type { DataSyncJobLogPublic, DataSyncJobPublic, DataSyncJobStatus } from '@/models/data-sync/dto';
 import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';

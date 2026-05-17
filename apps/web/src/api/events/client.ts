@@ -1,4 +1,4 @@
-﻿import { getQuantAgentApiBase } from '@/api/client';
+import { getQuantAgentApiBase } from '@/api/client';
 
 export type EventHandler<T = unknown> = (data: T) => void;
 
@@ -12,7 +12,6 @@ export const CONNECTION = {
 /** SSE wire payload (``app.events.schemas.EventEnvelope``); only used when parsing. */
 interface WireEnvelope {
   id: number;
-  topic: string;
   ts: string;
   data: unknown;
 }

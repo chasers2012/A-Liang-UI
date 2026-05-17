@@ -14,9 +14,15 @@ import asyncio
 import itertools
 import logging
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, NamedTuple
 
 from .schemas import EventEnvelope
+
+
+class BusMessage(NamedTuple):
+    topic: str
+    envelope: EventEnvelope
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +31,7 @@ _QUEUE_MAXSIZE = 1024
 
 class EventBus:
     def __init__(self) -> None:
-        self._subscribers: set[asyncio.Queue[EventEnvelope]] = set()
+        self._subscribers: set[asyncio.Queue[BusMessage]] = set()
         self._lock = asyncio.Lock()
         self._id_seq = itertools.count(1)
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -34,13 +40,13 @@ class EventBus:
         """Remember the main asyncio loop so threads can publish into it."""
         self._loop = loop
 
-    async def subscribe(self) -> AsyncIterator[EventEnvelope]:
+    async def subscribe(self) -> AsyncIterator[BusMessage]:
         """Async iterator yielding every event for this subscriber.
 
         Caller is responsible for breaking out of the loop on client
         disconnect; the queue is cleaned up via ``finally``.
         """
-        queue: asyncio.Queue[EventEnvelope] = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
+        queue: asyncio.Queue[BusMessage] = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
         async with self._lock:
             self._subscribers.add(queue)
         try:
@@ -53,18 +59,21 @@ class EventBus:
 
     async def publish(self, topic: str, data: dict[str, Any]) -> None:
         """Publish an event from the asyncio loop."""
-        envelope = EventEnvelope(id=next(self._id_seq), topic=topic, data=data)
+        message = BusMessage(
+            topic=topic,
+            envelope=EventEnvelope(id=next(self._id_seq), data=data),
+        )
         # Snapshot subscribers under lock; drop on slow consumers (full queue).
         async with self._lock:
             subscribers = list(self._subscribers)
         for queue in subscribers:
             try:
-                queue.put_nowait(envelope)
+                queue.put_nowait(message)
             except asyncio.QueueFull:
                 logger.warning(
                     "event bus subscriber queue full, dropping event topic=%s id=%s",
                     topic,
-                    envelope.id,
+                    message.envelope.id,
                 )
 
     def publish_threadsafe(self, topic: str, data: dict[str, Any]) -> None:

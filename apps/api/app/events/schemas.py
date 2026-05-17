@@ -13,14 +13,8 @@ def _now() -> datetime:
 
 
 class EventEnvelope(BaseModel):
-    """SSE wire payload.
-
-    On the wire we use ``event:`` to carry ``topic`` and ``data:`` to carry
-    the JSON-serialized envelope so the browser ``EventSource`` can dispatch
-    by topic via ``addEventListener(topic, ...)``.
-    """
+    """SSE ``data:`` JSON payload (topic is sent separately as ``event:``)."""
 
     id: int
-    topic: str
     ts: datetime = Field(default_factory=_now)
     data: dict[str, Any]
