@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/pagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
-import { eventBus, useEventReconnect, type EventEnvelope } from '@/events';
+import { CONNECTION, eventBus, type EventHandler } from '@/events';
 import type { DataSyncJobLogPublic, DataSyncJobPublic, DataSyncJobStatus } from '@/models/data-sync/dto';
 import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
@@ -129,27 +129,24 @@ export function DataSyncRecordsTab() {
 
   useEffect(() => {
     if (!active || !taskId) return;
-    const onJob = (envelope: EventEnvelope<SchedulerJobEventPayload>) => {
-      const payload = envelope.data;
+    const onJob: EventHandler<SchedulerJobEventPayload> = (payload) => {
       if (payload.task_type !== DATASOURCE_SYNC_TASK_TYPE) return;
       if (payload.task_id !== taskId) return;
       scheduleRecordsRefresh();
     };
-    const off = eventBus.on('scheduler.job.updated', onJob);
+    const offTopic = eventBus.on('scheduler.job.updated', onJob);
+    const offConnected = eventBus.on(CONNECTION.CONNECTED, (connectCount: number) => {
+      if (connectCount > 1) scheduleRecordsRefresh();
+    });
     return () => {
-      off();
+      offTopic();
+      offConnected();
       if (refreshTimerRef.current !== null) {
         window.clearTimeout(refreshTimerRef.current);
         refreshTimerRef.current = null;
       }
     };
   }, [active, taskId, scheduleRecordsRefresh]);
-
-  useEventReconnect(
-    useCallback(() => {
-      if (active && taskId) scheduleRecordsRefresh();
-    }, [active, taskId, scheduleRecordsRefresh]),
-  );
 
   const toggleLogs = async (jobId: string) => {
     if (expandedJobId === jobId) {

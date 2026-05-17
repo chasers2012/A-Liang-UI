@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSidebar } from '@/components/ui/sidebar';
-import { eventBus, type EventEnvelope } from '@/events';
+import { eventBus, type EventHandler } from '@/events';
 import type { SchedulerActiveJob } from '@/api/scheduler';
 import type { SchedulerJobPublic, SchedulerJobStatus, SchedulerTaskPublic } from '@/models/scheduler/dto';
 import {
@@ -57,11 +57,11 @@ export function SchedulerActiveJobsPoller() {
   useEffect(() => {
     if (onSchedulerPage) return;
 
-    const onJobUpdated = (envelope: EventEnvelope<SchedulerJobPublic>) => {
-      applyJob(envelope.data);
+    const onJobUpdated: EventHandler<SchedulerJobPublic> = (data) => {
+      applyJob(data);
     };
-    const onTaskUpdated = (envelope: EventEnvelope<SchedulerTaskPublic & { deleted?: boolean }>) => {
-      applyTask(envelope.data);
+    const onTaskUpdated: EventHandler<SchedulerTaskPublic & { deleted?: boolean }> = (data) => {
+      applyTask(data);
     };
 
     const offJob = eventBus.on('scheduler.job.updated', onJobUpdated);

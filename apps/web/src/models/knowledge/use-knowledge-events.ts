@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { eventBus, useEventReconnect } from '@/events';
+import { CONNECTION, eventBus } from '@/events';
 
 /**
  * Subscribe knowledge page state to SSE events.
@@ -20,19 +20,17 @@ export function useKnowledgeEvents(refresh: () => Promise<unknown> | void, debou
   }, [debounceMs, refresh]);
 
   useEffect(() => {
-    const off = eventBus.on('knowledge.document.updated', scheduleRefresh);
+    const offTopic = eventBus.on('knowledge.document.updated', scheduleRefresh);
+    const offConnected = eventBus.on(CONNECTION.CONNECTED, (connectCount: number) => {
+      if (connectCount > 1) scheduleRefresh();
+    });
     return () => {
-      off();
+      offTopic();
+      offConnected();
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
   }, [scheduleRefresh]);
-
-  useEventReconnect(
-    useCallback(() => {
-      scheduleRefresh();
-    }, [scheduleRefresh]),
-  );
 }

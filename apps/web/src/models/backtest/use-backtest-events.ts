@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { eventBus, useEventReconnect } from '@/events';
+import { CONNECTION, eventBus } from '@/events';
 
 /**
  * Subscribe the backtests list to SSE events.
@@ -20,19 +20,17 @@ export function useBacktestEvents(refresh: () => Promise<unknown> | void, deboun
   }, [debounceMs, refresh]);
 
   useEffect(() => {
-    const off = eventBus.on('backtest.run.updated', scheduleRefresh);
+    const offTopic = eventBus.on('backtest.run.updated', scheduleRefresh);
+    const offConnected = eventBus.on(CONNECTION.CONNECTED, (connectCount: number) => {
+      if (connectCount > 1) scheduleRefresh();
+    });
     return () => {
-      off();
+      offTopic();
+      offConnected();
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
   }, [scheduleRefresh]);
-
-  useEventReconnect(
-    useCallback(() => {
-      scheduleRefresh();
-    }, [scheduleRefresh]),
-  );
 }

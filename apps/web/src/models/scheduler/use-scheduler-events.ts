@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 
-import { eventBus, useEventReconnect } from '@/events';
+import { CONNECTION, eventBus } from '@/events';
 
 /**
  * Subscribe scheduler page state to SSE events.
@@ -24,19 +24,17 @@ export function useSchedulerEvents(refresh: () => Promise<unknown> | void, debou
   useEffect(() => {
     const offJob = eventBus.on('scheduler.job.updated', scheduleRefresh);
     const offTask = eventBus.on('scheduler.task.updated', scheduleRefresh);
+    const offConnected = eventBus.on(CONNECTION.CONNECTED, (connectCount: number) => {
+      if (connectCount > 1) scheduleRefresh();
+    });
     return () => {
       offJob();
       offTask();
+      offConnected();
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
   }, [scheduleRefresh]);
-
-  useEventReconnect(
-    useCallback(() => {
-      scheduleRefresh();
-    }, [scheduleRefresh]),
-  );
 }

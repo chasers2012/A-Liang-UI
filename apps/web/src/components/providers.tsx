@@ -6,7 +6,6 @@ import { Provider } from 'jotai';
 import { ThemeProvider } from 'next-themes';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { EventBusProvider } from '@/events';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -14,12 +13,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <IncremarkShadcnThemeProvider>
         <TooltipProvider delay={200}>
           <Provider>
-            <EventBusProvider>
-              <div className="sr-only" aria-hidden="true">
-                <MarkdownWarmup />
-              </div>
-              {children}
-            </EventBusProvider>
+            <div className="sr-only" aria-hidden="true">
+              <MarkdownWarmup />
+            </div>
+            {children}
           </Provider>
         </TooltipProvider>
       </IncremarkShadcnThemeProvider>
