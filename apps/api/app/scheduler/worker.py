@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from app.scheduler.exceptions import JobCancelledError
 from app.scheduler.handlers import run_task_handler
+from app.scheduler.schemas import scheduler_job_task_id, scheduler_job_task_type
 from app.startup_jobs import register_startup_job
 
 from . import controller, execution
@@ -47,9 +48,9 @@ def run_worker_loop(
             effective_payload: dict = dict(job.payload or {})
             effective_payload["_scheduler"] = {
                 "job_id": job.id,
-                "task_id": job.task_id,
+                "task_id": scheduler_job_task_id(job),
             }
-            task_type = job.task_type
+            task_type = scheduler_job_task_type(job)
             payload = effective_payload
             result = execution.run_job(
                 job.id,

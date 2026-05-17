@@ -59,6 +59,18 @@ class SchedulerJobTaskPublic(BaseModel):
     enabled: bool
 
 
+def scheduler_job_task_id(job: SchedulerJobPublic) -> str | None:
+    return job.task.id if job.task is not None else None
+
+
+def scheduler_job_task_type(job: SchedulerJobPublic) -> str:
+    if job.task is not None:
+        return job.task.task_type
+    if job.task_type is not None:
+        return job.task_type
+    raise ValueError(f"scheduler job {job.id} has no task_type")
+
+
 class SchedulerJobPublic(BaseModel):
     id: str
     task: SchedulerJobTaskPublic | None = None

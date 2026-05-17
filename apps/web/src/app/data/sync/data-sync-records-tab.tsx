@@ -17,17 +17,17 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/reui/badge';
 import { CONNECTION, eventBus, type EventHandler } from '@/api/events';
-import type { DataSyncJobLogPublic, DataSyncJobPublic, DataSyncJobStatus } from '@/models/data-sync/dto';
+import {
+  DATASOURCE_SYNC_TASK_TYPE,
+  type DataSyncJobLogPublic,
+  type DataSyncJobPublic,
+  type DataSyncJobStatus,
+} from '@/models/data-sync/dto';
+import { schedulerJobTaskId, schedulerJobTaskType, type SchedulerJobPublic } from '@/models/scheduler/jobs/dto';
 import { panelActiveTabAtom, recordsRefreshEpochAtom, selectedIdAtom } from '@/models/data-sync/panel.atom';
 import { cn } from '@/lib/utils';
 
-const DATASOURCE_SYNC_TASK_TYPE = 'datasource.sync';
 const EVENT_REFRESH_DEBOUNCE_MS = 200;
-
-type SchedulerJobEventPayload = {
-  task_id?: string | null;
-  task_type?: string;
-};
 
 const PAGE_SIZE = 20;
 
@@ -129,9 +129,9 @@ export function DataSyncRecordsTab() {
 
   useEffect(() => {
     if (!active || !taskId) return;
-    const onJob: EventHandler<SchedulerJobEventPayload> = (payload) => {
-      if (payload.task_type !== DATASOURCE_SYNC_TASK_TYPE) return;
-      if (payload.task_id !== taskId) return;
+    const onJob: EventHandler<SchedulerJobPublic> = (payload) => {
+      if (schedulerJobTaskType(payload) !== DATASOURCE_SYNC_TASK_TYPE) return;
+      if (schedulerJobTaskId(payload) !== taskId) return;
       scheduleRecordsRefresh();
     };
     const offTopic = eventBus.on('scheduler.job.updated', onJob);
