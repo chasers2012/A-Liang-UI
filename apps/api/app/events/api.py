@@ -2,25 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from fastapi import APIRouter, Request
 from sse_starlette.sse import EventSourceResponse
-
-from app.startup_jobs import register_startup_job
 
 from .bus import event_bus
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["events"])
-
-
-@register_startup_job
-async def _attach_event_loop() -> None:
-    """Capture the running loop so worker threads can publish into it."""
-    event_bus.attach_loop(asyncio.get_running_loop())
 
 
 @router.get("/events")
