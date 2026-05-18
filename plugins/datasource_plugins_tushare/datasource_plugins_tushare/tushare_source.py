@@ -115,6 +115,9 @@ class TushareDataSource(DataSource):
             )
         )
 
+    def write_data(self, df: pd.DataFrame) -> int:
+        raise NotImplementedError("Tushare 数据源为只读，不支持写入")
+
 
 class TushareDataSourceSpec(DataSourceSpec):
     def __init__(self) -> None:

@@ -219,9 +219,6 @@ class SqlDataSource(DataSource):
         cols = [str(c) for c in cols if c]
         return sorted(set(cols), key=lambda x: (x.lower(), x))
 
-    def list_sync_target_physical_columns(self) -> list[str]:
-        return self.list_columns()
-
     def _load_existing_sync_keys(self) -> pd.DataFrame:
         key_cols = _sql_sync_key_columns(
             date_column=self._date_column,
@@ -233,7 +230,7 @@ class SqlDataSource(DataSource):
         with self._engine.connect() as cx:
             return pd.read_sql(text(sql), cx)
 
-    def write_sync_dataframe(self, df: pd.DataFrame) -> int:
+    def write_data(self, df: pd.DataFrame) -> int:
         if df.empty:
             return 0
         if not self._write_enabled:

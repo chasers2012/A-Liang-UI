@@ -113,6 +113,9 @@ class BaoStockDataSource(DataSource):
             )
         )
 
+    def write_data(self, df: pd.DataFrame) -> int:
+        raise NotImplementedError("BaoStock 数据源为只读，不支持写入")
+
 
 class BaoStockDataSourceSpec(DataSourceSpec):
     def __init__(self) -> None:

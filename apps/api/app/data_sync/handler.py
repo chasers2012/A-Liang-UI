@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pandas as pd
+from data_source import DataSource
 from workflow import WorkflowExecutor
 
 from app.data_sync.schemas import (
@@ -64,7 +65,7 @@ def _frames_by_target_from_workflow(
 
 def _write_sync_to_targets(
     frames_by_target: dict[str, pd.DataFrame],
-    targets: list[tuple[str, Any]],
+    targets: list[tuple[str, DataSource]],
 ) -> tuple[list[DataSyncTargetWriteResult], int]:
     rows_written_by_target: list[DataSyncTargetWriteResult] = []
     rows_written = 0
@@ -76,7 +77,7 @@ def _write_sync_to_targets(
                 f"目标 {target_id} 的同步结果缺少日期列 {date_col!r}（来自目标自身配置），"
                 "无法推断同步进度；请在 sync_workflow 中保留该列"
             )
-        n = inst.write_sync_dataframe(df_out)
+        n = inst.write_data(df_out)
         rows_written_by_target.append(
             DataSyncTargetWriteResult(target_datasource_id=target_id, rows_written=n)
         )

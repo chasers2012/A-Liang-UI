@@ -62,3 +62,8 @@ class DataSource(ABC):
     ) -> pd.DataFrame:
         """读取一个普通 DataFrame（不设 index，不做列重命名）。"""
         raise NotImplementedError
+
+    @abstractmethod
+    def write_data(self, df: pd.DataFrame) -> int:
+        """将 DataFrame 写入数据源，返回实际写入的行数。"""
+        raise NotImplementedError

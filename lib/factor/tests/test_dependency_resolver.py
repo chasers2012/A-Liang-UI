@@ -36,6 +36,9 @@ class _FixedSource(DataSource):
     def asset_column(self) -> str | None:
         return self._asset_column
 
+    def write_data(self, df: pd.DataFrame) -> int:
+        raise NotImplementedError
+
     def load_frame(
         self,
         *,

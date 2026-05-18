@@ -361,9 +361,6 @@ class CsvDataSource(DataSource):
         cols = [str(c) for c in header.columns]
         return sorted(set(cols), key=lambda x: (x.lower(), x))
 
-    def list_sync_target_physical_columns(self) -> list[str]:
-        return self.list_columns()
-
     def _load_existing_sync_keys(self, path: Path) -> pd.DataFrame:
         key_cols = _csv_sync_key_columns(
             date_column=self._date_column,
@@ -378,7 +375,7 @@ class CsvDataSource(DataSource):
             return pd.DataFrame(columns=key_cols)
         return pd.read_csv(path, usecols=usecols, encoding=_CSV_ENCODING)
 
-    def write_sync_dataframe(self, df: pd.DataFrame) -> int:
+    def write_data(self, df: pd.DataFrame) -> int:
         if df.empty:
             return 0
         if not self._write_enabled:
