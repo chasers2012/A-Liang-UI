@@ -3,17 +3,8 @@ from __future__ import annotations
 import baostock as bs
 import pandas as pd
 
+from ._catalog import LoaderSpec
 from ._utils import extract_code_dates
-
-API_NAME = "query_sz50_stocks"
-ASSET_COLUMN: str | None = "code"
-TIME_COLUMN: str = "date"
-FIXED_COLUMNS = ["date", "code", "code_name"]
-json_schema = {
-    "type": "object",
-    "properties": {},
-    "required": [],
-}
 
 
 def load_frame(
@@ -35,12 +26,12 @@ def load_frame(
     return rs.get_data()
 
 
-LOADER_SPEC: dict[str, object] = {
-    "key": API_NAME,
-    "label": "上证50成分股",
-    "loader": load_frame,
-    "config": json_schema,
-    "columns": FIXED_COLUMNS,
-    "asset_column": ASSET_COLUMN,
-    "date_column": TIME_COLUMN,
-}
+LOADER_SPEC = LoaderSpec(
+    key="query_sz50_stocks",
+    label="上证50成分股",
+    loader=load_frame,
+    config={"type": "object", "properties": {}, "required": []},
+    columns=["date", "code", "code_name"],
+    asset_column="code",
+    date_column="date",
+)

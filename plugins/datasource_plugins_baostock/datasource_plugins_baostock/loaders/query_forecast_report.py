@@ -4,21 +4,8 @@ import baostock as bs
 import pandas as pd
 from tqdm import tqdm
 
+from ._catalog import LoaderSpec
 from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
-
-API_NAME = "query_forecast_report"
-ASSET_COLUMN: str | None = "code"
-TIME_COLUMN: str = "profitForcastExpPubDate"
-FIXED_COLUMNS = [
-    "code",
-    "profitForcastExpPubDate",
-    "profitForcastExpStatDate",
-    "profitForcastType",
-    "profitForcastAbstract",
-    "profitForcastChgPctUp",
-    "profitForcastChgPctDwn",
-]
-json_schema = {"type": "object", "properties": {}, "required": []}
 
 
 def load_frame(
@@ -50,12 +37,20 @@ def load_frame(
     return pd.DataFrame(columns=effective_cols) if effective_cols else pd.DataFrame()
 
 
-LOADER_SPEC: dict[str, object] = {
-    "key": API_NAME,
-    "label": "季频公司业绩预告",
-    "loader": load_frame,
-    "config": json_schema,
-    "columns": FIXED_COLUMNS,
-    "asset_column": ASSET_COLUMN,
-    "date_column": TIME_COLUMN,
-}
+LOADER_SPEC = LoaderSpec(
+    key="query_forecast_report",
+    label="季频公司业绩预告",
+    loader=load_frame,
+    config={"type": "object", "properties": {}, "required": []},
+    columns=[
+        "code",
+        "profitForcastExpPubDate",
+        "profitForcastExpStatDate",
+        "profitForcastType",
+        "profitForcastAbstract",
+        "profitForcastChgPctUp",
+        "profitForcastChgPctDwn",
+    ],
+    asset_column="code",
+    date_column="profitForcastExpPubDate",
+)

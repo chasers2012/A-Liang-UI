@@ -4,24 +4,8 @@ import baostock as bs
 import pandas as pd
 from tqdm import tqdm
 
+from ._catalog import LoaderSpec
 from ._utils import as_dataframe, extract_code_dates, quarter_range, resolve_target_codes
-
-API_NAME = "query_cash_flow_data"
-ASSET_COLUMN: str | None = "code"
-TIME_COLUMN: str = "pubDate"
-FIXED_COLUMNS = [
-    "code",
-    "pubDate",
-    "statDate",
-    "CAToAsset",
-    "NCAToAsset",
-    "tangibleAssetToAsset",
-    "ebitToInterest",
-    "CFOToOR",
-    "CFOToNP",
-    "CFOToGr",
-]
-json_schema = {"type": "object", "properties": {}, "required": []}
 
 
 def load_frame(
@@ -57,12 +41,23 @@ def load_frame(
     return pd.DataFrame(columns=effective_cols) if effective_cols else pd.DataFrame()
 
 
-LOADER_SPEC: dict[str, object] = {
-    "key": API_NAME,
-    "label": "季频现金流量",
-    "loader": load_frame,
-    "config": json_schema,
-    "columns": FIXED_COLUMNS,
-    "asset_column": ASSET_COLUMN,
-    "date_column": TIME_COLUMN,
-}
+LOADER_SPEC = LoaderSpec(
+    key="query_cash_flow_data",
+    label="季频现金流量",
+    loader=load_frame,
+    config={"type": "object", "properties": {}, "required": []},
+    columns=[
+        "code",
+        "pubDate",
+        "statDate",
+        "CAToAsset",
+        "NCAToAsset",
+        "tangibleAssetToAsset",
+        "ebitToInterest",
+        "CFOToOR",
+        "CFOToNP",
+        "CFOToGr",
+    ],
+    asset_column="code",
+    date_column="pubDate",
+)

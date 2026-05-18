@@ -4,36 +4,12 @@ import baostock as bs
 import pandas as pd
 from tqdm import tqdm
 
+from ._catalog import LoaderSpec
 from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
-
-API_NAME = "query_dividend_data"
-ASSET_COLUMN: str | None = "code"
-TIME_COLUMN: str = "dividOperateDate"
-FIXED_COLUMNS = [
-    "code",
-    "dividPreNoticeDate",
-    "dividAgmPumDate",
-    "dividPlanAnnounceDate",
-    "dividPlanDate",
-    "dividRegistDate",
-    "dividOperateDate",
-    "dividPayDate",
-    "dividStockMarketDate",
-    "dividCashPsBeforeTax",
-    "dividCashPsAfterTax",
-    "dividStocksPs",
-    "dividCashStock",
-    "dividReserveToStockPs",
-]
-json_schema = {
-    "type": "object",
-    "properties": {},
-    "required": [],
-}
 
 
 def _infer_query_years(start_date: str | None, end_date: str | None) -> list[int | None]:
-    if not start_date and not end_date:
+    if not start_date and (not end_date):
         return [None]
     start_year = pd.Timestamp(start_date).year if start_date else None
     end_year = pd.Timestamp(end_date).year if end_date else None
@@ -42,7 +18,7 @@ def _infer_query_years(start_date: str | None, end_date: str | None) -> list[int
     if end_year is None:
         return [start_year]
     if start_year > end_year:
-        start_year, end_year = end_year, start_year
+        start_year, end_year = (end_year, start_year)
     return list(range(start_year, end_year + 1))
 
 
@@ -82,12 +58,27 @@ def load_frame(
     return pd.DataFrame(columns=effective_cols) if effective_cols else pd.DataFrame()
 
 
-LOADER_SPEC: dict[str, object] = {
-    "key": API_NAME,
-    "label": "除权除息信息",
-    "loader": load_frame,
-    "config": json_schema,
-    "columns": FIXED_COLUMNS,
-    "asset_column": ASSET_COLUMN,
-    "date_column": TIME_COLUMN,
-}
+LOADER_SPEC = LoaderSpec(
+    key="query_dividend_data",
+    label="除权除息信息",
+    loader=load_frame,
+    config={"type": "object", "properties": {}, "required": []},
+    columns=[
+        "code",
+        "dividPreNoticeDate",
+        "dividAgmPumDate",
+        "dividPlanAnnounceDate",
+        "dividPlanDate",
+        "dividRegistDate",
+        "dividOperateDate",
+        "dividPayDate",
+        "dividStockMarketDate",
+        "dividCashPsBeforeTax",
+        "dividCashPsAfterTax",
+        "dividStocksPs",
+        "dividCashStock",
+        "dividReserveToStockPs",
+    ],
+    asset_column="code",
+    date_column="dividOperateDate",
+)

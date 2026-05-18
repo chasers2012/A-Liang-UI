@@ -1,9 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
+
+
+@dataclass(frozen=True, slots=True)
+class LoaderSpec:
+    key: str
+    label: str
+    loader: Callable[..., Any]
+    config: dict[str, Any]
+    columns: tuple[str, ...] | list[str]
+    date_column: str
+    asset_column: str | None = None
+    columns_for_config: Callable[..., list[str]] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,7 +44,7 @@ class ApiCatalog:
         return self.default_asset_columns.get(self.default_api_name)
 
 
-def build_api_catalog(api_specs: Iterable[Mapping[str, Any]]) -> ApiCatalog:
+def build_api_catalog(api_specs: Iterable[LoaderSpec]) -> ApiCatalog:
     keys: list[str] = []
     options: list[dict[str, str]] = []
     config_schemas: dict[str, dict[str, Any]] = {}
@@ -41,24 +53,20 @@ def build_api_catalog(api_specs: Iterable[Mapping[str, Any]]) -> ApiCatalog:
     columns_for_config: dict[str, Callable[..., list[str]]] = {}
     default_date_columns: dict[str, str] = {}
     default_asset_columns: dict[str, str | None] = {}
-    for api in api_specs:
-        key = str(api.get("key") or "").strip()
+    for spec in api_specs:
+        key = spec.key.strip()
         if not key:
             continue
-        label = api.get("label")
-        if label:
+        if spec.label:
             keys.append(key)
-            options.append({"const": key, "title": str(label)})
-        config_schemas[key] = dict(api.get("config") or {})
-        loader = api.get("loader")
-        if callable(loader):
-            loaders[key] = loader
-        fixed_columns[key] = tuple(str(c) for c in (api.get("columns") or []))
-        resolver = api.get("columns_for_config")
-        if callable(resolver):
-            columns_for_config[key] = resolver
-        default_date_columns[key] = str(api.get("date_column") or "")
-        asset_raw = api.get("asset_column")
+            options.append({"const": key, "title": spec.label})
+        config_schemas[key] = dict(spec.config)
+        loaders[key] = spec.loader
+        fixed_columns[key] = tuple(str(c) for c in spec.columns)
+        if spec.columns_for_config is not None:
+            columns_for_config[key] = spec.columns_for_config
+        default_date_columns[key] = spec.date_column
+        asset_raw = spec.asset_column
         default_asset_columns[key] = (
             (str(asset_raw).strip() or None) if asset_raw is not None else None
         )
