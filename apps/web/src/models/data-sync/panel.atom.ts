@@ -13,6 +13,7 @@ import {
 import { listDatasources } from '@/api/datasources';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import type { DataSourcePublic } from '@/models/datasource/dto';
+import type { DatasourceLabelSnapshot } from '@/models/data-sync/task-form';
 import type { DataSyncTaskPublic } from '@/models/data-sync/dto';
 import { schedulerActiveJobsAtoms } from '@/models/scheduler/jobs/active.atom';
 import { schedulerJobsListAtoms } from '@/models/scheduler/jobs/list.atom';
@@ -299,4 +300,19 @@ export const deleteTaskAtom = atom(null, async (get, set) => {
 export const setDetailTabAtom = atom(null, (get, set, tab: DetailTab) => {
   if (tab === 'records' && get(isEditingAtom) && get(selectedIdAtom) == null) return;
   set(detailActiveTabAtom, tab);
+});
+
+/** 新建 CSV 目标数据源后刷新目录并选中为目标。 */
+export const applyCreatedCsvTargetDatasourceAtom = atom(null, async (_get, set, created: DataSourcePublic) => {
+  const datasources = await listDatasources();
+  set(datasourcesAtom, datasources);
+  const label: DatasourceLabelSnapshot = { name: created.name, type: created.type };
+  set(formAtom, (prev) => {
+    const targetIds = prev.targetIds.includes(created.id) ? prev.targetIds : [...prev.targetIds, created.id];
+    return {
+      ...prev,
+      targetIds,
+      datasourceLabels: { ...prev.datasourceLabels, [created.id]: label },
+    };
+  });
 });

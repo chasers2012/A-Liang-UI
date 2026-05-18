@@ -1,9 +1,11 @@
 'use client';
 
-import { useLayoutEffect, useMemo, useRef, type SetStateAction } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { PlusIcon } from 'lucide-react';
 
 import { PreprocessingWorkflowEditorBlock } from '@/app/data/data-sets/components/panel/preprocessing-workflow-editor-block';
+import { CreateCsvTargetDatasourceDialog } from '@/app/data/sync/create-csv-target-datasource-dialog';
 import { DataSyncCronField } from '@/app/data/sync/data-sync-cron-field';
 import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
 import { EditablePageTitle } from '@/components/editable-page-title';
@@ -41,6 +43,7 @@ import {
   selectedTaskAtom,
   workflowCanvasHandleAtom,
   workflowCanvasKeyAtom,
+  applyCreatedCsvTargetDatasourceAtom,
   deleteTaskAtom,
   enterEditAtom,
   setDetailTabAtom,
@@ -238,8 +241,11 @@ function DataSyncConfigFields() {
   const isEditing = useAtomValue(isEditingAtom);
   const datasources = useAtomValue(datasourcesAtom);
   const [form, setForm] = useAtom(formAtom);
+  const applyCreatedCsvTarget = useSetAtom(applyCreatedCsvTargetDatasourceAtom);
+  const [createCsvTargetOpen, setCreateCsvTargetOpen] = useState(false);
 
   const readOnly = !isEditing;
+  const hasSource = form.sourceIds.some((id) => id.trim().length > 0);
   const targetOptions = useMemo(
     () => targetDatasourceOptions(datasources, form.targetIds, readOnly),
     [datasources, form.targetIds, readOnly],
@@ -276,23 +282,46 @@ function DataSyncConfigFields() {
               }))
             }
           />
-          <DatasourceComboboxField
-            title="目标数据源"
-            required
+          <div className="flex flex-col gap-2">
+            <DatasourceComboboxField
+              title="目标数据源"
+              required
+              datasources={datasources}
+              optionDatasources={targetOptions}
+              labelSnapshots={form.datasourceLabels}
+              emptyLabel="没有可写入的数据源（请在 SQL 或 CSV 数据源中开启写入）"
+              selectedIds={form.targetIds}
+              otherSelectedIds={form.sourceIds}
+              readOnly={readOnly}
+              onChange={(targetIds) =>
+                setForm((prev) => ({
+                  ...prev,
+                  targetIds,
+                  datasourceLabels: patchDatasourceLabels(targetIds, prev.datasourceLabels),
+                }))
+              }
+            />
+            {!readOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                disabled={!hasSource}
+                onClick={() => setCreateCsvTargetOpen(true)}
+              >
+                <PlusIcon className="size-3.5" />
+                新建 CSV 目标（沿用源列名）
+              </Button>
+            ) : null}
+          </div>
+          <CreateCsvTargetDatasourceDialog
+            open={createCsvTargetOpen}
+            sourceIds={form.sourceIds}
             datasources={datasources}
-            optionDatasources={targetOptions}
-            labelSnapshots={form.datasourceLabels}
-            emptyLabel="没有可写入的数据源（请在 SQL 数据源中开启写入）"
-            selectedIds={form.targetIds}
-            otherSelectedIds={form.sourceIds}
-            readOnly={readOnly}
-            onChange={(targetIds) =>
-              setForm((prev) => ({
-                ...prev,
-                targetIds,
-                datasourceLabels: patchDatasourceLabels(targetIds, prev.datasourceLabels),
-              }))
-            }
+            datasourceLabels={form.datasourceLabels}
+            onClose={() => setCreateCsvTargetOpen(false)}
+            onCreated={(created) => void applyCreatedCsvTarget(created)}
           />
           <FieldGroup className="grid gap-4 sm:grid-cols-2">
             <Field className="gap-2">
