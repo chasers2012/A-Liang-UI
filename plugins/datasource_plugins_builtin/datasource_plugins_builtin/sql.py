@@ -1,32 +1,87 @@
 from __future__ import annotations
 
+from contextlib import suppress
+from dataclasses import dataclass
 from typing import Any, Literal
 
-import pandas as pd
+import duckdb
 from app.datasource.plugins import DataSourcePlugin
 from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
-from data_source import DataSource
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import bindparam
-from sqlalchemy.engine import Engine
-from sqlmodel import create_engine, inspect, text
+from pydantic import BaseModel, ConfigDict, model_validator
+
+from ._duckdb_backend import (
+    DatasourceColumnsConfig,
+    DatasourceWriteConfig,
+    DuckDbDataSource,
+    duckdb_load_and_attach,
+    quote_ident,
+)
+
+_REMOTE = "remote"
 
 
-class SqlWriteConfig(BaseModel):
-    """同步写入选项（存于 ``write`` 段）。"""
+@dataclass(frozen=True, slots=True)
+class SqlDriverProfile:
+    """DuckDB ATTACH 驱动描述；新增库类型时在此表追加一条即可。"""
 
-    model_config = ConfigDict(extra="ignore")
+    id: str
+    title: str
+    duckdb_extension: str
+    default_port: int
+    database_dsn_key: str
+    default_schema: str | None = None
+    aliases: frozenset[str] = frozenset()
 
-    write_enabled: bool = False
+
+SQL_DRIVERS: tuple[SqlDriverProfile, ...] = (
+    SqlDriverProfile(
+        id="postgresql",
+        title="PostgreSQL",
+        duckdb_extension="postgres",
+        default_port=5432,
+        database_dsn_key="dbname",
+        default_schema="public",
+        aliases=frozenset({"postgres"}),
+    ),
+    SqlDriverProfile(
+        id="mysql",
+        title="MySQL / MariaDB",
+        duckdb_extension="mysql",
+        default_port=3306,
+        database_dsn_key="database",
+        default_schema=None,
+        aliases=frozenset({"mariadb"}),
+    ),
+)
+
+_DRIVER_BY_KEY: dict[str, SqlDriverProfile] = {
+    key: profile
+    for profile in SQL_DRIVERS
+    for key in (profile.id.lower(), *(a.lower() for a in profile.aliases))
+}
+
+
+def resolve_sql_driver(db_driver: str) -> SqlDriverProfile:
+    profile = _DRIVER_BY_KEY.get((db_driver or "").strip().lower())
+    if profile is None:
+        options = "、".join(p.title for p in SQL_DRIVERS)
+        raise ValueError(f"不支持的 db_driver: {db_driver!r}，可选: {options}")
+    return profile
+
+
+def sql_driver_form_options() -> list[dict[str, str]]:
+    return [{"const": p.id, "title": p.title} for p in SQL_DRIVERS]
+
+
+class SqlWriteConfig(DatasourceWriteConfig):
+    pass
 
 
 class SqlConnectionConfig(BaseModel):
-    """数据库连接与表（存于 ``connection`` 段）。"""
-
     model_config = ConfigDict(extra="ignore")
 
-    db_driver: str = "postgresql"
+    db_driver: str = SQL_DRIVERS[0].id
     db_host: str = ""
     db_port: int | None = None
     db_username: str = ""
@@ -38,277 +93,133 @@ class SqlConnectionConfig(BaseModel):
     def _validate(self) -> SqlConnectionConfig:
         if not self.table.strip():
             raise ValueError("表名不能为空")
-        d = (self.db_driver or "").lower()
         if not self.db_host.strip() or not self.db_name.strip():
             raise ValueError("主机（IP）与数据库名不能为空")
-        if d not in ("postgres", "postgresql", "mysql", "mariadb"):
-            raise ValueError("db_driver 须为 postgresql、mysql 或 mysql/mariadb")
+        profile = resolve_sql_driver(self.db_driver)
+        self.db_driver = profile.id
         return self
 
 
-class SqlColumnsConfig(BaseModel):
-    """日期列、资产列与列缓存（存储 ``columns`` 段）。"""
-
-    model_config = ConfigDict(extra="ignore")
-
-    date_column: str = "date"
-    asset_column: str | None = "asset"
-    columns: list[str] = Field(default_factory=list)
-
-    @model_validator(mode="after")
-    def _validate(self) -> SqlColumnsConfig:
-        date_col = str(self.date_column).strip()
-        if not date_col:
-            raise ValueError("date_column 不能为空")
-        self.date_column = date_col
-        if self.asset_column is not None:
-            asset_col = str(self.asset_column).strip()
-            self.asset_column = asset_col or None
-        self.columns = [str(c).strip() for c in self.columns if str(c).strip()]
-        return self
+class SqlColumnsConfig(DatasourceColumnsConfig):
+    pass
 
 
-def _as_engine(engine: str | Engine) -> Engine:
-    if isinstance(engine, Engine):
-        return engine
-    return create_engine(engine)
+def _dsn_pair(key: str, value: str | int) -> str:
+    if isinstance(value, int):
+        return f"{key}={value}"
+    s = str(value)
+    if s == "":
+        return f"{key}=''"
+    if any(c in s for c in " \t'\\"):
+        escaped = s.replace("\\", "\\\\").replace("'", "\\'")
+        return f"{key}='{escaped}'"
+    return f"{key}={s}"
 
 
-def _quote_ident(engine: Engine, name: str) -> str:
-    prep = engine.dialect.identifier_preparer
-    if "." in name:
-        return ".".join(prep.quote(p) for p in name.split("."))
-    return prep.quote(name)
-
-
-def _nan_to_none_records(df: pd.DataFrame) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    for row in df.replace({pd.NA: None}).to_dict(orient="records"):
-        rec = {k: (None if pd.isna(v) else v) for k, v in row.items()}
-        out.append(rec)
-    return out
-
-
-def _execute_insert_loop(engine: Engine, sql: str, records: list[dict[str, Any]]) -> int:
-    stmt = text(sql)
-    with engine.begin() as cx:
-        for rec in records:
-            cx.execute(stmt, rec)
-    return len(records)
-
-
-def _auth_fragment(username: str, password: str) -> str:
-    from urllib.parse import quote_plus
-
-    if not username and not password:
-        return ""
-    if not username:
-        return f":{quote_plus(password)}@"
-    if not password:
-        return f"{quote_plus(username)}@"
-    return f"{quote_plus(username)}:{quote_plus(password)}@"
-
-
-def build_sqlalchemy_url(cfg: SqlConnectionConfig) -> str:
-    from urllib.parse import quote_plus
-
+def build_duckdb_attach_dsn(cfg: SqlConnectionConfig) -> tuple[str, str]:
+    profile = resolve_sql_driver(cfg.db_driver)
     host = (cfg.db_host or "").strip()
     db_name = (cfg.db_name or "").strip()
+    port = int(cfg.db_port) if cfg.db_port is not None else profile.default_port
+
+    pairs = [_dsn_pair("host", host), _dsn_pair("port", port)]
     user = (cfg.db_username or "").strip()
-    password = cfg.db_password or ""
-    driver = (cfg.db_driver or "postgresql").lower()
-    port = cfg.db_port
-    auth = _auth_fragment(user, password)
-    db_path = quote_plus(db_name)
-
-    if driver in ("postgres", "postgresql"):
-        p = int(port) if port is not None else 5432
-        return f"postgresql+psycopg://{auth}{host}:{p}/{db_path}"
-    if driver in ("mysql", "mariadb"):
-        p = int(port) if port is not None else 3306
-        return f"mysql+pymysql://{auth}{host}:{p}/{db_path}"
-    raise ValueError(f"不支持的 db_driver: {cfg.db_driver!r}，请使用 postgresql 或 mysql")
+    if user:
+        pairs.append(_dsn_pair("user", user))
+    if cfg.db_password:
+        pairs.append(_dsn_pair("password", cfg.db_password))
+    pairs.append(_dsn_pair(profile.database_dsn_key, db_name))
+    return " ".join(pairs), profile.duckdb_extension
 
 
-def _sql_sync_key_columns(*, date_column: str, asset_column: str | None) -> list[str]:
-    cols = [date_column]
-    if asset_column:
-        cols.append(asset_column)
-    return cols
+def _default_schema(profile: SqlDriverProfile, cfg: SqlConnectionConfig) -> str:
+    if profile.default_schema is not None:
+        return profile.default_schema
+    return (cfg.db_name or "").strip() or "main"
 
 
-def _sql_normalize_sync_keys(
-    df: pd.DataFrame,
-    *,
-    date_column: str,
-    asset_column: str | None,
-) -> pd.DataFrame:
-    if df.empty:
-        key_cols = _sql_sync_key_columns(date_column=date_column, asset_column=asset_column)
-        return pd.DataFrame(columns=key_cols)
-    out = df.loc[
-        :, _sql_sync_key_columns(date_column=date_column, asset_column=asset_column)
-    ].copy()
-    out[date_column] = pd.to_datetime(out[date_column], errors="coerce").dt.normalize()
-    if asset_column is not None:
-        out[asset_column] = out[asset_column].astype(str)
-    return out.drop_duplicates().reset_index(drop=True)
+def _qualified_table(cfg: SqlConnectionConfig) -> str:
+    profile = resolve_sql_driver(cfg.db_driver)
+    schema_default = _default_schema(profile, cfg)
+    raw = str(cfg.table).strip()
+    if "." in raw:
+        schema, name = raw.split(".", 1)
+        schema = schema.strip() or schema_default
+    else:
+        schema = schema_default
+        name = raw
+    return f"{quote_ident(_REMOTE)}.{quote_ident(schema)}.{quote_ident(name.strip())}"
 
 
-def _sql_filter_sync_new_rows(
-    df: pd.DataFrame,
-    *,
-    existing_keys: pd.DataFrame,
-    date_column: str,
-    asset_column: str | None,
-) -> pd.DataFrame:
-    if df.empty or existing_keys.empty:
-        return df.reset_index(drop=True)
-    key_cols = _sql_sync_key_columns(date_column=date_column, asset_column=asset_column)
-    for col in key_cols:
-        if col not in df.columns:
-            raise ValueError(f"同步结果缺少去重键列: {col!r}")
-    incoming_keys = _sql_normalize_sync_keys(df, date_column=date_column, asset_column=asset_column)
-    known_keys = _sql_normalize_sync_keys(
-        existing_keys, date_column=date_column, asset_column=asset_column
-    )
-    merged = incoming_keys.merge(known_keys, on=key_cols, how="left", indicator=True)
-    is_new = merged["_merge"] == "left_only"
-    out = df.loc[is_new.to_numpy()].reset_index(drop=True)
-    return out.drop_duplicates(subset=key_cols, keep="last").reset_index(drop=True)
-
-
-class SqlDataSource(DataSource):
-    """从 SQL 表读取普通 DataFrame（中性接口，不承载业务语义）。"""
-
+class SqlDataSource(DuckDbDataSource):
     def __init__(
         self,
-        engine: str | Engine,
+        connection: SqlConnectionConfig,
         *,
-        table: str,
         date_column: str = "date",
         asset_column: str | None = "asset",
         write_enabled: bool = False,
     ) -> None:
-        self._engine = _as_engine(engine)
-        self._table = str(table)
-        self._table_sql = _quote_ident(self._engine, self._table)
-        self._date_column = str(date_column).strip()
-        self._asset_column = (
-            str(asset_column).strip()
-            if asset_column is not None and str(asset_column).strip()
-            else None
+        super().__init__(
+            date_column=date_column,
+            asset_column=asset_column,
+            write_enabled=write_enabled,
         )
-        self._write_enabled = bool(write_enabled)
+        self._dsn, self._duckdb_extension = build_duckdb_attach_dsn(connection)
+        self._rel = _qualified_table(connection)
 
-    @property
-    def date_column(self) -> str:
-        return self._date_column
-
-    @property
-    def asset_column(self) -> str | None:
-        return self._asset_column
-
-    def list_columns(self) -> list[str]:
-        insp = inspect(self._engine)
-        schema = None
-        table = self._table
-        if "." in table:
-            schema, table = table.split(".", 1)
-        cols = [c.get("name") for c in insp.get_columns(table, schema=schema)]
-        cols = [str(c) for c in cols if c]
-        return sorted(set(cols), key=lambda x: (x.lower(), x))
-
-    def _load_existing_sync_keys(self) -> pd.DataFrame:
-        key_cols = _sql_sync_key_columns(
-            date_column=self._date_column,
-            asset_column=self._asset_column,
+    def _prepare(self, con: duckdb.DuckDBPyConnection) -> None:
+        duckdb_load_and_attach(
+            con,
+            driver=self._duckdb_extension,
+            dsn=self._dsn,
+            read_only=not self._write_enabled,
         )
-        quoted_cols = [_quote_ident(self._engine, c) for c in key_cols]
-        col_list_sql = ", ".join(quoted_cols)
-        sql = f"SELECT DISTINCT {col_list_sql} FROM {self._table_sql}"
-        with self._engine.connect() as cx:
-            return pd.read_sql(text(sql), cx)
 
-    def write_data(self, df: pd.DataFrame) -> int:
-        if df.empty:
-            return 0
-        if not self._write_enabled:
-            raise ValueError("目标数据源未开启 write_enabled，拒绝写入")
-
-        existing_keys = self._load_existing_sync_keys()
-        df = _sql_filter_sync_new_rows(
-            df,
-            existing_keys=existing_keys,
-            date_column=self._date_column,
-            asset_column=self._asset_column,
-        )
-        if df.empty:
-            return 0
-
-        engine = self._engine
-        table_sql = self._table_sql
-        db_cols = list(df.columns)
-        if not db_cols:
-            return 0
-
-        quoted_cols = [_quote_ident(engine, c) for c in db_cols]
-        col_list_sql = ", ".join(quoted_cols)
-        placeholders = ", ".join(f":{c}" for c in db_cols)
-        records = _nan_to_none_records(df)
-        sql = f"INSERT INTO {table_sql} ({col_list_sql}) VALUES ({placeholders})"
-        return _execute_insert_loop(engine, sql, records)
-
-    def load_frame(
+    def _persist_new_rows(
         self,
-        *,
-        columns: list[str],
-        start_date: str | None = None,
-        end_date: str | None = None,
-        asset_values: list[str] | None = None,
-    ) -> pd.DataFrame:
-        prep = self._engine.dialect.identifier_preparer
+        con: duckdb.DuckDBPyConnection,
+        new_rows_view: str,
+        incoming_columns: list[str],
+        new_row_count: int,
+    ) -> int:
+        if not incoming_columns:
+            return 0
+        cols = ", ".join(quote_ident(c) for c in incoming_columns)
+        con.execute(f"INSERT INTO {self._rel} ({cols}) SELECT {cols} FROM {new_rows_view}")
+        return new_row_count
 
-        cols = [str(c) for c in columns]
-        if not cols:
-            return pd.DataFrame()
-        select_parts = []
-        for c in cols:
-            qc = _quote_ident(self._engine, c)
-            select_parts.append(f"{qc} AS {prep.quote(c)}")
+    def verify(self) -> VerifyResult:
+        con: duckdb.DuckDBPyConnection | None = None
+        try:
+            con = duckdb.connect(":memory:")
+            try:
+                duckdb_load_and_attach(
+                    con,
+                    driver=self._duckdb_extension,
+                    dsn=self._dsn,
+                    read_only=True,
+                )
+            except (duckdb.Error, RuntimeError) as e:
+                return VerifyResult(ok=False, message=str(e))
+            con.execute("SELECT 1")
+        except Exception as e:
+            return VerifyResult(ok=False, message=f"SQL 连接失败: {e}")
+        finally:
+            if con is not None:
+                with suppress(Exception):
+                    con.close()
+        return VerifyResult(ok=True, message="SQL 连接成功。")
 
-        where_parts: list[str] = []
-        params: dict = {}
-        stmt = None
 
-        codes_needed = False
-        if self._date_column:
-            date_column = self._date_column
-            col_sql = _quote_ident(self._engine, date_column)
-            if start_date is not None:
-                where_parts.append(f"{col_sql} >= :date_start")
-                params["date_start"] = str(start_date)
-            if end_date is not None:
-                where_parts.append(f"{col_sql} <= :date_end")
-                params["date_end"] = str(end_date)
-
-        if asset_values is not None:
-            asset_column = self._asset_column
-            if asset_column is None:
-                raise ValueError("asset_values 过滤需要 asset_column")
-            col_sql = _quote_ident(self._engine, asset_column)
-            where_parts.append(f"{col_sql} IN :asset_values")
-            params["asset_values"] = [str(v) for v in asset_values]
-            codes_needed = True
-
-        sql = f"SELECT {', '.join(select_parts)} FROM {self._table_sql}"
-        if where_parts:
-            sql += f" WHERE {' AND '.join(where_parts)}"
-        stmt = text(sql)
-        if codes_needed:
-            stmt = stmt.bindparams(bindparam("asset_values", expanding=True))
-
-        return pd.read_sql(stmt, self._engine, params=params)
+def _parse_sql_config(
+    raw: dict[str, Any],
+) -> tuple[SqlConnectionConfig, SqlColumnsConfig, SqlWriteConfig]:
+    return (
+        SqlConnectionConfig.model_validate(dict(raw.get("connection") or {})),
+        SqlColumnsConfig.model_validate(dict(raw.get("columns") or {})),
+        SqlWriteConfig.model_validate(dict(raw.get("write") or {})),
+    )
 
 
 class SqlDataSourceSpec(DataSourceSpec):
@@ -323,11 +234,8 @@ class SqlDataSourceSpec(DataSourceSpec):
                         "db_driver": {
                             "title": "数据库类型",
                             "type": "string",
-                            "default": "postgresql",
-                            "oneOf": [
-                                {"const": "postgresql", "title": "PostgreSQL"},
-                                {"const": "mysql", "title": "MySQL / MariaDB"},
-                            ],
+                            "default": SQL_DRIVERS[0].id,
+                            "oneOf": sql_driver_form_options(),
                         },
                         "db_host": {"type": "string", "title": "主机（IP）", "minLength": 1},
                         "db_port": {"type": ["integer", "null"], "title": "端口"},
@@ -397,10 +305,7 @@ class SqlDataSourceSpec(DataSourceSpec):
         )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        raw = dict(config or {})
-        conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
-        col = SqlColumnsConfig.model_validate(dict(raw.get("columns") or {}))
-        write = SqlWriteConfig.model_validate(dict(raw.get("write") or {}))
+        conn, col, write = _parse_sql_config(dict(config or {}))
         return {
             "connection": conn.model_dump(mode="json"),
             "columns": col.model_dump(mode="json"),
@@ -408,45 +313,24 @@ class SqlDataSourceSpec(DataSourceSpec):
         }
 
     def to_datasource(self, config: dict[str, Any]):
-        raw = dict(config or {})
-        conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
-        col = SqlColumnsConfig.model_validate(dict(raw.get("columns") or {}))
-        write = SqlWriteConfig.model_validate(dict(raw.get("write") or {}))
-        url = build_sqlalchemy_url(conn)
-        eng = (
-            create_engine(url, connect_args={"check_same_thread": False})
-            if ":memory:" in url
-            else create_engine(url)
-        )
+        conn, col, write = _parse_sql_config(dict(config or {}))
         return SqlDataSource(
-            engine=eng,
-            table=conn.table.strip(),
+            connection=conn,
             date_column=col.date_column,
             asset_column=col.asset_column,
             write_enabled=write.write_enabled,
         )
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
-        raw = dict(config or {})
         try:
-            conn = SqlConnectionConfig.model_validate(dict(raw.get("connection") or {}))
-            url = build_sqlalchemy_url(conn)
+            return self.to_datasource(config).verify()
         except Exception as e:
             return VerifyResult(ok=False, message=str(e))
-        try:
-            connect_args = {} if ":memory:" not in url else {"check_same_thread": False}
-            engine = create_engine(url, connect_args=connect_args)
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-        except Exception as e:
-            return VerifyResult(ok=False, message=f"SQL 连接失败: {e}")
-        return VerifyResult(ok=True, message="SQL 连接成功。")
 
 
 class SqlDataSourcePlugin(DataSourcePlugin):
     name: Literal["sql"] = "sql"
-
     spec = SqlDataSourceSpec()
 
 
-SQL_PLUGIN = SqlDataSourcePlugin()
+__all__ = ["SqlDataSourcePlugin"]
