@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
+from data_source import DataSource
 from factor import DataSet, DataSourceBinding, DependencyResolver
-from factor.datasource import FactorDataSource
 
 
 def _panel(rows: list[tuple], cols: list[str]) -> pd.DataFrame:
@@ -17,7 +17,7 @@ def _panel(rows: list[tuple], cols: list[str]) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
-class _FixedSource(FactorDataSource):
+class _FixedSource(DataSource):
     def __init__(
         self, df: pd.DataFrame, *, date_column: str = "date", asset_column: str | None = "asset"
     ) -> None:

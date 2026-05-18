@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from factor import FactorDataSource
+from data_source import DataSource
 
 from app.datasource.models import DataSourceRow
 from app.datasource.plugins import get_datasource_plugin
@@ -120,13 +120,13 @@ def _validate_datasource_storage(
     return plugin.spec.encrypt_storage_config(validated)
 
 
-def get_datasource(id: str) -> FactorDataSource | None:
+def get_datasource(id: str) -> DataSource | None:
     rec = DataSourceItemsRegistry.get_item(id)
     if rec is None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    return plugin.spec.to_factor_datasource(plain)
+    return plugin.spec.to_datasource(plain)
 
 
 def list_datasources() -> list[DataSourcePublic]:
@@ -202,7 +202,7 @@ def inspect_columns(body: InspectColumnsRequest) -> InspectColumnsResponse:
     validated = plugin.spec.validate_config(
         {"connection": connection, "columns": columns, "write": write}
     )
-    cols = plugin.spec.to_factor_datasource(validated).list_columns()
+    cols = plugin.spec.to_datasource(validated).list_columns()
     str_cols = [str(c) for c in cols]
     columns_meta = dict(validated.get("columns") or {})
     return _build_inspect_columns_response(columns_meta, str_cols)

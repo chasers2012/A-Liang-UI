@@ -8,7 +8,7 @@ import pandas as pd
 from app.datasource.plugins import DataSourcePlugin
 from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
-from factor.datasource import FactorDataSource
+from data_source import DataSource
 
 from .common import (
     BaostockIOBusyError,
@@ -41,7 +41,7 @@ API_COLUMNS_FOR_CONFIG = {
 }
 
 
-class BaoStockDataSource(FactorDataSource):
+class BaoStockDataSource(DataSource):
     def __init__(
         self,
         *,
@@ -224,7 +224,7 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             "columns": col.model_dump(mode="json"),
         }
 
-    def to_factor_datasource(self, config: dict[str, Any]):
+    def to_datasource(self, config: dict[str, Any]):
         raw = dict(config or {})
         conn = BaoStockConnectionConfig.model_validate(dict(raw.get("connection") or {}))
         col_in = dict(raw.get("columns") or {})

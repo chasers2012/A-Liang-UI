@@ -5,7 +5,6 @@ from factor.batch import (
     merged_dependencies,
 )
 from factor.data_set import DataSet, DataSourceBinding
-from factor.datasource import FactorDataSource
 from factor.dependency_resolver import DependencyResolver
 from factor.factor import Factor
 from factor.loader import (
@@ -22,7 +21,6 @@ __all__ = [
     "DataSourceBinding",
     "DependencyResolver",
     "Factor",
-    "FactorDataSource",
     "compute_factor_values",
     "compute_factor_values_from_source",
     "is_valid_factor_class",

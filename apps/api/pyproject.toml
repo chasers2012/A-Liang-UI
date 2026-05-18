@@ -18,6 +18,7 @@ dependencies = [
   "pymysql>=1.1.0",
   "cryptography>=42.0.0",
   "workspace",
+  "data-source",
   "factor",
   "pandas>=2.3.0",
   "numpy>=1.26.0",
@@ -42,6 +43,7 @@ dependencies = [
 [tool.uv.sources]
 custom-code = { workspace = true }
 workspace = { workspace = true }
+data-source = { workspace = true }
 factor = { workspace = true }
 workflow = { workspace = true }
 

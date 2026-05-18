@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import Any
 
-from factor import FactorDataSource
+from data_source import DataSource
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.common.datetime_utils import utc_now_iso
@@ -227,8 +227,8 @@ class DataSourceSpec(ABC):
         """校验连接或可读性；入参为已解密的 ``{connection, columns[, write]}``。"""
 
     @abstractmethod
-    def to_factor_datasource(self, config: dict[str, Any]) -> FactorDataSource:
-        """由已解密的 ``{connection, columns[, write]}`` 构建 :class:`~factor.datasource.FactorDataSource`。"""
+    def to_datasource(self, config: dict[str, Any]) -> DataSource:
+        """由已解密的 ``{connection, columns[, write]}`` 构建 :class:`~data_source.DataSource`。"""
 
 
 # --- API payloads ---

@@ -3,20 +3,20 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import pandas as pd
+from data_source import DataSource
 
-from factor.datasource import FactorDataSource
 from factor.panel import panel_load_start_date
 
 
 class DataSourceBinding:
-    datasource: FactorDataSource
+    datasource: DataSource
     # 物理列选择：为空表示加载 datasource 的所有列
     columns: list[str]
     datasource_id: str | None
 
     def __init__(
         self,
-        datasource: FactorDataSource,
+        datasource: DataSource,
         columns: list[str] | None = None,
         *,
         datasource_id: str | None = None,

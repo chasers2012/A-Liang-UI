@@ -7,7 +7,7 @@ import pandas as pd
 from app.datasource.plugins import DataSourcePlugin
 from app.datasource.schemas import DataSourceSpec, VerifyResult
 from app.form import FormSchema
-from factor.datasource import FactorDataSource
+from data_source import DataSource
 
 from .client import TushareIOBusyError, call_pro, resolve_token, run_tushare_io
 from .common import TushareColumnsConfig, TushareConnectionConfig
@@ -37,7 +37,7 @@ API_COLUMNS_FOR_CONFIG = {
 }
 
 
-class TushareDataSource(FactorDataSource):
+class TushareDataSource(DataSource):
     def __init__(
         self,
         *,
@@ -236,7 +236,7 @@ class TushareDataSourceSpec(DataSourceSpec):
             "columns": col.model_dump(mode="json"),
         }
 
-    def to_factor_datasource(self, config: dict[str, Any]):
+    def to_datasource(self, config: dict[str, Any]):
         raw = dict(config or {})
         conn = TushareConnectionConfig.model_validate(dict(raw.get("connection") or {}))
         col_in = dict(raw.get("columns") or {})

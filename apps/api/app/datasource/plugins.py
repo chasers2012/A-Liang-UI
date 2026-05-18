@@ -15,7 +15,7 @@ __all__ = [
 
 class DataSourcePlugin(Plugin):
     """
-    Datasource plugin: validates config, verifies connectivity, builds a FactorDataSource.
+    Datasource plugin: validates config, verifies connectivity, builds a DataSource.
     """
 
     category = "datasource"

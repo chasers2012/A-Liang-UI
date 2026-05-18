@@ -24,7 +24,7 @@ class InFilter:
 LoadFilter = BetweenFilter | InFilter
 
 
-class FactorDataSource(ABC):
+class DataSource(ABC):
     """中性的 DataFrame 读取接口（不承载任何因子业务语义）。
 
     该接口只负责“从某个后端读取指定列，并应用通用过滤条件”，不出现

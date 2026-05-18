@@ -21,6 +21,7 @@ members = [
     "alphalens-nodes",
     "common-nodes",
     "custom-code",
+    "data-source",
     "datasource-plugins-baostock",
     "datasource-plugins-builtin",
     "datasource-plugins-tushare",
@@ -934,6 +935,17 @@ wheels = [
 ]
 
 [[package]]
+name = "data-source"
+version = "0.1.0"
+source = { editable = "lib/data_source" }
+dependencies = [
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pandas", specifier = ">=2.0.0" }]
+
+[[package]]
 name = "dataclasses-json"
 version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
@@ -1324,6 +1336,7 @@ version = "0.1.0"
 source = { editable = "lib/factor" }
 dependencies = [
     { name = "custom-code" },
+    { name = "data-source" },
     { name = "numpy" },
     { name = "pandas" },
 ]
@@ -1331,6 +1344,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "custom-code", editable = "lib/custom_code" },
+    { name = "data-source", editable = "lib/data_source" },
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
@@ -4943,6 +4957,7 @@ dependencies = [
     { name = "croniter" },
     { name = "cryptography" },
     { name = "custom-code" },
+    { name = "data-source" },
     { name = "deepagents" },
     { name = "diskcache" },
     { name = "docling" },
@@ -4976,6 +4991,7 @@ requires-dist = [
     { name = "croniter", specifier = ">=6.0.0" },
     { name = "cryptography", specifier = ">=42.0.0" },
     { name = "custom-code", editable = "lib/custom_code" },
+    { name = "data-source", editable = "lib/data_source" },
     { name = "deepagents", specifier = ">=0.5.3" },
     { name = "diskcache", specifier = ">=5.6.3" },
     { name = "docling", specifier = ">=2.92.0" },

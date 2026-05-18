@@ -34,6 +34,7 @@ technical-nodes = { workspace = true }
 example-factors = { workspace = true }
 example-strategies = { workspace = true }
 example-evaluation-profiles = { workspace = true }
+data-source = { workspace = true }
 factor = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
