@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
-
+from ._catalog import ApiCatalog, build_api_catalog
 from .query_adjust_factor import LOADER_SPEC as adjust_factor_spec
 from .query_balance_data import LOADER_SPEC as balance_spec
 from .query_cash_flow_data import LOADER_SPEC as cash_flow_spec
@@ -19,7 +18,7 @@ from .query_stock_industry import LOADER_SPEC as stock_industry_spec
 from .query_sz50_stocks import LOADER_SPEC as sz50_spec
 from .query_zz500_stocks import LOADER_SPEC as zz500_spec
 
-SUPPORTED_APIS = [
+_SUPPORTED_APIS = [
     k_data_spec,
     dividend_spec,
     adjust_factor_spec,
@@ -38,22 +37,4 @@ SUPPORTED_APIS = [
     zz500_spec,
 ]
 
-
-API_DEFAULT_DATE_COLUMNS = {
-    str(api.get("key")): str(api.get("date_column")) for api in SUPPORTED_APIS if api.get("key")
-}
-
-API_DEFAULT_ASSET_COLUMNS = {
-    str(api.get("key")): (
-        str(api.get("asset_column")).strip() if api.get("asset_column") is not None else None
-    )
-    for api in SUPPORTED_APIS
-    if api.get("key")
-}
-
-DEFAULT_DATE_COLUMN: str = next(iter(API_DEFAULT_DATE_COLUMNS.values()), "date")
-DEFAULT_ASSET_COLUMN: str | None = next(iter(API_DEFAULT_ASSET_COLUMNS.values()), "code")
-if DEFAULT_ASSET_COLUMN is not None and not str(DEFAULT_ASSET_COLUMN).strip():
-    DEFAULT_ASSET_COLUMN = None
-
-DEFAULT_API_NAME: str = cast(str, SUPPORTED_APIS[0].get("key")) if SUPPORTED_APIS else ""
+API_CATALOG: ApiCatalog = build_api_catalog(_SUPPORTED_APIS)

@@ -281,4 +281,7 @@ def test_datasource(ds_id: str) -> VerifyResult | None:
         return None
     plugin = get_datasource_plugin(rec.type)
     plain = plugin.spec.decrypt_storage_config(dict(rec.config or {}))
-    return plugin.spec.verify(plain)
+    try:
+        return plugin.spec.to_datasource(plain).verify()
+    except Exception as e:
+        return VerifyResult(ok=False, message=str(e))

@@ -2,156 +2,139 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass
+from functools import cache
 from typing import Any, Literal
 
 import duckdb
 from app.datasource.plugins import DataSourcePlugin
-from app.datasource.schemas import DataSourceSpec, VerifyResult
+from app.datasource.schemas import DataSourceSpec
 from app.form import FormSchema
+from data_source import VerifyResult
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from ._duckdb_backend import (
     DatasourceColumnsConfig,
     DatasourceWriteConfig,
     DuckDbDataSource,
-    duckdb_load_and_attach,
-    quote_ident,
 )
-
-_REMOTE = "remote"
-
-
-@dataclass(frozen=True, slots=True)
-class SqlDriverProfile:
-    """DuckDB ATTACH 驱动描述；新增库类型时在此表追加一条即可。"""
-
-    id: str
-    title: str
-    duckdb_extension: str
-    default_port: int
-    database_dsn_key: str
-    default_schema: str | None = None
-    aliases: frozenset[str] = frozenset()
-
-
-SQL_DRIVERS: tuple[SqlDriverProfile, ...] = (
-    SqlDriverProfile(
-        id="postgresql",
-        title="PostgreSQL",
-        duckdb_extension="postgres",
-        default_port=5432,
-        database_dsn_key="dbname",
-        default_schema="public",
-        aliases=frozenset({"postgres"}),
-    ),
-    SqlDriverProfile(
-        id="mysql",
-        title="MySQL / MariaDB",
-        duckdb_extension="mysql",
-        default_port=3306,
-        database_dsn_key="database",
-        default_schema=None,
-        aliases=frozenset({"mariadb"}),
-    ),
-)
-
-_DRIVER_BY_KEY: dict[str, SqlDriverProfile] = {
-    key: profile
-    for profile in SQL_DRIVERS
-    for key in (profile.id.lower(), *(a.lower() for a in profile.aliases))
-}
-
-
-def resolve_sql_driver(db_driver: str) -> SqlDriverProfile:
-    profile = _DRIVER_BY_KEY.get((db_driver or "").strip().lower())
-    if profile is None:
-        options = "、".join(p.title for p in SQL_DRIVERS)
-        raise ValueError(f"不支持的 db_driver: {db_driver!r}，可选: {options}")
-    return profile
-
-
-def sql_driver_form_options() -> list[dict[str, str]]:
-    return [{"const": p.id, "title": p.title} for p in SQL_DRIVERS]
 
 
 class SqlWriteConfig(DatasourceWriteConfig):
     pass
 
 
-class SqlConnectionConfig(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    db_driver: str = SQL_DRIVERS[0].id
-    db_host: str = ""
-    db_port: int | None = None
-    db_username: str = ""
-    db_password: str = ""
-    db_name: str = ""
-    table: str = ""
-
-    @model_validator(mode="after")
-    def _validate(self) -> SqlConnectionConfig:
-        if not self.table.strip():
-            raise ValueError("表名不能为空")
-        if not self.db_host.strip() or not self.db_name.strip():
-            raise ValueError("主机（IP）与数据库名不能为空")
-        profile = resolve_sql_driver(self.db_driver)
-        self.db_driver = profile.id
-        return self
-
-
 class SqlColumnsConfig(DatasourceColumnsConfig):
     pass
 
 
-def _dsn_pair(key: str, value: str | int) -> str:
-    if isinstance(value, int):
-        return f"{key}={value}"
-    s = str(value)
-    if s == "":
-        return f"{key}=''"
-    if any(c in s for c in " \t'\\"):
-        escaped = s.replace("\\", "\\\\").replace("'", "\\'")
-        return f"{key}='{escaped}'"
-    return f"{key}={s}"
-
-
-def build_duckdb_attach_dsn(cfg: SqlConnectionConfig) -> tuple[str, str]:
-    profile = resolve_sql_driver(cfg.db_driver)
-    host = (cfg.db_host or "").strip()
-    db_name = (cfg.db_name or "").strip()
-    port = int(cfg.db_port) if cfg.db_port is not None else profile.default_port
-
-    pairs = [_dsn_pair("host", host), _dsn_pair("port", port)]
-    user = (cfg.db_username or "").strip()
-    if user:
-        pairs.append(_dsn_pair("user", user))
-    if cfg.db_password:
-        pairs.append(_dsn_pair("password", cfg.db_password))
-    pairs.append(_dsn_pair(profile.database_dsn_key, db_name))
-    return " ".join(pairs), profile.duckdb_extension
-
-
-def _default_schema(profile: SqlDriverProfile, cfg: SqlConnectionConfig) -> str:
-    if profile.default_schema is not None:
-        return profile.default_schema
-    return (cfg.db_name or "").strip() or "main"
-
-
-def _qualified_table(cfg: SqlConnectionConfig) -> str:
-    profile = resolve_sql_driver(cfg.db_driver)
-    schema_default = _default_schema(profile, cfg)
-    raw = str(cfg.table).strip()
-    if "." in raw:
-        schema, name = raw.split(".", 1)
-        schema = schema.strip() or schema_default
-    else:
-        schema = schema_default
-        name = raw
-    return f"{quote_ident(_REMOTE)}.{quote_ident(schema)}.{quote_ident(name.strip())}"
-
-
 class SqlDataSource(DuckDbDataSource):
+    _REMOTE = "remote"
+
+    @dataclass(frozen=True, slots=True)
+    class DriverProfile:
+        """DuckDB ATTACH 驱动描述；新增库类型时在此表追加一条即可。"""
+
+        id: str
+        title: str
+        duckdb_extension: str
+        default_port: int
+        database_dsn_key: str
+        default_schema: str | None = None
+        aliases: frozenset[str] = frozenset()
+
+    DRIVERS: tuple[DriverProfile, ...] = (
+        DriverProfile(
+            id="postgresql",
+            title="PostgreSQL",
+            duckdb_extension="postgres",
+            default_port=5432,
+            database_dsn_key="dbname",
+            default_schema="public",
+            aliases=frozenset({"postgres"}),
+        ),
+        DriverProfile(
+            id="mysql",
+            title="MySQL / MariaDB",
+            duckdb_extension="mysql",
+            default_port=3306,
+            database_dsn_key="database",
+            default_schema=None,
+            aliases=frozenset({"mariadb"}),
+        ),
+    )
+
+    @classmethod
+    @cache
+    def _driver_by_key(cls) -> dict[str, DriverProfile]:
+        return {
+            key: profile
+            for profile in cls.DRIVERS
+            for key in (profile.id.lower(), *(a.lower() for a in profile.aliases))
+        }
+
+    @classmethod
+    def resolve_driver(cls, db_driver: str) -> DriverProfile:
+        profile = cls._driver_by_key().get((db_driver or "").strip().lower())
+        if profile is None:
+            options = "、".join(p.title for p in cls.DRIVERS)
+            raise ValueError(f"不支持的 db_driver: {db_driver!r}，可选: {options}")
+        return profile
+
+    @classmethod
+    def driver_form_options(cls) -> list[dict[str, str]]:
+        return [{"const": p.id, "title": p.title} for p in cls.DRIVERS]
+
+    @staticmethod
+    def _dsn_pair(key: str, value: str | int) -> str:
+        if isinstance(value, int):
+            return f"{key}={value}"
+        s = str(value)
+        if s == "":
+            return f"{key}=''"
+        if any(c in s for c in " \t'\\"):
+            escaped = s.replace("\\", "\\\\").replace("'", "\\'")
+            return f"{key}='{escaped}'"
+        return f"{key}={s}"
+
+    @classmethod
+    def build_attach_dsn(cls, cfg: SqlConnectionConfig) -> tuple[str, str]:
+        profile = cls.resolve_driver(cfg.db_driver)
+        host = (cfg.db_host or "").strip()
+        db_name = (cfg.db_name or "").strip()
+        port = int(cfg.db_port) if cfg.db_port is not None else profile.default_port
+
+        pairs = [cls._dsn_pair("host", host), cls._dsn_pair("port", port)]
+        user = (cfg.db_username or "").strip()
+        if user:
+            pairs.append(cls._dsn_pair("user", user))
+        if cfg.db_password:
+            pairs.append(cls._dsn_pair("password", cfg.db_password))
+        pairs.append(cls._dsn_pair(profile.database_dsn_key, db_name))
+        return " ".join(pairs), profile.duckdb_extension
+
+    @classmethod
+    def _default_schema(cls, profile: DriverProfile, cfg: SqlConnectionConfig) -> str:
+        if profile.default_schema is not None:
+            return profile.default_schema
+        return (cfg.db_name or "").strip() or "main"
+
+    @classmethod
+    def qualified_table(cls, cfg: SqlConnectionConfig) -> str:
+        profile = cls.resolve_driver(cfg.db_driver)
+        schema_default = cls._default_schema(profile, cfg)
+        raw = str(cfg.table).strip()
+        if "." in raw:
+            schema, name = raw.split(".", 1)
+            schema = schema.strip() or schema_default
+        else:
+            schema = schema_default
+            name = raw
+        return (
+            f"{cls.quote_ident(cls._REMOTE)}."
+            f"{cls.quote_ident(schema)}."
+            f"{cls.quote_ident(name.strip())}"
+        )
+
     def __init__(
         self,
         connection: SqlConnectionConfig,
@@ -165,11 +148,11 @@ class SqlDataSource(DuckDbDataSource):
             asset_column=asset_column,
             write_enabled=write_enabled,
         )
-        self._dsn, self._duckdb_extension = build_duckdb_attach_dsn(connection)
-        self._rel = _qualified_table(connection)
+        self._dsn, self._duckdb_extension = self.build_attach_dsn(connection)
+        self._rel = self.qualified_table(connection)
 
     def _prepare(self, con: duckdb.DuckDBPyConnection) -> None:
-        duckdb_load_and_attach(
+        self.load_and_attach(
             con,
             driver=self._duckdb_extension,
             dsn=self._dsn,
@@ -185,7 +168,7 @@ class SqlDataSource(DuckDbDataSource):
     ) -> int:
         if not incoming_columns:
             return 0
-        cols = ", ".join(quote_ident(c) for c in incoming_columns)
+        cols = ", ".join(self.quote_ident(c) for c in incoming_columns)
         con.execute(f"INSERT INTO {self._rel} ({cols}) SELECT {cols} FROM {new_rows_view}")
         return new_row_count
 
@@ -194,7 +177,7 @@ class SqlDataSource(DuckDbDataSource):
         try:
             con = duckdb.connect(":memory:")
             try:
-                duckdb_load_and_attach(
+                self.load_and_attach(
                     con,
                     driver=self._duckdb_extension,
                     dsn=self._dsn,
@@ -212,17 +195,40 @@ class SqlDataSource(DuckDbDataSource):
         return VerifyResult(ok=True, message="SQL 连接成功。")
 
 
-def _parse_sql_config(
-    raw: dict[str, Any],
-) -> tuple[SqlConnectionConfig, SqlColumnsConfig, SqlWriteConfig]:
-    return (
-        SqlConnectionConfig.model_validate(dict(raw.get("connection") or {})),
-        SqlColumnsConfig.model_validate(dict(raw.get("columns") or {})),
-        SqlWriteConfig.model_validate(dict(raw.get("write") or {})),
-    )
+class SqlConnectionConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    db_driver: str = SqlDataSource.DRIVERS[0].id
+    db_host: str = ""
+    db_port: int | None = None
+    db_username: str = ""
+    db_password: str = ""
+    db_name: str = ""
+    table: str = ""
+
+    @model_validator(mode="after")
+    def _validate(self) -> SqlConnectionConfig:
+        if not self.table.strip():
+            raise ValueError("表名不能为空")
+        if not self.db_host.strip() or not self.db_name.strip():
+            raise ValueError("主机（IP）与数据库名不能为空")
+        profile = SqlDataSource.resolve_driver(self.db_driver)
+        self.db_driver = profile.id
+        return self
 
 
 class SqlDataSourceSpec(DataSourceSpec):
+    @classmethod
+    def parse_config(
+        cls,
+        raw: dict[str, Any],
+    ) -> tuple[SqlConnectionConfig, SqlColumnsConfig, SqlWriteConfig]:
+        return (
+            SqlConnectionConfig.model_validate(dict(raw.get("connection") or {})),
+            SqlColumnsConfig.model_validate(dict(raw.get("columns") or {})),
+            SqlWriteConfig.model_validate(dict(raw.get("write") or {})),
+        )
+
     def __init__(self) -> None:
         super().__init__(
             connection_schema=FormSchema(
@@ -234,8 +240,8 @@ class SqlDataSourceSpec(DataSourceSpec):
                         "db_driver": {
                             "title": "数据库类型",
                             "type": "string",
-                            "default": SQL_DRIVERS[0].id,
-                            "oneOf": sql_driver_form_options(),
+                            "default": SqlDataSource.DRIVERS[0].id,
+                            "oneOf": SqlDataSource.driver_form_options(),
                         },
                         "db_host": {"type": "string", "title": "主机（IP）", "minLength": 1},
                         "db_port": {"type": ["integer", "null"], "title": "端口"},
@@ -305,7 +311,7 @@ class SqlDataSourceSpec(DataSourceSpec):
         )
 
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
-        conn, col, write = _parse_sql_config(dict(config or {}))
+        conn, col, write = self.parse_config(dict(config or {}))
         return {
             "connection": conn.model_dump(mode="json"),
             "columns": col.model_dump(mode="json"),
@@ -313,19 +319,13 @@ class SqlDataSourceSpec(DataSourceSpec):
         }
 
     def to_datasource(self, config: dict[str, Any]):
-        conn, col, write = _parse_sql_config(dict(config or {}))
+        conn, col, write = self.parse_config(dict(config or {}))
         return SqlDataSource(
             connection=conn,
             date_column=col.date_column,
             asset_column=col.asset_column,
             write_enabled=write.write_enabled,
         )
-
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
-        try:
-            return self.to_datasource(config).verify()
-        except Exception as e:
-            return VerifyResult(ok=False, message=str(e))
 
 
 class SqlDataSourcePlugin(DataSourcePlugin):

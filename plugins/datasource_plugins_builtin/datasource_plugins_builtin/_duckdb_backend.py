@@ -16,61 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 _INCOMING_VIEW = "_qa_incoming_df"
 _NEW_ROWS_VIEW = "_qa_new_rows"
 
-
-def quote_ident(name: str) -> str:
-    return '"' + str(name).replace('"', '""') + '"'
-
-
-def quote_literal(value: str) -> str:
-    return "'" + str(value).replace("'", "''") + "'"
-
-
-def duckdb_path(path_like: Any) -> str:
-    return str(path_like).replace("\\", "/")
-
-
-# Filenames produced by ``bundle_duckdb_extensions.py`` at wheel build time.
 _BUNDLED_EXTENSION_ARTIFACTS: dict[str, str] = {
     "postgres": "postgres_scanner.duckdb_extension",
     "mysql": "mysql_scanner.duckdb_extension",
 }
-
-
-def _bundled_extension_resource(driver: str) -> Path:
-    artifact = _BUNDLED_EXTENSION_ARTIFACTS.get(driver)
-    if artifact is None:
-        raise RuntimeError(f"未配置 DuckDB 扩展打包映射: {driver!r}")
-    resource = files("datasource_plugins_builtin") / "_bundled_extensions" / artifact
-    if not resource.is_file():
-        raise RuntimeError(
-            f"缺少打包的 DuckDB 扩展 {artifact!r}（请重新构建/安装 datasource-plugins-builtin，"
-            "构建时会执行 bundle_duckdb_extensions）"
-        )
-    with as_file(resource) as path:
-        return Path(path)
-
-
-def _load_duckdb_extension(con: duckdb.DuckDBPyConnection, driver: str) -> None:
-    path = _bundled_extension_resource(driver)
-    try:
-        con.execute(f"LOAD {quote_literal(duckdb_path(path))}")
-    except duckdb.Error as e:
-        raise RuntimeError(f"DuckDB 扩展 {driver!r} 加载失败: {e}") from e
-
-
-def duckdb_load_and_attach(
-    con: duckdb.DuckDBPyConnection,
-    *,
-    driver: str,
-    dsn: str,
-    catalog: str = "remote",
-    read_only: bool,
-) -> None:
-    _load_duckdb_extension(con, driver)
-    opts = f"TYPE {driver}"
-    if read_only:
-        opts += ", READ_ONLY"
-    con.execute(f"ATTACH {quote_literal(dsn)} AS {quote_ident(catalog)} ({opts})")
 
 
 class DatasourceWriteConfig(BaseModel):
@@ -98,6 +47,56 @@ class DatasourceColumnsConfig(BaseModel):
 
 
 class DuckDbDataSource(DataSource):
+    @staticmethod
+    def quote_ident(name: str) -> str:
+        return '"' + str(name).replace('"', '""') + '"'
+
+    @staticmethod
+    def quote_literal(value: str) -> str:
+        return "'" + str(value).replace("'", "''") + "'"
+
+    @staticmethod
+    def duckdb_path(path_like: Any) -> str:
+        return str(path_like).replace("\\", "/")
+
+    @staticmethod
+    def _bundled_extension_resource(driver: str) -> Path:
+        artifact = _BUNDLED_EXTENSION_ARTIFACTS.get(driver)
+        if artifact is None:
+            raise RuntimeError(f"未配置 DuckDB 扩展打包映射: {driver!r}")
+        resource = files("datasource_plugins_builtin") / "_bundled_extensions" / artifact
+        if not resource.is_file():
+            raise RuntimeError(
+                f"缺少打包的 DuckDB 扩展 {artifact!r}（请重新构建/安装 datasource-plugins-builtin，"
+                "构建时会执行 bundle_duckdb_extensions）"
+            )
+        with as_file(resource) as path:
+            return Path(path)
+
+    @classmethod
+    def _load_duckdb_extension(cls, con: duckdb.DuckDBPyConnection, driver: str) -> None:
+        path = cls._bundled_extension_resource(driver)
+        try:
+            con.execute(f"LOAD {cls.quote_literal(cls.duckdb_path(path))}")
+        except duckdb.Error as e:
+            raise RuntimeError(f"DuckDB 扩展 {driver!r} 加载失败: {e}") from e
+
+    @classmethod
+    def load_and_attach(
+        cls,
+        con: duckdb.DuckDBPyConnection,
+        *,
+        driver: str,
+        dsn: str,
+        catalog: str = "remote",
+        read_only: bool,
+    ) -> None:
+        cls._load_duckdb_extension(con, driver)
+        opts = f"TYPE {driver}"
+        if read_only:
+            opts += ", READ_ONLY"
+        con.execute(f"ATTACH {cls.quote_literal(dsn)} AS {cls.quote_ident(catalog)} ({opts})")
+
     def __init__(
         self,
         *,
@@ -164,11 +163,11 @@ class DuckDbDataSource(DataSource):
 
         con = self._db()
         rel = self._rel
-        select_sql = ", ".join(quote_ident(c) for c in cols)
+        select_sql = ", ".join(self.quote_ident(c) for c in cols)
         where_parts: list[str] = []
         params: list[Any] = []
 
-        dc = quote_ident(self._date_column)
+        dc = self.quote_ident(self._date_column)
         if start_date is not None:
             where_parts.append(f"{dc} >= ?")
             params.append(str(start_date))
@@ -182,7 +181,7 @@ class DuckDbDataSource(DataSource):
                 where_parts.append("1 = 0")
             else:
                 placeholders = ", ".join(["?"] * len(asset_values))
-                where_parts.append(f"{quote_ident(self._asset_column)} IN ({placeholders})")
+                where_parts.append(f"{self.quote_ident(self._asset_column)} IN ({placeholders})")
                 params.extend(str(v) for v in asset_values)
 
         sql = f"SELECT {select_sql} FROM {rel}"
@@ -209,13 +208,13 @@ class DuckDbDataSource(DataSource):
         con.register(_INCOMING_VIEW, df_unique)
         try:
             preds = [
-                f"CAST(t.{quote_ident(self._date_column)} AS DATE) "
-                f"= CAST(i.{quote_ident(self._date_column)} AS DATE)"
+                f"CAST(t.{self.quote_ident(self._date_column)} AS DATE) "
+                f"= CAST(i.{self.quote_ident(self._date_column)} AS DATE)"
             ]
             if self._asset_column is not None:
                 preds.append(
-                    f"CAST(t.{quote_ident(self._asset_column)} AS VARCHAR) "
-                    f"= CAST(i.{quote_ident(self._asset_column)} AS VARCHAR)"
+                    f"CAST(t.{self.quote_ident(self._asset_column)} AS VARCHAR) "
+                    f"= CAST(i.{self.quote_ident(self._asset_column)} AS VARCHAR)"
                 )
             con.execute(
                 f"CREATE OR REPLACE TEMP VIEW {_NEW_ROWS_VIEW} AS "

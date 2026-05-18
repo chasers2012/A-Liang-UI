@@ -17,12 +17,6 @@ DataSourceType = str
 generate_id = create_id_generator("datasources")
 
 
-class VerifyResult(BaseModel):
-    model_config = ConfigDict(frozen=True)
-    ok: bool
-    message: str
-
-
 DATASOURCE_WRITE_FLAT_KEYS = frozenset({"write_enabled"})
 
 
@@ -221,10 +215,6 @@ class DataSourceSpec(ABC):
     @abstractmethod
     def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
         """校验并规范化 ``{connection, columns[, write]}``，返回可 JSON 序列化的存储形态。"""
-
-    @abstractmethod
-    def verify(self, config: dict[str, Any]) -> VerifyResult:
-        """校验连接或可读性；入参为已解密的 ``{connection, columns[, write]}``。"""
 
     @abstractmethod
     def to_datasource(self, config: dict[str, Any]) -> DataSource:

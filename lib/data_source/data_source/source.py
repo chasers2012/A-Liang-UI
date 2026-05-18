@@ -8,6 +8,12 @@ import pandas as pd
 
 
 @dataclass(frozen=True, slots=True)
+class VerifyResult:
+    ok: bool
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
 class BetweenFilter:
     column: str
     start: str
@@ -66,4 +72,9 @@ class DataSource(ABC):
     @abstractmethod
     def write_data(self, df: pd.DataFrame) -> int:
         """将 DataFrame 写入数据源，返回实际写入的行数。"""
+        raise NotImplementedError
+
+    @abstractmethod
+    def verify(self) -> VerifyResult:
+        """校验连接或可读性（运行时探测，非配置表单校验）。"""
         raise NotImplementedError

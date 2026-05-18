@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 import pytest
-from data_source import DataSource
+from data_source import DataSource, VerifyResult
 from factor import DataSet, DataSourceBinding, DependencyResolver
 
 
@@ -38,6 +38,9 @@ class _FixedSource(DataSource):
 
     def write_data(self, df: pd.DataFrame) -> int:
         raise NotImplementedError
+
+    def verify(self) -> VerifyResult:
+        return VerifyResult(ok=True, message="ok")
 
     def load_frame(
         self,
