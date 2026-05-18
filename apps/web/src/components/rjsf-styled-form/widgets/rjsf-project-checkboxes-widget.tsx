@@ -63,6 +63,7 @@ export default function RjsfProjectCheckboxesWidget<
         enumOptions.map((option, index: number) => {
           const checked = enumOptionsIsSelected<S>(option.value, checkboxesValues);
           const itemDisabled = Array.isArray(enumDisabled) && enumDisabled.indexOf(option.value) !== -1;
+          const isOptionDisabled = itemDisabled || disabled || isReadonly;
           const indexOptionId = optionId(id, index);
 
           return (
@@ -71,8 +72,7 @@ export default function RjsfProjectCheckboxesWidget<
                 id={indexOptionId}
                 name={htmlName || id}
                 required={required}
-                disabled={itemDisabled || disabled}
-                readOnly={isReadonly}
+                disabled={isOptionDisabled}
                 onCheckedChange={(state) => {
                   if (isReadonly) return;
                   const on = state === true;
@@ -89,7 +89,9 @@ export default function RjsfProjectCheckboxesWidget<
                 onFocus={_onFocus}
                 aria-describedby={ariaDescribedByIds(id)}
               />
-              <FieldLabel className="leading-tight">{option.label}</FieldLabel>
+              <FieldLabel htmlFor={indexOptionId} className={cn('leading-tight', isOptionDisabled && 'opacity-50')}>
+                {option.label}
+              </FieldLabel>
             </Field>
           );
         })}

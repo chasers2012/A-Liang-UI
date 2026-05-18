@@ -16,6 +16,7 @@ import {
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field, FieldLabel } from '@/components/ui/field';
+import { cn } from '@/lib/utils';
 
 type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
 
@@ -60,11 +61,10 @@ export default function RjsfProjectCheckboxWidget<
   const _onFocus = () => onFocus(id, value);
 
   const description = options.description || schema.description;
+  const isDisabled = disabled || isReadonly;
+
   return (
-    <div
-      className={`relative ${disabled || isReadonly ? 'cursor-not-allowed opacity-50' : ''}`}
-      aria-describedby={ariaDescribedByIds(id)}
-    >
+    <div className="relative" aria-describedby={ariaDescribedByIds(id)}>
       {!hideLabel && description ? (
         <DescriptionFieldTemplate
           id={descriptionId(id)}
@@ -80,15 +80,16 @@ export default function RjsfProjectCheckboxWidget<
           name={htmlName || id}
           checked={typeof value === 'undefined' ? false : Boolean(value)}
           required={required}
-          disabled={disabled}
-          readOnly={isReadonly}
+          disabled={isDisabled}
           autoFocus={autofocus}
           onCheckedChange={_onChange}
           onBlur={_onBlur}
           onFocus={_onFocus}
           className={className}
         />
-        <FieldLabel className="leading-tight">{labelValue(label, hideLabel || !label)}</FieldLabel>
+        <FieldLabel htmlFor={id} className={cn('leading-tight', isDisabled && 'opacity-50')}>
+          {labelValue(label, hideLabel || !label)}
+        </FieldLabel>
       </Field>
     </div>
   );
