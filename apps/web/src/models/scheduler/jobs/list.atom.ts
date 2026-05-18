@@ -1,7 +1,7 @@
 import { atom } from 'jotai';
 
 import { cancelSchedulerJob, listSchedulerJobs } from '@/api/scheduler';
-import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
+import { createRefreshableAsyncAtoms, type RefreshableAsyncRefreshOptions } from '@/lib/refreshable-async-atoms';
 import { schedulerActiveJobsAtoms } from '@/models/scheduler/jobs/active.atom';
 import type { SchedulerJobPublic } from '@/models/scheduler/jobs/dto';
 
@@ -37,9 +37,9 @@ const coreJobsListAtoms = createRefreshableAsyncAtoms<SchedulerJobsPageData>({
 
 export const schedulerJobsListAtoms = {
   ...coreJobsListAtoms,
-  refreshAtom: atom(null, (_get, set) => {
+  refreshAtom: atom(null, (_get, set, options?: RefreshableAsyncRefreshOptions) => {
     set(schedulerJobActionErrorAtom, null);
-    set(coreJobsListAtoms.refreshAtom);
+    set(coreJobsListAtoms.refreshAtom, options);
   }),
 };
 

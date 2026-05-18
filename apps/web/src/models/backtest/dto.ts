@@ -1,5 +1,8 @@
 /** 回测运行 DTO（与后端 `/backtests` 契约一致）。 */
 
+/** Scheduler one-off task type for a single backtest run. */
+export const BACKTEST_RUN_TASK_TYPE = 'backtest.run';
+
 export type BacktestRunStatus = 'queued' | 'running' | 'success' | 'failed' | 'cancelled';
 
 export interface BacktestRunSummary {

@@ -1,6 +1,8 @@
 import { atom } from 'jotai';
 import { atomEffect } from 'jotai-effect';
 
+import type { RefreshableAsyncRefreshOptions } from '@/lib/refreshable-async-atoms';
+
 import {
   createDataSyncTask,
   deleteDataSyncTask,
@@ -104,9 +106,11 @@ export const panelActiveTabAtom = atom((get): DetailTab => {
 
 const datasourceNameByIdAtom = atom((get) => Object.fromEntries(get(datasourcesAtom).map((d) => [d.id, d.name])));
 
-export const refreshPageAtom = atom(null, async (_get, set) => {
+export const refreshPageAtom = atom(null, async (_get, set, options?: RefreshableAsyncRefreshOptions) => {
   set(errorAtom, null);
-  set(loadingAtom, true);
+  if (!options?.silent) {
+    set(loadingAtom, true);
+  }
   try {
     const [tasks, datasources] = await Promise.all([listDataSyncTasks(), listDatasources()]);
     set(tasksAtom, tasks);

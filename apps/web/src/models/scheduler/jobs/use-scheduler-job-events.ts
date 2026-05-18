@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 import { CONNECTION, eventBus } from '@/api/events';
+import type { EventBusRefreshFn } from '@/lib/refreshable-async-atoms';
 
 /**
  * Subscribe job list to ``scheduler.job.updated`` SSE events (debounced).
- * Also refreshes on SSE reconnect after the initial connection.
+ * Also silently refreshes on SSE reconnect after the initial connection.
  */
-export function useSchedulerJobEvents(refresh: () => void | Promise<unknown>, debounceMs = 200) {
+export function useSchedulerJobEvents(refresh: EventBusRefreshFn, debounceMs = 200) {
   const timerRef = useRef<number | null>(null);
 
   const scheduleRefresh = useCallback(() => {
     if (timerRef.current !== null) return;
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
-      void refresh();
+      void refresh({ silent: true });
     }, debounceMs);
   }, [debounceMs, refresh]);
 

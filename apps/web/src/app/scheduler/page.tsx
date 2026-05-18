@@ -61,9 +61,9 @@ export default function SchedulerPage() {
     void refreshActiveJobs();
   }, [refreshActiveJobs, refreshJobs]);
 
-  useSchedulerJobEvents(() => {
-    void refreshJobs();
-    void refreshActiveJobs();
+  useSchedulerJobEvents((options) => {
+    void refreshJobs(options);
+    void refreshActiveJobs(options);
   });
 
   const pageSize = useMemo(() => {

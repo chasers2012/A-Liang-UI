@@ -1,5 +1,6 @@
 import { atom } from 'jotai';
 
+import type { RefreshableAsyncRefreshOptions } from '@/lib/refreshable-async-atoms';
 import {
   createKnowledgeDocument,
   deleteKnowledgeDocument,
@@ -86,8 +87,10 @@ export const setKnowledgeSearchQueryAtom = atom(null, (get, set, value: string) 
   });
 });
 
-export const refreshKnowledgePageAtom = atom(null, async (_get, set) => {
-  set(knowledgePageAtom, (s) => ({ ...s, loading: true, error: null }));
+export const refreshKnowledgePageAtom = atom(null, async (_get, set, options?: RefreshableAsyncRefreshOptions) => {
+  if (!options?.silent) {
+    set(knowledgePageAtom, (s) => ({ ...s, loading: true, error: null }));
+  }
   try {
     const documents = await listKnowledgeDocuments();
     set(knowledgePageAtom, (s) => ({
