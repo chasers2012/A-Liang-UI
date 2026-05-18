@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from data_source import VerifyResult
 from fastapi import APIRouter, HTTPException
 
 from app.datasource import controller as datasource_controller
@@ -11,7 +12,6 @@ from app.datasource.schemas import (
     DataSourcePublic,
     InspectColumnsRequest,
     InspectColumnsResponse,
-    VerifyResult,
 )
 
 router = APIRouter(prefix="/datasources", tags=["datasources"])

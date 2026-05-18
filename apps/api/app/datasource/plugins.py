@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from app.datasource.schemas import DataSourceSpec, VerifyResult
+from data_source import VerifyResult
+
+from app.datasource.schemas import DataSourceSpec
 from app.plugin.base import Plugin
 from app.plugin.registry import PluginRegistry
 

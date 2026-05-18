@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from data_source import DataSource
+from data_source import DataSource, VerifyResult
 
 from app.datasource.models import DataSourceRow
 from app.datasource.plugins import get_datasource_plugin
@@ -15,7 +15,6 @@ from app.datasource.schemas import (
     DataSourcePublic,
     InspectColumnsRequest,
     InspectColumnsResponse,
-    VerifyResult,
     row_to_public,
     utc_now_iso,
 )
