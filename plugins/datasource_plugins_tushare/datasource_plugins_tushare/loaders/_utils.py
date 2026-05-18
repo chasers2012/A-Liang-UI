@@ -394,7 +394,9 @@ def _fetch_all_market_by_trade_date(
 ) -> pd.DataFrame:
     trade_dates = list_open_trade_dates(token, start_date, end_date)
     if not trade_dates:
-        raise ValueError(f"{api_name} 全市场拉取需要有效的 start_date 与 end_date")
+        if not start_date or not end_date:
+            raise ValueError(f"{api_name} 全市场拉取需要有效的 start_date 与 end_date")
+        return pd.DataFrame()
     kwargs_base: dict = {"fields": fields}
     if empty_ts_code:
         kwargs_base["ts_code"] = ""

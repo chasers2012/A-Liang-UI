@@ -16,17 +16,19 @@ from app.datasource.registry import DataSourceItemsRegistry
 from app.scheduler import controller as scheduler_controller
 
 
-def _earliest_latest_date_from_targets(targets: list[tuple[str, Any]]) -> str | None:
-    dates: list[str] = []
+def _incremental_start_date_from_targets(targets: list[tuple[str, Any]]) -> str | None:
+    """目标中已有数据时，取各目标最大日期的最小值再推进一天，作为增量起点。"""
+    start_dates: list[str] = []
     for _target_id, inst in targets:
         date_col = inst.date_column
         df = inst.load_frame(columns=[date_col])
         if df.empty or date_col not in df.columns:
             continue
         mx = pd.to_datetime(df[date_col], errors="coerce").max()
-        if not pd.isna(mx):
-            dates.append(pd.Timestamp(mx).date().isoformat())
-    return min(dates) if dates else None
+        if pd.isna(mx):
+            continue
+        start_dates.append((pd.Timestamp(mx).normalize() + pd.Timedelta(days=1)).date().isoformat())
+    return min(start_dates) if start_dates else None
 
 
 def _load_targets_bundle(target_ids: list[str]) -> list[tuple[str, Any]]:
@@ -102,9 +104,21 @@ def _datasource_sync_run(
 
     targets = _load_targets_bundle(target_ids)
 
-    earliest_target_date = _earliest_latest_date_from_targets(targets)
+    incremental_start = _incremental_start_date_from_targets(targets)
     end_date = sync_payload.end_date or datetime.now(timezone.utc).date().isoformat()
-    start_date = earliest_target_date or sync_payload.start_date
+    start_date = incremental_start or sync_payload.start_date
+    if not start_date:
+        raise ValueError("缺少有效的 start_date")
+    if pd.Timestamp(start_date).normalize() > pd.Timestamp(end_date).normalize():
+        return DataSyncRunResult(
+            rows_read=0,
+            rows_written=0,
+            rows_written_by_target=[],
+            start_date=start_date,
+            end_date=end_date,
+            source_datasource_ids=source_ids,
+            target_datasource_ids=target_ids,
+        )
 
     raw_frames: dict[str, pd.DataFrame] = {}
     for sid in source_ids:

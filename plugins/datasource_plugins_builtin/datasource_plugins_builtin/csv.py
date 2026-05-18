@@ -247,6 +247,54 @@ class CsvColumnsConfig(BaseModel):
         return self
 
 
+def _csv_sync_key_columns(*, date_column: str, asset_column: str | None) -> list[str]:
+    cols = [date_column]
+    if asset_column:
+        cols.append(asset_column)
+    return cols
+
+
+def _csv_normalize_sync_keys(
+    df: pd.DataFrame,
+    *,
+    date_column: str,
+    asset_column: str | None,
+) -> pd.DataFrame:
+    if df.empty:
+        key_cols = _csv_sync_key_columns(date_column=date_column, asset_column=asset_column)
+        return pd.DataFrame(columns=key_cols)
+    out = df.loc[
+        :, _csv_sync_key_columns(date_column=date_column, asset_column=asset_column)
+    ].copy()
+    out[date_column] = pd.to_datetime(out[date_column], errors="coerce").dt.normalize()
+    if asset_column is not None:
+        out[asset_column] = out[asset_column].astype(str)
+    return out.drop_duplicates().reset_index(drop=True)
+
+
+def _csv_filter_sync_new_rows(
+    df: pd.DataFrame,
+    *,
+    existing_keys: pd.DataFrame,
+    date_column: str,
+    asset_column: str | None,
+) -> pd.DataFrame:
+    if df.empty or existing_keys.empty:
+        return df.reset_index(drop=True)
+    key_cols = _csv_sync_key_columns(date_column=date_column, asset_column=asset_column)
+    for col in key_cols:
+        if col not in df.columns:
+            raise ValueError(f"同步结果缺少去重键列: {col!r}")
+    incoming_keys = _csv_normalize_sync_keys(df, date_column=date_column, asset_column=asset_column)
+    known_keys = _csv_normalize_sync_keys(
+        existing_keys, date_column=date_column, asset_column=asset_column
+    )
+    merged = incoming_keys.merge(known_keys, on=key_cols, how="left", indicator=True)
+    is_new = merged["_merge"] == "left_only"
+    out = df.loc[is_new.to_numpy()].reset_index(drop=True)
+    return out.drop_duplicates(subset=key_cols, keep="last").reset_index(drop=True)
+
+
 class CsvDataSource(FactorDataSource):
     """从 CSV 读取普通 DataFrame（中性接口，不承载业务语义）。"""
 
@@ -316,6 +364,20 @@ class CsvDataSource(FactorDataSource):
     def list_sync_target_physical_columns(self) -> list[str]:
         return self.list_columns()
 
+    def _load_existing_sync_keys(self, path: Path) -> pd.DataFrame:
+        key_cols = _csv_sync_key_columns(
+            date_column=self._date_column,
+            asset_column=self._asset_column,
+        )
+        if not path.is_file() or path.stat().st_size == 0:
+            return pd.DataFrame(columns=key_cols)
+        header = pd.read_csv(path, nrows=0, encoding=_CSV_ENCODING)
+        present = set(header.columns)
+        usecols = [c for c in key_cols if c in present]
+        if self._date_column not in present:
+            return pd.DataFrame(columns=key_cols)
+        return pd.read_csv(path, usecols=usecols, encoding=_CSV_ENCODING)
+
     def write_sync_dataframe(self, df: pd.DataFrame) -> int:
         if df.empty:
             return 0
@@ -325,6 +387,16 @@ class CsvDataSource(FactorDataSource):
         path = self._resolved_file_path()
         path.parent.mkdir(parents=True, exist_ok=True)
         write_kw: dict = {"encoding": _CSV_ENCODING, "index": False}
+
+        existing_keys = self._load_existing_sync_keys(path)
+        df = _csv_filter_sync_new_rows(
+            df,
+            existing_keys=existing_keys,
+            date_column=self._date_column,
+            asset_column=self._asset_column,
+        )
+        if df.empty:
+            return 0
 
         file_exists = path.is_file() and path.stat().st_size > 0
         if file_exists:
