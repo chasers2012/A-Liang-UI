@@ -326,6 +326,15 @@ export const datasourcesSyncViewFormEffectAtom = atomEffect((get, set) => {
   set(datasourcesEditorFormAtom, hydrateFormFromDataSource(item));
 });
 
+function buildNewDatasourceDraft(plugins: DatasourcePluginPublic[]): FormState {
+  return {
+    ...emptyForm(),
+    name: defaultNewName('新数据源'),
+    type: plugins[0]?.type ?? '',
+    config: { connection: {}, columns: {}, write: {} },
+  };
+}
+
 /** 进入编辑态时拉取详情或初始化新建草稿；退出时复位加载/提交相关 UI 状态 */
 export const datasourcesEditorLoadEffectAtom = atomEffect((get, set) => {
   const isEditing = get(datasourcesIsEditingAtom);
@@ -339,13 +348,10 @@ export const datasourcesEditorLoadEffectAtom = atomEffect((get, set) => {
   set(datasourcesEditorFormErrorAtom, null);
   // Entering edit mode should not trigger a detail refetch; current form is already synced from selected item.
   if (!selectedId) {
-    const nextName = defaultNewName('新数据源');
-    set(datasourcesEditorFormAtom, {
-      ...emptyForm(),
-      name: nextName,
-      type: plugins[0]?.type ?? '',
-      config: { connection: {}, columns: {}, write: {} },
-    });
+    const form = get(datasourcesEditorFormAtom);
+    if (!form.type.trim()) {
+      set(datasourcesEditorFormAtom, buildNewDatasourceDraft(plugins));
+    }
   }
 });
 
@@ -369,9 +375,11 @@ export const selectDatasourceFromListAtom = atom(null, (_get, set, itemId: strin
   set(datasourcesIsEditingAtom, false);
 });
 
-export const startCreateNewDatasourceAtom = atom(null, (_get, set) => {
+export const startCreateNewDatasourceAtom = atom(null, (get, set) => {
   set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesEditorFormErrorAtom, null);
   set(datasourcesSelectedIdAtom, null);
+  set(datasourcesEditorFormAtom, buildNewDatasourceDraft(get(datasourcesPluginsAtom)));
   set(datasourcesIsEditingAtom, true);
   set(datasourcesDetailActiveTabAtom, 'base');
 });

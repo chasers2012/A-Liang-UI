@@ -91,6 +91,14 @@ class DataSourceSpec(ABC):
         """从扁平 ``write_*`` 字典解析并校验通用写入语义（插件可从 ``connection`` 等段组装该字典）。"""
         return DataSourceWriteConfig.model_validate(dict(write_config or {}))
 
+    def prepare_storage_config(
+        self,
+        datasource_id: str,
+        config: dict[str, Any],
+    ) -> dict[str, Any]:
+        """保存前由插件根据数据源 ID 补全配置（如 CSV 自动路径）。"""
+        return dict(config or {})
+
     def split_write_config_for_validation(
         self,
         connection_config: dict[str, Any],
@@ -298,19 +306,17 @@ def row_to_public(row: DataSourceRow) -> DataSourcePublic:
     columns_schema = plugin.spec.columns_schema
     write_schema = plugin.spec.write_schema
     raw_config = dict(row.config or {})
-    public_config = deepcopy(raw_config)
+    plain = plugin.spec.decrypt_storage_config(raw_config)
+    public_config = deepcopy(plain)
     if not isinstance(public_config.get("connection"), dict):
         public_config["connection"] = {}
     if not isinstance(public_config.get("columns"), dict):
         public_config["columns"] = {}
     if connection_schema is not None:
-        public_config["connection"] = connection_schema.redact(
-            dict(public_config.get("connection") or {})
-        )
+        public_config["connection"] = connection_schema.redact(dict(plain.get("connection") or {}))
     if columns_schema is not None:
-        public_config["columns"] = columns_schema.redact(dict(public_config.get("columns") or {}))
+        public_config["columns"] = columns_schema.redact(dict(plain.get("columns") or {}))
     if write_schema is not None:
-        plain = plugin.spec.decrypt_storage_config(raw_config)
         public_config["write"] = write_schema.redact(dict(plain.get("write") or {}))
         for k in DATASOURCE_WRITE_FLAT_KEYS:
             public_config["connection"].pop(k, None)

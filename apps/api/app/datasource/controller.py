@@ -104,6 +104,8 @@ def _validate_datasource_storage(
     connection_config: dict[str, Any],
     columns_config: dict[str, Any],
     write_config: dict[str, Any] | None = None,
+    *,
+    datasource_id: str | None = None,
 ) -> dict[str, Any]:
     plugin = get_datasource_plugin(plugin_type)
     connection, columns, write = plugin.spec.split_write_config_for_validation(
@@ -111,9 +113,10 @@ def _validate_datasource_storage(
         dict(columns_config or {}),
         dict(write_config or {}) if write_config is not None else None,
     )
-    validated = plugin.spec.validate_config(
-        {"connection": connection, "columns": columns, "write": write}
-    )
+    config = {"connection": connection, "columns": columns, "write": write}
+    if datasource_id:
+        config = plugin.spec.prepare_storage_config(datasource_id, config)
+    validated = plugin.spec.validate_config(config)
     return plugin.spec.encrypt_storage_config(validated)
 
 
@@ -228,6 +231,7 @@ def create_datasource(body: DataSourceCreate) -> DataSourcePublic:
         dict(body.connection_config or {}),
         dict(body.columns_config or {}),
         dict(body.write_config or {}),
+        datasource_id=new_row.id,
     )
     created_row = DataSourceItemsRegistry.add_item(new_row)
     return row_to_public(created_row)
@@ -257,6 +261,7 @@ def patch_datasource(ds_id: str, body: DataSourcePatch) -> DataSourcePublic | No
                 dict(merged.get("connection") or {}),
                 dict(merged.get("columns") or {}),
                 dict(merged.get("write") or {}),
+                datasource_id=ds_id,
             )
         row.updated_at = utc_now_iso()
 
