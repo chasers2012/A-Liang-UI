@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import pandas as pd
-from tqdm import tqdm
 
-from ..client import call_pro
-from ._utils import extract_code_dates, resolve_target_codes, select_columns
+from ._utils import extract_code_dates, load_by_ts_code_series, resolve_target_codes, select_columns
 
 API_NAME = "income"
 ASSET_COLUMN: str | None = "ts_code"
@@ -117,9 +115,10 @@ def load_frame(
     effective_cols = requested_cols or None
     fields = ",".join(effective_cols) if effective_cols else None
     target_codes = resolve_target_codes(token, selected_codes)
-    frames: list[pd.DataFrame] = []
+    if not target_codes:
+        return pd.DataFrame(columns=effective_cols or [])
 
-    for ts_code in tqdm(target_codes, desc="Tushare 利润表", unit="只"):
+    def build_kwargs(ts_code: str) -> dict:
         kwargs: dict = {"ts_code": ts_code}
         if start_date:
             kwargs["start_date"] = start_date
@@ -127,13 +126,14 @@ def load_frame(
             kwargs["end_date"] = end_date
         if fields:
             kwargs["fields"] = fields
-        df = call_pro(token, API_NAME, **kwargs)
-        if not df.empty:
-            frames.append(df)
+        return kwargs
 
-    if not frames:
-        return pd.DataFrame(columns=effective_cols or [])
-    out = pd.concat(frames, ignore_index=True)
+    out = load_by_ts_code_series(
+        token,
+        API_NAME,
+        target_codes,
+        build_kwargs=build_kwargs,
+    )
     return select_columns(out, requested_cols or None)
 
 

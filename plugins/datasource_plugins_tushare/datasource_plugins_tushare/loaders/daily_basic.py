@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import pandas as pd
-from tqdm import tqdm
 
-from ..client import call_pro
-from ._utils import extract_code_dates, resolve_target_codes, select_columns
+from ._utils import extract_code_dates, fetch_daily_basic, select_columns
 
 API_NAME = "daily_basic"
 ASSET_COLUMN: str | None = "ts_code"
@@ -52,24 +50,14 @@ def load_frame(
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or FIXED_COLUMNS
     fields = ",".join(effective_cols)
-    target_codes = resolve_target_codes(token, selected_codes)
-    frames: list[pd.DataFrame] = []
 
-    for ts_code in tqdm(target_codes, desc="Tushare 每日指标", unit="只"):
-        df = call_pro(
-            token,
-            API_NAME,
-            ts_code=ts_code,
-            start_date=start_date,
-            end_date=end_date,
-            fields=fields,
-        )
-        if not df.empty:
-            frames.append(df)
-
-    if not frames:
-        return pd.DataFrame(columns=effective_cols)
-    out = pd.concat(frames, ignore_index=True)
+    out = fetch_daily_basic(
+        token,
+        selected_codes=selected_codes,
+        start_date=start_date,
+        end_date=end_date,
+        fields=fields,
+    )
     return select_columns(out, requested_cols or None)
 
 

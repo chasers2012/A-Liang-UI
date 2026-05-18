@@ -18,7 +18,7 @@ from .loaders import (
     DEFAULT_ASSET_COLUMN,
     DEFAULT_DATE_COLUMN,
 )
-from .loaders._utils import to_ts_code
+from .loaders._utils import normalize_date_column, to_ts_code
 
 API_KEYS = [api.get("key") for api in SUPPORTED_APIS]
 API_LABELS = [api.get("label") for api in SUPPORTED_APIS]
@@ -87,7 +87,7 @@ class TushareDataSource(FactorDataSource):
         loader = API_LOADERS.get(self._api_name)
         if loader is None:
             raise ValueError(f"Tushare 未配置 loader: {self._api_name}")
-        return loader(
+        frame = loader(
             columns=columns,
             date_column=self._date_column,
             start_date=start_date,
@@ -96,6 +96,7 @@ class TushareDataSource(FactorDataSource):
             asset_values=asset_values,
             config=self._loader_config(),
         )
+        return normalize_date_column(frame, self._date_column)
 
     def load_frame(
         self,

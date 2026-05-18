@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import pandas as pd
-from tqdm import tqdm
 
 from ..client import call_pro
-from ._utils import extract_code_dates, select_columns, to_ts_code
+from ._utils import extract_code_dates, merge_frames, select_columns, to_ts_code
 
 API_NAME = "index_daily"
 ASSET_COLUMN: str | None = "ts_code"
@@ -69,9 +68,9 @@ def load_frame(
     fields = ",".join(effective_cols)
     default_code = to_ts_code(str(config.get("ts_code") or "000300.SH"))
     target_codes = selected_codes or [default_code]
-    frames: list[pd.DataFrame] = []
 
-    for ts_code in tqdm(target_codes, desc="Tushare 指数日线", unit="只"):
+    frames: list[pd.DataFrame] = []
+    for ts_code in target_codes:
         df = call_pro(
             token,
             API_NAME,
@@ -83,9 +82,7 @@ def load_frame(
         if not df.empty:
             frames.append(df)
 
-    if not frames:
-        return pd.DataFrame(columns=effective_cols)
-    out = pd.concat(frames, ignore_index=True)
+    out = merge_frames(frames, columns=effective_cols)
     return select_columns(out, requested_cols or None)
 
 

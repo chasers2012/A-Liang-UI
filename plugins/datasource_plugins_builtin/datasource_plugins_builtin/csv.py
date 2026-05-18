@@ -259,11 +259,13 @@ class CsvDataSource(FactorDataSource):
         write_enabled: bool = False,
         create_if_missing: bool = False,
         initial_columns: list[str] | None = None,
+        cached_columns: list[str] | None = None,
     ) -> None:
         self._path = Path(path)
         self._write_enabled = bool(write_enabled)
         self._create_if_missing = bool(create_if_missing)
         self._initial_columns = _normalize_column_names(initial_columns)
+        self._cached_columns = _normalize_column_names(cached_columns)
         self._date_column = str(date_column).strip()
         self._asset_column = (
             str(asset_column).strip()
@@ -284,11 +286,28 @@ class CsvDataSource(FactorDataSource):
             return self._path.resolve()
         return (get_workspace_root() / self._path).resolve()
 
+    def _header_columns(self) -> list[str]:
+        return _columns_for_new_csv_file(
+            initial_columns=self._initial_columns,
+            date_column=self._date_column,
+            asset_column=self._asset_column,
+            cached_columns=self._cached_columns,
+        )
+
+    def _ensure_csv_file_exists(self) -> Path:
+        path = self._resolved_file_path()
+        if path.is_file() and path.stat().st_size > 0:
+            return path
+        if not self._create_if_missing:
+            raise ValueError(f"CSV 文件不存在: {path}")
+        ensure_csv_file(path, columns=self._header_columns())
+        return path
+
     def list_columns(self) -> list[str]:
         path = self._resolved_file_path()
-        if not path.is_file():
-            if self._create_if_missing and self._initial_columns:
-                return sorted(set(self._initial_columns), key=lambda x: (x.lower(), x))
+        if not path.is_file() or path.stat().st_size == 0:
+            if self._create_if_missing:
+                return sorted(set(self._header_columns()), key=lambda x: (x.lower(), x))
             raise ValueError(f"CSV 文件不存在: {path}")
         header = pd.read_csv(path, nrows=0, encoding=_CSV_ENCODING)
         cols = [str(c) for c in header.columns]
@@ -329,7 +348,7 @@ class CsvDataSource(FactorDataSource):
         end_date: str | None = None,
         asset_values: list[str] | None = None,
     ) -> pd.DataFrame:
-        file_path = self._resolved_file_path()
+        file_path = self._ensure_csv_file_exists()
         usecols = sorted({str(c) for c in columns})
         header = pd.read_csv(file_path, nrows=0, encoding=_CSV_ENCODING)
         present = set(header.columns)
@@ -468,6 +487,7 @@ class CsvDataSourceSpec(DataSourceSpec):
             write_enabled=write.write_enabled,
             create_if_missing=conn.create_if_missing,
             initial_columns=conn.initial_columns,
+            cached_columns=col.columns,
         )
 
     def verify(self, config: dict[str, Any]) -> VerifyResult:
