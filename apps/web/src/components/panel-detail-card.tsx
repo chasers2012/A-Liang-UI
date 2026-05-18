@@ -12,6 +12,8 @@ export type PanelDetailCardTabPanelItem = {
   label: ReactNode;
   content: ReactNode;
   contentClassName?: string;
+  /** 内容区占满剩余高度并在内部滚动，外层 body 不再出现第二条滚动条 */
+  fillHeight?: boolean;
   /** 为 true 时该 tab 不可切换（仍会随 value 显示对应内容） */
   disabled?: boolean;
 };
@@ -66,6 +68,8 @@ function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children
     return panels!.find((p) => p.value === active) ?? panels![0] ?? null;
   }, [activePanelValue, hasPanels, panels]);
 
+  const fillsViewport = activePanel?.fillHeight === true;
+
   return (
     <>
       <div
@@ -88,10 +92,23 @@ function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children
         </div>
         <div className="flex shrink-0 items-center gap-2">{actions ?? null}</div>
       </div>
-      <div className={'flex min-h-0 flex-1 flex-col overflow-hidden h-full px-6 pb-0 pt-4'}>
-        {children}
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col overflow-x-hidden px-6 pb-4 pt-4',
+          fillsViewport ? 'gap-2 overflow-hidden' : 'gap-4 overflow-y-auto',
+        )}
+      >
+        {children ? (
+          <div className={cn('shrink-0', fillsViewport && 'max-h-40 overflow-y-auto')}>{children}</div>
+        ) : null}
         {hasPanels && activePanel ? (
-          <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden space-y-6', activePanel.contentClassName)}>
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col',
+              fillsViewport && 'h-0 overflow-hidden',
+              activePanel.contentClassName,
+            )}
+          >
             {activePanel.content}
           </div>
         ) : null}

@@ -132,7 +132,11 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
                   {list.map((item) => {
                     const descriptionNode = renderDescription?.(item);
                     const description =
-                      typeof descriptionNode === 'string' ? toPlainTextFirstLinePreview(descriptionNode) : '';
+                      descriptionNode === undefined
+                        ? ''
+                        : typeof descriptionNode === 'string'
+                          ? toPlainTextFirstLinePreview(descriptionNode)
+                          : descriptionNode;
                     return (
                       <Fragment key={item.id}>
                         {renderItem({

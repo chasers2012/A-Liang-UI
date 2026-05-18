@@ -30,7 +30,9 @@ export function SearchListItem<TItem extends SearchListItemBase>(props: SearchLi
     >
       <ItemContent className="min-h-18 overflow-hidden">
         <ItemTitle className="truncate">{title}</ItemTitle>
-        <ItemDescription className="min-h-10 line-clamp-2">{description || '-'}</ItemDescription>
+        <ItemDescription className="min-h-10 line-clamp-2 [&:not(:has(*))]:line-clamp-2">
+          {description ?? '-'}
+        </ItemDescription>
       </ItemContent>
     </Item>
   );

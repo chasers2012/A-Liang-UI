@@ -42,6 +42,10 @@ export type PageProps = {
   action?: ReactNode;
   /** 主内容区宽度：`default` 为 `max-w-7xl` 居中；`full` 铺满可用宽度。 */
   size?: 'default' | 'full';
+  /**
+   * 主内容区滚动：`auto` 由 Page 外层滚动；`none` 占满剩余高度且不在 Page 层滚动（左右分栏等全高布局）。
+   */
+  contentScroll?: 'auto' | 'none';
 };
 
 const PageAppHeader = memo(function PageAppHeader({
@@ -84,6 +88,58 @@ const PageAppHeader = memo(function PageAppHeader({
   );
 });
 
+function resolveShowAppHeaderBackLink(
+  canHeaderBack: boolean,
+  showAppHeaderBack: boolean | undefined,
+  backLinkSuppressedByAction: boolean,
+) {
+  if (!canHeaderBack) return false;
+  if (showAppHeaderBack === true) return true;
+  if (showAppHeaderBack === false) return false;
+  return !backLinkSuppressedByAction;
+}
+
+function PageMainContent({
+  children,
+  className,
+  title,
+  description,
+  headerClassName,
+  gap,
+  size,
+  contentScroll,
+}: Pick<
+  PageProps,
+  'children' | 'className' | 'title' | 'description' | 'headerClassName' | 'gap' | 'size' | 'contentScroll'
+>) {
+  const isContentScrollLocked = contentScroll === 'none';
+  const showPageHeading = !!title || !!description;
+
+  return (
+    <div className={cn('min-w-0 w-full flex-1', isContentScrollLocked ? 'min-h-0 overflow-hidden' : 'overflow-y-auto')}>
+      <div
+        className={cn(
+          'mx-auto flex min-w-0 w-full flex-col p-4',
+          size === 'full' ? 'max-w-none' : 'max-w-7xl',
+          gapClass[gap ?? 'lg'],
+          isContentScrollLocked ? 'min-h-0 h-full' : 'min-h-full',
+          className,
+        )}
+      >
+        {showPageHeading ? (
+          <header className={cn('mt-4 shrink-0 space-y-2', headerClassName)}>
+            {title != null ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
+            {description != null ? (
+              <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</div>
+            ) : null}
+          </header>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function Page({
   children,
   className,
@@ -92,6 +148,7 @@ export function Page({
   headerClassName,
   gap = 'lg',
   size = 'default',
+  contentScroll = 'auto',
   showAppHeader = true,
   showAppHeaderBack,
   action,
@@ -99,7 +156,6 @@ export function Page({
   const pathname = usePathname();
   const canHeaderBack = !isTopLevelPath(pathname);
   const pageHeaderLabel = typeof title === 'string' ? title : undefined;
-  const showPageHeading = !!title || !!description;
 
   const [backLinkSuppressedByAction, setBackLinkSuppressedByAction] = useState(false);
   const suppressBackLink = useCallback((suppress: boolean) => {
@@ -108,36 +164,25 @@ export function Page({
 
   const headerContextValue = useMemo(() => ({ suppressBackLink }), [suppressBackLink]);
 
-  const showBackLink =
-    canHeaderBack && (showAppHeaderBack === true || (showAppHeaderBack !== false && !backLinkSuppressedByAction));
+  const showBackLink = resolveShowAppHeaderBackLink(canHeaderBack, showAppHeaderBack, backLinkSuppressedByAction);
 
   return (
     <PageAppHeaderContext.Provider value={headerContextValue}>
-      <div className="flex h-full flex-1 min-w-0 w-full flex-col">
+      <div className="flex h-full w-full min-w-0 flex-1 flex-col">
         {showAppHeader ? (
           <PageAppHeader showBackLink={showBackLink} action={action} pageHeaderLabel={pageHeaderLabel} />
         ) : null}
-
-        <div className="min-w-0 w-full flex-1 overflow-y-auto">
-          <div
-            className={cn(
-              'mx-auto flex min-h-full min-w-0 w-full flex-col p-4',
-              size === 'full' ? 'max-w-none' : 'max-w-7xl',
-              gapClass[gap],
-              className,
-            )}
-          >
-            {showPageHeading ? (
-              <header className={cn('shrink-0 space-y-2 mt-4', headerClassName)}>
-                {title != null ? <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1> : null}
-                {description != null ? (
-                  <div className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</div>
-                ) : null}
-              </header>
-            ) : null}
-            {children}
-          </div>
-        </div>
+        <PageMainContent
+          className={className}
+          title={title}
+          description={description}
+          headerClassName={headerClassName}
+          gap={gap}
+          size={size}
+          contentScroll={contentScroll}
+        >
+          {children}
+        </PageMainContent>
       </div>
     </PageAppHeaderContext.Provider>
   );

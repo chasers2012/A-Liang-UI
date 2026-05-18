@@ -4,6 +4,7 @@ import type { BacktestRunFormSpec } from '@/api/backtests';
 import { getBacktestRunSpec, runBacktest } from '@/api/backtests';
 
 import { backtestsListAtoms } from './list.atom';
+import { backtestsCreateModeAtom, backtestsSelectedIdAtom } from './selection.atom';
 
 export type BacktestRunFormState = {
   spec: BacktestRunFormSpec | null;
@@ -55,12 +56,14 @@ export const submitBacktestRunAtom = atom(null, async (get, set) => {
 
   set(backtestRunFormAtom, (s) => ({ ...s, submitting: true, error: null }));
   try {
-    await runBacktest({
+    const created = await runBacktest({
       strategy_id: sid,
       data_set_id: did,
       params: formData ?? {},
     });
     set(backtestRunFormAtom, (s) => ({ ...s, submitting: false }));
+    set(backtestsCreateModeAtom, false);
+    set(backtestsSelectedIdAtom, created.id);
     await set(backtestsListAtoms.refreshAtom);
   } catch (e) {
     set(backtestRunFormAtom, (s) => ({

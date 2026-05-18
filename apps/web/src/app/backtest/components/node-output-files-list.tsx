@@ -39,7 +39,7 @@ export function NodeOutputFilesList({
           {isCsvOutputFile(file) ? (
             <CsvVirtualGrid runId={runId} nodeId={nodeId} fileName={file.name} />
           ) : (
-            <pre className="max-h-72 overflow-auto rounded bg-background p-2 text-xs">
+            <pre className="rounded bg-background p-2 text-xs break-words whitespace-pre-wrap">
               {file.kind === 'json' ? JSON.stringify(file.content, null, 2) : String(file.content ?? '')}
             </pre>
           )}

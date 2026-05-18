@@ -10,7 +10,7 @@ export type SearchListItemBase = {
 export type SearchListRenderItemProps<TItem extends SearchListItemBase> = {
   item: TItem;
   selectedId?: string | null;
-  description: string;
+  description: ReactNode;
   title: ReactNode;
 };
 
