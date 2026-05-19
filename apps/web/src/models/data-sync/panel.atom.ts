@@ -25,9 +25,11 @@ import {
   formatTaskDescription,
 } from './list-helpers';
 import { syncWorkflowBoundary } from './sync-workflow-boundary';
+import { defaultNewName } from '@/lib/default-new-name';
 import {
   emptyFormValues,
   mergeDatasourceLabelMaps,
+  newDataSyncFormValues,
   taskToFormValues,
   validateDataSyncForm,
   type FormValues,
@@ -173,7 +175,7 @@ export const selectTaskAtom = atom(null, (_get, set, itemId: string) => {
 
 export const startCreateAtom = atom(null, (_get, set) => {
   set(formErrorAtom, null);
-  set(applyFormAtom, emptyFormValues());
+  set(applyFormAtom, newDataSyncFormValues());
   set(selectedIdAtom, null);
   set(isEditingAtom, true);
   set(detailActiveTabAtom, 'config');
@@ -202,7 +204,7 @@ export const submitFormAtom = atom(null, async (get, set) => {
   const form = get(formAtom);
   const selectedId = get(selectedIdAtom);
   if (!get(isEditingAtom)) return;
-  const name = form.name.trim();
+  const name = form.name.trim() || defaultNewName('新数据同步');
   const formValidationError = validateDataSyncForm(form, get(datasourcesAtom));
   if (formValidationError) {
     set(formErrorAtom, formValidationError);

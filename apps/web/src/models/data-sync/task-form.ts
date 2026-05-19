@@ -1,5 +1,6 @@
 import { parsePersistedWorkflowGraphPayload } from '@/components/workflow-graph';
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+import { defaultNewName } from '@/lib/default-new-name';
 import type { DataSyncDatasourceRef, DataSyncTaskPublic } from '@/models/data-sync/dto';
 import type { DataSourcePublic } from '@/models/datasource/dto';
 
@@ -87,6 +88,14 @@ export function emptyFormValues(): FormValues {
     startDate: '',
     endDate: '',
     syncWorkflow: parsePersistedWorkflowGraphPayload({}),
+  };
+}
+
+/** 新建数据同步任务时的默认表单（含自动生成的任务名称）。 */
+export function newDataSyncFormValues(): FormValues {
+  return {
+    ...emptyFormValues(),
+    name: defaultNewName('新数据同步'),
   };
 }
 
