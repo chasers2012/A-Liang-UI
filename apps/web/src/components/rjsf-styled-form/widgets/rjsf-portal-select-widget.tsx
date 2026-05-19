@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { WidgetProps } from '@rjsf/utils';
 import { XIcon } from 'lucide-react';
-import { useCallback, useMemo, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, type MouseEvent } from 'react';
 
 type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
 
@@ -16,8 +16,23 @@ function isEnumValueMatched(left: unknown, right: unknown): boolean {
 }
 
 function isUnset(value: unknown, emptyValue: unknown): boolean {
-  if (value === undefined) return true;
-  return Object.is(value, emptyValue);
+  if (Object.is(value, emptyValue)) return true;
+  return value == null && emptyValue == null;
+}
+
+type EnumOption = { value: unknown; label?: string };
+
+function resolveValuesInOptions(values: unknown[], opts: EnumOption[]): unknown[] {
+  return values.map((v) => opts.find((o) => isEnumValueMatched(o.value, v))?.value).filter((v) => v !== undefined);
+}
+
+function hasValueOutsideOptions(value: unknown, opts: EnumOption[], multiple: boolean, emptyValue: unknown): boolean {
+  if (multiple) {
+    const arr = Array.isArray(value) ? value : [];
+    return arr.some((v) => !opts.some((o) => isEnumValueMatched(o.value, v)));
+  }
+  if (isUnset(value, emptyValue)) return false;
+  return !opts.some((o) => isEnumValueMatched(o.value, value));
 }
 
 export function RjsfPortalSelectWidget(props: WidgetProps) {
@@ -37,6 +52,7 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
   } = props;
   const forcedReadonly = Boolean((formContext as RjsfProjectFormContext | undefined)?.__rjsfProjectReadonly);
   const isReadonly = readonly || forcedReadonly;
+  const { emptyValue } = options;
 
   const { selectedValues, multiSummary, selectedLabel } = useMemo(() => {
     const opts = Array.isArray(options.enumOptions) ? options.enumOptions : [];
@@ -47,11 +63,11 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
       selectedValues = arr
         .map((v) => opts.find((o) => isEnumValueMatched(o.value, v))?.value)
         .filter((v) => v !== undefined);
-    } else if (isUnset(value, options.emptyValue)) {
+    } else if (isUnset(value, emptyValue)) {
       selectedValues = null;
     } else {
       const found = opts.find((o) => isEnumValueMatched(o.value, value));
-      selectedValues = found ? found.value : value;
+      selectedValues = found ? found.value : null;
     }
 
     let multiSummary: string | undefined;
@@ -72,7 +88,23 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
     }
 
     return { selectedValues, multiSummary, selectedLabel };
-  }, [multiple, options.emptyValue, options.enumOptions, value]);
+  }, [emptyValue, multiple, options.enumOptions, value]);
+
+  useEffect(() => {
+    const opts = Array.isArray(options.enumOptions) ? options.enumOptions : [];
+    if (!hasValueOutsideOptions(value, opts, Boolean(multiple), options.emptyValue)) return;
+
+    if (multiple) {
+      const arr = Array.isArray(value) ? value : [];
+      onChange(resolveValuesInOptions(arr, opts));
+      return;
+    }
+    if (required && opts.length > 0) {
+      onChange(opts[0].value);
+      return;
+    }
+    onChange(options.emptyValue);
+  }, [multiple, onChange, options.emptyValue, options.enumOptions, required, value]);
 
   const onValueChange = useCallback(
     (next: unknown) => {
@@ -83,12 +115,12 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
         return;
       }
       if (next == null) {
-        onChange(options.emptyValue);
+        onChange(emptyValue);
         return;
       }
       onChange(next);
     },
-    [isReadonly, multiple, onChange, options],
+    [emptyValue, isReadonly, multiple, onChange],
   );
 
   const onOpenChange = useCallback(
@@ -102,16 +134,16 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
     [onBlur, onFocus, id, value],
   );
 
-  const showClear = !multiple && !required && !disabled && !isReadonly && !isUnset(value, options.emptyValue);
+  const showClear = !multiple && !required && !disabled && !isReadonly && !isUnset(value, emptyValue);
 
   const onClear = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();
       event.stopPropagation();
       if (isReadonly) return;
-      onChange(options.emptyValue);
+      onChange(emptyValue);
     },
-    [isReadonly, onChange, options.emptyValue],
+    [emptyValue, isReadonly, onChange],
   );
 
   return (

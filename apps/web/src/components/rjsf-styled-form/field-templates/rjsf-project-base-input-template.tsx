@@ -59,7 +59,7 @@ export default function RjsfProjectBaseInputTemplate<
     (e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      onChange(options.emptyValue ?? '');
+      onChange(options.emptyValue);
     },
     [onChange, options.emptyValue],
   );

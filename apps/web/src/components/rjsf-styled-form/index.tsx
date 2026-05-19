@@ -7,7 +7,9 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
 
+import RjsfStringField from './fields/rjsf-string-field';
 import { HoverDescriptionFieldTemplate } from './field-templates/hover-description-field-template';
+import { uiSchemaWithNullEmptyValue } from './rjsf-empty-value';
 import RjsfProjectBaseInputTemplate from './field-templates/rjsf-project-base-input-template';
 import RjsfProjectObjectFieldTemplate from './field-templates/rjsf-project-object-field-template';
 import { RjsfPortalSelectWidget } from './widgets/rjsf-portal-select-widget';
@@ -161,6 +163,12 @@ function buildTabSchemaAndUi(
         'ui:widget': 'hidden',
       };
     });
+
+  const globalOptions = pagination.uiSchema['ui:globalOptions'];
+  if (globalOptions && typeof globalOptions === 'object' && !Array.isArray(globalOptions)) {
+    tabUi['ui:globalOptions'] = globalOptions as UiSchema['ui:globalOptions'];
+  }
+
   return { schema: tabSchema, uiSchema: tabUi };
 }
 
@@ -279,23 +287,24 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
     [props.formContext, formReadonly],
   );
   const formData = useMemo(() => (props.formData as Record<string, unknown>) ?? {}, [props.formData]);
+  const baseUiSchema = useMemo(() => uiSchemaWithNullEmptyValue(uiSchema), [uiSchema]);
   const { pagination, resolvedTab, tabSchemaAndUi } = useMemo(
-    () => resolveTabState(tabbedByNav, schema, uiSchema, activeTab, formData),
-    [tabbedByNav, schema, uiSchema, activeTab, formData],
+    () => resolveTabState(tabbedByNav, schema, baseUiSchema, activeTab, formData),
+    [tabbedByNav, schema, baseUiSchema, activeTab, formData],
   );
+  const resolvedFormUiSchema = tabSchemaAndUi?.uiSchema ?? baseUiSchema;
   const handleChange = (next: RjsfOnChangeArg) => {
     if (formReadonly) return;
     if (tabSchemaAndUi) {
       const nextEvent = (typeof next === 'object' && next ? next : {}) as Record<string, unknown>;
       const nextData = (nextEvent.formData as Record<string, unknown> | undefined) ?? {};
-      const mergedEvent = {
+      props.onChange?.({
         ...nextEvent,
         formData: {
           ...formData,
           ...nextData,
         },
-      } as RjsfOnChangeArg;
-      props.onChange?.(mergedEvent);
+      } as RjsfOnChangeArg);
       return;
     }
     props.onChange?.(next);
@@ -329,8 +338,12 @@ export function RjsfStyledForm({ className, tabbedByNav = false, ...props }: Rjs
         readonly={formReadonly}
         formContext={mergedFormContext}
         schema={tabSchemaAndUi?.schema ?? props.schema}
-        uiSchema={tabSchemaAndUi?.uiSchema ?? props.uiSchema}
+        uiSchema={resolvedFormUiSchema}
         onChange={handleChange}
+        fields={{
+          ...(props.fields ?? {}),
+          StringField: RjsfStringField,
+        }}
         widgets={{
           SelectWidget: RjsfPortalSelectWidget,
           TextareaWidget: RjsfProjectTextareaWidget,

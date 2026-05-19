@@ -16,15 +16,12 @@ async function createDatasourceFromForm(form: FormState): Promise<DataSourcePubl
     throw new Error('请选择数据源类型');
   }
   const container = dictLikeOrEmpty(form.config);
-  const connection = dictLikeOrEmpty(container.connection);
-  const columns = dictLikeOrEmpty(container.columns);
-  const write = dictLikeOrEmpty(container.write);
   return await createDatasource({
     name: form.name.trim(),
     type: form.type,
-    connection_config: connection,
-    columns_config: columns,
-    write_config: write,
+    connection_config: dictLikeOrEmpty(container.connection),
+    columns_config: dictLikeOrEmpty(container.columns),
+    write_config: dictLikeOrEmpty(container.write),
   });
 }
 
@@ -34,23 +31,23 @@ function buildEditPatch(form: FormState, orig: DataSourcePublic): Record<string,
   if (form.name.trim() !== orig.name) patch.name = form.name.trim();
 
   const container = dictLikeOrEmpty(form.config);
-  const next = {
-    connection: dictLikeOrEmpty(container.connection),
-    columns: dictLikeOrEmpty(container.columns),
-    write: dictLikeOrEmpty(container.write),
-  };
+  const connection = dictLikeOrEmpty(container.connection);
+  const columns = dictLikeOrEmpty(container.columns);
+  const write = dictLikeOrEmpty(container.write);
+
   const origConfig = dictLikeOrEmpty(orig.config);
   const oc = dictLikeOrEmpty(origConfig.connection);
   const ocol = dictLikeOrEmpty(origConfig.columns);
   const ow = dictLikeOrEmpty(origConfig.write);
-  if (JSON.stringify(next.connection) !== JSON.stringify(oc)) {
-    patch.connection_config = next.connection;
+
+  if (JSON.stringify(connection) !== JSON.stringify(oc)) {
+    patch.connection_config = connection;
   }
-  if (JSON.stringify(next.columns) !== JSON.stringify(ocol)) {
-    patch.columns_config = next.columns;
+  if (JSON.stringify(columns) !== JSON.stringify(ocol)) {
+    patch.columns_config = columns;
   }
-  if (JSON.stringify(next.write) !== JSON.stringify(ow)) {
-    patch.write_config = next.write;
+  if (JSON.stringify(write) !== JSON.stringify(ow)) {
+    patch.write_config = write;
   }
 
   return patch;
