@@ -42,7 +42,7 @@ export function DataSyncListPane() {
       searchQuery={listSearchQuery}
       onSearchQueryChange={setListSearchQuery}
       selectedId={sidebarCollapsed ? null : selectedId}
-      renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => onSelectItem(item.id)} />}
+      renderItem={(p) => <SearchListItem {...p} dense onItemSelected={(item) => onSelectItem(item.id)} />}
       actions={[
         {
           label: '新增',

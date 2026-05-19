@@ -65,7 +65,7 @@ function DatasourceListPanel() {
         searchQuery={searchQuery}
         onSearchQueryChange={setSearchQuery}
         selectedId={selectedId}
-        renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+        renderItem={(p) => <SearchListItem {...p} dense onItemSelected={(item) => void selectItem(item.id)} />}
         actions={[
           {
             label: '新增数据源',

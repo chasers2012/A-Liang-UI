@@ -15,6 +15,8 @@ export type SearchListRenderItemProps<TItem extends SearchListItemBase> = {
 };
 
 export type SearchListItemProps<TItem extends SearchListItemBase> = SearchListRenderItemProps<TItem> & {
+  /** 紧凑模式：仅显示标题，不显示描述。 */
+  dense?: boolean;
   onItemSelected?: (item: TItem) => void;
   onItemDrag?: (item: TItem, e: DragEvent<HTMLDivElement>) => void;
 };

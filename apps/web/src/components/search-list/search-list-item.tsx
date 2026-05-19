@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import type { SearchListItemBase, SearchListItemProps } from './types';
 
 export function SearchListItem<TItem extends SearchListItemBase>(props: SearchListItemProps<TItem>) {
-  const { item, selectedId, description, title, onItemSelected, onItemDrag } = props;
+  const { item, selectedId, description, title, dense, onItemSelected, onItemDrag } = props;
   const draggable = Boolean(onItemDrag);
   return (
     <Item
@@ -28,11 +28,13 @@ export function SearchListItem<TItem extends SearchListItemBase>(props: SearchLi
         />
       }
     >
-      <ItemContent className="min-h-18 overflow-hidden">
+      <ItemContent className={cn('overflow-hidden', dense ? 'min-h-0' : 'min-h-18')}>
         <ItemTitle className="truncate">{title}</ItemTitle>
-        <ItemDescription className="min-h-10 line-clamp-2 [&:not(:has(*))]:line-clamp-2">
-          {description ?? '-'}
-        </ItemDescription>
+        {!dense && (
+          <ItemDescription className="min-h-10 line-clamp-2 [&:not(:has(*))]:line-clamp-2">
+            {description || '-'}
+          </ItemDescription>
+        )}
       </ItemContent>
     </Item>
   );

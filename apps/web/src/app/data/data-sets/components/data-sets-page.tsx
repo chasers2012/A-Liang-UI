@@ -100,7 +100,7 @@ export function DataSetsPage() {
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             selectedId={selectedId}
-            renderItem={(p) => <SearchListItem {...p} onItemSelected={onSelectItem} />}
+            renderItem={(p) => <SearchListItem {...p} dense onItemSelected={onSelectItem} />}
             actions={[
               {
                 label: '新增数据集',
