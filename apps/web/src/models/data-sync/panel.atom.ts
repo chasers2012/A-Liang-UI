@@ -21,7 +21,6 @@ import {
   buildListEmptyState,
   buildSearchListItems,
   buildDatasourceLabelLookup,
-  filterTasksBySearch,
   formatTaskDescription,
 } from './list-helpers';
 import { syncWorkflowBoundary } from './sync-workflow-boundary';
@@ -46,8 +45,6 @@ export const recordsRefreshEpochAtom = atom(0);
 
 export const isEditingAtom = atom(false);
 export const selectedIdAtom = atom<string | null>(null);
-export const listSearchQueryAtom = atom('');
-
 export const formAtom = atom<FormValues>(emptyFormValues());
 export const formErrorAtom = atom<string | null>(null);
 export const workflowCanvasKeyAtom = atom(0);
@@ -76,12 +73,10 @@ export const describeTaskAtom = atom((get) => {
   };
 });
 
-export const filteredSyncTasksAtom = atom((get) => filterTasksBySearch(get(tasksAtom), get(listSearchQueryAtom)));
-
 export const searchListItemsAtom = atom((get) => {
-  const filtered = get(filteredSyncTasksAtom);
+  const tasks = get(tasksAtom);
   const describe = get(describeTaskAtom);
-  return buildSearchListItems(filtered, describe);
+  return buildSearchListItems(tasks, describe);
 });
 
 export const selectedTaskAtom = atom((get): DataSyncTaskPublic | undefined => {
@@ -95,7 +90,6 @@ export const listEmptyStateAtom = atom((get) =>
     error: get(errorAtom),
     loading: get(loadingAtom),
     syncTasksLength: get(tasksAtom).length,
-    filteredCount: get(filteredSyncTasksAtom).length,
   }),
 );
 

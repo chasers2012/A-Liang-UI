@@ -127,13 +127,19 @@ function StrategiesPageContent() {
           className="h-full min-h-0"
           items={strategiesSearchListItems}
           getGroupKey={(item) => item.category}
-          renderTitle={(item) => item.name}
-          renderDescription={(item) => item.description ?? ''}
-          getSearchText={(item) => [item.name, item.description ?? '', item.id].join(' ')}
+          searchKeys={['name', 'description', 'id']}
           title="策略列表"
           searchPlaceholder="搜索策略"
           selectedId={listSelectedId}
-          renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+          renderItem={({ item, selectedId }) => (
+            <SearchListItem
+              item={item}
+              selectedId={selectedId}
+              title={item.name}
+              description={item.description ?? ''}
+              onClick={() => void selectItem(item.id)}
+            />
+          )}
           actions={[
             {
               label: '新增策略',

@@ -9,27 +9,16 @@ import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-
 import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
-import {
-  creatingAtom,
-  factorsBrowseStateAtom,
-  factorsListAtoms,
-  factorsEditingAtom,
-  factorsSelectedIdAtom,
-  filteredFactorsAtom,
-  setFactorsSearchQueryAtom,
-} from '@/models/factor';
+import { creatingAtom, factorsListAtoms, factorsEditingAtom, factorsSelectedIdAtom } from '@/models/factor';
 import { FactorDetailPanel } from './components/panel/factor-detail-panel';
 
 function FactorsListPane() {
-  const setSearchQuery = useSetAtom(setFactorsSearchQueryAtom);
   const startCreate = useSetAtom(creatingAtom);
   const setEditing = useSetAtom(factorsEditingAtom);
   const [selectedId, setSelectedId] = useAtom(factorsSelectedIdAtom);
   const [editing] = useAtom(factorsEditingAtom);
   const listItems = useAtomValue(factorsListAtoms.valueAtom);
   const listError = useAtomValue(factorsListAtoms.errorAtom);
-  const filteredItems = useAtomValue(filteredFactorsAtom);
-  const browseState = useAtomValue(factorsBrowseStateAtom);
 
   const factorsSearchListEmpty = resolveAsyncListEmptyState({
     loading: listItems == null,
@@ -45,7 +34,7 @@ function FactorsListPane() {
       <SearchList
         className="h-full min-h-0"
         items={
-          filteredItems?.map((m) => ({
+          listItems?.map((m) => ({
             id: m.id,
             label: m.name,
             description: m.description,
@@ -53,18 +42,17 @@ function FactorsListPane() {
           })) ?? null
         }
         getGroupKey={(item) => item.category ?? '未分组'}
-        renderTitle={(item) => item.label}
-        renderDescription={(item) => item.description ?? ''}
-        getSearchText={(item) => [item.label, item.description ?? '', item.category ?? '', item.id].join(' ')}
+        searchKeys={['label', 'description', 'category', 'id']}
         title="因子列表"
         searchPlaceholder="搜索因子"
-        searchQuery={browseState.searchQuery}
-        onSearchQueryChange={setSearchQuery}
         selectedId={selectedId}
-        renderItem={(p) => (
+        renderItem={({ item, selectedId }) => (
           <SearchListItem
-            {...p}
-            onItemSelected={(item) => {
+            item={item}
+            selectedId={selectedId}
+            title={item.label}
+            description={item.description ?? ''}
+            onClick={() => {
               setSelectedId(item.id);
               if (editing) {
                 setEditing(false);

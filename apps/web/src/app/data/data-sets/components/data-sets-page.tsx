@@ -10,11 +10,6 @@ import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-li
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  dataSetsBrowseStateAtom,
-  filteredDataSetsAtom,
-  setDataSetsSearchQueryAtom,
-} from '@/models/data-set/browse.atom';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
 import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import { handleCancelDataSetEditAtom } from '@/models/data-set/edit.atom';
@@ -27,15 +22,9 @@ import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 
 import { DataSetDetailPanel } from './panel/data-set-detail-panel';
 
-/** 所有数据集共用一个分组键，避免按数据源类型拆分（SearchList 不改，仅用 getGroupKey 归组） */
-const DATA_SETS_LIST_GROUP_KEY = '数据集';
-
 /** 与 `apps/web/src/app/nodes/page.tsx` 对齐：左列表 + 右卡片，状态全部走 jotai */
 export function DataSetsPage() {
   const items = useAtomValue(dataSetAtoms.valueAtom);
-  const filteredItems = useAtomValue(filteredDataSetsAtom);
-  const { searchQuery } = useAtomValue(dataSetsBrowseStateAtom);
-  const setSearchQuery = useSetAtom(setDataSetsSearchQueryAtom);
   const selectedId = useAtomValue(dataSetsSelectedIdAtom);
 
   const selectDetail = useSetAtom(dataSetsSelectAndDetailAtom);
@@ -63,7 +52,7 @@ export function DataSetsPage() {
   );
 
   const dataSetsSearchListEmpty = resolveAsyncListEmptyState({
-    loading: filteredItems == null,
+    loading: items == null,
     error: listError ? '数据集列表加载失败。' : null,
     itemCount: items?.length ?? 0,
     emptyTitle: '暂无数据集',
@@ -84,23 +73,26 @@ export function DataSetsPage() {
           <SearchList
             className="h-full min-h-0"
             items={
-              filteredItems?.map((m) => ({
+              items?.map((m) => ({
                 id: m.id,
                 label: m.name,
                 description: m.description,
                 datasourceType: m.datasource_bindings?.[0]?.datasource_type ?? '',
               })) ?? null
             }
-            getGroupKey={() => DATA_SETS_LIST_GROUP_KEY}
-            renderTitle={(item) => item.label}
-            renderDescription={(item) => item.description ?? ''}
-            getSearchText={(item) => [item.label, item.description ?? '', item.datasourceType].join(' ')}
+            searchKeys={['label', 'description', 'datasourceType']}
             title="数据集列表"
             searchPlaceholder="搜索数据集"
-            searchQuery={searchQuery}
-            onSearchQueryChange={setSearchQuery}
             selectedId={selectedId}
-            renderItem={(p) => <SearchListItem {...p} dense onItemSelected={onSelectItem} />}
+            renderItem={({ item, selectedId }) => (
+              <SearchListItem
+                item={item}
+                selectedId={selectedId}
+                title={item.label}
+                dense
+                onClick={() => onSelectItem(item)}
+              />
+            )}
             actions={[
               {
                 label: '新增数据集',

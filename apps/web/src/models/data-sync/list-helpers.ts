@@ -49,12 +49,6 @@ export function formatTaskDescription(
   return `${sl} → ${tl} · ${cron} · 下次 ${next}`;
 }
 
-export function filterTasksBySearch(syncTasks: DataSyncTaskPublic[], listSearchQuery: string): DataSyncTaskPublic[] {
-  const q = listSearchQuery.trim().toLowerCase();
-  if (!q) return syncTasks;
-  return syncTasks.filter((t) => t.name.toLowerCase().includes(q));
-}
-
 export function buildSearchListItems(
   filteredTasks: DataSyncTaskPublic[],
   describe: (t: DataSyncTaskPublic) => string,
@@ -71,9 +65,8 @@ export function buildListEmptyState(args: {
   error: string | null;
   loading: boolean;
   syncTasksLength: number;
-  filteredCount: number;
 }): EmptyStateProps {
-  const { error, loading, syncTasksLength, filteredCount } = args;
+  const { error, loading, syncTasksLength } = args;
   if (error && !syncTasksLength) {
     return { variant: 'error', title: '加载失败', description: '列表加载失败，请检查网络或重试。' };
   }
@@ -83,12 +76,9 @@ export function buildListEmptyState(args: {
   if (syncTasksLength === 0) {
     return { variant: 'default', title: '暂无同步任务', description: '点击列表上方「新增」创建。' };
   }
-  if (filteredCount === 0) {
-    return {
-      variant: 'default',
-      title: '无匹配结果',
-      description: '没有符合当前搜索条件的任务。',
-    };
-  }
-  return { variant: 'loading', title: '加载中' };
+  return {
+    variant: 'default',
+    title: '无匹配结果',
+    description: '没有符合当前搜索条件的任务。',
+  };
 }

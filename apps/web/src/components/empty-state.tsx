@@ -50,7 +50,7 @@ export function EmptyState({
 
 /** SearchList 无数据 / 加载 / 错误时的默认占位。 */
 export function SearchListEmpty(props: EmptyStateProps) {
-  return <EmptyState {...props} className={cn('min-h-[10rem]', props.className)} />;
+  return <EmptyState {...props} className={cn('min-h-40', props.className)} />;
 }
 
 /** 详情面板内未选中或加载中的占位。 */

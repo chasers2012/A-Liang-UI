@@ -1,13 +1,12 @@
 'use client';
 
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
 import { SearchListEmpty } from '@/components/empty-state';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import {
   listEmptyStateAtom,
-  listSearchQueryAtom,
   loadingAtom,
   searchListItemsAtom,
   isEditingAtom,
@@ -18,7 +17,6 @@ import {
 } from '@/models/data-sync/panel.atom';
 
 export function DataSyncListPane() {
-  const [listSearchQuery, setListSearchQuery] = useAtom(listSearchQueryAtom);
   const sidebarCollapsed = useAtomValue(isEditingAtom);
   const selectedId = useAtomValue(selectedIdAtom);
   const loading = useAtomValue(loadingAtom);
@@ -33,16 +31,20 @@ export function DataSyncListPane() {
     <SearchList
       className="h-full min-h-0"
       items={loading && syncTasksCount === 0 ? null : searchListItems}
-      getGroupKey={(item) => item.category ?? '同步任务'}
-      renderTitle={(item) => item.label}
-      renderDescription={(item) => item.description}
-      getSearchText={(item) => [item.label, item.description ?? '', item.id].join(' ')}
+      searchKeys={['label', 'description', 'id']}
       title="同步任务"
       searchPlaceholder="搜索任务"
-      searchQuery={listSearchQuery}
-      onSearchQueryChange={setListSearchQuery}
       selectedId={sidebarCollapsed ? null : selectedId}
-      renderItem={(p) => <SearchListItem {...p} dense onItemSelected={(item) => onSelectItem(item.id)} />}
+      renderItem={({ item, selectedId }) => (
+        <SearchListItem
+          item={item}
+          selectedId={selectedId}
+          title={item.label}
+          description={item.description}
+          dense
+          onClick={() => onSelectItem(item.id)}
+        />
+      )}
       actions={[
         {
           label: '新增',

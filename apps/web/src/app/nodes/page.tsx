@@ -10,7 +10,7 @@ import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-li
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
-import { filteredNodesAtom, nodesBrowseStateAtom, setNodesSearchQueryAtom } from '@/models/nodes/browse.atom';
+import { filteredNodesAtom } from '@/models/nodes/browse.atom';
 import { nodesSelectedIdAtom } from '@/models/nodes/selection.atom';
 import { handleCancelNodesEditAtom, nodesCreateModeAtom, nodesEditActiveAtom } from '@/models/nodes/edit.atom';
 import { nodesListAtoms } from '@/models/nodes/list-detail.atom';
@@ -18,12 +18,10 @@ import { NodesNodeDetailPanel } from './components/panel/node-detail-panel';
 
 export default function NodesPage() {
   const items = useAtomValue(nodesListAtoms.valueAtom);
-  const { searchQuery } = useAtomValue(nodesBrowseStateAtom);
   const filteredItems = useAtomValue(filteredNodesAtom);
   const setIsCreate = useSetAtom(nodesCreateModeAtom);
   const isEditActive = useAtomValue(nodesEditActiveAtom);
   const [selectedId, setSelectedId] = useAtom(nodesSelectedIdAtom);
-  const setSearchQuery = useSetAtom(setNodesSearchQueryAtom);
   const refreshList = useSetAtom(nodesListAtoms.refreshAtom);
   const cancelNodesEdit = useSetAtom(handleCancelNodesEditAtom);
 
@@ -64,15 +62,19 @@ export default function NodesPage() {
             })) ?? null
           }
           getGroupKey={(item) => item.category ?? '其他'}
-          renderTitle={(item) => item.label}
-          renderDescription={(item) => item.description ?? ''}
-          getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
+          searchKeys={['label', 'description', 'category']}
           title="节点列表"
           searchPlaceholder="搜索节点"
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
           selectedId={selectedId}
-          renderItem={(p) => <SearchListItem {...p} onItemSelected={onSelectNode} />}
+          renderItem={({ item, selectedId }) => (
+            <SearchListItem
+              item={item}
+              selectedId={selectedId}
+              title={item.label}
+              description={item.description ?? ''}
+              onClick={() => onSelectNode(item)}
+            />
+          )}
           actions={[
             { label: '筛选节点', render: () => <NodesListFilterPopover /> },
             {

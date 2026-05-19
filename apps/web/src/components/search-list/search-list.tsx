@@ -6,56 +6,53 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SearchInput } from '@/components/search-input';
 import { cn } from '@/lib/utils';
 
-import { toPlainTextFirstLinePreview } from './preview-text';
 import { SearchListGroup } from './search-list-group';
-import { SearchListItem } from './search-list-item';
 import { SearchListToolbarActions } from './toolbar-actions';
 import type { SearchListAction, SearchListItemBase, SearchListRenderItemProps } from './types';
 
-function defaultRenderItem<TItem extends SearchListItemBase>(params: SearchListRenderItemProps<TItem>) {
-  return <SearchListItem {...params} />;
+function buildItemSearchText<TItem extends SearchListItemBase>(
+  item: TItem,
+  searchKeys: readonly (keyof TItem & string)[],
+): string {
+  return searchKeys
+    .map((key) => {
+      const value = item[key];
+      if (value == null) return '';
+      return typeof value === 'string' ? value : String(value);
+    })
+    .join(' ');
 }
 
 export function SearchList<TItem extends SearchListItemBase>(props: {
   items: TItem[] | null;
-  getGroupKey: (item: TItem) => unknown;
-  renderTitle: (item: TItem) => ReactNode;
-  renderDescription?: (item: TItem) => ReactNode;
-  getSearchText?: (item: TItem) => string;
+  /** 未传入时不分组，直接平铺列表项。 */
+  getGroupKey?: (item: TItem) => unknown;
+  /** 参与搜索的 item 字段名列表，例如 `['label', 'description']`。 */
+  searchKeys?: readonly (keyof TItem & string)[];
   title?: string;
   searchPlaceholder?: string;
-  searchQuery?: string;
-  onSearchQueryChange?: (value: string) => void;
   selectedId?: string | null;
   /** 无列表数据时展示（不区分加载与空列表，由调用方决定内容）。 */
   children?: ReactNode;
   className?: string;
-  listClassName?: string;
   actions?: readonly SearchListAction[];
-  /** 默认使用 {@link SearchListItem}。需要点击、拖拽等行为时自行传入并扩展 props。 */
-  renderItem?: (params: SearchListRenderItemProps<TItem>) => ReactNode;
+  renderItem: (params: SearchListRenderItemProps<TItem>) => ReactNode;
 }) {
   const {
     items,
     getGroupKey,
-    renderTitle,
-    renderDescription,
-    getSearchText,
+    searchKeys,
     title = '列表',
     searchPlaceholder = '搜索',
-    searchQuery,
-    onSearchQueryChange,
     selectedId,
     children,
     className,
-    listClassName,
     actions,
-    renderItem = defaultRenderItem,
+    renderItem,
   } = props;
 
-  const [innerQuery, setInnerQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
-  const effectiveQuery = searchQuery ?? innerQuery;
 
   const toggleGroup = useCallback((group: string) => {
     setCollapsedGroups((prev) => {
@@ -66,28 +63,18 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
     });
   }, []);
 
-  const handleQueryChange = useCallback(
-    (value: string) => {
-      if (onSearchQueryChange) onSearchQueryChange(value);
-      else setInnerQuery(value);
-    },
-    [onSearchQueryChange],
-  );
-
   const filteredItems = useMemo(() => {
     if (!items) return null;
-    const q = effectiveQuery.trim().toLocaleLowerCase('zh-CN');
+    const q = searchQuery.trim().toLocaleLowerCase('zh-CN');
     if (!q) return items;
     return items.filter((item) => {
-      const titleNode = renderTitle(item);
-      const fallbackText = typeof titleNode === 'string' ? titleNode : '';
-      const text = (getSearchText ? getSearchText(item) : fallbackText).toLocaleLowerCase('zh-CN');
-      return text.includes(q);
+      if (!searchKeys?.length) return false;
+      return buildItemSearchText(item, searchKeys).toLocaleLowerCase('zh-CN').includes(q);
     });
-  }, [items, effectiveQuery, getSearchText, renderTitle]);
+  }, [items, searchQuery, searchKeys]);
 
   const groupedItems = useMemo(() => {
-    if (!filteredItems) return null;
+    if (!filteredItems || !getGroupKey) return null;
     const groups = new Map<string, TItem[]>();
     for (const item of filteredItems) {
       const raw = getGroupKey(item);
@@ -99,6 +86,8 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
     return [...groups.entries()];
   }, [filteredItems, getGroupKey]);
 
+  const renderListItem = useCallback((item: TItem) => renderItem({ item, selectedId }), [renderItem, selectedId]);
+
   return (
     <Card className={cn('flex min-h-0 flex-col overflow-hidden', className)}>
       <CardHeader className="shrink-0">
@@ -109,19 +98,15 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
           <SearchInput
             className="max-w-xs"
             placeholder={searchPlaceholder}
-            value={effectiveQuery}
-            onValueChange={handleQueryChange}
+            value={searchQuery}
+            onValueChange={setSearchQuery}
           />
           <SearchListToolbarActions actions={actions} />
         </div>
-        <div
-          className={cn(
-            'min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-2 flex flex-col pb-2',
-            listClassName,
-          )}
-        >
-          {filteredItems && filteredItems.length > 0
-            ? groupedItems?.map(([group, list]) => (
+        <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-2 flex flex-col pb-2">
+          {filteredItems && filteredItems.length > 0 ? (
+            getGroupKey ? (
+              groupedItems?.map(([group, list]) => (
                 <SearchListGroup
                   key={group}
                   group={group}
@@ -129,28 +114,21 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
                   isCollapsed={collapsedGroups.has(group)}
                   onToggle={() => toggleGroup(group)}
                 >
-                  {list.map((item) => {
-                    const descriptionNode = renderDescription?.(item);
-                    const description =
-                      descriptionNode === undefined
-                        ? ''
-                        : typeof descriptionNode === 'string'
-                          ? toPlainTextFirstLinePreview(descriptionNode)
-                          : descriptionNode;
-                    return (
-                      <Fragment key={item.id}>
-                        {renderItem({
-                          item,
-                          title: renderTitle(item),
-                          selectedId,
-                          description,
-                        })}
-                      </Fragment>
-                    );
-                  })}
+                  {list.map((item) => (
+                    <Fragment key={item.id}>{renderListItem(item)}</Fragment>
+                  ))}
                 </SearchListGroup>
               ))
-            : (children ?? null)}
+            ) : (
+              <div className="space-y-2">
+                {filteredItems.map((item) => (
+                  <Fragment key={item.id}>{renderListItem(item)}</Fragment>
+                ))}
+              </div>
+            )
+          ) : (
+            (children ?? null)
+          )}
         </div>
       </CardContent>
     </Card>

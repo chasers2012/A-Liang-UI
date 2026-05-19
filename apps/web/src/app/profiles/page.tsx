@@ -67,13 +67,19 @@ export default function EvaluationProfilesPage() {
           className="h-full min-h-0"
           items={sidebarItems}
           getGroupKey={(item) => item.category}
-          renderTitle={(item) => item.name}
-          renderDescription={(item) => item.description ?? ''}
-          getSearchText={(item) => [item.name, item.description ?? '', item.id].join(' ')}
+          searchKeys={['name', 'description', 'id']}
           title="评价方案列表"
           searchPlaceholder="搜索评价方案"
           selectedId={listSelectedId}
-          renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => void selectItem(item.id)} />}
+          renderItem={({ item, selectedId }) => (
+            <SearchListItem
+              item={item}
+              selectedId={selectedId}
+              title={item.name}
+              description={item.description ?? ''}
+              onClick={() => void selectItem(item.id)}
+            />
+          )}
           actions={[
             {
               label: '新增评价方案',

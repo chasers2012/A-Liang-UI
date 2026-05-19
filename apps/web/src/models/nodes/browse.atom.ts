@@ -11,13 +11,11 @@ export const UNCATEGORIZED_KEY = '__uncategorized__';
 export type NodesSourceFilter = 'all' | 'user' | 'plugin';
 
 export type NodesBrowseState = {
-  searchQuery: string;
   sourceFilter: NodesSourceFilter;
   includedCategories: string[];
 };
 
 export const nodesBrowseStateAtom = atom<NodesBrowseState>({
-  searchQuery: '',
   sourceFilter: 'all',
   includedCategories: [],
 });
@@ -61,10 +59,6 @@ export function categoryLabel(key: string): string {
   return key === UNCATEGORIZED_KEY ? '未分类' : key;
 }
 
-export const setNodesSearchQueryAtom = atom(null, (_get, set, searchQuery: string) => {
-  set(nodesBrowseStateAtom, (s) => ({ ...s, searchQuery }));
-});
-
 export const setNodesSourceFilterAtom = atom(null, (_get, set, sourceFilter: NodesSourceFilter) => {
   set(nodesBrowseStateAtom, (s) => ({ ...s, sourceFilter }));
 });
@@ -94,7 +88,6 @@ export const clearNodesCategoryFiltersAtom = atom(null, (_get, set) => {
 
 export const resetNodesBrowseFiltersAtom = atom(null, (_get, set) => {
   set(nodesBrowseStateAtom, {
-    searchQuery: '',
     sourceFilter: 'all',
     includedCategories: [],
   });
@@ -114,11 +107,10 @@ export const nodesCategoryOptionKeysAtom = atom((get) => {
 
 export const filteredNodesAtom = atom((get) => {
   const items = get(nodesListAtoms.valueAtom);
-  const { searchQuery, sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
+  const { sourceFilter, includedCategories } = get(nodesBrowseStateAtom);
   const selectedDomains = get(nodesSelectedDomainsAtom);
   const domainConfigs = get(nodesDomainConfigsAtom);
   if (!items) return null;
-  const q = searchQuery.trim().toLowerCase();
   const categorySet = new Set(includedCategories);
   return items.filter((m) => {
     if (sourceFilter === 'user' && m.is_plugin) {
@@ -129,10 +121,6 @@ export const filteredNodesAtom = atom((get) => {
     }
     if (categorySet.size > 0 && !categorySet.has(categoryKey(m))) {
       return false;
-    }
-    if (q) {
-      const hay = `${m.name}\n${m.desc}\n${m.id}`.toLowerCase();
-      if (!hay.includes(q)) return false;
     }
     if (selectedDomains.length > 0) {
       const visibleInAnySelectedDomain = selectedDomains.some((domain) => {

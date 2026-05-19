@@ -83,7 +83,6 @@ export default function SubagentsPage() {
   const data = useAtomValue(subagentToolConfigAtoms.valueAtom);
   const refresh = useSetAtom(refreshSubagentToolConfigsAtom);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     void refresh();
@@ -123,16 +122,19 @@ export default function SubagentsPage() {
             selectedCount: item.tool_ids.length,
           })) ?? null
         }
-        getGroupKey={() => 'Subagents'}
-        renderTitle={(item) => item.label}
-        renderDescription={(item) => `${item.description}（已启用 ${item.selectedCount} 个工具）`}
-        getSearchText={(item) => [item.label, item.description].join(' ')}
+        searchKeys={['label', 'description']}
         title="子代理列表"
         searchPlaceholder="搜索子代理"
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
         selectedId={effectiveSelectedId}
-        renderItem={(p) => <SearchListItem {...p} onItemSelected={(item) => setSelectedId(item.id)} />}
+        renderItem={({ item, selectedId }) => (
+          <SearchListItem
+            item={item}
+            selectedId={selectedId}
+            title={item.label}
+            description={`${item.description}（已启用 ${item.selectedCount} 个工具）`}
+            onClick={() => setSelectedId(item.id)}
+          />
+        )}
       >
         <SearchListEmpty {...subagentsSearchListEmpty} />
       </SearchList>

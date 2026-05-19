@@ -12,7 +12,6 @@ import {
   datasourcesListAtoms,
   datasourcesListCountAtom,
   datasourcesListRefreshOnMountEffectAtom,
-  datasourcesListSearchQueryAtom,
   cancelDatasourceEditorAtom,
   datasourcesIsEditingAtom,
   datasourcesSearchListRowsAtom,
@@ -27,7 +26,6 @@ import { DatasourceDetailPanel } from './ui/datasource-detail-panel';
 function DatasourceListPanel() {
   useAtom(datasourcesListRefreshOnMountEffectAtom);
 
-  const [searchQuery, setSearchQuery] = useAtom(datasourcesListSearchQueryAtom);
   const listItems = useAtomValue(datasourcesSearchListRowsAtom);
   const listError = useAtomValue(datasourcesListAtoms.errorAtom);
   const count = useAtomValue(datasourcesListCountAtom);
@@ -57,15 +55,19 @@ function DatasourceListPanel() {
         className="h-full min-h-0"
         items={listItems}
         getGroupKey={(item) => item.category ?? '其他'}
-        renderTitle={(item) => item.label}
-        renderDescription={() => ''}
-        getSearchText={(item) => [item.label, item.category ?? ''].join(' ')}
+        searchKeys={['label', 'category']}
         title="数据源列表"
         searchPlaceholder="搜索数据源"
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
         selectedId={selectedId}
-        renderItem={(p) => <SearchListItem {...p} dense onItemSelected={(item) => void selectItem(item.id)} />}
+        renderItem={({ item, selectedId }) => (
+          <SearchListItem
+            item={item}
+            selectedId={selectedId}
+            title={item.label}
+            dense
+            onClick={() => void selectItem(item.id)}
+          />
+        )}
         actions={[
           {
             label: '新增数据源',

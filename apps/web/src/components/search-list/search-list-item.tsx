@@ -6,27 +6,21 @@ import { cn } from '@/lib/utils';
 import type { SearchListItemBase, SearchListItemProps } from './types';
 
 export function SearchListItem<TItem extends SearchListItemBase>(props: SearchListItemProps<TItem>) {
-  const { item, selectedId, description, title, dense, onItemSelected, onItemDrag } = props;
-  const draggable = Boolean(onItemDrag);
+  const { item, selectedId, description, title, dense, className, variant = 'outline', ...itemProps } = props;
+
   return (
     <Item
-      variant="outline"
-      className={cn({
-        'border-primary bg-muted/50 ring-1 ring-primary/35': item.id === selectedId,
-      })}
-      render={
-        <div
-          role="button"
-          tabIndex={0}
-          className="w-full cursor-pointer text-left outline-none"
-          onClick={() => onItemSelected?.(item)}
-          draggable={draggable}
-          onDragStart={(e) => {
-            if (!onItemDrag) return;
-            onItemDrag(item, e);
-          }}
-        />
-      }
+      variant={variant}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        'w-full cursor-pointer text-left outline-none',
+        {
+          'border-primary bg-muted/50 ring-1 ring-primary/35': item.id === selectedId,
+        },
+        className,
+      )}
+      {...itemProps}
     >
       <ItemContent className={cn('overflow-hidden', dense ? 'min-h-0' : 'min-h-18')}>
         <ItemTitle className="truncate">{title}</ItemTitle>

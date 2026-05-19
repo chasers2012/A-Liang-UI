@@ -57,9 +57,6 @@ export const datasourcesPluginsAtom = atom<DatasourcePluginPublic[]>([]);
 export const datasourcesEditorFormErrorAtom = atom<string | null>(null);
 export const datasourcesEditorSubmittingAtom = atom(false);
 
-/** 左侧列表搜索关键字 */
-export const datasourcesListSearchQueryAtom = atom('');
-
 export type DatasourceSearchListRow = {
   id: string;
   label: string;

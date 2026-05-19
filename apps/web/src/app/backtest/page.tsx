@@ -15,21 +15,7 @@ import { backtestsListAtoms } from '@/models/backtest/list.atom';
 import { selectBacktestFromListAtom, startCreateBacktestAtom } from '@/models/backtest/panel.atom';
 import { backtestsCreateModeAtom, backtestsSelectedIdAtom } from '@/models/backtest/selection.atom';
 import { useBacktestEvents } from '@/models/backtest/use-backtest-events';
-import type { BacktestRunSummary } from '@/models/backtest/dto';
 import { BACKTEST_STATUS_LABEL } from './constants';
-
-function formatBacktestListSearchText(item: {
-  strategyId: string;
-  strategyName: string | null;
-  dataSetName: string | null;
-  status: BacktestRunSummary['status'];
-  error: string | null;
-}) {
-  const status = BACKTEST_STATUS_LABEL[item.status] ?? item.status;
-  return [item.strategyName, item.strategyId, item.dataSetName, status, item.error, '策略已删除']
-    .filter(Boolean)
-    .join(' ');
-}
 
 export default function BacktestPage() {
   const items = useAtomValue(backtestsListAtoms.valueAtom);
@@ -85,22 +71,25 @@ export default function BacktestPage() {
               category: BACKTEST_STATUS_LABEL[r.status] ?? r.status,
             })) ?? null
           }
-          getGroupKey={(item) => item.category ?? '其他'}
-          renderTitle={(item) => (
-            <BacktestStrategyTitle strategyId={item.strategyId} strategyName={item.strategyName} />
-          )}
-          renderDescription={(item) => (
-            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-              <span className="truncate">{item.dataSetName || '未命名数据集'}</span>
-              <BacktestStatusBadge status={item.status} />
-              {item.error ? <span className="truncate text-destructive">{item.error}</span> : null}
-            </span>
-          )}
-          getSearchText={formatBacktestListSearchText}
+          searchKeys={['strategyName', 'strategyId', 'dataSetName', 'status', 'error', 'category', 'id']}
           title="回测记录"
           searchPlaceholder="搜索回测"
           selectedId={listSelectedId}
-          renderItem={(p) => <SearchListItem {...p} onItemSelected={onSelectBacktest} />}
+          renderItem={({ item, selectedId }) => (
+            <SearchListItem
+              item={item}
+              selectedId={selectedId}
+              title={<BacktestStrategyTitle strategyId={item.strategyId} strategyName={item.strategyName} />}
+              description={
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <span className="truncate">{item.dataSetName || '未命名数据集'}</span>
+                  <BacktestStatusBadge status={item.status} />
+                  {item.error ? <span className="truncate text-destructive">{item.error}</span> : null}
+                </span>
+              }
+              onClick={() => onSelectBacktest(item)}
+            />
+          )}
           actions={[
             {
               label: '发起回测',

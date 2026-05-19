@@ -51,14 +51,16 @@ export function StrategyWorkflowEditorBlock(props: {
             title="策略节点"
             searchPlaceholder="搜索节点/描述"
             getGroupKey={(item) => item.category ?? '未分类'}
-            renderTitle={(item) => item.label}
-            renderDescription={(item) => item.description ?? ''}
-            getSearchText={(item) => [item.label, item.description ?? '', item.category ?? ''].join(' ')}
-            renderItem={(p) => (
+            searchKeys={['label', 'description', 'category']}
+            renderItem={({ item, selectedId }) => (
               <SearchListItem
-                {...p}
-                onItemSelected={(item) => canvasRef.current?.addNode(item.id)}
-                onItemDrag={(item, e) => {
+                item={item}
+                selectedId={selectedId}
+                title={item.label}
+                description={item.description ?? ''}
+                draggable
+                onClick={() => canvasRef.current?.addNode(item.id)}
+                onDragStart={(e) => {
                   e.dataTransfer.setData(WORKFLOW_GRAPH_NODE_DRAG_MIME, item.id);
                   e.dataTransfer.effectAllowed = 'copy';
                 }}
