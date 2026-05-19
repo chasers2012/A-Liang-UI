@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { WidgetProps } from '@rjsf/utils';
 import { XIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, type MouseEvent } from 'react';
@@ -161,22 +162,24 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
       onValueChange={onValueChange}
       onOpenChange={onOpenChange}
     >
-      <SelectTrigger id={id} className="w-full">
-        <SelectValue placeholder={placeholder}>{multiple ? multiSummary : selectedLabel}</SelectValue>
+      <div className="relative w-full">
+        <SelectTrigger id={id} className={cn('w-full', showClear && 'pr-8')}>
+          <SelectValue placeholder={placeholder}>{multiple ? multiSummary : selectedLabel}</SelectValue>
+        </SelectTrigger>
         {showClear ? (
           <Button
             type="button"
             variant="ghost"
             size="icon-xs"
             aria-label="清空"
-            className="pointer-events-auto -mr-1 shrink-0"
+            className="pointer-events-auto absolute top-1/2 right-7 z-10 -translate-y-1/2 shrink-0"
             onClick={onClear}
             onPointerDown={(event) => event.stopPropagation()}
           >
             <XIcon className="size-3.5" />
           </Button>
         ) : null}
-      </SelectTrigger>
+      </div>
       <SelectContent>
         {(Array.isArray(options.enumOptions) ? options.enumOptions : []).map((option, index) => (
           <SelectItem

@@ -37,6 +37,14 @@ type RjsfStyledFormProps = ComponentProps<typeof Form> & {
 type RjsfOnChangeArg = Parameters<NonNullable<RjsfStyledFormProps['onChange']>>[0];
 type RjsfFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
 
+function applyRootUiSchemaOptions(tabUi: UiSchema, sourceUiSchema: NavDrivenUiSchema): void {
+  Object.entries(sourceUiSchema).forEach(([key, value]) => {
+    if (key.startsWith('ui:')) {
+      tabUi[key] = value as UiSchema[typeof key];
+    }
+  });
+}
+
 function shouldStopWheelPropagation(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return Boolean(
@@ -164,10 +172,7 @@ function buildTabSchemaAndUi(
       };
     });
 
-  const globalOptions = pagination.uiSchema['ui:globalOptions'];
-  if (globalOptions && typeof globalOptions === 'object' && !Array.isArray(globalOptions)) {
-    tabUi['ui:globalOptions'] = globalOptions as UiSchema['ui:globalOptions'];
-  }
+  applyRootUiSchemaOptions(tabUi, pagination.uiSchema);
 
   return { schema: tabSchema, uiSchema: tabUi };
 }

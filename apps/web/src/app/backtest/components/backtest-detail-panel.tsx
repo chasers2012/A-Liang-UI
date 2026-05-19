@@ -33,6 +33,7 @@ import { isBacktestStrategyDeleted } from '../constants';
 import type { BacktestRunStatus } from '@/models/backtest/dto';
 import { asEquitySeries, asStatsEntries, asTradeRows, fmtValue, isRecord } from '../utils';
 import type { BacktestRunDetailViewData } from '../types';
+import { BacktestCreateActions } from '../ui/backtest-create-actions';
 import { BacktestRunForm } from '../ui/backtest-run-form';
 
 function BacktestRunDetailContent({ runId }: { runId: string }) {
@@ -252,8 +253,8 @@ export function BacktestDetailPanel() {
 
   if (isCreateMode) {
     return (
-      <PanelDetailCard title="发起回测" className="flex min-h-0 flex-1 flex-col">
-        <BacktestRunForm embedded />
+      <PanelDetailCard title="发起回测" className="flex min-h-0 flex-1 flex-col" actions={<BacktestCreateActions />}>
+        <BacktestRunForm />
       </PanelDetailCard>
     );
   }
