@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 import baostock as bs
 import pandas as pd
@@ -83,40 +82,16 @@ FIELD_LABELS: dict[str, str] = {
     "isST": "是否ST",
 }
 
-ADJUSTFLAG_OPTIONS = ["1", "2", "3"]
-ADJUSTFLAG_LABELS = ["后复权", "前复权", "不复权"]
-ADJUSTFLAG_ONE_OF = [
-    {"const": key, "title": label}
-    for key, label in zip(ADJUSTFLAG_OPTIONS, ADJUSTFLAG_LABELS, strict=True)
-]
-
-
-def adjustflag_config_schema() -> dict[str, Any]:
-    return {
-        "type": "string",
-        "title": "复权类型",
-        "description": "1=后复权、2=前复权、3=不复权（默认）。已支持日/周/月/分钟前后复权。",
-        "oneOf": ADJUSTFLAG_ONE_OF,
-        "default": "3",
-    }
-
-
-def frequency_config_schema(
-    *,
-    options: list[str],
-    labels: list[str],
-    default: str,
-    description: str,
-) -> dict[str, Any]:
-    return {
-        "type": "string",
-        "title": "K线周期",
-        "description": description,
-        "oneOf": [
-            {"const": key, "title": label} for key, label in zip(options, labels, strict=True)
-        ],
-        "default": default,
-    }
+ADJUSTFLAG_CONFIG_SCHEMA = {
+    "type": "string",
+    "title": "复权类型",
+    "oneOf": [
+        {"const": "1", "title": "后复权"},
+        {"const": "2", "title": "前复权"},
+        {"const": "3", "title": "不复权"},
+    ],
+    "default": "3",
+}
 
 
 def is_baostock_index_code(code: str) -> bool:

@@ -138,11 +138,8 @@ class BaoStockDataSourceSpec(DataSourceSpec):
         config = dict(raw or {})
         conn = BaoStockConnectionConfig.model_validate(dict(config.get("connection") or {}))
         col_in = dict(config.get("columns") or {})
-        if not str(col_in.get("api_name") or "").strip():
-            col_in["api_name"] = conn.api_name
+        col_in.pop("api_name", None)
         col = BaoStockColumnsConfig.model_validate(col_in)
-        if col.api_name != conn.api_name:
-            raise ValueError("columns.api_name 须与 connection.api_name 一致")
         return conn, col
 
     @staticmethod
@@ -184,16 +181,10 @@ class BaoStockDataSourceSpec(DataSourceSpec):
             ),
             columns_schema=FormSchema(
                 title="BaoStock 字段配置",
-                description="配置日期列和资产列。",
+                description="配置日期列和资产列（接口名在连接配置中选择）。",
                 json_schema={
                     "type": "object",
                     "properties": {
-                        "api_name": {
-                            "type": "string",
-                            "title": "Baostock 接口",
-                            "default": first_api_key,
-                            "oneOf": list(api_options),
-                        },
                         "date_column": {
                             "type": "string",
                             "title": "日期列",
@@ -219,31 +210,9 @@ class BaoStockDataSourceSpec(DataSourceSpec):
                             "default": [],
                         },
                     },
-                    "required": ["api_name", "date_column"],
-                    "allOf": [
-                        {
-                            "if": {
-                                "required": ["api_name"],
-                                "properties": {"api_name": {"const": api_name}},
-                            },
-                            "then": {
-                                "properties": {
-                                    "date_column": {
-                                        "default": API_CATALOG.default_date_columns.get(
-                                            api_name, API_CATALOG.default_date_column
-                                        ),
-                                    },
-                                    "asset_column": {
-                                        "default": API_CATALOG.default_asset_columns.get(api_name),
-                                    },
-                                }
-                            },
-                        }
-                        for api_name in api_keys
-                    ],
+                    "required": ["date_column"],
                 },
                 ui_schema={
-                    "api_name": {"ui:widget": "hidden"},
                     "columns": {"ui:widget": "hidden"},
                 },
             ),

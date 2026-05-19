@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ._catalog import LoaderSpec
-from ._history_k_common import DAILY_FIELDS, adjustflag_config_schema, create_load_frame
+from ._history_k_common import ADJUSTFLAG_CONFIG_SCHEMA, DAILY_FIELDS, create_load_frame
 
 load_frame = create_load_frame(
     resolve_frequency=lambda _config: "d",
@@ -17,9 +17,9 @@ LOADER_SPEC = LoaderSpec(
     config={
         "type": "object",
         "properties": {
-            "adjustflag": adjustflag_config_schema(),
+            "adjustflag": ADJUSTFLAG_CONFIG_SCHEMA,
         },
-        "required": [],
+        "required": ["adjustflag"],
     },
     columns=list(DAILY_FIELDS),
     asset_column="code",

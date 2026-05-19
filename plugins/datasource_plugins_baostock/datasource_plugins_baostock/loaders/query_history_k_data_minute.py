@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from ._catalog import LoaderSpec
 from ._history_k_common import (
+    ADJUSTFLAG_CONFIG_SCHEMA,
     MINUTE_FIELDS,
-    STOCK_K_DATA_DOC,
-    adjustflag_config_schema,
     create_load_frame,
-    frequency_config_schema,
     resolve_minute_frequency,
 )
 
@@ -25,15 +23,20 @@ LOADER_SPEC = LoaderSpec(
     config={
         "type": "object",
         "properties": {
-            "frequency": frequency_config_schema(
-                options=["5", "15", "30", "60"],
-                labels=["5分钟", "15分钟", "30分钟", "60分钟"],
-                default="5",
-                description=(f"5/15/30/60=分钟K；分钟线不包含指数。详见 {STOCK_K_DATA_DOC}"),
-            ),
-            "adjustflag": adjustflag_config_schema(),
+            "frequency": {
+                "type": "string",
+                "title": "K线周期",
+                "oneOf": [
+                    {"const": "5", "title": "5分钟"},
+                    {"const": "15", "title": "15分钟"},
+                    {"const": "30", "title": "30分钟"},
+                    {"const": "60", "title": "60分钟"},
+                ],
+                "default": "5",
+            },
+            "adjustflag": ADJUSTFLAG_CONFIG_SCHEMA,
         },
-        "required": [],
+        "required": ["frequency", "adjustflag"],
     },
     columns=list(MINUTE_FIELDS),
     asset_column="code",

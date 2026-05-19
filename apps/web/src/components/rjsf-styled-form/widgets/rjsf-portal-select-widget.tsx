@@ -1,8 +1,10 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { WidgetProps } from '@rjsf/utils';
-import { useCallback, useMemo } from 'react';
+import { XIcon } from 'lucide-react';
+import { useCallback, useMemo, type MouseEvent } from 'react';
 
 type RjsfProjectFormContext = Record<string, unknown> & { __rjsfProjectReadonly?: boolean };
 
@@ -100,6 +102,18 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
     [onBlur, onFocus, id, value],
   );
 
+  const showClear = !multiple && !required && !disabled && !isReadonly && !isUnset(value, options.emptyValue);
+
+  const onClear = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (isReadonly) return;
+      onChange(options.emptyValue);
+    },
+    [isReadonly, onChange, options.emptyValue],
+  );
+
   return (
     <Select
       multiple={multiple}
@@ -117,13 +131,21 @@ export function RjsfPortalSelectWidget(props: WidgetProps) {
     >
       <SelectTrigger id={id} className="w-full">
         <SelectValue placeholder={placeholder}>{multiple ? multiSummary : selectedLabel}</SelectValue>
+        {showClear ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="清空"
+            className="pointer-events-auto -mr-1 shrink-0"
+            onClick={onClear}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <XIcon className="size-3.5" />
+          </Button>
+        ) : null}
       </SelectTrigger>
       <SelectContent>
-        {!multiple && !required ? (
-          <SelectItem value={null as never} label={typeof placeholder === 'string' ? placeholder : undefined}>
-            {placeholder}
-          </SelectItem>
-        ) : null}
         {(Array.isArray(options.enumOptions) ? options.enumOptions : []).map((option, index) => (
           <SelectItem
             key={`${id}-${String(option.value)}-${index}`}

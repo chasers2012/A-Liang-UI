@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from ._catalog import LoaderSpec
 from ._history_k_common import (
-    STOCK_K_DATA_DOC,
+    ADJUSTFLAG_CONFIG_SCHEMA,
     WEEKLY_MONTHLY_FIELDS,
-    adjustflag_config_schema,
     create_load_frame,
-    frequency_config_schema,
     resolve_weekly_monthly_frequency,
 )
 
@@ -24,18 +22,18 @@ LOADER_SPEC = LoaderSpec(
     config={
         "type": "object",
         "properties": {
-            "frequency": frequency_config_schema(
-                options=["w", "m"],
-                labels=["周K线", "月K线"],
-                default="w",
-                description=(
-                    "w=周K、m=月K。周线仅每周最后交易日、月线仅每月最后交易日可获取。"
-                    f"详见 {STOCK_K_DATA_DOC}"
-                ),
-            ),
-            "adjustflag": adjustflag_config_schema(),
+            "frequency": {
+                "type": "string",
+                "title": "K线周期",
+                "oneOf": [
+                    {"const": "w", "title": "周K线"},
+                    {"const": "m", "title": "月K线"},
+                ],
+                "default": "w",
+            },
+            "adjustflag": ADJUSTFLAG_CONFIG_SCHEMA,
         },
-        "required": [],
+        "required": ["frequency", "adjustflag"],
     },
     columns=list(WEEKLY_MONTHLY_FIELDS),
     asset_column="code",

@@ -23,20 +23,14 @@ class BaoStockConnectionConfig(BaseModel):
 
 
 class BaoStockColumnsConfig(BaseModel):
-    """日期列、资产列与列缓存（存储 ``columns`` 段）；须与 connection 的 api_name 一致。"""
+    """日期列、资产列与列缓存（存储 ``columns`` 段）；接口名见 ``connection.api_name``。"""
 
-    api_name: str = API_CATALOG.default_api_name
     date_column: str = API_CATALOG.default_date_column
     asset_column: str | None = API_CATALOG.default_asset_column
     columns: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _validate(self) -> BaoStockColumnsConfig:
-        self.api_name = str(self.api_name).strip()
-        if not self.api_name:
-            raise ValueError("api_name 不能为空")
-        if self.api_name not in API_CATALOG.default_date_columns:
-            raise ValueError(f"api_name 不在支持列表中: {self.api_name}")
         self.date_column = str(self.date_column).strip()
         if not self.date_column:
             raise ValueError("date_column 不能为空")
