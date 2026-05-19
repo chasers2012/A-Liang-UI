@@ -5,13 +5,12 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { EmptyState, PanelPlaceholder } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import type { DataSourcePublic } from '@/models/datasource/dto';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
+import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 import { dataSetDetailAsyncStateAtomFamily, refreshDataSetDetailAtomFamily } from '@/models/data-set/detail.atom';
 import { dataSetEditorStateAtom } from '@/models/data-set/editor/form-state.atom';
 import {
-  dataSetEditorDatasourcesAsyncStateAtom,
   editorDependencyFieldsByDsIdAsyncStateAtom,
   selectedDataSetDependencyFieldsByDsIdAsyncStateAtom,
 } from '@/models/data-set/editor/datasources.atom';
@@ -32,8 +31,7 @@ export function DataSetDetailTabContent(props: { isEditing: boolean }) {
   const error = detailState.error;
   const refreshDetail = useSetAtom(refreshDataSetDetailAtomFamily(dataSetId));
 
-  const datasourcesState = useAtomValue(dataSetEditorDatasourcesAsyncStateAtom);
-  const bindingDatasources: DataSourcePublic[] = datasourcesState.value ?? [];
+  const bindingDatasources = useAtomValue(datasourcesListAtoms.valueAtom) ?? [];
   const detailDependencyFieldsByDsId = useAtomValue(selectedDataSetDependencyFieldsByDsIdAsyncStateAtom).value ?? {};
 
   const editorState = useAtomValue(dataSetEditorStateAtom);

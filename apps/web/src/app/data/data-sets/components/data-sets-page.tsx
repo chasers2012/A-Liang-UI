@@ -16,6 +16,7 @@ import {
   setDataSetsSearchQueryAtom,
 } from '@/models/data-set/browse.atom';
 import { dataSetAtoms } from '@/models/data-set/panel-detail.atom';
+import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import { handleCancelDataSetEditAtom } from '@/models/data-set/edit.atom';
 import {
   dataSetsEnterCreateAtom,
@@ -39,7 +40,8 @@ export function DataSetsPage() {
 
   const selectDetail = useSetAtom(dataSetsSelectAndDetailAtom);
   const enterCreate = useSetAtom(dataSetsEnterCreateAtom);
-  const refreshList = useSetAtom(dataSetAtoms.refreshAtom);
+  const refreshDataSets = useSetAtom(dataSetAtoms.refreshAtom);
+  const refreshDatasources = useSetAtom(datasourcesListAtoms.refreshAtom);
   const listError = useAtomValue(dataSetAtoms.errorAtom);
   const isEditing = useAtomValue(dataSetsIsEditingAtom);
   const cancelDataSetEdit = useSetAtom(handleCancelDataSetEditAtom);
@@ -49,8 +51,9 @@ export function DataSetsPage() {
   });
 
   useEffect(() => {
-    void refreshList();
-  }, [refreshList]);
+    void refreshDataSets();
+    void refreshDatasources();
+  }, [refreshDataSets, refreshDatasources]);
 
   const onSelectItem = useCallback(
     (item: { id: string }) => {

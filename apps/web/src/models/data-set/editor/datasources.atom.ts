@@ -1,17 +1,10 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai-family';
 
-import { getDatasourceDependencyFields, listDatasources } from '@/api/datasources';
+import { getDatasourceDependencyFields } from '@/api/datasources';
 import { toAsyncValueStateAtom } from '@/lib/loadable';
-import type { DataSourcePublic } from '@/models/datasource/dto';
 import { dataSetEditorStateAtom } from '@/models/data-set/editor/form-state.atom';
 import { selectedDataSetDetailAtom } from '@/models/data-set/detail.atom';
-
-export const dataSetEditorDatasourcesAsyncAtom = atom(async (): Promise<DataSourcePublic[]> => {
-  return await listDatasources();
-});
-
-export const dataSetEditorDatasourcesAsyncStateAtom = toAsyncValueStateAtom(dataSetEditorDatasourcesAsyncAtom);
 
 export const datasourceDependencyFieldsRevisionAtomFamily = atomFamily((key: string) => {
   void key;

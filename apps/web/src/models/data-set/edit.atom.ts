@@ -7,7 +7,7 @@ import {
   refreshDataSetDetailAtomFamily,
   saveDataSetDetailAtom,
 } from '@/models/data-set/detail.atom';
-import { dataSetEditorDatasourcesAsyncAtom } from '@/models/data-set/editor/datasources.atom';
+import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import {
   dataSetEditorHydrateTickAtom,
   dataSetEditorStateAtom,
@@ -58,7 +58,7 @@ export const prepareDataSetEditorAtom = atom(
 
     try {
       const [datasources, template] = await Promise.all([
-        get(dataSetEditorDatasourcesAsyncAtom),
+        get(datasourcesListAtoms.asyncAtom),
         get(dataSetWorkflowTemplateAsyncAtom),
       ]);
       void datasources;

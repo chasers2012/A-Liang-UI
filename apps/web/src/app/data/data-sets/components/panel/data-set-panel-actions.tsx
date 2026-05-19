@@ -17,7 +17,7 @@ import { dataSetsSelectedIdAtom } from '@/models/data-set/selection.atom';
 import { dataSetDetailAsyncStateAtomFamily } from '@/models/data-set/detail.atom';
 import { handleSaveDataSetEditorAtom } from '@/models/data-set/edit.atom';
 import { dataSetEditorStateAtom } from '@/models/data-set/editor/form-state.atom';
-import { dataSetEditorDatasourcesAsyncStateAtom } from '@/models/data-set/editor/datasources.atom';
+import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import { confirmDeleteDataSetAtom, dataSetDeleteStateAtom } from '@/models/data-set/delete.atom';
 
 import { DeleteDataSetDialog } from './delete-data-set-dialog';
@@ -40,7 +40,7 @@ export function DataSetPanelHeaderActions(props: {
   const exitFormToDetail = useSetAtom(dataSetsExitFormToDetailAtom);
   const saveEditor = useSetAtom(handleSaveDataSetEditorAtom);
   const { submitting, form } = useAtomValue(dataSetEditorStateAtom);
-  const bindingDatasources = useAtomValue(dataSetEditorDatasourcesAsyncStateAtom).value ?? [];
+  const bindingDatasources = useAtomValue(datasourcesListAtoms.valueAtom) ?? [];
   const chrome = useContext(PageAppHeaderContext);
 
   useLayoutEffect(() => {

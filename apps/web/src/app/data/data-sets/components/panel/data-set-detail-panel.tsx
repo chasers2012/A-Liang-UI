@@ -15,7 +15,7 @@ import {
   setDataSetEditorFormPatchAtom,
   syncDataSetEditorSystemWorkflowAtom,
 } from '@/models/data-set/editor/form-state.atom';
-import { dataSetEditorDatasourcesAsyncStateAtom } from '@/models/data-set/editor/datasources.atom';
+import { datasourcesListAtoms } from '@/models/datasource/panel.atom';
 import { dataSetWorkflowTemplateAsyncStateAtom } from '@/models/data-set/editor/workflow-template.atom';
 import type { WorkflowGraphCanvasHandle } from '@/components/workflow-graph';
 import { DataSetDetailTabContent } from './data-set-detail-tab-content';
@@ -59,10 +59,10 @@ export function DataSetDetailPanel() {
   const detailError = detailState.error;
 
   // --- shared datasources/template state (models)
-  const datasourcesState = useAtomValue(dataSetEditorDatasourcesAsyncStateAtom);
+  const datasourcesItems = useAtomValue(datasourcesListAtoms.valueAtom);
   const workflowTemplateState = useAtomValue(dataSetWorkflowTemplateAsyncStateAtom);
 
-  const datasourcesValue = useMemo(() => datasourcesState.value ?? [], [datasourcesState.value]);
+  const datasourcesValue = useMemo(() => datasourcesItems ?? [], [datasourcesItems]);
   const datasources = datasourcesValue;
   const preprocessingWorkflowTemplate = workflowTemplateState.value ?? null;
 
