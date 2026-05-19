@@ -103,7 +103,7 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
           />
           <SearchListToolbarActions actions={actions} />
         </div>
-        <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-2 flex flex-col pb-2">
+        <div className="min-h-0 w-full flex-1 overflow-y-auto overflow-x-hidden px-2 flex flex-col">
           {filteredItems && filteredItems.length > 0 ? (
             getGroupKey ? (
               groupedItems?.map(([group, list]) => (
@@ -120,7 +120,7 @@ export function SearchList<TItem extends SearchListItemBase>(props: {
                 </SearchListGroup>
               ))
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 py-3">
                 {filteredItems.map((item) => (
                   <Fragment key={item.id}>{renderListItem(item)}</Fragment>
                 ))}
