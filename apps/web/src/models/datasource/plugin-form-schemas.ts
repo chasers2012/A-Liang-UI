@@ -54,12 +54,47 @@ function isValueFilled(value: unknown): boolean {
   return true;
 }
 
-function areRequiredFieldsFilled(schema: Record<string, unknown>, data: Record<string, unknown>): boolean {
+/** Matches API ``FormSchema.is_unchanged_secret_value`` (empty / redacted placeholder). */
+function isUnchangedSecretValue(value: unknown): boolean {
+  if (value == null) return true;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length === 0 || trimmed === '***';
+  }
+  return false;
+}
+
+function passwordKeysFromUiSchema(ui: Record<string, unknown>): Set<string> {
+  const keys = new Set<string>();
+  for (const [k, v] of Object.entries(ui)) {
+    if (k.startsWith('ui:')) continue;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
+    if ((v as Record<string, unknown>)['ui:widget'] === 'password') {
+      keys.add(k);
+    }
+  }
+  return keys;
+}
+
+type RequiredFieldsFilledOptions = {
+  isEdit?: boolean;
+  passwordKeys?: Set<string>;
+};
+
+function areRequiredFieldsFilled(
+  schema: Record<string, unknown>,
+  data: Record<string, unknown>,
+  options?: RequiredFieldsFilledOptions,
+): boolean {
   const required = Array.isArray(schema.required) ? schema.required : [];
   if (required.length === 0) return true;
+  const isEdit = options?.isEdit ?? false;
+  const passwordKeys = options?.passwordKeys ?? new Set<string>();
   return required.every((key) => {
     if (typeof key !== 'string' || key.length === 0) return true;
-    return isValueFilled(data[key]);
+    const value = data[key];
+    if (isEdit && passwordKeys.has(key) && isUnchangedSecretValue(value)) return true;
+    return isValueFilled(value);
   });
 }
 
@@ -139,20 +174,44 @@ export function computeDatasourcePluginFormSchemas(
   };
 }
 
-export function computeDatasourcePluginConfigValid(form: FormState, plugin: DatasourcePluginPublic | null): boolean {
-  if (!plugin) return false;
-  const { baseFormSchema, fieldsFormSchema, writeFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
-  const baseValid = areRequiredFieldsFilled(baseFormSchema, getDatasourceConnectionConfig(form));
-  const fieldsValid = !fieldsFormSchema || areRequiredFieldsFilled(fieldsFormSchema, getDatasourceColumnsConfig(form));
-  const writeValid = !writeFormSchema || areRequiredFieldsFilled(writeFormSchema, getDatasourceWriteConfig(form));
-  return baseValid && fieldsValid && writeValid;
-}
+export type DatasourcePluginConfigValidOptions = {
+  /** True when editing an existing datasource (not create). */
+  isEdit?: boolean;
+};
 
 export function computeDatasourcePluginBaseConfigValid(
   form: FormState,
   plugin: DatasourcePluginPublic | null,
+  options?: DatasourcePluginConfigValidOptions,
 ): boolean {
   if (!plugin) return false;
-  const { baseFormSchema } = computeDatasourcePluginFormSchemas(form, plugin);
-  return areRequiredFieldsFilled(baseFormSchema, getDatasourceConnectionConfig(form));
+  const schemas = computeDatasourcePluginFormSchemas(form, plugin);
+  return areRequiredFieldsFilled(schemas.baseFormSchema, getDatasourceConnectionConfig(form), {
+    isEdit: options?.isEdit ?? false,
+    passwordKeys: passwordKeysFromUiSchema(schemas.baseFormUiSchema),
+  });
+}
+
+export function computeDatasourcePluginConfigValid(
+  form: FormState,
+  plugin: DatasourcePluginPublic | null,
+  options?: DatasourcePluginConfigValidOptions,
+): boolean {
+  if (!plugin) return false;
+  if (!computeDatasourcePluginBaseConfigValid(form, plugin, options)) return false;
+  const isEdit = options?.isEdit ?? false;
+  const schemas = computeDatasourcePluginFormSchemas(form, plugin);
+  const fieldsValid =
+    !schemas.fieldsFormSchema ||
+    areRequiredFieldsFilled(schemas.fieldsFormSchema, getDatasourceColumnsConfig(form), {
+      isEdit,
+      passwordKeys: passwordKeysFromUiSchema(schemas.fieldsFormUiSchema),
+    });
+  const writeValid =
+    !schemas.writeFormSchema ||
+    areRequiredFieldsFilled(schemas.writeFormSchema, getDatasourceWriteConfig(form), {
+      isEdit,
+      passwordKeys: passwordKeysFromUiSchema(schemas.writeFormUiSchema),
+    });
+  return fieldsValid && writeValid;
 }

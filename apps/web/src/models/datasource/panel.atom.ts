@@ -15,6 +15,8 @@ import type { DataSourcePublic, DatasourcePluginPublic } from './dto';
 import { commitDatasourceForm } from './commit-datasource';
 import { emptyForm, hydrateFormFromDataSource, type FormState } from './form-model';
 import {
+  computeDatasourcePluginBaseConfigValid,
+  computeDatasourcePluginConfigValid,
   computeDatasourcePluginFormSchemas,
   nestDatasourceConfigForApi,
   getDatasourceColumnsConfig,
@@ -110,50 +112,15 @@ export const datasourcesSelectedPluginHasWriteTabAtom = atom((get) => {
 export const datasourcesPluginConfigValidAtom = atom((get) => {
   const form = get(datasourcesEditorFormAtom);
   const plugin = get(datasourcesSelectedPluginAtom);
-  if (!plugin) return false;
-  const schemas = get(datasourcesPluginFormSchemasAtom);
-  const baseRequired = Array.isArray(schemas.baseFormSchema.required)
-    ? (schemas.baseFormSchema.required as unknown[])
-    : [];
-  const fieldsRequired =
-    schemas.fieldsFormSchema && Array.isArray(schemas.fieldsFormSchema.required)
-      ? (schemas.fieldsFormSchema.required as unknown[])
-      : [];
-  const writeRequired =
-    schemas.writeFormSchema && Array.isArray(schemas.writeFormSchema.required)
-      ? (schemas.writeFormSchema.required as unknown[])
-      : [];
-  const connection = (form.config?.connection as Record<string, unknown> | undefined) ?? {};
-  const columns = (form.config?.columns as Record<string, unknown> | undefined) ?? {};
-  const write = (form.config?.write as Record<string, unknown> | undefined) ?? {};
-  const isFilled = (value: unknown): boolean => {
-    if (value == null) return false;
-    if (typeof value === 'string') return value.trim().length > 0;
-    if (Array.isArray(value)) return value.length > 0;
-    return true;
-  };
-  const baseValid = baseRequired.every((key) => (typeof key === 'string' ? isFilled(connection[key]) : true));
-  const fieldsValid = fieldsRequired.every((key) => (typeof key === 'string' ? isFilled(columns[key]) : true));
-  const writeValid = writeRequired.every((key) => (typeof key === 'string' ? isFilled(write[key]) : true));
-  return baseValid && fieldsValid && writeValid;
+  const isEdit = get(datasourcesIsEditingAtom) && !!get(datasourcesSelectedIdAtom);
+  return computeDatasourcePluginConfigValid(form, plugin, { isEdit });
 });
 
 export const datasourcesPluginBaseConfigValidAtom = atom((get) => {
   const form = get(datasourcesEditorFormAtom);
   const plugin = get(datasourcesSelectedPluginAtom);
-  if (!plugin) return false;
-  const schemas = get(datasourcesPluginFormSchemasAtom);
-  const baseRequired = Array.isArray(schemas.baseFormSchema.required)
-    ? (schemas.baseFormSchema.required as unknown[])
-    : [];
-  const connection = (form.config?.connection as Record<string, unknown> | undefined) ?? {};
-  const isFilled = (value: unknown): boolean => {
-    if (value == null) return false;
-    if (typeof value === 'string') return value.trim().length > 0;
-    if (Array.isArray(value)) return value.length > 0;
-    return true;
-  };
-  return baseRequired.every((key) => (typeof key === 'string' ? isFilled(connection[key]) : true));
+  const isEdit = get(datasourcesIsEditingAtom) && !!get(datasourcesSelectedIdAtom);
+  return computeDatasourcePluginBaseConfigValid(form, plugin, { isEdit });
 });
 
 export const datasourcesEditorMainFormValidAtom = atom((get) => {
