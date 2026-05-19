@@ -11,12 +11,9 @@ from ._utils import as_dataframe, extract_code_dates, resolve_target_codes
 def load_frame(
     *,
     columns: list[str],
-    date_column: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
-    asset_column: str | None = None,
     asset_values: list[str] | None = None,
-    config: dict,
 ) -> pd.DataFrame:
     start_date, end_date, selected_codes = extract_code_dates(
         start_date=start_date, end_date=end_date, asset_values=asset_values

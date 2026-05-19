@@ -15,7 +15,6 @@ class LoaderSpec:
     columns: tuple[str, ...] | list[str]
     date_column: str
     asset_column: str | None = None
-    columns_for_config: Callable[..., list[str]] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,7 +24,6 @@ class ApiCatalog:
     config_schemas: MappingProxyType[str, dict[str, Any]]
     loaders: MappingProxyType[str, Callable[..., Any]]
     fixed_columns: MappingProxyType[str, tuple[str, ...]]
-    columns_for_config: MappingProxyType[str, Callable[..., list[str]]]
     default_date_columns: MappingProxyType[str, str]
     default_asset_columns: MappingProxyType[str, str | None]
 
@@ -50,7 +48,6 @@ def build_api_catalog(api_specs: Iterable[LoaderSpec]) -> ApiCatalog:
     config_schemas: dict[str, dict[str, Any]] = {}
     loaders: dict[str, Callable[..., Any]] = {}
     fixed_columns: dict[str, tuple[str, ...]] = {}
-    columns_for_config: dict[str, Callable[..., list[str]]] = {}
     default_date_columns: dict[str, str] = {}
     default_asset_columns: dict[str, str | None] = {}
     for spec in api_specs:
@@ -63,8 +60,6 @@ def build_api_catalog(api_specs: Iterable[LoaderSpec]) -> ApiCatalog:
         config_schemas[key] = dict(spec.config)
         loaders[key] = spec.loader
         fixed_columns[key] = tuple(str(c) for c in spec.columns)
-        if spec.columns_for_config is not None:
-            columns_for_config[key] = spec.columns_for_config
         default_date_columns[key] = spec.date_column
         asset_raw = spec.asset_column
         default_asset_columns[key] = (
@@ -76,7 +71,6 @@ def build_api_catalog(api_specs: Iterable[LoaderSpec]) -> ApiCatalog:
         config_schemas=MappingProxyType(config_schemas),
         loaders=MappingProxyType(loaders),
         fixed_columns=MappingProxyType(fixed_columns),
-        columns_for_config=MappingProxyType(columns_for_config),
         default_date_columns=MappingProxyType(default_date_columns),
         default_asset_columns=MappingProxyType(default_asset_columns),
     )

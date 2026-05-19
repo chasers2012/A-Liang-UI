@@ -19,14 +19,6 @@ from ._duckdb_backend import (
 )
 
 
-class SqlWriteConfig(DatasourceWriteConfig):
-    pass
-
-
-class SqlColumnsConfig(DatasourceColumnsConfig):
-    pass
-
-
 class SqlDataSource(DuckDbDataSource):
     _REMOTE = "remote"
 
@@ -222,11 +214,11 @@ class SqlDataSourceSpec(DataSourceSpec):
     def parse_config(
         cls,
         raw: dict[str, Any],
-    ) -> tuple[SqlConnectionConfig, SqlColumnsConfig, SqlWriteConfig]:
+    ) -> tuple[SqlConnectionConfig, DatasourceColumnsConfig, DatasourceWriteConfig]:
         return (
             SqlConnectionConfig.model_validate(dict(raw.get("connection") or {})),
-            SqlColumnsConfig.model_validate(dict(raw.get("columns") or {})),
-            SqlWriteConfig.model_validate(dict(raw.get("write") or {})),
+            DatasourceColumnsConfig.model_validate(dict(raw.get("columns") or {})),
+            DatasourceWriteConfig.model_validate(dict(raw.get("write") or {})),
         )
 
     def __init__(self) -> None:
@@ -294,18 +286,11 @@ class SqlDataSourceSpec(DataSourceSpec):
                             "items": {"type": "string"},
                             "default": [],
                         },
-                        "column_map": {
-                            "type": "object",
-                            "title": "列名映射",
-                            "default": {},
-                            "additionalProperties": {"type": "string"},
-                        },
                     },
                     "required": ["date_column"],
                 },
                 ui_schema={
                     "columns": {"ui:widget": "hidden"},
-                    "column_map": {"ui:widget": "hidden"},
                 },
             ),
         )

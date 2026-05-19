@@ -34,8 +34,8 @@ class DataSource(ABC):
     """中性的 DataFrame 读取接口（不承载任何因子业务语义）。
 
     该接口只负责“从某个后端读取指定列，并应用通用过滤条件”，不出现
-    ``date`` / ``asset`` / ``codes`` / ``column_map`` 等业务字段概念。
-    业务侧的索引列语义（逻辑 date/asset）与字段映射（alias/column_map）
+    ``date`` / ``asset`` / ``codes`` 等业务字段概念。
+    业务侧的索引列语义（逻辑 date/asset）与字段映射（alias）
     由 :class:`factor.data_set.DataSet` / :class:`factor.data_set.DataSourceBinding`
     统一处理。
     """

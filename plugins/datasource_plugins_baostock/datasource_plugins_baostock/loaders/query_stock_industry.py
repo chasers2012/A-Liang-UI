@@ -7,16 +7,7 @@ from ._catalog import LoaderSpec
 from ._utils import as_dataframe
 
 
-def load_frame(
-    *,
-    columns: list[str],
-    date_column: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
-    asset_column: str | None = None,
-    asset_values: list[str] | None = None,
-    config: dict,
-) -> pd.DataFrame:
+def load_frame(*, columns: list[str]) -> pd.DataFrame:
     requested_cols = sorted({str(c).strip() for c in columns if str(c).strip()})
     effective_cols = requested_cols or None
     frames: list[pd.DataFrame] = []

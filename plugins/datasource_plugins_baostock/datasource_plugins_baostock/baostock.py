@@ -1,6 +1,7 @@
 from __future__ import annotations
 # ruff: noqa: I001
 
+import inspect
 from typing import Any, Literal
 
 import baostock as bs
@@ -42,10 +43,6 @@ class BaoStockDataSource(DataSource):
         return self._asset_column
 
     def list_columns(self) -> list[str]:
-        resolver = API_CATALOG.columns_for_config.get(self._api_name)
-        if resolver is not None:
-            cols = resolver(self._api_params)
-            return sorted({str(col).strip() for col in cols if str(col).strip()})
         fixed_columns = API_CATALOG.fixed_columns.get(self._api_name, ())
         return sorted({str(col).strip() for col in fixed_columns if str(col).strip()})
 
@@ -61,15 +58,15 @@ class BaoStockDataSource(DataSource):
         loader = API_CATALOG.loaders.get(self._api_name)
         if loader is None:
             raise ValueError(f"BaoStock 未配置 loader: {self._api_name}")
-        return loader(
-            columns=columns,
-            date_column=self._date_column,
-            start_date=start_date,
-            end_date=end_date,
-            asset_column=self._asset_column,
-            asset_values=asset_values,
-            config=self._api_params,
-        )
+        loader_params = inspect.signature(loader).parameters
+        call_kwargs = {
+            "columns": columns,
+            "start_date": start_date,
+            "end_date": end_date,
+            "asset_values": asset_values,
+            "config": self._api_params,
+        }
+        return loader(**{k: v for k, v in call_kwargs.items() if k in loader_params})
 
     def write_data(self, df: pd.DataFrame) -> int:
         raise NotImplementedError("BaoStock 数据源为只读，不支持写入")

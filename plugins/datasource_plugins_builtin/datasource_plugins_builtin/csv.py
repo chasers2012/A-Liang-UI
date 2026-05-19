@@ -20,14 +20,6 @@ from ._duckdb_backend import (
 )
 
 
-class CsvWriteConfig(DatasourceWriteConfig):
-    pass
-
-
-class CsvColumnsConfig(DatasourceColumnsConfig):
-    pass
-
-
 class CsvDataSourceSpec(DataSourceSpec):
     @staticmethod
     def path_for_datasource_id(datasource_id: str) -> str:
@@ -63,13 +55,13 @@ class CsvDataSourceSpec(DataSourceSpec):
     def parse_config(
         cls,
         raw: dict[str, Any],
-    ) -> tuple[CsvConnectionConfig, CsvColumnsConfig, CsvWriteConfig]:
+    ) -> tuple[CsvConnectionConfig, DatasourceColumnsConfig, DatasourceWriteConfig]:
         return (
             CsvConnectionConfig.model_validate(
                 cls.normalize_connection_form_raw(dict(raw.get("connection") or {}))
             ),
-            CsvColumnsConfig.model_validate(dict(raw.get("columns") or {})),
-            CsvWriteConfig.model_validate(dict(raw.get("write") or {})),
+            DatasourceColumnsConfig.model_validate(dict(raw.get("columns") or {})),
+            DatasourceWriteConfig.model_validate(dict(raw.get("write") or {})),
         )
 
     def __init__(self) -> None:
