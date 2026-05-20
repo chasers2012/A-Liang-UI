@@ -419,10 +419,14 @@ def cancel_job(job_id: str) -> SchedulerJobPublic:
 
 
 def set_task_next_run(task_id: str, next_run_at: datetime | None) -> None:
+    updated_at = utcnow()
     if not SchedulerRegistry.set_task_next_run(
-        task_id=task_id, next_run_at=next_run_at, updated_at=utcnow()
+        task_id=task_id, next_run_at=next_run_at, updated_at=updated_at
     ):
         raise SchedulerTaskNotFoundError(f"任务不存在: {task_id}")
+    row = SchedulerRegistry.get_task(task_id)
+    if row is not None:
+        _emit_task_event(_task_to_public(row))
 
 
 def recover_incomplete_jobs_on_startup() -> int:

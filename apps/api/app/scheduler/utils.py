@@ -24,8 +24,13 @@ def validate_cron_expr(cron_expr: str | None) -> None:
 
 
 def next_cron_time(cron_expr: str, *, base_time: datetime | None = None) -> datetime:
-    anchor = (base_time or utcnow()).astimezone(timezone.utc)
-    return croniter(cron_expr, anchor).get_next(datetime)
+    """按系统本地时区解释 cron 五段，返回 UTC 供存储与比较。"""
+    ref = base_time or utcnow()
+    if ref.tzinfo is None:
+        ref = ref.replace(tzinfo=timezone.utc)
+    anchor_local = ref.astimezone()
+    next_local = croniter(cron_expr, anchor_local).get_next(datetime)
+    return next_local.astimezone(timezone.utc)
 
 
 def retry_backoff_seconds(attempt: int) -> int:

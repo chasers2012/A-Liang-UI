@@ -28,7 +28,7 @@ import {
   setSchedulerJobPageAtom,
 } from '@/models/scheduler/jobs/list.atom';
 import { schedulerActiveJobsAtoms } from '@/models/scheduler/jobs/active.atom';
-import { schedulerJobTaskId } from '@/models/scheduler/jobs/dto';
+import { schedulerJobTaskName } from '@/models/scheduler/jobs/dto';
 import { useSchedulerJobEvents } from '@/models/scheduler/jobs/use-scheduler-job-events';
 
 function toLocalTime(v: string | null): string {
@@ -181,7 +181,7 @@ export default function SchedulerPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Job ID</TableHead>
-                    <TableHead>Task ID</TableHead>
+                    <TableHead>任务</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Trigger</TableHead>
                     <TableHead>Attempt</TableHead>
@@ -195,7 +195,7 @@ export default function SchedulerPage() {
                     return (
                       <TableRow key={job.id}>
                         <TableCell className="font-mono text-xs">{job.id}</TableCell>
-                        <TableCell className="font-mono text-xs">{schedulerJobTaskId(job) ?? '-'}</TableCell>
+                        <TableCell>{schedulerJobTaskName(job)}</TableCell>
                         <TableCell>{job.status}</TableCell>
                         <TableCell>{job.trigger_type}</TableCell>
                         <TableCell>

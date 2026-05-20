@@ -67,7 +67,7 @@ def run_dispatcher_loop(*, poll_seconds: float = 30.0) -> None:
 @register_startup_job
 def start_cron_dispatcher() -> None:
     global _DISPATCHER_THREAD
-    enabled = os.getenv("SCHEDULER_CRON_DISPATCHER_ENABLED", "0").lower() not in {
+    enabled = os.getenv("SCHEDULER_CRON_DISPATCHER_ENABLED", "1").lower() not in {
         "0",
         "false",
         "no",

@@ -34,6 +34,13 @@ export function schedulerJobTaskId(job: SchedulerJobPublic): string | null {
   return job.task?.id ?? null;
 }
 
+export function schedulerJobTaskName(job: SchedulerJobPublic): string {
+  const name = job.task?.name?.trim();
+  if (name) return name;
+  const taskType = schedulerJobTaskType(job);
+  return taskType === '-' ? '-' : taskType;
+}
+
 export function schedulerJobTaskType(job: SchedulerJobPublic): string {
   return job.task?.task_type ?? job.task_type ?? '-';
 }
