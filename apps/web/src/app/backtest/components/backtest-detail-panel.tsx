@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { EmptyState } from '@/components/empty-state';
@@ -36,8 +36,20 @@ import type { BacktestRunDetailViewData } from '../types';
 import { BacktestCreateActions } from '../ui/backtest-create-actions';
 import { BacktestRunForm } from '../ui/backtest-run-form';
 
+type BacktestDetailTab = 'strategy' | 'performance' | 'trades' | 'run-error';
+
+function BacktestRunErrorPanel({ error }: { error: string }) {
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>运行失败</AlertTitle>
+      <AlertDescription className="break-words whitespace-pre-wrap">{error}</AlertDescription>
+    </Alert>
+  );
+}
+
 function BacktestRunDetailContent({ runId }: { runId: string }) {
   const [deleting, setDeleting] = useState(false);
+  const [detailTab, setDetailTab] = useState<BacktestDetailTab>('strategy');
   const setSelectedId = useSetAtom(backtestsSelectedIdAtom);
   const refreshList = useSetAtom(backtestsListAtoms.refreshAtom);
   const stateKey = runId;
@@ -99,6 +111,10 @@ function BacktestRunDetailContent({ runId }: { runId: string }) {
   );
 
   useEffect(() => {
+    setDetailTab('strategy');
+  }, [runId]);
+
+  useEffect(() => {
     void load();
   }, [load]);
 
@@ -111,6 +127,120 @@ function BacktestRunDetailContent({ runId }: { runId: string }) {
     if (!strategyId) return;
     void refreshStrategyNodeTypes();
   }, [refreshStrategyNodeTypes, strategyId]);
+
+  const runError = runData?.error?.trim() ? runData.error : null;
+
+  useEffect(() => {
+    if (runError) setDetailTab('run-error');
+  }, [runId, runError]);
+
+  useEffect(() => {
+    if (!runError && detailTab === 'run-error') setDetailTab('strategy');
+  }, [runError, detailTab]);
+
+  const detailPanels = useMemo(() => {
+    if (!runData) return [];
+
+    const panels: {
+      value: BacktestDetailTab;
+      label: string;
+      content: ReactNode;
+      fillHeight?: boolean;
+    }[] = [];
+
+    if (runError) {
+      panels.push({
+        value: 'run-error',
+        label: '运行失败',
+        content: <BacktestRunErrorPanel error={runError} />,
+      });
+    }
+
+    panels.push(
+      {
+        value: 'strategy',
+        label: '策略',
+        fillHeight: true,
+        content: (
+          <BacktestWorkflowPanel
+            key={runData.id}
+            runId={runData.id}
+            strategyId={strategyId}
+            strategyDetail={strategyDetail}
+            strategyError={strategyError}
+            strategyNodeCatalog={strategyNodeCatalog}
+            strategyNodeCatalogError={strategyNodeCatalogError}
+            strategyNodeTypes={strategyNodeTypes}
+          />
+        ),
+      },
+      {
+        value: 'performance',
+        label: '收益统计',
+        content: (
+          <div className="flex flex-col gap-6">
+            <EchartsOptionChart option={option} className="h-[360px] min-h-[360px] w-full shrink-0" />
+            {statsEntries.length > 0 ? (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {statsEntries.map((item) => (
+                  <div key={item.key} className="rounded-md border bg-muted/30 p-3">
+                    <div className="text-xs text-muted-foreground">{item.key}</div>
+                    <div className="mt-1 text-sm font-medium">{fmtValue(item.value)}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="暂无统计数据" compact />
+            )}
+          </div>
+        ),
+      },
+      {
+        value: 'trades',
+        label: '交易记录',
+        content:
+          tradeRows.length > 0 && tradeColumns.length > 0 ? (
+            <Table compact>
+              <TableHeader>
+                <TableRow>
+                  {tradeColumns.map((col) => (
+                    <TableHead key={col}>{col}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tradeRows.map((row, idx) => (
+                  <TableRow key={String(row['id'] ?? row['Trade Id'] ?? idx)}>
+                    {tradeColumns.map((col) => (
+                      <TableCell key={`${idx}-${col}`} className="font-mono">
+                        {fmtValue(row[col])}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <EmptyState title="暂无交易记录" compact />
+          ),
+      },
+    );
+
+    return panels;
+  }, [
+    runData,
+    runError,
+    strategyId,
+    strategyDetail,
+    strategyError,
+    strategyNodeCatalog,
+    strategyNodeCatalogError,
+    strategyNodeTypes,
+    option,
+    statsEntries,
+    tradeRows,
+    tradeColumns,
+  ]);
 
   const onDelete = async () => {
     setDeleting(true);
@@ -167,83 +297,14 @@ function BacktestRunDetailContent({ runId }: { runId: string }) {
       }
       className="flex min-h-0 flex-1 flex-col"
       actions={detailActions}
-      panels={[
-        {
-          value: 'strategy',
-          label: '策略',
-          fillHeight: true,
-          content: (
-            <BacktestWorkflowPanel
-              key={safeRun.id}
-              runId={safeRun.id}
-              strategyId={strategyId}
-              strategyDetail={strategyDetail}
-              strategyError={strategyError}
-              strategyNodeCatalog={strategyNodeCatalog}
-              strategyNodeCatalogError={strategyNodeCatalogError}
-              strategyNodeTypes={strategyNodeTypes}
-            />
-          ),
-        },
-        {
-          value: 'performance',
-          label: '收益统计',
-          content: (
-            <div className="flex flex-col gap-6">
-              <EchartsOptionChart option={option} className="h-[360px] min-h-[360px] w-full shrink-0" />
-              {statsEntries.length > 0 ? (
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {statsEntries.map((item) => (
-                    <div key={item.key} className="rounded-md border bg-muted/30 p-3">
-                      <div className="text-xs text-muted-foreground">{item.key}</div>
-                      <div className="mt-1 text-sm font-medium">{fmtValue(item.value)}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState title="暂无统计数据" compact />
-              )}
-            </div>
-          ),
-        },
-        {
-          value: 'trades',
-          label: '交易记录',
-          content:
-            tradeRows.length > 0 && tradeColumns.length > 0 ? (
-              <Table compact>
-                <TableHeader>
-                  <TableRow>
-                    {tradeColumns.map((col) => (
-                      <TableHead key={col}>{col}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tradeRows.map((row, idx) => (
-                    <TableRow key={String(row['id'] ?? row['Trade Id'] ?? idx)}>
-                      {tradeColumns.map((col) => (
-                        <TableCell key={`${idx}-${col}`} className="font-mono">
-                          {fmtValue(row[col])}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <EmptyState title="暂无交易记录" compact />
-            ),
-        },
-      ]}
-    >
-      {safeRun.error ? (
-        <Alert variant="destructive" className="shrink-0">
-          <AlertTitle>运行失败</AlertTitle>
-          <AlertDescription className="break-words whitespace-pre-wrap">{safeRun.error}</AlertDescription>
-        </Alert>
-      ) : null}
-    </PanelDetailCard>
+      panelActiveTab={detailTab}
+      onPanelActiveTabChange={(v) => {
+        if (v === 'strategy' || v === 'performance' || v === 'trades' || (v === 'run-error' && runError)) {
+          setDetailTab(v);
+        }
+      }}
+      panels={detailPanels}
+    />
   );
 }
 
