@@ -125,7 +125,7 @@ class FormSchema:
                 continue
             leaf = parts[-1]
             if leaf in cur:
-                cur[leaf] = ""
+                del cur[leaf]
 
     def redact(self, data: dict[str, Any]) -> dict[str, Any]:
         """
