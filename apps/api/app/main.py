@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from workspace import workspace_path
 
+import app.embedding
 import app.llm_tools
 import app.persistence
 import app.plugin

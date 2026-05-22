@@ -41,7 +41,7 @@ custom-code = { workspace = true }
 workflow = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/embedding_plugins_huggingface", "plugins/embedding_plugins_openai", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
 
 [dependency-groups]
 dev = [

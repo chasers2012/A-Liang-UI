@@ -8,34 +8,11 @@ from langchain_classic.retrievers.document_compressors import CrossEncoderRerank
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_huggingface import HuggingFaceEmbeddings
 from workspace import workspace_path
 
+from app.embedding.controller import get_embeddings
+
 from .config import KnowledgeSettings
-
-
-class LocalEmbeddings(Embeddings):
-    """Use LangChain embedding wrappers with a local default model."""
-
-    def __init__(self, settings: KnowledgeSettings) -> None:
-        self._settings = settings
-        provider = str(settings.get("embedding_provider", "huggingface")).lower()
-        model = str(settings.get("embedding_model", "BAAI/bge-small-zh-v1.5"))
-        kwargs = dict(settings.get("embedding_kwargs") or {})
-        if provider == "huggingface":
-            self._embedding_fn = HuggingFaceEmbeddings(
-                model_name=model,
-                encode_kwargs=kwargs,
-            )
-            return
-        raise ValueError(f"不支持的 embedding_provider: {provider}")
-
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return [list(map(float, vector)) for vector in self._embedding_fn.embed_documents(texts)]
-
-    def embed_query(self, text: str) -> list[float]:
-        return [float(value) for value in self._embedding_fn.embed_query(text)]
 
 
 @dataclass(frozen=True)
@@ -60,12 +37,12 @@ class VectorStoreAdapter:
         if self.__class__._initialized:
             return
         self._settings = settings
-        self._embedding = LocalEmbeddings(settings)
+        self._embedding = get_embeddings()
         self._reranker: Any = None
         persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
         self._store = Chroma(
-            collection_name=str(self._settings.get("collection_name", "knowledge")),
+            collection_name="knowledge",
             embedding_function=self._embedding,
             persist_directory=persist_dir.as_posix(),
         )

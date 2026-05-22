@@ -45,31 +45,6 @@ class KnowledgeRagSettings(BaseConfig):
                     "title": "Rerank 模型",
                     "default": "BAAI/bge-reranker-base",
                 },
-                "vector_store": {
-                    "type": "string",
-                    "title": "向量存储",
-                    "default": "chroma",
-                },
-                "collection_name": {
-                    "type": "string",
-                    "title": "集合名称",
-                    "default": "knowledge",
-                },
-                "embedding_provider": {
-                    "type": "string",
-                    "title": "Embedding 提供方",
-                    "default": "huggingface",
-                },
-                "embedding_model": {
-                    "type": "string",
-                    "title": "Embedding 模型",
-                    "default": "BAAI/bge-small-zh-v1.5",
-                },
-                "embedding_kwargs": {
-                    "type": "object",
-                    "title": "Embedding 参数",
-                    "default": {"normalize_embeddings": True},
-                },
             },
             "required": ["enabled", "top_k", "threshold"],
         }
