@@ -3,13 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 from app.config import BaseConfig
-from app.config.registry import register_config_spec
+from app.config.registry import get_config_spec, register_config_spec
 from app.config.schema import ConfigModuleSpec
 from app.form.schema import FormSchema
 from app.llm.plugins import get_llm_plugin, list_llm_plugins
 
 
 def register_llm_settings_module() -> None:
+    if get_config_spec(LlmSettings.category) is not None:
+        return
     json_schema, ui_schema = LlmSettings.schema()
     # IMPORTANT: config/controller merges spec.default_values at the root level.
     # Since LLM config persists *all* non-provider fields under `providers.<provider>`,
@@ -127,6 +129,7 @@ class LlmSettings(BaseConfig):
 
 
 def get_llm_settings() -> tuple[str, dict[str, Any]]:
+    register_llm_settings_module()
     settings = LlmSettings.get_value()
     provider_value = settings.get("provider")
     provider = str(provider_value).strip() if provider_value else ""

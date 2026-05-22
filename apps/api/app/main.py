@@ -18,6 +18,7 @@ import app.embedding
 import app.llm_tools
 import app.persistence
 import app.plugin
+import app.rerank
 import app.scheduler
 from app.agents import api as agents_router
 from app.backtest import api as backtests_router

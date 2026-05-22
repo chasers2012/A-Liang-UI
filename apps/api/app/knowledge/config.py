@@ -40,11 +40,6 @@ class KnowledgeRagSettings(BaseConfig):
                     "title": "Rerank 保留数量",
                     "default": 4,
                 },
-                "rerank_model": {
-                    "type": "string",
-                    "title": "Rerank 模型",
-                    "default": "BAAI/bge-reranker-base",
-                },
             },
             "required": ["enabled", "top_k", "threshold"],
         }

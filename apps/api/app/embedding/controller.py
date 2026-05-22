@@ -4,10 +4,12 @@ from langchain_core.embeddings import Embeddings
 
 from app.config.controller import get_module_config
 
+from .config import register_embedding_settings_module
 from .plugins import get_embedding_plugin
 
 
 def get_embeddings() -> Embeddings:
+    register_embedding_settings_module()
     settings = get_module_config("embedding")
     provider_value = settings.get("embedding_provider")
     provider = str(provider_value).strip() if provider_value else ""

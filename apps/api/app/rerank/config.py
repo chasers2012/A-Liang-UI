@@ -5,25 +5,25 @@ from typing import Any
 from app.config import BaseConfig
 from app.config.registry import get_config_spec, register_config_spec
 from app.config.schema import ConfigModuleSpec
-from app.embedding.plugins import list_embedding_plugins
 from app.form.schema import FormSchema
+from app.rerank.plugins import list_rerank_plugins
 
 
-def register_embedding_settings_module() -> None:
-    if get_config_spec(EmbeddingSettingsConfig.category) is not None:
+def register_rerank_settings_module() -> None:
+    if get_config_spec(RerankSettingsConfig.category) is not None:
         return
-    json_schema, ui_schema = EmbeddingSettingsConfig.schema()
-    provider_enum = ((json_schema.get("properties") or {}).get("embedding_provider") or {}).get(
+    json_schema, ui_schema = RerankSettingsConfig.schema()
+    provider_enum = ((json_schema.get("properties") or {}).get("rerank_provider") or {}).get(
         "enum"
     ) or []
     default_provider = provider_enum[0] if isinstance(provider_enum, list) and provider_enum else ""
     spec = ConfigModuleSpec(
-        key=EmbeddingSettingsConfig.category,
-        filename=f"{EmbeddingSettingsConfig.category}.json",
-        default_values={"embedding_provider": default_provider} if default_provider else {},
+        key=RerankSettingsConfig.category,
+        filename=f"{RerankSettingsConfig.category}.json",
+        default_values={"rerank_provider": default_provider} if default_provider else {},
         form=FormSchema(
-            title=EmbeddingSettingsConfig.category_label,
-            description=EmbeddingSettingsConfig.description or None,
+            title=RerankSettingsConfig.category_label,
+            description=RerankSettingsConfig.description or None,
             json_schema=json_schema,
             ui_schema=ui_schema,
         ),
@@ -31,13 +31,14 @@ def register_embedding_settings_module() -> None:
     register_config_spec(spec)
 
 
-class EmbeddingSettingsConfig(BaseConfig):
-    category = "embedding"
-    category_label = "Embedding"
+class RerankSettingsConfig(BaseConfig):
+    category = "rerank"
+    category_label = "Rerank"
+    description = "配置知识库检索使用的 Rerank 模型提供方。"
 
     @classmethod
     def schema(cls) -> tuple[dict[str, Any], dict[str, Any]]:
-        plugins = list_embedding_plugins()
+        plugins = list_rerank_plugins()
         provider_ids = [p.name for p in plugins if str(getattr(p, "name", "")).strip()]
         provider_titles = [
             (p.get_config_schema().title if p.get_config_schema() else p.name) for p in plugins
@@ -68,20 +69,20 @@ class EmbeddingSettingsConfig(BaseConfig):
         schema: dict[str, Any] = {
             "type": "object",
             "properties": {
-                "embedding_provider": provider_property,
-                "embedding_providers": providers_property,
+                "rerank_provider": provider_property,
+                "rerank_providers": providers_property,
             },
-            "required": ["embedding_provider", "embedding_providers"],
+            "required": ["rerank_provider", "rerank_providers"],
         }
 
         if plugins:
             schema["dependencies"] = {
-                "embedding_provider": {
+                "rerank_provider": {
                     "oneOf": [
                         {
                             "properties": {
-                                "embedding_provider": {"enum": [p.name]},
-                                "embedding_providers": {
+                                "rerank_provider": {"enum": [p.name]},
+                                "rerank_providers": {
                                     "type": "object",
                                     "properties": {p.name: provider_buckets.get(p.name)},
                                     "required": [p.name],
@@ -94,8 +95,8 @@ class EmbeddingSettingsConfig(BaseConfig):
             }
         ui_schema: dict[str, Any] = {
             "ui:submitButtonOptions": {"norender": True},
-            "embedding_provider": {"ui:placeholder": ""},
-            "embedding_providers": {"ui:options": {"label": False}},
+            "rerank_provider": {"ui:placeholder": ""},
+            "rerank_providers": {"ui:options": {"label": False}},
         }
         for p in plugins:
             cfg = p.get_config_schema()
@@ -107,11 +108,11 @@ class EmbeddingSettingsConfig(BaseConfig):
                 provider_options = {}
             provider_options["label"] = False
             provider_ui["ui:options"] = provider_options
-            ui_schema["embedding_providers"][p.name] = provider_ui
+            ui_schema["rerank_providers"][p.name] = provider_ui
         return schema, ui_schema
 
 
 __all__ = [
-    "EmbeddingSettingsConfig",
-    "register_embedding_settings_module",
+    "RerankSettingsConfig",
+    "register_rerank_settings_module",
 ]

@@ -11,6 +11,7 @@ dependencies = [
     "llm-plugins-builtin",
     "embedding-plugins-openai",
     "embedding-plugins-huggingface",
+    "rerank-plugins-huggingface",
     "echarts-nodes",
     "common-nodes",
     "strategy-nodes",
@@ -30,6 +31,7 @@ datasource-plugins-tushare = { workspace = true }
 llm-plugins-builtin = { workspace = true }
 embedding-plugins-openai = { workspace = true }
 embedding-plugins-huggingface = { workspace = true }
+rerank-plugins-huggingface = { workspace = true }
 echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
 strategy-nodes = { workspace = true }
@@ -45,7 +47,7 @@ custom-code = { workspace = true }
 workflow = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/embedding_plugins_huggingface", "plugins/embedding_plugins_openai", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/embedding_plugins_huggingface", "plugins/embedding_plugins_openai", "plugins/rerank_plugins_huggingface", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
 
 [dependency-groups]
 dev = [

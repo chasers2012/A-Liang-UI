@@ -5,12 +5,12 @@ from typing import Any
 
 from langchain_chroma import Chroma
 from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
-from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 from workspace import workspace_path
 
 from app.embedding.controller import get_embeddings
+from app.rerank.controller import get_reranker
 
 from .config import KnowledgeSettings
 
@@ -38,7 +38,8 @@ class VectorStoreAdapter:
             return
         self._settings = settings
         self._embedding = get_embeddings()
-        self._reranker: Any = None
+        self._reranker: CrossEncoderReranker | None = None
+        self._reranker_top_n: int | None = None
         persist_dir = workspace_path("data/knowledge/chroma")
         persist_dir.mkdir(parents=True, exist_ok=True)
         self._store = Chroma(
@@ -48,16 +49,15 @@ class VectorStoreAdapter:
         )
         self.__class__._initialized = True
 
+    def _rerank_top_n(self) -> int:
+        return int(self._settings.get("rerank_top_n", 4))
+
     @property
     def reranker(self) -> CrossEncoderReranker:
-        if self._reranker is None:
-            model = HuggingFaceCrossEncoder(
-                model_name=str(self._settings.get("rerank_model", "BAAI/bge-reranker-base"))
-            )
-            self._reranker = CrossEncoderReranker(
-                model=model,
-                top_n=int(self._settings.get("rerank_top_n", 4)),
-            )
+        top_n = self._rerank_top_n()
+        if self._reranker is None or self._reranker_top_n != top_n:
+            self._reranker = get_reranker(top_n=top_n)
+            self._reranker_top_n = top_n
         return self._reranker
 
     def upsert_chunks(
@@ -152,8 +152,7 @@ class VectorStoreAdapter:
                 )
             )
         results.sort(key=lambda item: item.score, reverse=True)
-        rerank_top_n = int(self._settings.get("rerank_top_n", 4))
-        return results[: min(rerank_top_n, len(results))]
+        return results[: min(self._rerank_top_n(), len(results))]
 
     def retrieve(
         self,
