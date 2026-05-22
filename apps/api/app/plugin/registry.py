@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import importlib.metadata
+import logging
 from collections.abc import Callable, Iterable
 from typing import ClassVar
 
 from app.plugin.base import Plugin
 from app.plugin.constants import PLUGIN_ENTRY_POINT_GROUP
+
+logger = logging.getLogger(__name__)
 
 PluginRegistryKey = tuple[str, str]
 
@@ -129,7 +132,17 @@ def load_plugins_from_entry_points(registry: PluginRegistry) -> None:
       or a Plugin instance.
     """
 
-    for ep in _entry_points_for_group(PLUGIN_ENTRY_POINT_GROUP):
+    entry_points = _entry_points_for_group(PLUGIN_ENTRY_POINT_GROUP)
+    loaded_plugins: list[tuple[str, str, str]] = []
+    failed_entry_points: list[tuple[str, str]] = []
+
+    logger.info(
+        "Discovering plugins from entry point group %r (%d entry point(s))",
+        PLUGIN_ENTRY_POINT_GROUP,
+        len(entry_points),
+    )
+
+    for ep in entry_points:
         try:
             loaded = ep.load()
 
@@ -145,7 +158,35 @@ def load_plugins_from_entry_points(registry: PluginRegistry) -> None:
                 )
 
             registry.register(plugin)
+            loaded_plugins.append((ep.name, plugin.category, plugin.name))
+            logger.info(
+                "Loaded plugin from entry point %r: category=%r name=%r",
+                ep.name,
+                plugin.category,
+                plugin.name,
+            )
 
         except Exception as e:
-            print(f"Error loading plugin {ep.name}: {e}")
+            failed_entry_points.append((ep.name, str(e)))
+            logger.warning("Failed to load plugin entry point %r: %s", ep.name, e, exc_info=True)
             continue
+
+    if loaded_plugins:
+        summary = ", ".join(
+            f"{entry_point}->{category}/{name}" for entry_point, category, name in loaded_plugins
+        )
+        logger.info(
+            "Loaded %d plugin(s): %s",
+            len(loaded_plugins),
+            summary,
+        )
+    else:
+        logger.info("No plugins were loaded from entry points")
+
+    if failed_entry_points:
+        failed_summary = ", ".join(f"{name} ({err})" for name, err in failed_entry_points)
+        logger.warning(
+            "Failed to load %d plugin entry point(s): %s",
+            len(failed_entry_points),
+            failed_summary,
+        )

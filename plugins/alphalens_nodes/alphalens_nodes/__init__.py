@@ -22,7 +22,6 @@ from .performance import (
     StdConversionMetric,
     TopBottomSpreadTimeSeriesMetric,
 )
-from .plugin import AlphalensNodesPlugin
 from .utils import GetCleanFactorAndForwardReturnsMetric
 
 __all__ = [
@@ -49,3 +48,11 @@ __all__ = [
     "StdConversionMetric",
     "TopBottomSpreadTimeSeriesMetric",
 ]
+
+
+def __getattr__(name: str):
+    if name == "AlphalensNodesPlugin":
+        from .plugin import AlphalensNodesPlugin
+
+        return AlphalensNodesPlugin
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

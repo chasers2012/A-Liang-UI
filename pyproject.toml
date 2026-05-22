@@ -9,6 +9,8 @@ dependencies = [
     "datasource-plugins-baostock",
     "datasource-plugins-tushare",
     "llm-plugins-builtin",
+    "embedding-plugins-openai",
+    "embedding-plugins-huggingface",
     "echarts-nodes",
     "common-nodes",
     "strategy-nodes",
@@ -26,6 +28,8 @@ datasource-plugins-builtin = { workspace = true }
 datasource-plugins-baostock = { workspace = true }
 datasource-plugins-tushare = { workspace = true }
 llm-plugins-builtin = { workspace = true }
+embedding-plugins-openai = { workspace = true }
+embedding-plugins-huggingface = { workspace = true }
 echarts-nodes = { workspace = true }
 common-nodes = { workspace = true }
 strategy-nodes = { workspace = true }
