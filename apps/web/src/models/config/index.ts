@@ -8,6 +8,7 @@ import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
 import type { ConfigModuleSpecPublic } from './dto';
 
 export type { ConfigModuleSpecPublic, ConfigSpecsResponse, ConfigValuesResponse } from './dto';
+export { configSelectedModuleKeyAtom } from './selection.atom';
 
 export type ConfigModuleView = {
   spec: ConfigModuleSpecPublic;
