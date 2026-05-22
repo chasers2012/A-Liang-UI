@@ -10,6 +10,8 @@ from .chat_model import build_chat_model
 from .config import LlmSettings, get_llm_settings, register_llm_settings_module
 from .plugins import LlmPlugin, get_llm_plugin, list_llm_plugins
 
+register_llm_settings_module()
+
 __all__ = [
     "LlmPlugin",
     "LlmSettings",
