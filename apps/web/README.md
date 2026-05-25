@@ -1,3 +1,5 @@
+项目总览、功能说明与完整快速上手见仓库根目录 [README.md](../../README.md)。
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -20,10 +22,10 @@ uv run --package quant-agent-api uvicorn app.main:app --reload --app-dir apps/ap
 
 环境变量：
 
-| 变量 | 作用 |
-|------|------|
-| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端请求的 API 基址（勿以 `/` 结尾）。未设置时默认为 `http://127.0.0.1:8000`。 |
-| `QUANT_AGENT_WORKSPACE` | **在运行 API 的进程里**设置：数据源配置文件写入该目录下 `config/datasources.json`。未设置时默认为用户主目录下的 `.quant-agent`。 |
+| 变量                          | 作用                                                                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端请求的 API 基址（勿以 `/` 结尾）。未设置时默认为 `http://127.0.0.1:8000`。                                                   |
+| `QUANT_AGENT_WORKSPACE`       | **在运行 API 的进程里**设置：数据源配置文件写入该目录下 `config/datasources.json`。未设置时默认为用户主目录下的 `.quant-agent`。 |
 
 API 的 CORS 默认允许 `http://localhost:3000`；其他来源请设置 API 进程的 `CORS_ORIGINS`（逗号分隔）。
 
