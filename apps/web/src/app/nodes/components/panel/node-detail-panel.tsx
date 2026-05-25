@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PanelDetailCard } from '@/components/panel-detail-card';
@@ -36,6 +37,7 @@ export function NodesNodeDetailPanel() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={
         <EditablePageTitle
           value={visibleName}

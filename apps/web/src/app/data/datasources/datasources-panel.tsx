@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import {
@@ -94,9 +94,9 @@ export function DatasourcesPanel() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isEditing} drawerTitle="数据源">
         <DatasourceListPanel />
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <DatasourceDetailPanel />

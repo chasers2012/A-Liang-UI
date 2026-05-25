@@ -4,7 +4,7 @@ import { useAtom, useAtomValue } from 'jotai';
 import { useLayoutEffect } from 'react';
 
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { configPageRefreshOnMountEffectAtom, configPageStateAtom } from '@/models/config';
@@ -43,7 +43,7 @@ export default function AgentConfigPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={false} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={false} drawerTitle="配置">
         <SearchList
           className="h-full min-h-0"
           items={sidebarItems}
@@ -63,7 +63,7 @@ export default function AgentConfigPage() {
         >
           <SearchListEmpty {...configSearchListEmpty} />
         </SearchList>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <ConfigModuleDetailPanel />

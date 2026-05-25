@@ -6,7 +6,7 @@ import { useCallback, useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -62,7 +62,7 @@ export function DataSetsPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isEditing} drawerTitle="数据集">
         <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
           {listError ? (
             <Alert variant="destructive">
@@ -106,7 +106,7 @@ export function DataSetsPage() {
             <SearchListEmpty {...dataSetsSearchListEmpty} />
           </SearchList>
         </div>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <DataSetDetailPanel />

@@ -5,10 +5,11 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus } from 'lucide-react';
 
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { toWorkflowNodeTypes } from '@/components/workflow-graph';
 import { useHydrated } from '@/lib/use-hydrated';
@@ -122,7 +123,7 @@ function StrategiesPageContent() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isEditing} drawerTitle="策略">
         <SearchList
           className="h-full min-h-0"
           items={strategiesSearchListItems}
@@ -152,7 +153,7 @@ function StrategiesPageContent() {
         >
           <SearchListEmpty {...strategiesSearchListEmpty} />
         </SearchList>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <StrategyDetailPanel nodeTypes={nodeTypes} nodeCatalogError={nodeCatalogError} />
       </div>
@@ -165,7 +166,7 @@ export default function StrategiesPage() {
     <Suspense
       fallback={
         <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-          <PanelDetailCard title={null}>
+          <PanelDetailCard titleActions={<CollapsibleSidebarDrawerTrigger />} title={null}>
             <SearchListEmpty variant="loading" title="加载中" />
           </PanelDetailCard>
         </Page>

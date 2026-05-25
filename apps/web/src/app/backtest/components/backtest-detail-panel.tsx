@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { EmptyState } from '@/components/empty-state';
 import { EchartsOptionChart } from '@/components/echarts/echarts-option-chart';
 import { PanelDetailCard } from '@/components/panel-detail-card';
@@ -255,7 +256,11 @@ function BacktestRunDetailContent({ runId }: { runId: string }) {
   const statusContent = resolveBacktestDetailStatusContent({ run: runData, error });
   if (statusContent) {
     return (
-      <PanelDetailCard title="回测详情" className="flex min-h-0 flex-1 flex-col">
+      <PanelDetailCard
+        titleActions={<CollapsibleSidebarDrawerTrigger />}
+        title="回测详情"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         {statusContent}
       </PanelDetailCard>
     );
@@ -286,6 +291,7 @@ function BacktestRunDetailContent({ runId }: { runId: string }) {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={
         <BacktestRecordTitle
           strategyId={safeRun.strategy_id}
@@ -314,7 +320,12 @@ export function BacktestDetailPanel() {
 
   if (isCreateMode) {
     return (
-      <PanelDetailCard title="发起回测" className="flex min-h-0 flex-1 flex-col" actions={<BacktestCreateActions />}>
+      <PanelDetailCard
+        titleActions={<CollapsibleSidebarDrawerTrigger />}
+        title="发起回测"
+        className="flex min-h-0 flex-1 flex-col"
+        actions={<BacktestCreateActions />}
+      >
         <BacktestRunForm />
       </PanelDetailCard>
     );
@@ -322,7 +333,11 @@ export function BacktestDetailPanel() {
 
   if (!selectedId) {
     return (
-      <PanelDetailCard title="回测详情" className="flex min-h-0 flex-1 flex-col">
+      <PanelDetailCard
+        titleActions={<CollapsibleSidebarDrawerTrigger />}
+        title="回测详情"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <EmptyState
           title="选择回测记录"
           description="在左侧列表中选择一条记录，或使用「发起回测」创建新任务。"

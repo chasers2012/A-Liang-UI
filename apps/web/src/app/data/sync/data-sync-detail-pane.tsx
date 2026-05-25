@@ -9,6 +9,7 @@ import { CreateCsvTargetDatasourceDialog } from '@/app/data/sync/create-csv-targ
 import { DataSyncCronField } from '@/app/data/sync/data-sync-cron-field';
 import { DataSyncRecordsTab } from '@/app/data/sync/data-sync-records-tab';
 import { EditablePageTitle } from '@/components/editable-page-title';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -545,6 +546,7 @@ export function DataSyncDetailPane() {
     <PanelDetailCard
       key={editorKey}
       className="min-h-0 flex-1"
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={title}
       actions={<DataSyncDetailActions />}
       panels={detailPanels}

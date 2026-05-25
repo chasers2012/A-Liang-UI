@@ -6,7 +6,7 @@ import { useCallback, useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { NodesListFilterPopover } from './components/nodes-list-filter-popover';
@@ -50,7 +50,7 @@ export default function NodesPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditActive} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isEditActive} drawerTitle="节点">
         <SearchList
           className="h-full min-h-0"
           items={
@@ -88,7 +88,7 @@ export default function NodesPage() {
         >
           <SearchListEmpty {...nodesSearchListEmpty} />
         </SearchList>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <NodesNodeDetailPanel />

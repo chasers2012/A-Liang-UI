@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Plus } from 'lucide-react';
 
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
@@ -57,7 +57,7 @@ export default function BacktestPage() {
 
   return (
     <Page size="full" gap="sm" contentScroll="none" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isCreateMode} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isCreateMode} drawerTitle="回测">
         <SearchList
           className="h-full min-h-0"
           items={
@@ -102,7 +102,7 @@ export default function BacktestPage() {
         >
           <SearchListEmpty {...backtestSearchListEmpty} />
         </SearchList>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <BacktestDetailPanel />

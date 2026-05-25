@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { Page } from '@/components/page';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { creatingAtom, factorsListAtoms, factorsEditingAtom, factorsSelectedIdAtom } from '@/models/factor';
@@ -30,7 +30,7 @@ function FactorsListPane() {
   });
 
   return (
-    <CollapsibleSearchListSidebar collapsed={editing} innerWidthClassName="w-[320px]">
+    <CollapsibleSidebar collapsed={editing} drawerTitle="因子">
       <SearchList
         className="h-full min-h-0"
         items={
@@ -74,7 +74,7 @@ function FactorsListPane() {
       >
         <SearchListEmpty {...factorsSearchListEmpty} />
       </SearchList>
-    </CollapsibleSearchListSidebar>
+    </CollapsibleSidebar>
   );
 }
 

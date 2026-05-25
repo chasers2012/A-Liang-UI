@@ -2,6 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import type { DataSetPublic } from '@/models/data-set/dto';
@@ -109,6 +110,7 @@ export function DataSetDetailPanel() {
   return (
     <>
       <PanelDetailCard
+        titleActions={<CollapsibleSidebarDrawerTrigger />}
         title={
           <EditablePageTitle
             value={pageTitleValue}

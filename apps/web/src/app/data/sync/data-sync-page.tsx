@@ -2,7 +2,7 @@
 
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { Page } from '@/components/page';
 import {
@@ -37,9 +37,9 @@ export function DataSyncPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={sidebarCollapsed} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={sidebarCollapsed} drawerTitle="同步任务">
         <DataSyncListPane />
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
       <DataSyncDetailPane />
     </Page>
   );

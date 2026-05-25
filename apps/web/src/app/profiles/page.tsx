@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 
 import { SearchListEmpty, resolveAsyncListEmptyState } from '@/components/empty-state';
 import { Page } from '@/components/page';
-import { CollapsibleSearchListSidebar } from '@/components/collapsible-search-list-sidebar';
+import { CollapsibleSidebar } from '@/components/collapsible-sidebar';
 import { SearchList, SearchListItem } from '@/components/search-list';
 import { useNavigationEditGuard } from '@/components/navigation-edit-guard-context';
 import { listAtoms, refreshNodeTypesAtom } from '@/models/evaluation-profile/list-detail.atom';
@@ -62,7 +62,7 @@ export default function EvaluationProfilesPage() {
 
   return (
     <Page size="full" gap="sm" className="flex h-full min-h-0 w-full flex-row overflow-hidden">
-      <CollapsibleSearchListSidebar collapsed={isEditing} innerWidthClassName="w-[320px]">
+      <CollapsibleSidebar collapsed={isEditing} drawerTitle="评价方案">
         <SearchList
           className="h-full min-h-0"
           items={sidebarItems}
@@ -92,7 +92,7 @@ export default function EvaluationProfilesPage() {
         >
           <SearchListEmpty {...evaluationProfilesSearchListEmpty} />
         </SearchList>
-      </CollapsibleSearchListSidebar>
+      </CollapsibleSidebar>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <EvaluationProfileDetailPanel />

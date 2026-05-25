@@ -7,6 +7,7 @@ import { WorkflowGraphCanvas, toWorkflowNodeTypes, type WorkflowGraphCanvasHandl
 import { EditablePageDescription } from '@/components/editable-page-description';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { EmptyState } from '@/components/empty-state';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -221,7 +222,7 @@ function StrategyDetailPanelEditor() {
 
   if (formState.loadError) {
     return (
-      <PanelDetailCard title="编辑策略">
+      <PanelDetailCard titleActions={<CollapsibleSidebarDrawerTrigger />} title="编辑策略">
         <Alert variant="destructive">
           <AlertTitle>加载失败</AlertTitle>
           <AlertDescription>{formState.loadError}</AlertDescription>
@@ -237,7 +238,7 @@ function StrategyDetailPanelEditor() {
 
   if (formState.loading || formState.templateLoading) {
     return (
-      <PanelDetailCard title={isCreate ? '新增策略' : '编辑策略'}>
+      <PanelDetailCard titleActions={<CollapsibleSidebarDrawerTrigger />} title={isCreate ? '新增策略' : '编辑策略'}>
         <EmptyState variant="loading" title="加载中" compact />
       </PanelDetailCard>
     );
@@ -292,6 +293,7 @@ function StrategyDetailPanelEditor() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       panelActiveTab={editTab}
       onPanelActiveTabChange={(v) => {
         if (v === 'meta' || v === 'workflow') setEditTab(v);
@@ -375,6 +377,7 @@ function StrategyDetailPanelView(props: {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       panelActiveTab={viewTab}
       onPanelActiveTabChange={(v) => {
         if (v === 'description' || v === 'workflow') setViewTab(v);

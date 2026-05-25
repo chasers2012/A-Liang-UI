@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 import { Button } from '@/components/ui/button';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import {
   cancelDatasourceEditorAtom,
@@ -191,6 +192,7 @@ export function DatasourceDetailPanel() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       panelActiveTab={detailTab}
       onPanelActiveTabChange={(v) => {
         if (!isDetailTab(v)) return;

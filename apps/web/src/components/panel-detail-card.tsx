@@ -20,6 +20,8 @@ export type PanelDetailCardTabPanelItem = {
 
 export type PanelDetailCardProps = Omit<ComponentProps<typeof Card>, 'title' | 'children'> & {
   title?: ReactNode;
+  /** 标题左侧附加操作（如窄屏侧栏打开按钮） */
+  titleActions?: ReactNode;
   children?: ReactNode;
   actions?: ReactNode;
   panels?: readonly PanelDetailCardTabPanelItem[];
@@ -120,6 +122,7 @@ function PanelDetailCardMainRegion({ panels, activePanelValue, actions, children
 export function PanelDetailCard({
   className,
   title,
+  titleActions,
   children,
   actions,
   panels,
@@ -142,7 +145,10 @@ export function PanelDetailCard({
   return (
     <Card className={cn('flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden', className)} {...cardProps}>
       <CardHeader className="shrink-0 space-y-2">
-        <CardTitle className="space-y-2">{title || ''}</CardTitle>
+        <CardTitle className="flex min-w-0 items-center gap-2 space-y-0">
+          {titleActions ? <div className="flex shrink-0 items-center gap-2">{titleActions}</div> : null}
+          <span className="min-w-0 flex-1 space-y-2">{title || ''}</span>
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         {panels && panels.length > 0 ? (

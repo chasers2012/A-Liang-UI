@@ -2,6 +2,7 @@
 
 import { useAtomValue, useSetAtom } from 'jotai';
 
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { EmptyState } from '@/components/empty-state';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PanelDetailCard } from '@/components/panel-detail-card';
@@ -60,6 +61,7 @@ export function FactorDetailPanel() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={
         <EditablePageTitle
           showEdit={editing}

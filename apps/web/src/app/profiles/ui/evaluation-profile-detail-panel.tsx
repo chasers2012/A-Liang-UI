@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
 import { EmptyState } from '@/components/empty-state';
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { EditablePageTitle } from '@/components/editable-page-title';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -110,6 +111,7 @@ export function EvaluationProfileDetailPanel() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={
         <EditablePageTitle
           value={pageTitleValue}

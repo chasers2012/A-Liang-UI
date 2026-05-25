@@ -3,6 +3,7 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import validator from '@rjsf/validator-ajv8';
 
+import { CollapsibleSidebarDrawerTrigger } from '@/components/collapsible-sidebar';
 import { PanelPlaceholder } from '@/components/empty-state';
 import { PanelDetailCard } from '@/components/panel-detail-card';
 import { RjsfStyledForm } from '@/components/rjsf-styled-form';
@@ -72,7 +73,11 @@ export function ConfigModuleDetailPanel() {
 
   if (!selectedKey || !moduleView) {
     return (
-      <PanelDetailCard title="配置详情" className="flex min-h-0 flex-1 flex-col">
+      <PanelDetailCard
+        titleActions={<CollapsibleSidebarDrawerTrigger />}
+        title="配置详情"
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <PanelPlaceholder
           title="请选择配置模块"
           description="从左侧选择一个模块；新增后端配置模块后会自动出现在列表中。"
@@ -83,6 +88,7 @@ export function ConfigModuleDetailPanel() {
 
   return (
     <PanelDetailCard
+      titleActions={<CollapsibleSidebarDrawerTrigger />}
       title={moduleView.spec.title}
       className="flex min-h-0 flex-1 flex-col"
       actions={<ConfigModuleSaveActions moduleView={moduleView} />}
