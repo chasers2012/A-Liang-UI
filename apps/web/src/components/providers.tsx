@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="quant-agent-theme">
+    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
       <IncremarkShadcnThemeProvider>
         <TooltipProvider delay={200}>
           <Provider>

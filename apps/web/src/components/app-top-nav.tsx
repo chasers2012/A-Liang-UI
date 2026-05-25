@@ -6,7 +6,6 @@ import { ChevronDown } from 'lucide-react';
 
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { SchedulerActiveJobsPoller, SchedulerActiveStatus } from '@/components/scheduler-active-status';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -314,7 +313,6 @@ export function AppTopNav() {
       <div className="flex shrink-0 items-center gap-2">
         <SchedulerActiveJobsPoller />
         <SchedulerActiveStatus />
-        <ThemeToggle />
       </div>
     </header>
   );
