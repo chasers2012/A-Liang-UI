@@ -1,3 +1,4 @@
+import { hasFeatureFlag, PAGE_FEATURES, type PageFeature } from '@/lib/feature-flags';
 import type { LucideIcon } from 'lucide-react';
 import {
   Archive,
@@ -17,20 +18,33 @@ import {
   Wrench,
 } from 'lucide-react';
 
-export type SidebarNavLeaf = {
+export type NavLeaf = {
   title: string;
   url: string;
   icon: LucideIcon;
 };
 
-export type SidebarNavMainItem = {
+export type NavItem = {
   title: string;
   url: string;
   icon: LucideIcon;
-  items?: SidebarNavLeaf[];
+  items?: NavLeaf[];
 };
 
-export const SIDEBAR_NAV: SidebarNavMainItem[] = [
+/** Feature flag → nav/route URLs gated by that flag. */
+export const FEATURE_FLAG_URLS: Record<PageFeature, readonly string[]> = {
+  [PAGE_FEATURES.ENABLE_PROFILES]: ['/profiles'],
+};
+
+const gatedUrls = new Set(Object.values(FEATURE_FLAG_URLS).flat());
+
+const enabledFeatureUrls = new Set(
+  Object.entries(FEATURE_FLAG_URLS)
+    .filter(([flag]) => hasFeatureFlag(flag))
+    .flatMap(([, urls]) => urls),
+);
+
+export const APP_NAV: NavItem[] = [
   {
     title: '对话',
     url: '/',
@@ -62,3 +76,19 @@ export const SIDEBAR_NAV: SidebarNavMainItem[] = [
   { title: '工具', url: '/tools', icon: Wrench },
   { title: '配置', url: '/config', icon: Settings },
 ];
+
+export function isPathAccessible(pathname: string): boolean {
+  for (const url of gatedUrls) {
+    if (pathname !== url && !pathname.startsWith(`${url}/`)) continue;
+    return enabledFeatureUrls.has(url);
+  }
+  return true;
+}
+
+export function getNav(): NavItem[] {
+  return APP_NAV.filter((item) => !gatedUrls.has(item.url) || enabledFeatureUrls.has(item.url)).map((item) => {
+    if (!item.items?.length) return item;
+    const items = item.items.filter((leaf) => !gatedUrls.has(leaf.url) || enabledFeatureUrls.has(leaf.url));
+    return { ...item, items };
+  });
+}

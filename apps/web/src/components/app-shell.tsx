@@ -25,7 +25,7 @@ import {
   SidebarProvider,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { SIDEBAR_NAV, type SidebarNavLeaf, type SidebarNavMainItem } from '@/lib/app-navigation';
+import { getNav, type NavItem, type NavLeaf } from '@/routes';
 import { cn } from '@/lib/utils';
 
 function isNavActive(url: string, pathname: string) {
@@ -34,16 +34,16 @@ function isNavActive(url: string, pathname: string) {
   return pathname === url || pathname.startsWith(`${url}/`);
 }
 
-function navSectionActive(item: SidebarNavMainItem, pathname: string) {
+function navSectionActive(item: NavItem, pathname: string) {
   if (isNavActive(item.url, pathname)) return true;
   return item.items?.some((sub) => isNavActive(sub.url, pathname)) ?? false;
 }
 
-function leafActive(leaf: SidebarNavLeaf, pathname: string) {
+function leafActive(leaf: NavLeaf, pathname: string) {
   return isNavActive(leaf.url, pathname);
 }
 
-function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainItem[] }) {
+function SidebarNavFromConfig({ navMain }: { navMain: readonly NavItem[] }) {
   const pathname = usePathname();
 
   return (
@@ -112,7 +112,6 @@ function SidebarNavFromConfig({ navMain }: { navMain: readonly SidebarNavMainIte
 function AppSidebar() {
   const { state, isMobile } = useSidebar();
   const collapsed = !isMobile && state === 'collapsed';
-
   return (
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarHeader
@@ -127,7 +126,7 @@ function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <nav aria-label="主导航">
-              <SidebarNavFromConfig navMain={SIDEBAR_NAV} />
+              <SidebarNavFromConfig navMain={getNav()} />
             </nav>
           </SidebarGroupContent>
         </SidebarGroup>

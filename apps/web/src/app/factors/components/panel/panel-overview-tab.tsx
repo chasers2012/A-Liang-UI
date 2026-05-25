@@ -4,10 +4,8 @@ import { useAtomValue } from 'jotai';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Item, ItemContent } from '@/components/ui/item';
-import { SectionHeader } from '@/components/section';
 import { factorsEditingAtom, factorsSaveErrorAtom, factorsSelectedIdAtom } from '@/models/factor';
 import { FactorMetaFields } from '../../ui/factor-form-fields';
-import { FactorEvaluationTrigger } from '../../ui/factor-evaluation-trigger';
 
 export function PanelOverviewTab() {
   const formError = useAtomValue(factorsSaveErrorAtom);
@@ -31,16 +29,6 @@ export function PanelOverviewTab() {
           </div>
         </ItemContent>
       </Item>
-      {selectedId ? (
-        <>
-          <SectionHeader>因子评价</SectionHeader>
-          <Item variant="outline">
-            <ItemContent>
-              <FactorEvaluationTrigger factorId={selectedId} />
-            </ItemContent>
-          </Item>
-        </>
-      ) : null}
     </div>
   );
 }

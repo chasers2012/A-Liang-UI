@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  env: {
+    FEATURE_FLAGS: process.env.FEATURE_FLAGS ?? '',
+  },
   async redirects() {
     return [
       {

@@ -2,11 +2,11 @@
 
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { buttonVariants } from '@/components/ui/button';
-import { SIDEBAR_NAV } from '@/lib/app-navigation';
+import { getNav } from '@/routes';
 import { cn } from '@/lib/utils';
 
 export function DataSectionLinks() {
-  const data = SIDEBAR_NAV.find((p) => p.url === '/data');
+  const data = getNav().find((p) => p.url === '/data');
   const items = data?.items ?? [];
   if (!items.length) return null;
 
