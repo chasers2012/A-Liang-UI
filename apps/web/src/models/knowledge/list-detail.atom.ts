@@ -39,6 +39,8 @@ const defaultCreateForm: CreateFormState = {
   files: [],
 };
 
+export const knowledgeSelectedIdAtom = atom<string | null>(null);
+
 export const knowledgePageAtom = atom<KnowledgePageState>({
   documents: [],
   hits: [],
