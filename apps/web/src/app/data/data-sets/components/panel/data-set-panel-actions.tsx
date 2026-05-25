@@ -3,10 +3,8 @@
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { Button } from '@/components/ui/button';
-import { useContext, useLayoutEffect } from 'react';
 
 import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
-import { PageAppHeaderContext } from '@/components/page-app-header-context';
 import {
   dataSetsEnterEditAtom,
   dataSetsExitFormToDetailAtom,
@@ -41,15 +39,6 @@ export function DataSetPanelHeaderActions(props: {
   const saveEditor = useSetAtom(handleSaveDataSetEditorAtom);
   const { submitting, form } = useAtomValue(dataSetEditorStateAtom);
   const bindingDatasources = useAtomValue(datasourcesListAtoms.valueAtom) ?? [];
-  const chrome = useContext(PageAppHeaderContext);
-
-  useLayoutEffect(() => {
-    if (!isEditing || chrome == null) return;
-    chrome.suppressBackLink(true);
-    return () => {
-      chrome.suppressBackLink(false);
-    };
-  }, [isEditing, chrome]);
 
   if (isEditing) {
     const detailStepInvalid = bindingDatasources.length === 0 || !form.name.trim();

@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 
 import { NavigationGuardLink } from '@/components/navigation-guard-link';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useSidebar } from '@/components/ui/sidebar';
 import { eventBus, type EventHandler } from '@/api/events';
 import { schedulerJobTaskType, type SchedulerJobPublic, type SchedulerJobStatus } from '@/models/scheduler/jobs/dto';
 import {
@@ -16,7 +15,6 @@ import {
   applySchedulerTaskEventAtom,
 } from '@/models/scheduler/jobs/active.atom';
 import type { SchedulerTaskPublic } from '@/models/scheduler/tasks/dto';
-import { cn } from '@/lib/utils';
 
 const STATUS_LABEL: Record<SchedulerJobStatus, string> = {
   queued: '排队中',
@@ -46,7 +44,7 @@ function tooltipContent(jobs: SchedulerJobPublic[]): string {
 }
 
 const chipClassName =
-  'inline-flex max-w-full items-center gap-2 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted/60';
+  'inline-flex max-w-[12rem] items-center gap-2 rounded-md border border-border/80 bg-muted/40 px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted/60 sm:max-w-xs';
 
 export function SchedulerActiveJobsPoller() {
   const pathname = usePathname();
@@ -77,40 +75,25 @@ export function SchedulerActiveJobsPoller() {
 
 export function SchedulerActiveStatus() {
   const jobs = useAtomValue(activeSchedulerJobsAtom);
-  const { state, isMobile } = useSidebar();
-  const collapsed = !isMobile && state === 'collapsed';
 
   if (jobs.length === 0) return null;
 
   const tooltip = tooltipContent(jobs);
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <NavigationGuardLink
-              href="/scheduler"
-              className={cn(
-                'inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-sidebar-accent',
-              )}
-              aria-label={summaryLabel(jobs)}
-            >
-              <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" aria-hidden />
-            </NavigationGuardLink>
-          }
-        />
-        <TooltipContent side="right" className="max-w-xs whitespace-pre-line">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
+  const label = summaryLabel(jobs);
 
   return (
-    <NavigationGuardLink href="/scheduler" className={chipClassName}>
-      <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
-      <span className="min-w-0 truncate">{summaryLabel(jobs)}</span>
-    </NavigationGuardLink>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <NavigationGuardLink href="/scheduler" className={chipClassName} aria-label={label}>
+            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+            <span className="min-w-0 truncate">{label}</span>
+          </NavigationGuardLink>
+        }
+      />
+      <TooltipContent side="bottom" className="max-w-xs whitespace-pre-line">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }

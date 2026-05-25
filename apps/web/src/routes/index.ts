@@ -12,6 +12,7 @@ import {
   ListChecks,
   MessageCircle,
   Settings,
+  Settings2,
   Table2,
   TableProperties,
   Workflow,
@@ -29,6 +30,8 @@ export type NavItem = {
   url: string;
   icon: LucideIcon;
   items?: NavLeaf[];
+  /** 无独立落地页，点击主项仅展开子菜单 */
+  menuOnly?: boolean;
 };
 
 /** Feature flag → nav/route URLs gated by that flag. */
@@ -45,16 +48,12 @@ const enabledFeatureUrls = new Set(
 );
 
 export const APP_NAV: NavItem[] = [
-  {
-    title: '对话',
-    url: '/',
-    icon: MessageCircle,
-    items: [{ title: '会话管理', url: '/chat/archived', icon: Archive }],
-  },
+  { title: '对话', url: '/', icon: MessageCircle },
   {
     title: '数据',
-    url: '/data',
+    url: '#',
     icon: TableProperties,
+    menuOnly: true,
     items: [
       { title: '数据源', url: '/data/datasources', icon: Database },
       { title: '数据集', url: '/data/data-sets', icon: Table2 },
@@ -69,12 +68,21 @@ export const APP_NAV: NavItem[] = [
   },
   { title: '策略', url: '/strategies', icon: GitBranch },
   { title: '回测', url: '/backtest', icon: LineChart },
-  { title: '任务', url: '/scheduler', icon: ListChecks },
   { title: '知识库', url: '/knowledge', icon: BookOpen },
   { title: '节点', url: '/nodes', icon: Workflow },
-  { title: '子代理', url: '/subagents', icon: Bot },
-  { title: '工具', url: '/tools', icon: Wrench },
-  { title: '配置', url: '/config', icon: Settings },
+  {
+    title: '管理',
+    url: '#',
+    icon: Settings2,
+    menuOnly: true,
+    items: [
+      { title: '会话管理', url: '/chat/archived', icon: Archive },
+      { title: '任务', url: '/scheduler', icon: ListChecks },
+      { title: '子代理', url: '/subagents', icon: Bot },
+      { title: '工具', url: '/tools', icon: Wrench },
+      { title: '配置', url: '/config', icon: Settings },
+    ],
+  },
 ];
 
 export function isPathAccessible(pathname: string): boolean {
