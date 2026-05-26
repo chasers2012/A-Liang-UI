@@ -20,7 +20,6 @@ dependencies = [
     "example-factors",
     "example-strategies",
     "example-evaluation-profiles",
-    "sqlmodel>=0.0.38",
 ]
 
 [tool.uv.sources]
@@ -56,7 +55,6 @@ dev = [
     "factor",
     "workspace",
     "custom-code",
-    "psycopg[binary]>=3.1",
     "ruff>=0.15.8",
 ]
 

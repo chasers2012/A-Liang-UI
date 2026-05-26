@@ -14,7 +14,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ### 数据源页与 quant-agent API
 
-「数据源」页面会请求 **quant-agent FastAPI**（默认 `http://127.0.0.1:8000`）。本地需同时启动 API，例如在仓库根目录：
+「数据源」页面会请求 **quant-agent FastAPI**（默认 `http://127.0.0.1:8000/api`）。应用入口为 [http://localhost:3000](http://localhost:3000)。本地需同时启动 API，例如在仓库根目录：
 
 ```bash
 uv run --package quant-agent-api uvicorn app.main:app --reload --app-dir apps/api
@@ -24,7 +24,7 @@ uv run --package quant-agent-api uvicorn app.main:app --reload --app-dir apps/ap
 
 | 变量                          | 作用                                                                                                                             |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端请求的 API 基址（勿以 `/` 结尾）。未设置时默认为 `http://127.0.0.1:8000`。                                                   |
+| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端请求的 API 基址（勿以 `/` 结尾）。本地默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`。                             |
 | `QUANT_AGENT_WORKSPACE`       | **在运行 API 的进程里**设置：数据源配置文件写入该目录下 `config/datasources.json`。未设置时默认为用户主目录下的 `.quant-agent`。 |
 
 API 的 CORS 默认允许 `http://localhost:3000`；其他来源请设置 API 进程的 `CORS_ORIGINS`（逗号分隔）。

@@ -4,10 +4,12 @@
 
 - [项目简介](#项目简介)
 - [快速上手](#快速上手)
-  - [安装依赖](#1-安装依赖)
-  - [启动服务](#2-启动服务)
-  - [打开应用](#3-打开应用)
-  - [使用提示](#使用提示)
+  - [源码启动](#源码启动)
+    - [安装依赖](#1-安装依赖)
+    - [启动服务](#2-启动服务)
+    - [打开应用](#3-打开应用)
+    - [使用提示](#使用提示)
+  - [Docker](#docker)
 - [核心功能](#核心功能)
   - [对话](#对话)
   - [数据](#数据)
@@ -25,18 +27,22 @@
 
 **quant-agent** 是本地运行的量化研究与 AI 助手平台。通过 Web 界面管理行情数据、因子、策略、回测与知识库，并在对话中与多个专业子代理协作完成研究任务。
 
-| 项目     | 说明                                                                                                   |
-| -------- | ------------------------------------------------------------------------------------------------------ |
-| 前端     | 浏览器访问，默认 [http://localhost:3000](http://localhost:3000)                                        |
-| 后端     | 处理业务、调度与 Agent，默认 [http://127.0.0.1:8000](http://127.0.0.1:8000)                            |
-| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.quant-agent`，可用 `QUANT_AGENT_WORKSPACE` 指定其他路径 |
-| 环境要求 | Node.js 20+、pnpm 9、Python 3.11+、[uv](https://docs.astral.sh/uv/)                                    |
+| 项目     | 说明                                                                                                           |
+| -------- | -------------------------------------------------------------------------------------------------------------- |
+| 前端     | 本地开发 [http://localhost:3000](http://localhost:3000)；Docker [http://127.0.0.1:8000](http://127.0.0.1:8000) |
+| 后端 API | 接口前缀 `/api`，如 [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)                       |
+| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.quant-agent`，可用 `QUANT_AGENT_WORKSPACE` 指定其他路径         |
+| 环境要求 | Node.js 20+、pnpm 9、Python 3.11+、[uv](https://docs.astral.sh/uv/)                                            |
 
 ---
 
 ## 快速上手
 
-### 1. 安装依赖
+### 源码启动
+
+在本地安装 Node.js、pnpm、Python 与 [uv](https://docs.astral.sh/uv/) 后，从仓库源码运行（环境要求见 [项目简介](#项目简介)）。
+
+#### 1. 安装依赖
 
 在仓库根目录执行其一：
 
@@ -54,7 +60,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1
 ./scripts/setup.sh
 ```
 
-### 2. 启动服务
+#### 2. 启动服务
 
 同时启动 API 与 Web（推荐）：
 
@@ -69,14 +75,45 @@ pnpm run dev:api   # 仅后端，端口 8000
 pnpm run dev:web   # 仅前端，端口 3000
 ```
 
-### 3. 打开应用
+#### 3. 打开应用
 
-浏览器访问 [http://localhost:3000](http://localhost:3000)。若页面无法加载数据，请确认后端 API 已正常启动。
+浏览器访问 [http://localhost:3000](http://localhost:3000)。若页面无法加载数据，请确认后端 API 已正常启动（`/api`）。
 
-### 使用提示
+#### 使用提示
 
 - **数据源**：Tushare、BaoStock 等插件需在「配置」页或数据源向导中填写 token/账号；未配置时无法拉取对应行情。
 - **生产构建**：`pnpm run build`（仅前端）或 `pnpm run build:all`（前端 + API 校验）
+
+### Docker
+
+无需本地安装 Node / Python 时，可用 [`docker-compose.yml`](docker-compose.yml) 启动（镜像 tag 与 CI 一致，默认 `quant-agent:latest`）：
+
+```bash
+docker compose up -d
+```
+
+指定版本 tag（与推送 `v0.1.0` 时 CI 生成的 `quant-agent:v0.1.0` 一致）：
+
+```bash
+QUANT_AGENT_IMAGE=quant-agent:v0.1.0 docker compose up -d
+```
+
+浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)（页面在 `/`，接口在 `/api`）。`NEXT_PUBLIC_QUANT_AGENT_API` 在 `docker-compose.yml` 中配置，默认同源 `/api`。数据持久化在 Docker volume `quant-agent-data`（容器内 `/data`）。
+
+仅构建镜像（tag 与 CI 相同）：
+
+```bash
+docker build -t quant-agent:latest -t quant-agent:v0.1.0 .
+```
+
+`NEXT_PUBLIC_QUANT_AGENT_API` 在 **`docker-compose.yml` 的 `environment` 中配置**（容器启动时生效），需与浏览器实际访问的 API 地址一致。更多环境变量见 [环境变量](#环境变量)。
+
+GitHub Actions 中 Docker 镜像构建见 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)，在推送 **`v*` 格式 tag**（如 `v0.1.0`）时自动触发，不会随普通 CI 自动运行：
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
 
 ---
 
@@ -158,10 +195,10 @@ flowchart TB
 
 ## 环境变量
 
-| 变量                          | 作用域 | 说明                                                  |
-| ----------------------------- | ------ | ----------------------------------------------------- |
-| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，默认 `http://127.0.0.1:8000`，勿以 `/` 结尾 |
-| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.quant-agent`                     |
-| `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                    |
+| 变量                          | 作用域 | 说明                                                                                      |
+| ----------------------------- | ------ | ----------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾 |
+| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.quant-agent`                                                         |
+| `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                        |
 
 完整说明见 [`.env.example`](.env.example)。

@@ -1,0 +1,17 @@
+services:
+  quant-agent:
+    # 与 .github/workflows/docker.yml 一致：quant-agent:<tag>、quant-agent:latest
+    image: ${QUANT_AGENT_IMAGE:-quant-agent:latest}
+    pull_policy: if_not_present
+    ports:
+      - '8000:8000'
+    environment:
+      NEXT_PUBLIC_QUANT_AGENT_API: /api
+      QUANT_AGENT_WORKSPACE: /data
+      CORS_ORIGINS: '*'
+    volumes:
+      - quant-agent-data:/data
+    restart: unless-stopped
+
+volumes:
+  quant-agent-data:

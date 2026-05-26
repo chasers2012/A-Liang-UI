@@ -1,8 +1,9 @@
-import { redirect } from 'next/navigation';
+import { EditStrategyRedirect } from './redirect-client';
 
-type Props = { params: Promise<{ id: string }> };
+export function generateStaticParams() {
+  return [{ id: '_' }];
+}
 
-export default async function EditStrategyPage(props: Props) {
-  const { id } = await props.params;
-  redirect(`/strategies?strategyId=${encodeURIComponent(id)}&edit=1`);
+export default function EditStrategyRedirectPage() {
+  return <EditStrategyRedirect />;
 }

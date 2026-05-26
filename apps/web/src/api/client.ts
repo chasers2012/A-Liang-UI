@@ -1,8 +1,6 @@
-/** Base URL for quant-agent FastAPI (no trailing slash). */
-export function getQuantAgentApiBase(): string {
-  const raw = process.env.NEXT_PUBLIC_QUANT_AGENT_API ?? 'http://127.0.0.1:8000';
-  return raw.replace(/\/$/, '');
-}
+import { getQuantAgentApiBase } from '@/lib/quant-agent-api-base';
+
+export { getQuantAgentApiBase };
 
 export class ApiError extends Error {
   constructor(

@@ -1,5 +1,14 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-export default function NewStrategyPage() {
-  redirect('/strategies?new=1');
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+export default function NewStrategyRedirectPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace('/strategies/?new=1');
+  }, [router]);
+
+  return null;
 }

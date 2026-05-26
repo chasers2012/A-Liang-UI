@@ -33,11 +33,13 @@ from app.events import api as events_router
 from app.factors import api as factors_router
 from app.knowledge import api as knowledge_router
 from app.nodes import api as nodes_router
+from app.paths import API_PREFIX
 from app.scheduler import api as scheduler_router
 from app.startup_jobs import STARTUP_JOBS
 from app.strategy import api as strategies_router
 from app.tool import api as tools_router
 from app.uploads import api as uploads_router
+from app.web_static import mount_web_static
 
 
 def _load_env_file(path: Path) -> None:
@@ -111,23 +113,28 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
-app.include_router(agents_router.router)
-app.include_router(agent_llm_router.router)
-app.include_router(config_router.router)
-app.include_router(datasources_router.router)
-app.include_router(nodes_router.router)
-app.include_router(evaluation_profiles_router.router)
-app.include_router(evaluation_runs_router.router)
-app.include_router(backtests_router.router)
-app.include_router(data_sets_router.router)
-app.include_router(data_sync_router.router)
-app.include_router(events_router.router)
-app.include_router(factors_router.router)
-app.include_router(knowledge_router.router)
-app.include_router(scheduler_router.router)
-app.include_router(strategies_router.router)
-app.include_router(tools_router.router)
-app.include_router(uploads_router.router)
+
+_api_routers = (
+    agents_router.router,
+    agent_llm_router.router,
+    config_router.router,
+    datasources_router.router,
+    nodes_router.router,
+    evaluation_profiles_router.router,
+    evaluation_runs_router.router,
+    backtests_router.router,
+    data_sets_router.router,
+    data_sync_router.router,
+    events_router.router,
+    factors_router.router,
+    knowledge_router.router,
+    scheduler_router.router,
+    strategies_router.router,
+    tools_router.router,
+    uploads_router.router,
+)
+for _router in _api_routers:
+    app.include_router(_router, prefix=API_PREFIX)
 
 _gzip_min_size = int(os.getenv("GZIP_MIN_SIZE", "1024"))
 app.add_middleware(GZipMiddleware, minimum_size=_gzip_min_size)
@@ -144,14 +151,12 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
+@app.get(f"{API_PREFIX}/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"service": "quant-agent-api"}
+mount_web_static(app)
 
 
 if __name__ == "__main__":
