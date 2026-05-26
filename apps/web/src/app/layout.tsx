@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Public_Sans } from 'next/font/google';
-import Script from 'next/script';
 
 import { AppShell } from '@/components/app-shell';
 import { Providers } from '@/components/providers';
@@ -44,7 +43,6 @@ export default function RootLayout({
       )}
     >
       <body className="overflow-hidden flex min-h-dvh flex-col h-screen w-screen">
-        <Script src={`${process.env.NEXT_PUBLIC_WEB_BASE_PATH ?? ''}/config.js`} strategy="beforeInteractive" />
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

@@ -17,7 +17,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 「数据源」页面会请求 **quant-agent FastAPI**（默认 `http://127.0.0.1:8000/api`）。应用入口为 [http://localhost:3000](http://localhost:3000)。本地需同时启动 API，例如在仓库根目录：
 
 ```bash
-uv run --package quant-agent-api uvicorn app.main:app --reload --app-dir apps/api
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 环境变量：

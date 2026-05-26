@@ -19,6 +19,7 @@ venv
 .eggs
 dist
 build
+apps/api/build
 
 # IDE / OS
 .idea

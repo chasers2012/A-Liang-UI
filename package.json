@@ -19,6 +19,7 @@
     "build": "pnpm --filter web build",
     "build:all": "pnpm --filter web build && pnpm run build:api",
     "build:api": "python apps/api/build.py",
+    "build:standalone": "python scripts/build_standalone.py",
     "lint": "pnpm --filter web lint",
     "lint:fix": "pnpm --filter web lint:fix",
     "format": "prettier . --write",

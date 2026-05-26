@@ -1,6 +1,6 @@
 services:
   quant-agent:
-    # 与 .github/workflows/docker.yml 一致：quant-agent:<tag>、quant-agent:latest
+    # 与 .github/workflows/release.yml 一致：quant-agent:<tag>、quant-agent:latest
     image: ${QUANT_AGENT_IMAGE:-quant-agent:latest}
     pull_policy: if_not_present
     ports:

@@ -75,6 +75,8 @@ pnpm run dev:api   # 仅后端，端口 8000
 pnpm run dev:web   # 仅前端，端口 3000
 ```
 
+生产/打包场景使用 `python -m app.main`；本地开发使用 `uvicorn app.main:app`。
+
 #### 3. 打开应用
 
 浏览器访问 [http://localhost:3000](http://localhost:3000)。若页面无法加载数据，请确认后端 API 已正常启动（`/api`）。
@@ -83,6 +85,7 @@ pnpm run dev:web   # 仅前端，端口 3000
 
 - **数据源**：Tushare、BaoStock 等插件需在「配置」页或数据源向导中填写 token/账号；未配置时无法拉取对应行情。
 - **生产构建**：`pnpm run build`（仅前端）或 `pnpm run build:all`（前端 + API 校验）
+- **便携版（ComfyUI 式）**：`pnpm run build:standalone`（`dist/quant-agent_portable/`：自带 `python_embeded` + 静态前端 + 插件）
 
 ### Docker
 
@@ -100,15 +103,48 @@ QUANT_AGENT_IMAGE=quant-agent:v0.1.0 docker compose up -d
 
 浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)（页面在 `/`，接口在 `/api`）。`NEXT_PUBLIC_QUANT_AGENT_API` 在 `docker-compose.yml` 中配置，默认同源 `/api`。数据持久化在 Docker volume `quant-agent-data`（容器内 `/data`）。
 
-仅构建镜像（tag 与 CI 相同）：
+构建镜像前须先在宿主环境生成便携目录（镜像仅 COPY 产物，不在容器内 build）：
 
 ```bash
+pnpm run build:standalone
 docker build -t quant-agent:latest -t quant-agent:v0.1.0 .
 ```
 
 `NEXT_PUBLIC_QUANT_AGENT_API` 在 **`docker-compose.yml` 的 `environment` 中配置**（容器启动时生效），需与浏览器实际访问的 API 地址一致。更多环境变量见 [环境变量](#环境变量)。
 
-GitHub Actions 中 Docker 镜像构建见 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)，在推送 **`v*` 格式 tag**（如 `v0.1.0`）时自动触发，不会随普通 CI 自动运行：
+推送 **`v*`** tag 或手动触发 [`.github/workflows/release.yml`](.github/workflows/release.yml) 时，会构建 Linux / Windows 便携目录并构建 Docker 镜像（不会随普通 CI 自动运行）：
+
+```bash
+pnpm run build:standalone
+# 产物：dist/quant-agent_portable/
+#   python_embeded/          — 独立 Python + 依赖（uv venv）
+#   web/out/                 — 静态前端
+#   plugins/src/             — 内置插件源码
+#   plugins/site-packages/   — .pth 指向插件源码
+#   run.sh / run.bat         — 启动脚本
+cd dist/quant-agent_portable
+./run.sh          # Linux / macOS，默认 http://0.0.0.0:8000
+# Windows: run.bat
+```
+
+### 插件（内置与第三方）
+
+核心通过 `quant-agent.plugins` 入口点加载插件。插件 `pyproject.toml` 需声明 `[project.entry-points."quant-agent.plugins"]`。
+
+| 场景                 | 内置插件来源                                                                                                     |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 本地开发             | `uv sync` 安装到 `.venv`                                                                                         |
+| 便携版 / Docker      | `build:standalone` 将 `plugins/*` 以源码形式放入 `plugins/src/`，并由 `plugins/site-packages/*.pth` 加入导入路径 |
+| 额外第三方（非开发） | `~/.quant-agent/plugins/site-packages`，便携版/Docker 经 `PYTHONPATH` 加载                                       |
+
+安装第三方 wheel 示例（安装后需重启进程）：
+
+```powershell
+$plugins = "$env:USERPROFILE\.quant-agent\plugins\site-packages"
+uv pip install --target $plugins .\my-plugin-0.1.0-py3-none-any.whl
+```
+
+发布 tag 触发 CI：
 
 ```bash
 git tag v0.1.0
@@ -195,10 +231,11 @@ flowchart TB
 
 ## 环境变量
 
-| 变量                          | 作用域 | 说明                                                                                      |
-| ----------------------------- | ------ | ----------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾 |
-| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.quant-agent`                                                         |
-| `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                        |
+| 变量                          | 作用域 | 说明                                                                                               |
+| ----------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾          |
+| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.quant-agent`                                                                  |
+| `PYTHONPATH`                  | 后端   | 插件 `site-packages`（含 `.pth`）；便携版/Docker 由启动脚本或镜像设置；开发模式仅用 `.venv` 内插件 |
+| `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                                 |
 
 完整说明见 [`.env.example`](.env.example)。
