@@ -95,7 +95,7 @@ logger = logging.getLogger("uvicorn.error")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    logger.info("Starting quant-agent API application")
+    logger.info("Starting A-Liang-UI API application")
     for job in STARTUP_JOBS:
         try:
             if iscoroutinefunction(job):
@@ -109,10 +109,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             continue
 
     yield
-    logger.info("Stopping quant-agent API application")
+    logger.info("Stopping A-Liang-UI API application")
 
 
-app = FastAPI(title="quant-agent API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="A-Liang-UI API", version="0.1.0", lifespan=lifespan)
 
 _api_routers = (
     agents_router.router,
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     log_config_path = Path(__file__).resolve().with_name("log_conf.yaml")
     log_config = _get_uvicorn_log_config(log_config_path)
 
-    logger.info("Starting quant-agent API on http://%s:%s", host, port)
+    logger.info("Starting A-Liang-UI API on http://%s:%s", host, port)
     uvicorn.run(
         app,
         host=host,

@@ -1,10 +1,10 @@
 [project]
-name = "quant-agent"
+name = "a-liang-ui"
 version = "0.1.0"
 description = "Monorepo root: pnpm (apps/web) + uv workspace (apps/api)"
 requires-python = ">=3.9"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
     "datasource-plugins-builtin",
     "datasource-plugins-baostock",
     "datasource-plugins-tushare",
@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 datasource-plugins-builtin = { workspace = true }
 datasource-plugins-baostock = { workspace = true }
 datasource-plugins-tushare = { workspace = true }

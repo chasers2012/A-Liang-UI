@@ -18,6 +18,8 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "a-liang-ui",
+    "a-liang-ui-api",
     "alphalens-nodes",
     "common-nodes",
     "custom-code",
@@ -33,13 +35,135 @@ members = [
     "example-strategies",
     "factor",
     "llm-plugins-builtin",
-    "quant-agent",
-    "quant-agent-api",
     "rerank-plugins-huggingface",
     "strategy-nodes",
     "technical-nodes",
     "workflow",
     "workspace",
+]
+
+[[package]]
+name = "a-liang-ui"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "a-liang-ui-api" },
+    { name = "alphalens-nodes" },
+    { name = "common-nodes" },
+    { name = "datasource-plugins-baostock" },
+    { name = "datasource-plugins-builtin" },
+    { name = "datasource-plugins-tushare" },
+    { name = "echarts-nodes" },
+    { name = "embedding-plugins-huggingface" },
+    { name = "embedding-plugins-openai" },
+    { name = "example-evaluation-profiles" },
+    { name = "example-factors" },
+    { name = "example-strategies" },
+    { name = "llm-plugins-builtin" },
+    { name = "rerank-plugins-huggingface" },
+    { name = "strategy-nodes" },
+    { name = "technical-nodes" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "custom-code" },
+    { name = "factor" },
+    { name = "httpx" },
+    { name = "pytest" },
+    { name = "ruff" },
+    { name = "workspace" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
+    { name = "alphalens-nodes", editable = "plugins/alphalens_nodes" },
+    { name = "common-nodes", editable = "plugins/common_nodes" },
+    { name = "datasource-plugins-baostock", editable = "plugins/datasource_plugins_baostock" },
+    { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
+    { name = "datasource-plugins-tushare", editable = "plugins/datasource_plugins_tushare" },
+    { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
+    { name = "embedding-plugins-huggingface", editable = "plugins/embedding_plugins_huggingface" },
+    { name = "embedding-plugins-openai", editable = "plugins/embedding_plugins_openai" },
+    { name = "example-evaluation-profiles", editable = "plugins/example_evaluation_profiles" },
+    { name = "example-factors", editable = "plugins/example_factors" },
+    { name = "example-strategies", editable = "plugins/example_strategies" },
+    { name = "llm-plugins-builtin", editable = "plugins/llm_plugins_builtin" },
+    { name = "rerank-plugins-huggingface", editable = "plugins/rerank_plugins_huggingface" },
+    { name = "strategy-nodes", editable = "plugins/strategy_nodes" },
+    { name = "technical-nodes", editable = "plugins/technical_nodes" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "custom-code", editable = "lib/custom_code" },
+    { name = "factor", editable = "lib/factor" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "ruff", specifier = ">=0.15.8" },
+    { name = "workspace", editable = "lib/workspace" },
+]
+
+[[package]]
+name = "a-liang-ui-api"
+version = "0.1.0"
+source = { editable = "apps/api" }
+dependencies = [
+    { name = "chromadb" },
+    { name = "croniter" },
+    { name = "cryptography" },
+    { name = "custom-code" },
+    { name = "data-source" },
+    { name = "deepagents" },
+    { name = "diskcache" },
+    { name = "docling" },
+    { name = "factor" },
+    { name = "fastapi" },
+    { name = "langchain" },
+    { name = "langchain-chroma" },
+    { name = "langchain-classic" },
+    { name = "langchain-community" },
+    { name = "langgraph-checkpoint-sqlite" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "python-multipart" },
+    { name = "rank-bm25" },
+    { name = "sqlmodel" },
+    { name = "sse-starlette" },
+    { name = "uvicorn", extra = ["standard"] },
+    { name = "vectorbt" },
+    { name = "workflow" },
+    { name = "workspace" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "chromadb", specifier = ">=0.5.0" },
+    { name = "croniter", specifier = ">=6.0.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
+    { name = "custom-code", editable = "lib/custom_code" },
+    { name = "data-source", editable = "lib/data_source" },
+    { name = "deepagents", specifier = ">=0.5.3" },
+    { name = "diskcache", specifier = ">=5.6.3" },
+    { name = "docling", specifier = ">=2.92.0" },
+    { name = "factor", editable = "lib/factor" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "langchain", specifier = ">=0.3.0" },
+    { name = "langchain-chroma", specifier = ">=0.2.0" },
+    { name = "langchain-classic", specifier = ">=1.0.3" },
+    { name = "langchain-community", specifier = ">=0.3.0" },
+    { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.3" },
+    { name = "numpy", specifier = ">=1.26.0" },
+    { name = "pandas", specifier = ">=2.3.0" },
+    { name = "python-multipart", specifier = ">=0.0.20" },
+    { name = "rank-bm25", specifier = ">=0.2.2" },
+    { name = "sqlmodel", specifier = ">=0.0.24" },
+    { name = "sse-starlette", specifier = ">=2.1.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+    { name = "vectorbt" },
+    { name = "workflow", editable = "lib/workflow" },
+    { name = "workspace", editable = "lib/workspace" },
 ]
 
 [[package]]
@@ -198,13 +322,13 @@ name = "alphalens-nodes"
 version = "0.1.0"
 source = { editable = "plugins/alphalens_nodes" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -683,13 +807,13 @@ name = "common-nodes"
 version = "0.1.0"
 source = { editable = "plugins/common_nodes" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -966,14 +1090,14 @@ name = "datasource-plugins-baostock"
 version = "0.1.0"
 source = { editable = "plugins/datasource_plugins_baostock" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "baostock" },
-    { name = "quant-agent-api" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "baostock", specifier = ">=0.9.1" },
-    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [[package]]
@@ -981,8 +1105,8 @@ name = "datasource-plugins-builtin"
 version = "0.1.0"
 source = { editable = "plugins/datasource_plugins_builtin" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "duckdb" },
-    { name = "quant-agent-api" },
 ]
 
 [package.dev-dependencies]
@@ -992,8 +1116,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "duckdb", specifier = ">=1.0.0" },
-    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [package.metadata.requires-dev]
@@ -1004,14 +1128,14 @@ name = "datasource-plugins-tushare"
 version = "0.1.0"
 source = { editable = "plugins/datasource_plugins_tushare" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
     { name = "tqdm" },
     { name = "tushare" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "tqdm", specifier = ">=4.66.0" },
     { name = "tushare", specifier = ">=1.4.0" },
 ]
@@ -1301,15 +1425,15 @@ name = "echarts-nodes"
 version = "0.1.0"
 source = { editable = "plugins/echarts_nodes" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "echartsy" },
-    { name = "quant-agent-api" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "echartsy", specifier = ">=0.7.4" },
-    { name = "quant-agent-api", editable = "apps/api" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -1331,15 +1455,15 @@ name = "embedding-plugins-huggingface"
 version = "0.1.0"
 source = { editable = "plugins/embedding_plugins_huggingface" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "langchain-huggingface" },
-    { name = "quant-agent-api" },
     { name = "sentence-transformers" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "langchain-huggingface", specifier = ">=0.1.0" },
-    { name = "quant-agent-api", editable = "apps/api" },
     { name = "sentence-transformers", specifier = ">=3.0.0" },
 ]
 
@@ -1348,14 +1472,14 @@ name = "embedding-plugins-openai"
 version = "0.1.0"
 source = { editable = "plugins/embedding_plugins_openai" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "langchain-openai" },
-    { name = "quant-agent-api" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "langchain-openai", specifier = ">=1.2.1" },
-    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [[package]]
@@ -1372,25 +1496,25 @@ name = "example-evaluation-profiles"
 version = "0.1.0"
 source = { editable = "plugins/example_evaluation_profiles" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
+requires-dist = [{ name = "a-liang-ui-api", editable = "apps/api" }]
 
 [[package]]
 name = "example-factors"
 version = "0.1.0"
 source = { editable = "plugins/example_factors" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "factor" },
-    { name = "quant-agent-api" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "factor", editable = "lib/factor" },
-    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [[package]]
@@ -1398,11 +1522,11 @@ name = "example-strategies"
 version = "0.1.0"
 source = { editable = "plugins/example_strategies" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "quant-agent-api", editable = "apps/api" }]
+requires-dist = [{ name = "a-liang-ui-api", editable = "apps/api" }]
 
 [[package]]
 name = "executing"
@@ -2714,20 +2838,20 @@ name = "llm-plugins-builtin"
 version = "0.1.0"
 source = { editable = "plugins/llm_plugins_builtin" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "langchain-anthropic" },
     { name = "langchain-deepseek" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
-    { name = "quant-agent-api" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "langchain-anthropic" },
     { name = "langchain-deepseek" },
     { name = "langchain-ollama", specifier = ">=1.1.0" },
     { name = "langchain-openai", specifier = ">=1.2.1" },
-    { name = "quant-agent-api", editable = "apps/api" },
 ]
 
 [[package]]
@@ -4917,130 +5041,6 @@ wheels = [
 ]
 
 [[package]]
-name = "quant-agent"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "alphalens-nodes" },
-    { name = "common-nodes" },
-    { name = "datasource-plugins-baostock" },
-    { name = "datasource-plugins-builtin" },
-    { name = "datasource-plugins-tushare" },
-    { name = "echarts-nodes" },
-    { name = "embedding-plugins-huggingface" },
-    { name = "embedding-plugins-openai" },
-    { name = "example-evaluation-profiles" },
-    { name = "example-factors" },
-    { name = "example-strategies" },
-    { name = "llm-plugins-builtin" },
-    { name = "quant-agent-api" },
-    { name = "rerank-plugins-huggingface" },
-    { name = "strategy-nodes" },
-    { name = "technical-nodes" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "custom-code" },
-    { name = "factor" },
-    { name = "httpx" },
-    { name = "pytest" },
-    { name = "ruff" },
-    { name = "workspace" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alphalens-nodes", editable = "plugins/alphalens_nodes" },
-    { name = "common-nodes", editable = "plugins/common_nodes" },
-    { name = "datasource-plugins-baostock", editable = "plugins/datasource_plugins_baostock" },
-    { name = "datasource-plugins-builtin", editable = "plugins/datasource_plugins_builtin" },
-    { name = "datasource-plugins-tushare", editable = "plugins/datasource_plugins_tushare" },
-    { name = "echarts-nodes", editable = "plugins/echarts_nodes" },
-    { name = "embedding-plugins-huggingface", editable = "plugins/embedding_plugins_huggingface" },
-    { name = "embedding-plugins-openai", editable = "plugins/embedding_plugins_openai" },
-    { name = "example-evaluation-profiles", editable = "plugins/example_evaluation_profiles" },
-    { name = "example-factors", editable = "plugins/example_factors" },
-    { name = "example-strategies", editable = "plugins/example_strategies" },
-    { name = "llm-plugins-builtin", editable = "plugins/llm_plugins_builtin" },
-    { name = "quant-agent-api", editable = "apps/api" },
-    { name = "rerank-plugins-huggingface", editable = "plugins/rerank_plugins_huggingface" },
-    { name = "strategy-nodes", editable = "plugins/strategy_nodes" },
-    { name = "technical-nodes", editable = "plugins/technical_nodes" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "custom-code", editable = "lib/custom_code" },
-    { name = "factor", editable = "lib/factor" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "ruff", specifier = ">=0.15.8" },
-    { name = "workspace", editable = "lib/workspace" },
-]
-
-[[package]]
-name = "quant-agent-api"
-version = "0.1.0"
-source = { editable = "apps/api" }
-dependencies = [
-    { name = "chromadb" },
-    { name = "croniter" },
-    { name = "cryptography" },
-    { name = "custom-code" },
-    { name = "data-source" },
-    { name = "deepagents" },
-    { name = "diskcache" },
-    { name = "docling" },
-    { name = "factor" },
-    { name = "fastapi" },
-    { name = "langchain" },
-    { name = "langchain-chroma" },
-    { name = "langchain-classic" },
-    { name = "langchain-community" },
-    { name = "langgraph-checkpoint-sqlite" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "python-multipart" },
-    { name = "rank-bm25" },
-    { name = "sqlmodel" },
-    { name = "sse-starlette" },
-    { name = "uvicorn", extra = ["standard"] },
-    { name = "vectorbt" },
-    { name = "workflow" },
-    { name = "workspace" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "chromadb", specifier = ">=0.5.0" },
-    { name = "croniter", specifier = ">=6.0.0" },
-    { name = "cryptography", specifier = ">=42.0.0" },
-    { name = "custom-code", editable = "lib/custom_code" },
-    { name = "data-source", editable = "lib/data_source" },
-    { name = "deepagents", specifier = ">=0.5.3" },
-    { name = "diskcache", specifier = ">=5.6.3" },
-    { name = "docling", specifier = ">=2.92.0" },
-    { name = "factor", editable = "lib/factor" },
-    { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "langchain", specifier = ">=0.3.0" },
-    { name = "langchain-chroma", specifier = ">=0.2.0" },
-    { name = "langchain-classic", specifier = ">=1.0.3" },
-    { name = "langchain-community", specifier = ">=0.3.0" },
-    { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.3" },
-    { name = "numpy", specifier = ">=1.26.0" },
-    { name = "pandas", specifier = ">=2.3.0" },
-    { name = "python-multipart", specifier = ">=0.0.20" },
-    { name = "rank-bm25", specifier = ">=0.2.2" },
-    { name = "sqlmodel", specifier = ">=0.0.24" },
-    { name = "sse-starlette", specifier = ">=2.1.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
-    { name = "vectorbt" },
-    { name = "workflow", editable = "lib/workflow" },
-    { name = "workspace", editable = "lib/workspace" },
-]
-
-[[package]]
 name = "rank-bm25"
 version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -5236,17 +5236,17 @@ name = "rerank-plugins-huggingface"
 version = "0.1.0"
 source = { editable = "plugins/rerank_plugins_huggingface" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "langchain-classic" },
     { name = "langchain-community" },
-    { name = "quant-agent-api" },
     { name = "sentence-transformers" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "langchain-classic", specifier = ">=1.0.3" },
     { name = "langchain-community", specifier = ">=0.3.0" },
-    { name = "quant-agent-api", editable = "apps/api" },
     { name = "sentence-transformers", specifier = ">=3.0.0" },
 ]
 
@@ -5895,15 +5895,15 @@ name = "strategy-nodes"
 version = "0.1.0"
 source = { editable = "plugins/strategy_nodes" }
 dependencies = [
+    { name = "a-liang-ui-api" },
     { name = "factor" },
-    { name = "quant-agent-api" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "factor", editable = "lib/factor" },
-    { name = "quant-agent-api", editable = "apps/api" },
     { name = "workflow", editable = "lib/workflow" },
 ]
 
@@ -5933,14 +5933,14 @@ name = "technical-nodes"
 version = "0.1.0"
 source = { editable = "plugins/technical_nodes" }
 dependencies = [
-    { name = "quant-agent-api" },
+    { name = "a-liang-ui-api" },
     { name = "vectorbt" },
     { name = "workflow" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "quant-agent-api", editable = "apps/api" },
+    { name = "a-liang-ui-api", editable = "apps/api" },
     { name = "vectorbt" },
     { name = "workflow", editable = "lib/workflow" },
 ]

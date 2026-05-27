@@ -3,9 +3,9 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quant-agent-api"
+name = "a-liang-ui-api"
 version = "0.1.0"
-description = "quant-agent Python API"
+description = "A-Liang-UI Python API"
 requires-python = ">=3.11"
 dependencies = [
   "custom-code",

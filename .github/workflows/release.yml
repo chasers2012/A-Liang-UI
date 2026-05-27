@@ -39,8 +39,8 @@ jobs:
 
       - name: Smoke test portable
         run: |
-          chmod +x dist/quant-agent_portable/run.sh
-          cd dist/quant-agent_portable
+          chmod +x dist/a-liang-ui_portable/run.sh
+          cd dist/a-liang-ui_portable
           ./run.sh &
           pid=$!
           for i in $(seq 1 60); do
@@ -60,8 +60,8 @@ jobs:
       - name: Upload Linux portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: quant-agent-linux-x86_64-portable
-          path: dist/quant-agent_portable
+          name: a-liang-ui-linux-x86_64-portable
+          path: dist/a-liang-ui_portable
           if-no-files-found: error
 
   build-windows:
@@ -93,8 +93,8 @@ jobs:
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: quant-agent-windows-x86_64-portable
-          path: dist\quant-agent_portable
+          name: a-liang-ui-windows-x86_64-portable
+          path: dist\a-liang-ui_portable
           if-no-files-found: error
 
   docker:
@@ -107,8 +107,8 @@ jobs:
       - name: Download Linux portable package
         uses: actions/download-artifact@v4
         with:
-          name: quant-agent-linux-x86_64-portable
-          path: dist/quant-agent_portable
+          name: a-liang-ui-linux-x86_64-portable
+          path: dist/a-liang-ui_portable
 
       - uses: docker/setup-buildx-action@v3
 
@@ -117,8 +117,8 @@ jobs:
         with:
           context: .
           tags: |
-            quant-agent:${{ github.ref_name }}
-            quant-agent:latest
+            a-liang-ui:${{ github.ref_name }}
+            a-liang-ui:latest
           push: false
-          cache-from: type=gha,scope=quant-agent
-          cache-to: type=gha,mode=max,scope=quant-agent
+          cache-from: type=gha,scope=a-liang-ui
+          cache-to: type=gha,mode=max,scope=a-liang-ui

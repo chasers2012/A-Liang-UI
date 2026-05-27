@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Technical indicator workflow node plugin for quant-agent"
 requires-python = ">=3.10"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
     "workflow",
     "vectorbt",
 ]
@@ -17,7 +17,7 @@ dependencies = [
 technical-nodes = "technical_nodes.plugin:TechnicalNodesPlugin"
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

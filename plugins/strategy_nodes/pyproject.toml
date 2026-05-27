@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Strategy and backtest workflow nodes for quant-agent"
 requires-python = ">=3.10"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
     "factor",
     "workflow",
 ]
@@ -17,7 +17,7 @@ dependencies = [
 strategy = "strategy_nodes.plugin:StrategyNodesPlugin"
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 factor = { workspace = true }
 workflow = { workspace = true }
 

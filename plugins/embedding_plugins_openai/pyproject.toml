@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "OpenAI-compatible embedding provider plugin for quant-agent"
 requires-python = ">=3.10"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
     "langchain-openai>=1.2.1",
 ]
 
@@ -16,7 +16,7 @@ dependencies = [
 embedding_openai = "embedding_plugins_openai:OpenAiEmbeddingPlugin"
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["embedding_plugins_openai"]

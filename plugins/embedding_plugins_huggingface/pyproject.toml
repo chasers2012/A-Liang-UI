@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "HuggingFace embedding provider plugin for quant-agent"
 requires-python = ">=3.10"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
     "langchain-huggingface>=0.1.0",
     "sentence-transformers>=3.0.0",
 ]
@@ -17,7 +17,7 @@ dependencies = [
 embedding_huggingface = "embedding_plugins_huggingface:HuggingFaceEmbeddingPlugin"
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["embedding_plugins_huggingface"]

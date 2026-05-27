@@ -305,7 +305,7 @@ export function AppTopNav() {
         href="/"
         className="shrink-0 text-sm font-semibold tracking-tight whitespace-nowrap hover:text-foreground/80"
       >
-        quant-agent
+        阿量UI
       </NavigationGuardLink>
 
       <TopNavLinks navMain={navMain} pathname={pathname} />

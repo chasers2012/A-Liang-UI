@@ -1,4 +1,4 @@
-# quant-agent
+# 阿量UI（A-Liang-UI）
 
 ## 目录
 
@@ -26,13 +26,13 @@
 
 ## 项目简介
 
-**quant-agent** 是本地运行的量化研究与 AI 助手平台。通过 Web 界面管理行情数据、因子、策略、回测与知识库，并在对话中与多个专业子代理协作完成研究任务。
+**阿量UI（A-Liang-UI）** 是本地运行的量化研究与 AI 协作平台，强调可视化工作流编辑、智能编排与多代理协同。通过 Web 界面管理行情数据、因子、策略、回测与知识库，并在对话中与多个专业子代理协作完成研究任务。
 
 | 项目     | 说明                                                                                                           |
 | -------- | -------------------------------------------------------------------------------------------------------------- |
 | 前端     | 本地开发 [http://localhost:3000](http://localhost:3000)；Docker [http://127.0.0.1:8000](http://127.0.0.1:8000) |
 | 后端 API | 接口前缀 `/api`，如 [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)                       |
-| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.quant-agent`，可用 `QUANT_AGENT_WORKSPACE` 指定其他路径         |
+| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.a-liang-ui`，可用 `QUANT_AGENT_WORKSPACE` 指定其他路径          |
 | 环境要求 | Node.js 20+、pnpm 9、Python 3.11+、[uv](https://docs.astral.sh/uv/)                                            |
 
 ---
@@ -93,7 +93,7 @@ pnpm run dev:web   # 仅前端，端口 3000
 
 ```bash
 pnpm run build:standalone
-docker build -t quant-agent:latest .
+docker build -t a-liang-ui:latest .
 docker compose up -d
 ```
 
@@ -107,18 +107,18 @@ docker compose up -d
 
 ### 插件（内置与第三方）
 
-核心通过 `quant-agent.plugins` 入口点加载插件。插件 `pyproject.toml` 需声明 `[project.entry-points."quant-agent.plugins"]`。
+核心通过 `a-liang-ui.plugins` 入口点加载插件。插件 `pyproject.toml` 需声明 `[project.entry-points."a-liang-ui.plugins"]`。
 
 | 场景                 | 内置插件来源                                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | 本地开发             | `uv sync` 安装到 `.venv`                                                                                            |
 | 便携版 / Docker      | [便携版构建](#便携版) 将 `plugins/*` 以源码形式放入 `plugins/src/`，并由 `plugins/site-packages/*.pth` 加入导入路径 |
-| 额外第三方（非开发） | `~/.quant-agent/plugins/site-packages`，便携版/Docker 经 `PYTHONPATH` 加载                                          |
+| 额外第三方（非开发） | `~/.a-liang-ui/plugins/site-packages`，便携版/Docker 经 `PYTHONPATH` 加载                                           |
 
 安装第三方 wheel 示例（安装后需重启进程）：
 
 ```powershell
-$plugins = "$env:USERPROFILE\.quant-agent\plugins\site-packages"
+$plugins = "$env:USERPROFILE\.a-liang-ui\plugins\site-packages"
 uv pip install --target $plugins .\my-plugin-0.1.0-py3-none-any.whl
 ```
 
@@ -205,8 +205,10 @@ flowchart TB
 | 变量                          | 作用域 | 说明                                                                                               |
 | ----------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾          |
-| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.quant-agent`                                                                  |
+| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.a-liang-ui`                                                                   |
 | `PYTHONPATH`                  | 后端   | 插件 `site-packages`（含 `.pth`）；便携版/Docker 由启动脚本或镜像设置；开发模式仅用 `.venv` 内插件 |
 | `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                                 |
 
 完整说明见 [`.env.example`](.env.example)。
+
+> 说明：当前仓库内部包名与环境变量仍保留原有实现标识，后续如需统一到 `A-Liang-UI`，可继续同步代码与配置。

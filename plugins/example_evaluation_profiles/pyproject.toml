@@ -8,14 +8,14 @@ version = "0.1.0"
 description = "Example evaluation profile plugin package for quant-agent"
 requires-python = ">=3.10"
 dependencies = [
-    "quant-agent-api",
+    "a-liang-ui-api",
 ]
 
 [project.entry-points."quant-agent.plugins"]
 example-evaluation-profiles = "example_evaluation_profiles.plugin:ExampleEvaluationProfilesPlugin"
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
+a-liang-ui-api = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["example_evaluation_profiles"]

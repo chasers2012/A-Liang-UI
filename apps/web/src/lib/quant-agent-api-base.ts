@@ -6,19 +6,19 @@ function normalizeApiBase(raw: string): string {
 }
 
 function publicApiBaseFromEnv(): string | undefined {
-  const raw = process.env.NEXT_PUBLIC_QUANT_AGENT_API?.trim() || process.env.QUANT_AGENT_API?.trim();
+  const raw = process.env.NEXT_PUBLIC_A_LIANG_UI_API?.trim() || process.env.A_LIANG_UI_API?.trim();
   return raw ? normalizeApiBase(raw) : undefined;
 }
 
 /** Resolve API base on the server (local dev / SSR). */
-export function resolveQuantAgentApiBase(): string {
+export function resolveALiangUiApiBase(): string {
   return publicApiBaseFromEnv() ?? DEFAULT_DEV_API;
 }
 
-/** Base URL for quant-agent FastAPI (no trailing slash). */
-export function getQuantAgentApiBase(): string {
+/** Base URL for A-Liang-UI FastAPI (no trailing slash). */
+export function getALiangUiApiBase(): string {
   if (typeof window !== 'undefined') {
     return publicApiBaseFromEnv() ?? DEFAULT_SAME_ORIGIN_API;
   }
-  return resolveQuantAgentApiBase();
+  return resolveALiangUiApiBase();
 }

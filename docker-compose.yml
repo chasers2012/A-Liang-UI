@@ -1,7 +1,7 @@
 services:
-  quant-agent:
-    # 与 .github/workflows/release.yml 一致：quant-agent:<tag>、quant-agent:latest
-    image: ${QUANT_AGENT_IMAGE:-quant-agent:latest}
+  a-liang-ui:
+    # 与 .github/workflows/release.yml 一致：a-liang-ui:<tag>、a-liang-ui:latest
+    image: ${QUANT_AGENT_IMAGE:-a-liang-ui:latest}
     pull_policy: if_not_present
     ports:
       - '8000:8000'
@@ -10,8 +10,8 @@ services:
       QUANT_AGENT_WORKSPACE: /data
       CORS_ORIGINS: '*'
     volumes:
-      - quant-agent-data:/data
+      - a-liang-ui-data:/data
     restart: unless-stopped
 
 volumes:
-  quant-agent-data:
+  a-liang-ui-data:
