@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "llm-plugins-builtin"
 version = "0.1.0"
-description = "Built-in quant-agent LLM provider plugins (Ollama, OpenAI, DeepSeek)"
+description = "Built-in A-Liang-UI LLM provider plugins (Ollama, OpenAI, DeepSeek)"
 requires-python = ">=3.10"
 dependencies = [
     "a-liang-ui-api",
@@ -15,7 +15,7 @@ dependencies = [
     "langchain-anthropic",
 ]
 
-[project.entry-points."quant-agent.plugins"]
+[project.entry-points."a-liang-ui.plugins"]
 llm_anthropic = "llm_plugins_builtin.anthropic:AnthropicLlmPlugin"
 llm_deepseek = "llm_plugins_builtin.deepseek:DeepSeekLlmPlugin"
 llm_ollama = "llm_plugins_builtin.ollama:OllamaLlmPlugin"

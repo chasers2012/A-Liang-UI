@@ -15,13 +15,13 @@ import tomllib
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_OUT = REPO_ROOT / "apps" / "web" / "out"
 DIST_DIR = REPO_ROOT / "dist"
-PORTABLE_DIR = DIST_DIR / "quant-agent_portable"
+PORTABLE_DIR = DIST_DIR / "a-liang-ui_portable"
 PYTHON_DIR = PORTABLE_DIR / "python_embeded"
 WEB_DEST = PORTABLE_DIR / "web" / "out"
 PLUGIN_SITE = PORTABLE_DIR / "plugins" / "site-packages"
 PLUGIN_SOURCE = PORTABLE_DIR / "plugins" / "src"
 
-_PLUGIN_ENTRY_POINT_GROUP = "quant-agent.plugins"
+_PLUGIN_ENTRY_POINT_GROUP = "a-liang-ui.plugins"
 _PLUGIN_COPY_IGNORE = {
     ".git",
     ".venv",
@@ -75,7 +75,7 @@ def _has_plugin_entry_points(pyproject: Path) -> bool:
 
 
 def _discover_plugin_projects() -> tuple[Path, ...]:
-    """Projects under ``plugins/`` that declare ``quant-agent.plugins`` entry points."""
+    """Projects under ``plugins/`` that declare ``a-liang-ui.plugins`` entry points."""
     plugins_root = REPO_ROOT / "plugins"
     if not plugins_root.is_dir():
         return ()
@@ -115,7 +115,7 @@ def _write_plugin_pth(*, site_packages: Path, source_projects: list[Path]) -> Pa
     for project in source_projects:
         src = project / "src"
         lines.append(str(src if src.is_dir() else project))
-    pth = site_packages / "quant_agent_plugins_src.pth"
+    pth = site_packages / "a_liang_ui_plugins_src.pth"
     pth.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return pth
 
@@ -143,7 +143,7 @@ def build_web(*, skip: bool) -> None:
         return
     pnpm = _resolve_tool("pnpm")
     env = os.environ.copy()
-    env.setdefault("NEXT_PUBLIC_QUANT_AGENT_API", "/api")
+    env.setdefault("NEXT_PUBLIC_A_LIANG_UI_API", "/api")
     _run([pnpm, "install", "--frozen-lockfile"], env=env)
     _run([pnpm, "--filter", "web", "build"], env=env)
     if not (WEB_OUT / "index.html").is_file():
@@ -211,7 +211,7 @@ endlocal
 
 def write_readme() -> None:
     (PORTABLE_DIR / "README_PORTABLE.txt").write_text(
-        """quant-agent portable (ComfyUI-style layout)
+        """A-Liang-UI portable (ComfyUI-style layout)
 
 Extract this folder anywhere, then start:
 
@@ -228,8 +228,8 @@ Layout:
 
 Install extra plugin wheels into plugins/site-packages, then restart.
 
-Data (config, DB, models) is stored under ~/.quant-agent unless
-QUANT_AGENT_WORKSPACE is set.
+Data (config, DB, models) is stored under ~/.a-liang-ui unless
+A_LIANG_UI_WORKSPACE is set.
 """,
         encoding="utf-8",
     )

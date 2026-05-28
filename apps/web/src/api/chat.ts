@@ -10,7 +10,7 @@ import type {
   ChatRequestPublic,
   ChatSummaryPublic,
 } from '@/models/agent-llm/dto';
-import { ApiError, apiFetchJson, getQuantAgentApiBase, parseDetail } from './client';
+import { ApiError, apiFetchJson, getApiBase, parseDetail } from './client';
 
 /** Mirrors ``app.chat.events.ToolPayload``. */
 type ChatSseToolPayload =
@@ -245,7 +245,7 @@ function handleParsedAgentChatSseEvent(ev: ChatSseParsedEvent, options: AgentCha
  * POST ``/chat/message`` (SSE). Wire: ``event:`` + payload-only ``data:`` (see ``app.chat`` controller stream).
  */
 export async function postAgentChatStream(body: ChatRequestPublic, options: AgentChatStreamOptions): Promise<void> {
-  const url = `${getQuantAgentApiBase()}/chat/message`;
+  const url = `${getApiBase()}/chat/message`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -300,7 +300,7 @@ export async function postAgentChatAuthorize(body: {
   assistant_message_id: string;
   decisions: Array<{ type: 'approve' | 'reject'; tool_call_id: string }>;
 }): Promise<void> {
-  const url = `${getQuantAgentApiBase()}/chat/authorize`;
+  const url = `${getApiBase()}/chat/authorize`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -315,7 +315,7 @@ export async function postAgentChatAuthorize(body: {
 }
 
 export async function postAgentChatStop(body: { session_id: string; assistant_message_id?: string }): Promise<void> {
-  const url = `${getQuantAgentApiBase()}/chat/stop`;
+  const url = `${getApiBase()}/chat/stop`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {

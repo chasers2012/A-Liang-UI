@@ -44,7 +44,7 @@ def load_factor_instance_from_source(source: str, *, module_name: str | None = N
     except SyntaxError as exc:
         raise ValueError(f"source 语法错误: {exc.msg}") from exc
 
-    mod_name = module_name or f"_quant_agent_inline_factor_{uuid.uuid4().hex}"
+    mod_name = module_name or f"_a_liang_ui_inline_factor_{uuid.uuid4().hex}"
     module = types.ModuleType(mod_name)
     sys.modules[mod_name] = module
 

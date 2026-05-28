@@ -1,4 +1,4 @@
-import { getQuantAgentApiBase } from '@/api/client';
+import { getApiBase } from '@/api/client';
 
 export type EventHandler<T = unknown> = (data: T) => void;
 
@@ -58,7 +58,7 @@ class EventBusClient {
     if (typeof window === 'undefined') return;
     if (this.es) return;
 
-    const url = `${getQuantAgentApiBase()}/events`;
+    const url = `${getApiBase()}/events`;
     const es = new EventSource(url);
     this.es = es;
 

@@ -14,7 +14,7 @@ venv
 .eggs
 dist
 build
-!dist/quant-agent_portable/**
+!dist/a-liang-ui_portable/**
 
 # Git & IDE
 .git

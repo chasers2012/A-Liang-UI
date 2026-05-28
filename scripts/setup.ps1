@@ -38,7 +38,7 @@ function Ensure-Uv {
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 Set-Location $repoRoot
 
-Write-Host "==> quant-agent setup (repo: $repoRoot)"
+Write-Host "==> A-Liang-UI setup (repo: $repoRoot)"
 
 Need-Command pnpm
 Ensure-Uv

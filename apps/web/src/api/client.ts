@@ -1,6 +1,6 @@
-import { getALiangUiApiBase } from '@/lib/quant-agent-api-base';
+import { getApiBase } from '@/lib/api-base';
 
-export { getALiangUiApiBase as getQuantAgentApiBase };
+export { getApiBase };
 
 export class ApiError extends Error {
   constructor(
@@ -28,7 +28,7 @@ export function parseDetail(text: string): string {
 }
 
 export async function apiFetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${getALiangUiApiBase()}${path.startsWith('/') ? path : `/${path}`}`;
+  const url = `${getApiBase()}${path.startsWith('/') ? path : `/${path}`}`;
   const hasJsonBody = typeof init?.body === 'string' && init.body.length > 0;
   const res = await fetch(url, {
     ...init,

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "echarts-nodes"
 version = "0.1.0"
-description = "ECharts workflow node plugin for quant-agent"
+description = "ECharts workflow node plugin for A-Liang-UI"
 requires-python = ">=3.10"
 dependencies = [
     "a-liang-ui-api",
@@ -13,7 +13,7 @@ dependencies = [
     "echartsy>=0.7.4",
 ]
 
-[project.entry-points."quant-agent.plugins"]
+[project.entry-points."a-liang-ui.plugins"]
 echarts = "echarts_nodes.plugin:EchartsNodesPlugin"
 
 [tool.uv.sources]

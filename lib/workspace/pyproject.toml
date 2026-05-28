@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "workspace"
 version = "0.1.0"
-description = "Local filesystem workspace for quant-agent (default ~/.quant-agent)"
+description = "Local filesystem workspace for A-Liang-UI (default ~/.a-liang-ui)"
 requires-python = ">=3.10"
 dependencies = []
 

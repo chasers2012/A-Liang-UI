@@ -17,20 +17,20 @@ def _reset_workspace_root():
     set_workspace_root(None)
 
 
-def test_default_workspace_root_uses_home_dot_quant_agent(monkeypatch, tmp_path):
-    monkeypatch.delenv("QUANT_AGENT_WORKSPACE", raising=False)
+def test_default_workspace_root_uses_home_dot_a_liang_ui(monkeypatch, tmp_path):
+    monkeypatch.delenv("A_LIANG_UI_WORKSPACE", raising=False)
     monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
-    assert default_workspace_root() == (tmp_path / ".quant-agent").resolve()
+    assert default_workspace_root() == (tmp_path / ".a-liang-ui").resolve()
 
 
 def test_default_workspace_root_respects_env(monkeypatch, tmp_path):
     custom = tmp_path / "custom_ws"
-    monkeypatch.setenv("QUANT_AGENT_WORKSPACE", str(custom))
+    monkeypatch.setenv("A_LIANG_UI_WORKSPACE", str(custom))
     assert default_workspace_root() == custom.resolve()
 
 
 def data_set_workspace_root_overrides(monkeypatch, tmp_path):
-    monkeypatch.delenv("QUANT_AGENT_WORKSPACE", raising=False)
+    monkeypatch.delenv("A_LIANG_UI_WORKSPACE", raising=False)
     override = tmp_path / "override"
     set_workspace_root(override)
     assert get_workspace_root() == override.resolve()

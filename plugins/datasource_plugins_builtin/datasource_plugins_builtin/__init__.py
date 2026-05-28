@@ -1,4 +1,4 @@
-"""Built-in datasource plugins (SQL, CSV) for quant-agent."""
+"""Built-in datasource plugins (SQL, CSV) for A-Liang-UI."""
 
 from __future__ import annotations
 

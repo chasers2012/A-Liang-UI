@@ -32,7 +32,7 @@
 | -------- | -------------------------------------------------------------------------------------------------------------- |
 | 前端     | 本地开发 [http://localhost:3000](http://localhost:3000)；Docker [http://127.0.0.1:8000](http://127.0.0.1:8000) |
 | 后端 API | 接口前缀 `/api`，如 [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)                       |
-| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.a-liang-ui`，可用 `QUANT_AGENT_WORKSPACE` 指定其他路径          |
+| 数据存储 | 配置、数据库、因子源码、知识库等默认保存在 `~/.a-liang-ui`，可用 `A_LIANG_UI_WORKSPACE` 指定其他路径           |
 | 环境要求 | Node.js 20+、pnpm 9、Python 3.11+、[uv](https://docs.astral.sh/uv/)                                            |
 
 ---
@@ -103,7 +103,7 @@ docker compose up -d
 docker compose up -d
 ```
 
-浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)（页面在 `/`，接口在 `/api`）。`NEXT_PUBLIC_QUANT_AGENT_API` 在 `docker-compose.yml` 中配置，默认同源 `/api`。数据持久化在 Docker volume `quant-agent-data`（容器内 `/data`）。
+浏览器访问 [http://127.0.0.1:8000](http://127.0.0.1:8000)（页面在 `/`，接口在 `/api`）。`NEXT_PUBLIC_A_LIANG_UI_API` 在 `docker-compose.yml` 中配置，默认同源 `/api`。数据持久化在 Docker volume `a-liang-ui-data`（容器内 `/data`）。
 
 ### 插件（内置与第三方）
 
@@ -202,13 +202,11 @@ flowchart TB
 
 ## 环境变量
 
-| 变量                          | 作用域 | 说明                                                                                               |
-| ----------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_QUANT_AGENT_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾          |
-| `QUANT_AGENT_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.a-liang-ui`                                                                   |
-| `PYTHONPATH`                  | 后端   | 插件 `site-packages`（含 `.pth`）；便携版/Docker 由启动脚本或镜像设置；开发模式仅用 `.venv` 内插件 |
-| `CORS_ORIGINS`                | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                                 |
+| 变量                         | 作用域 | 说明                                                                                               |
+| ---------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_A_LIANG_UI_API` | 前端   | API 基址，本地开发默认 `http://127.0.0.1:8000/api`；Docker 默认同源 `/api`，勿以 `/` 结尾          |
+| `A_LIANG_UI_WORKSPACE`       | 后端   | 数据根目录，默认 `~/.a-liang-ui`                                                                   |
+| `PYTHONPATH`                 | 后端   | 插件 `site-packages`（含 `.pth`）；便携版/Docker 由启动脚本或镜像设置；开发模式仅用 `.venv` 内插件 |
+| `CORS_ORIGINS`               | 后端   | 允许跨域的来源，逗号分隔，默认 `*`                                                                 |
 
 完整说明见 [`.env.example`](.env.example)。
-
-> 说明：当前仓库内部包名与环境变量仍保留原有实现标识，后续如需统一到 `A-Liang-UI`，可继续同步代码与配置。

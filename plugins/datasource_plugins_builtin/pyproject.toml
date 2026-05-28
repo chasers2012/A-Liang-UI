@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "datasource-plugins-builtin"
 version = "0.1.0"
-description = "Built-in quant-agent datasource plugins (SQL, CSV)"
+description = "Built-in A-Liang-UI datasource plugins (SQL, CSV)"
 requires-python = ">=3.10"
 dependencies = [
     "a-liang-ui-api",
     "duckdb>=1.0.0",
 ]
 
-[project.entry-points."quant-agent.plugins"]
+[project.entry-points."a-liang-ui.plugins"]
 csv = "datasource_plugins_builtin.csv:CsvDataSourcePlugin"
 sql = "datasource_plugins_builtin.sql:SqlDataSourcePlugin"
 

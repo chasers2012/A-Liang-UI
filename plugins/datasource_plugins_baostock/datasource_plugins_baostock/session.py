@@ -26,8 +26,8 @@ class BaostockIOBusyError(RuntimeError):
 
 
 def _baostock_lock_path() -> Path:
-    env = os.environ.get("QUANT_AGENT_WORKSPACE")
-    root = Path(env).expanduser() if env else Path.home() / ".quant-agent"
+    env = os.environ.get("A_LIANG_UI_WORKSPACE")
+    root = Path(env).expanduser() if env else Path.home() / ".a-liang-ui"
     root.mkdir(parents=True, exist_ok=True)
     return root / "baostock.io.lock"
 

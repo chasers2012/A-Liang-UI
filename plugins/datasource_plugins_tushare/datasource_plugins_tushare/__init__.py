@@ -1,4 +1,4 @@
-"""Tushare datasource plugin for quant-agent."""
+"""Tushare datasource plugin for A-Liang-UI."""
 
 from __future__ import annotations
 

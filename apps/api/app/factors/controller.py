@@ -148,7 +148,7 @@ def _load_user_factor_module(factor_id: str, source_path: str):
     if not source_file.is_file():
         return None
     safe_id = re.sub(r"\W+", "_", factor_id)
-    module_name = f"_quant_agent_user_factor_{safe_id}"
+    module_name = f"_a_liang_ui_user_factor_{safe_id}"
     spec = importlib.util.spec_from_file_location(module_name, str(source_file))
     if spec is None or spec.loader is None:
         return None

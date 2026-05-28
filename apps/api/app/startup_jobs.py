@@ -59,7 +59,7 @@ def is_first_run() -> bool:
         return _FIRST_RUN_CACHE
 
     workspace_root = Path(__file__).resolve().parents[3]
-    flag_path = workspace_root / ".quant-agent" / "first_run.flag"
+    flag_path = workspace_root / ".a-liang-ui" / "first_run.flag"
     flag_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:

@@ -44,7 +44,7 @@ from .schemas import (
 
 _AUTH_PENDING_TTL_SECONDS = 10 * 60
 _AUTH_WAIT_POLL_SECONDS = 0.2
-_AUTH_CACHE = Cache(str(workspace_path(".quant-agent/chat_auth_cache")))
+_AUTH_CACHE = Cache(str(workspace_path(".a-liang-ui/chat_auth_cache")))
 _RUNNING_STREAMS_LOCK = threading.Lock()
 _RUNNING_STREAMS: dict[str, dict[str, Any]] = {}
 

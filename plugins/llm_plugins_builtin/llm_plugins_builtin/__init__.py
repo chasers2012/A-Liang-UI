@@ -1,4 +1,4 @@
-"""Built-in LLM provider plugins for quant-agent."""
+"""Built-in LLM provider plugins for A-Liang-UI."""
 
 from .anthropic import AnthropicLlmPlugin
 from .deepseek import DeepSeekLlmPlugin

@@ -5,7 +5,7 @@ from abc import ABC
 
 class Plugin(ABC):
     """
-    Base class for quant-agent plugins.
+    Base class for A-Liang-UI plugins.
 
     Subclasses must define non-empty string class attributes ``name`` (registry key)
     and ``category`` (grouping, e.g. ``"datasource"``). Abstract intermediates may omit

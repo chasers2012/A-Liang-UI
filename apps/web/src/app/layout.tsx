@@ -21,8 +21,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'quant-agent',
-  description: 'Next.js + Python monorepo',
+  title: '阿量UI（A-Liang-UI）',
+  description: 'Visual quantitative workflow editor with AI collaboration',
 };
 
 export default function RootLayout({

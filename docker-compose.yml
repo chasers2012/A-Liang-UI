@@ -1,13 +1,13 @@
 services:
   a-liang-ui:
     # 与 .github/workflows/release.yml 一致：a-liang-ui:<tag>、a-liang-ui:latest
-    image: ${QUANT_AGENT_IMAGE:-a-liang-ui:latest}
+    image: ${A_LIANG_UI_IMAGE:-a-liang-ui:latest}
     pull_policy: if_not_present
     ports:
       - '8000:8000'
     environment:
-      NEXT_PUBLIC_QUANT_AGENT_API: /api
-      QUANT_AGENT_WORKSPACE: /data
+      NEXT_PUBLIC_A_LIANG_UI_API: /api
+      A_LIANG_UI_WORKSPACE: /data
       CORS_ORIGINS: '*'
     volumes:
       - a-liang-ui-data:/data

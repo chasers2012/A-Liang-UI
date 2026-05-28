@@ -1,7 +1,7 @@
 """
 Local workspace root for on-disk data.
 
-Default directory is ``~/.quant-agent``. Override with the ``QUANT_AGENT_WORKSPACE``
+Default directory is ``~/.a-liang-ui``. Override with the ``A_LIANG_UI_WORKSPACE``
 environment variable, or call ``set_workspace_root`` for an in-process override.
 """
 
@@ -12,14 +12,14 @@ from pathlib import Path
 
 PathPart = str | Path
 
-_ENV_WORKSPACE = "QUANT_AGENT_WORKSPACE"
-_DEFAULT_DIRNAME = ".quant-agent"
+_ENV_WORKSPACE = "A_LIANG_UI_WORKSPACE"
+_DEFAULT_DIRNAME = ".a-liang-ui"
 
 _runtime_root: Path | None = None
 
 
 def default_workspace_root() -> Path:
-    """Logical root when no in-process override: env ``QUANT_AGENT_WORKSPACE`` else ``~/.quant-agent``."""
+    """Logical root when no in-process override: env ``A_LIANG_UI_WORKSPACE`` else ``~/.a-liang-ui``."""
     env = os.environ.get(_ENV_WORKSPACE)
     if env:
         return Path(env).expanduser().resolve()

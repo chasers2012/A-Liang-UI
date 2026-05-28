@@ -1,4 +1,4 @@
-"""BaoStock datasource plugin for quant-agent."""
+"""BaoStock datasource plugin for A-Liang-UI."""
 
 from __future__ import annotations
 

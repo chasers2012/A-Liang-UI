@@ -11,14 +11,14 @@ function publicApiBaseFromEnv(): string | undefined {
 }
 
 /** Resolve API base on the server (local dev / SSR). */
-export function resolveALiangUiApiBase(): string {
+export function resolveApiBase(): string {
   return publicApiBaseFromEnv() ?? DEFAULT_DEV_API;
 }
 
-/** Base URL for A-Liang-UI FastAPI (no trailing slash). */
-export function getALiangUiApiBase(): string {
+/** Base URL for the FastAPI server (no trailing slash). */
+export function getApiBase(): string {
   if (typeof window !== 'undefined') {
     return publicApiBaseFromEnv() ?? DEFAULT_SAME_ORIGIN_API;
   }
-  return resolveALiangUiApiBase();
+  return resolveApiBase();
 }

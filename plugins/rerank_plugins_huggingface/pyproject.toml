@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "rerank-plugins-huggingface"
 version = "0.1.0"
-description = "HuggingFace rerank provider plugin for quant-agent"
+description = "HuggingFace rerank provider plugin for A-Liang-UI"
 requires-python = ">=3.10"
 dependencies = [
     "a-liang-ui-api",
@@ -14,7 +14,7 @@ dependencies = [
     "sentence-transformers>=3.0.0",
 ]
 
-[project.entry-points."quant-agent.plugins"]
+[project.entry-points."a-liang-ui.plugins"]
 rerank_huggingface = "rerank_plugins_huggingface:HuggingFaceRerankPlugin"
 
 [tool.uv.sources]
