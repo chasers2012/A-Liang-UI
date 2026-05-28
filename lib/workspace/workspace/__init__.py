@@ -1,7 +1,7 @@
 """
 Local workspace root for on-disk data.
 
-Default directory is ``~/.a-liang-ui``. Override with the ``A_LIANG_UI_WORKSPACE``
+Default directory is ``~/.a-liang-ui``. Override with the ``WORKSPACE_ROOT``
 environment variable, or call ``set_workspace_root`` for an in-process override.
 """
 
@@ -12,14 +12,14 @@ from pathlib import Path
 
 PathPart = str | Path
 
-_ENV_WORKSPACE = "A_LIANG_UI_WORKSPACE"
+_ENV_WORKSPACE = "WORKSPACE_ROOT"
 _DEFAULT_DIRNAME = ".a-liang-ui"
 
 _runtime_root: Path | None = None
 
 
 def default_workspace_root() -> Path:
-    """Logical root when no in-process override: env ``A_LIANG_UI_WORKSPACE`` else ``~/.a-liang-ui``."""
+    """Logical root when no in-process override: env ``WORKSPACE_ROOT`` else ``~/.a-liang-ui``."""
     env = os.environ.get(_ENV_WORKSPACE)
     if env:
         return Path(env).expanduser().resolve()

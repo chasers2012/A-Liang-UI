@@ -229,7 +229,7 @@ Layout:
 Install extra plugin wheels into plugins/site-packages, then restart.
 
 Data (config, DB, models) is stored under ~/.a-liang-ui unless
-A_LIANG_UI_WORKSPACE is set.
+WORKSPACE_ROOT is set.
 """,
         encoding="utf-8",
     )

@@ -26,7 +26,7 @@ class BaostockIOBusyError(RuntimeError):
 
 
 def _baostock_lock_path() -> Path:
-    env = os.environ.get("A_LIANG_UI_WORKSPACE")
+    env = os.environ.get("WORKSPACE_ROOT")
     root = Path(env).expanduser() if env else Path.home() / ".a-liang-ui"
     root.mkdir(parents=True, exist_ok=True)
     return root / "baostock.io.lock"

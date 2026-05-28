@@ -18,19 +18,19 @@ def _reset_workspace_root():
 
 
 def test_default_workspace_root_uses_home_dot_a_liang_ui(monkeypatch, tmp_path):
-    monkeypatch.delenv("A_LIANG_UI_WORKSPACE", raising=False)
+    monkeypatch.delenv("WORKSPACE_ROOT", raising=False)
     monkeypatch.setattr("pathlib.Path.home", classmethod(lambda cls: tmp_path))
     assert default_workspace_root() == (tmp_path / ".a-liang-ui").resolve()
 
 
 def test_default_workspace_root_respects_env(monkeypatch, tmp_path):
     custom = tmp_path / "custom_ws"
-    monkeypatch.setenv("A_LIANG_UI_WORKSPACE", str(custom))
+    monkeypatch.setenv("WORKSPACE_ROOT", str(custom))
     assert default_workspace_root() == custom.resolve()
 
 
 def data_set_workspace_root_overrides(monkeypatch, tmp_path):
-    monkeypatch.delenv("A_LIANG_UI_WORKSPACE", raising=False)
+    monkeypatch.delenv("WORKSPACE_ROOT", raising=False)
     override = tmp_path / "override"
     set_workspace_root(override)
     assert get_workspace_root() == override.resolve()

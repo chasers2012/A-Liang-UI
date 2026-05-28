@@ -7,7 +7,7 @@ from pathlib import Path
 from cryptography.fernet import Fernet
 from workspace import workspace_path
 
-_ENV_KEY = "A_LIANG_UI_FERNET_KEY"
+_ENV_KEY = "FERNET_KEY"
 _KEY_FILE = "data/secrets/fernet.key"
 
 
@@ -26,7 +26,7 @@ def get_fernet() -> Fernet:
     Encryption for secrets at rest.
 
     Key priority:
-    1) env var A_LIANG_UI_FERNET_KEY
+    1) env var FERNET_KEY
     2) workspace file data/secrets/fernet.key (auto-generated if missing)
     """
 
