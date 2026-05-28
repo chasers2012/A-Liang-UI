@@ -1,0 +1,44 @@
+version: 1
+disable_existing_loggers: false
+formatters:
+  default:
+    format: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+handlers:
+  default:
+    class: logging.StreamHandler
+    formatter: default
+    stream: ext://sys.stderr
+  file:
+    class: logging.handlers.RotatingFileHandler
+    formatter: default
+    filename: logs/api/api.log
+    maxBytes: 10485760
+    backupCount: 10
+    encoding: utf-8
+root:
+  level: INFO
+  handlers:
+    - default
+    - file
+loggers:
+  app:
+    level: INFO
+    handlers:
+      - default
+      - file
+    propagate: false
+  uvicorn:
+    handlers:
+      - default
+      - file
+    level: INFO
+    propagate: false
+  uvicorn.error:
+    level: INFO
+  uvicorn.access:
+    handlers:
+      - default
+      - file
+    level: INFO
+    propagate: false

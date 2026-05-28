@@ -1,0 +1,144 @@
+"""ECharts 直方图节点（echartsy）。"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import echartsy as ec
+from workflow import (
+    BooleanNodeParam,
+    NodeParam,
+    NumberNodeParam,
+    Socket,
+    StringNodeParam,
+    workflow_node,
+)
+
+from .echarts_common import (
+    VALUE_DECIMAL_PLACES_DEFAULT,
+    apply_chrome,
+    coerce_to_dataframe,
+    finalize_figure_option,
+    merge_extra_and_pack,
+    patch_x_axis_label_density,
+)
+
+
+@workflow_node(
+    label="ECharts 直方图",
+    description="从 DataFrame 单列生成直方图（echartsy hist）",
+    category="ECharts",
+    input_sockets=[
+        Socket(
+            "data",
+            required=True,
+            value_type="dataframe",
+            label="数据(DataFrame)",
+            description="用于生成图表的数据源",
+        ),
+        StringNodeParam(
+            "column",
+            required=True,
+            default="value",
+            label="数值列",
+            description="用于分箱的数值列名",
+        ),
+        NumberNodeParam(
+            "bins",
+            required=False,
+            default=10,
+            minimum=2,
+            maximum=200,
+            label="分箱数",
+            description="直方图柱数",
+        ),
+        BooleanNodeParam(
+            "density",
+            required=False,
+            default=False,
+            label="密度归一化",
+            description="True 时纵轴为概率密度",
+        ),
+        StringNodeParam("title", required=False, default="", label="标题", description="图表标题"),
+        BooleanNodeParam(
+            "show_legend",
+            required=False,
+            default=True,
+            label="显示图例",
+            description="是否显示 legend",
+        ),
+        BooleanNodeParam(
+            "show_tooltip",
+            required=False,
+            default=True,
+            label="显示提示",
+            description="是否显示 tooltip",
+        ),
+        BooleanNodeParam(
+            "value_axes_scale_to_data",
+            required=False,
+            default=True,
+            label="数值轴贴合数据",
+            description="开启时为直角坐标系 value 轴设置 scale，刻度范围更贴数据；横向条形图作用于数值横轴。关闭则恢复 ECharts 默认刻度（常含 0）。无直角坐标轴的图表类型不受影响",
+        ),
+        NumberNodeParam(
+            "value_decimal_places",
+            required=False,
+            default=VALUE_DECIMAL_PLACES_DEFAULT,
+            minimum=0,
+            maximum=15,
+            label="数值小数位数",
+            description="图内数值（series、视觉映射等）保留的小数位；0 为整数",
+        ),
+        NodeParam(
+            "extra_options",
+            required=False,
+            value_type="json",
+            default=None,
+            label="额外配置(将并入 option 根级)",
+            description="与自动生成的 option 合并，冲突键以后者覆盖前者",
+        ),
+    ],
+    output_sockets=[
+        Socket(
+            "option",
+            value_type="json",
+            label="ECharts 配置",
+            description="包含 type=echart 与 option 的可视化配置对象\n\n**数据格式**\n- JSON 对象 `{'type':'echart','option':{...}}`",
+        )
+    ],
+    entry="execute",
+)
+class EchartsHistNode:
+    def execute(
+        self,
+        data: Any,
+        column: str = "value",
+        bins: int = 10,
+        density: bool = False,
+        title: str = "",
+        show_legend: bool = True,
+        show_tooltip: bool = True,
+        value_axes_scale_to_data: bool = True,
+        value_decimal_places: int | float = VALUE_DECIMAL_PLACES_DEFAULT,
+        extra_options: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        df = coerce_to_dataframe(data)
+        col = column.strip()
+        if not col or col not in df.columns:
+            raise KeyError(f"column {col!r} not found in dataframe columns")
+        fig = ec.Figure()
+        apply_chrome(fig, title, show_legend, show_tooltip)
+        fig.hist(df, column=col, bins=int(bins), density=density)
+        option = finalize_figure_option(fig)
+        xd = option.get("xAxis")
+        n = 0
+        if isinstance(xd, dict) and isinstance(xd.get("data"), list):
+            n = len(xd["data"])
+        patch_x_axis_label_density(option, num_categories=max(n, int(bins)))
+        return merge_extra_and_pack(
+            option,
+            extra_options,
+            value_decimal_places=int(value_decimal_places),
+            value_axes_scale_to_data=value_axes_scale_to_data,
+        )

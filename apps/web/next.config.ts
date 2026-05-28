@@ -1,19 +1,18 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
+
+/** Keep in sync with `apps/api/app/paths.py` (`WEB_UI_PREFIX`). Empty string = site root. */
+const webBasePath = (process.env.WEB_UI_PREFIX ?? '').replace(/\/$/, '');
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/data/test-sets",
-        destination: "/data/data-sets",
-        permanent: true,
-      },
-      {
-        source: "/data/test-sets/:path*",
-        destination: "/data/data-sets/:path*",
-        permanent: true,
-      },
-    ];
+  output: 'export',
+  ...(webBasePath ? { basePath: webBasePath } : {}),
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  env: {
+    FEATURE_FLAGS: process.env.FEATURE_FLAGS ?? '',
+    NEXT_PUBLIC_WEB_BASE_PATH: webBasePath,
   },
 };
 

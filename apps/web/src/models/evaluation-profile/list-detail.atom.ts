@@ -1,57 +1,54 @@
-import { atom } from "jotai";
-import { atomFamily } from "jotai-family";
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
 
-import {
-  getEvaluationProfile,
-  listEvaluationProfiles,
-} from "@/lib/quant-agent-api";
-import type { EvaluationProfilePublic } from "./dto";
+import { getEvaluationProfile, listEvaluationProfiles } from '@/api/evaluation-profiles';
+import { listNodes } from '@/api/nodes';
+import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
+import type { EvaluationProfilePublic } from './dto';
+import type { NodeSummaryPublic } from '@/models/nodes/dto';
+import { errorAtom, isEditingAtom, loadingAtom } from '@/models/evaluation-profile/scope.atom';
 
-export type EvaluationProfilesListState = {
-  items: EvaluationProfilePublic[] | null;
-  error: string | null;
-};
-
-export const evaluationProfilesListAtom = atom<EvaluationProfilesListState>({
-  items: null,
-  error: null,
+export const listAtoms = createRefreshableAsyncAtoms<EvaluationProfilePublic[] | null>({
+  initialValue: null,
+  fetcher: listEvaluationProfiles,
 });
 
-export const refreshEvaluationProfilesListAtom = atom(null, async (_get, set) => {
-  set(evaluationProfilesListAtom, (s) => ({ ...s, error: null }));
-  try {
-    const items = await listEvaluationProfiles();
-    set(evaluationProfilesListAtom, { items, error: null });
-  } catch (e) {
-    set(evaluationProfilesListAtom, {
-      items: null,
-      error: e instanceof Error ? e.message : String(e),
-    });
-  }
-});
-
-export type EvaluationProfileDetailState = {
-  row: EvaluationProfilePublic | null;
-  error: string | null;
-};
-
-export const evaluationProfileDetailAtomFamily = atomFamily((id: string) => {
+export const detailAtomFamily = atomFamily((id: string) => {
   void id;
-  return atom<EvaluationProfileDetailState>({ row: null, error: null });
+  return atom<EvaluationProfilePublic | null>(null);
 });
 
-export const loadEvaluationProfileDetailAtomFamily = atomFamily((id: string) =>
+export const loadDetailAtomFamily = atomFamily((id: string) =>
   atom(null, async (_get, set) => {
     if (!id) return;
-    set(evaluationProfileDetailAtomFamily(id), { row: null, error: null });
+    set(loadingAtom, true);
     try {
+      set(errorAtom, null);
+      set(detailAtomFamily(id), null);
       const row = await getEvaluationProfile(id);
-      set(evaluationProfileDetailAtomFamily(id), { row, error: null });
+      set(detailAtomFamily(id), row);
+      set(errorAtom, null);
     } catch (e) {
-      set(evaluationProfileDetailAtomFamily(id), {
-        row: null,
-        error: e instanceof Error ? e.message : String(e),
-      });
+      const msg = e instanceof Error ? e.message : String(e);
+      set(detailAtomFamily(id), null);
+      set(errorAtom, msg);
+    } finally {
+      set(loadingAtom, false);
     }
   }),
 );
+
+export const nodeTypesAtom = atom<NodeSummaryPublic[] | null>(null);
+
+export const refreshNodeTypesAtom = atom(null, async (get, set) => {
+  try {
+    const items = await listNodes('evaluation-profile');
+    set(nodeTypesAtom, items);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    set(nodeTypesAtom, null);
+    if (!get(isEditingAtom)) {
+      set(errorAtom, msg);
+    }
+  }
+});

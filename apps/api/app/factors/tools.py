@@ -1,86 +1,125 @@
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
-from langchain_core.tools import tool
+from factor import Factor
 
 from app.factors.constants import NEW_FACTOR_TEMPLATE
-from app.factors.registry import FactorItemsRegistry, factor_detail
-from app.factors.schemas import FactorCreate, FactorPatch
-from app.routers.factors import list_factors
+from app.tool.models import ToolAuthorization
+from app.tool.safe_tool import safe_tool
+
+from . import controller
 
 
-@tool(
-    description=(
-        "获取新因子源码模板（NEW_FACTOR_TEMPLATE）。"
-        "你可以先调用本工具拿到模板，再基于模板生成完整可运行的因子源码字符串；"
-        "最后用 create_factor(body={name, group, description, max_window, dependencies, source}) 保存。"
-    )
-)
+@safe_tool("get_new_factor_template", parse_docstring=True)
 def get_new_factor_template() -> str:
+    """
+    获取新因子源码模板。
+
+    当需要了解因子代码格式时使用该工具。
+
+    Returns:
+        因子源码模板字符串。
+    """
     return NEW_FACTOR_TEMPLATE
 
 
-@tool(
-    description=(
-        "创建并保存一个因子，返回所创建的因子详情。"
-        "入参 body 必须包含 name（合法 Python 标识符），并同时提供 source（完整 Python 源码字符串）。"
-    )
-)
-def create_factor(body: FactorCreate) -> dict[str, Any]:
+@safe_tool("get_factor_base_source", parse_docstring=True)
+def get_factor_base_source() -> str:
     """
-    body: FactorCreate = {
-        "name": "因子名称",
-        "group": "因子组",
-        "description": "因子描述",
-        "max_window": 20,
-        "dependencies": ["close"],
-        "source": "因子源码"
-    }
+    获取因子基类源码。
+
+    Returns:
+        因子基类 `Factor` 的源码文本。
     """
-    # Models sometimes omit `source` when tool-calling; use a safe default template.
-    src = (body.source or "").strip()
+    return inspect.getsource(Factor)
+
+
+@safe_tool("create_factor_tool", parse_docstring=True)
+def create_factor_tool(source: str | None = None) -> dict[str, Any]:
+    """
+    创建并保存新因子。
+
+    Args:
+        source: 因子完整源码。
+
+    Returns:
+        创建后的因子详情。
+    """
+    src = (source or "").strip()
     if not src:
-        src = NEW_FACTOR_TEMPLATE.replace("class NewFactor(", f"class {body.name}(")
-        src = src.replace('name = ""', f'name = "{body.name}"')
-        body = body.model_copy(update={"source": src})
-
-    rec = FactorItemsRegistry.create_factor(body)
-
-    return factor_detail(rec).model_dump()
+        raise ValueError("需要传入因子源码")
+    rec = controller.create_factor(src)
+    return controller.factor_detail(rec).model_dump()
 
 
-@tool(description="获取因子详情，返回所获取的因子详情")
+@safe_tool("get_factor_detail", parse_docstring=True)
 def get_factor_detail(factor_id: str) -> dict[str, Any]:
-    rec = FactorItemsRegistry.get_item(factor_id)
+    """
+    查询单个因子详情。
+
+    Args:
+        factor_id: 因子 ID；不存在会抛出明确错误。
+
+    Returns:
+        因子详情。
+    """
+    rec = controller.get_factor_detail_by_id(factor_id)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
-    return factor_detail(rec).model_dump()
+    return controller.factor_detail(rec).model_dump()
 
 
-@tool(description="获取因子列表，返回所获取的因子列表")
+@safe_tool("get_factor_list", parse_docstring=True)
 def get_factor_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_factors()]
+    """
+    查询因子列表。
+
+    Returns:
+        全部因子摘要列表，用于选择后续编辑或运行目标。
+    """
+    return [f.model_dump() for f in controller.list_factors()]
 
 
-@tool(description="更新因子，返回所更新的因子详情")
-def update_factor(factor_id: str, body: FactorPatch) -> dict[str, Any]:
-    rec = FactorItemsRegistry.update_item(factor_id, body)
+@safe_tool("update_factor_tool", parse_docstring=True)
+def update_factor_tool(factor_id: str, source: str) -> dict[str, Any]:
+    """
+    更新已有因子源码。
+
+    Args:
+        factor_id: 因子 ID。
+        source: 新的因子源码。
+
+    Returns:
+        更新后的因子详情。
+    """
+    rec = controller.update_factor(factor_id, source)
     if rec is None:
         raise ValueError(f"因子 {factor_id} 不存在")
-    return factor_detail(rec).model_dump()
+    return controller.factor_detail(rec).model_dump()
 
 
-@tool(description="删除因子，返回所删除的因子详情")
-def delete_factor(factor_id: str) -> dict[str, Any]:
-    return FactorItemsRegistry.delete_item(factor_id)
+@safe_tool("delete_factor_tool", parse_docstring=True)
+def delete_factor_tool(factor_id: str) -> dict[str, Any]:
+    """
+    删除指定因子。
+
+    Args:
+        factor_id: 因子 ID；不存在需报错。
+
+    Returns:
+        删除前快照。
+    """
+    rec = controller.delete_factor(factor_id)
+    return rec.model_dump()
 
 
-FACTOR_CHAT_TOOLS = [
-    get_new_factor_template,
-    create_factor,
-    get_factor_detail,
-    get_factor_list,
-    update_factor,
-    delete_factor,
-]
+TOOLS = {
+    "factor.get_new_factor_template": (get_new_factor_template, ToolAuthorization.allowed),
+    "factor.create_factor": (create_factor_tool, ToolAuthorization.allowed),
+    "factor.get_factor_detail": (get_factor_detail, ToolAuthorization.allowed),
+    "factor.get_factor_list": (get_factor_list, ToolAuthorization.allowed),
+    "factor.update_factor": (update_factor_tool, ToolAuthorization.need_authorize),
+    "factor.delete_factor": (delete_factor_tool, ToolAuthorization.disabled),
+}

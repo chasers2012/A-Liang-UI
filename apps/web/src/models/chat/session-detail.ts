@@ -1,0 +1,115 @@
+import { getAgentChat } from '@/api/chat';
+import type { ChatDetailPublic, ChatMessagePublic, TextBlockPublic } from '@/models/agent-llm/dto';
+import { atom } from 'jotai';
+import { atomFamily } from 'jotai-family';
+import { chatIsSendingAtom, chatStreamingReplyIdAtom, isSessionGeneratingAtomFamily } from './chat.atom';
+
+/**
+ * message id → message(ChatMessagePublic)
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const messagesAtomFamily = atomFamily((_mid: string) => atom<ChatMessagePublic | undefined>(undefined));
+
+/**
+ * session id → user message ids
+ */
+export const sessionUserMessageIdsAtomFamily = atomFamily(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  (_sessionId: string | undefined | null) => atom<string[]>([]),
+);
+
+/**
+ * user message id → assistant message ids
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const userMessageReplieIdsAtomFamily = atomFamily((_umid: string) => atom<string[]>([]));
+
+export const replieIdOfMessageAtomFamily = atomFamily((id: string) =>
+  atom((get) => get(userMessageReplieIdsAtomFamily(id))[0]),
+);
+
+export const replyOfMessageAtomFamily = atomFamily((id: string) =>
+  atom<ChatMessagePublic | undefined>((get) => {
+    const rid = get(replieIdOfMessageAtomFamily(id));
+    if (!rid) return undefined;
+    return get(messagesAtomFamily(rid));
+  }),
+);
+
+/**
+ * user message id -> whether its assistant reply is currently streaming.
+ * This narrows chat sending updates to the active reply only.
+ */
+export const isReplyStreamingOfMessageAtomFamily = atomFamily((id: string) =>
+  atom((get) => {
+    if (!get(chatIsSendingAtom)) return false;
+    const rid = get(replieIdOfMessageAtomFamily(id));
+    if (!rid) return false;
+    return rid === get(chatStreamingReplyIdAtom);
+  }),
+);
+
+export const userMessageTextAtomFamily = atomFamily((id: string) =>
+  atom((get) =>
+    ((get(messagesAtomFamily(id))?.blocks?.filter((b) => b.kind === 'text') || []) as TextBlockPublic[])
+      .map((b) => b.content)
+      .join(''),
+  ),
+);
+
+export const sessionDetailAtomFamily = atomFamily((sessionId: string | undefined | null) => {
+  const base = atom<ChatDetailPublic | null>(null);
+  return atom(
+    (get) => {
+      return get(base);
+    },
+    async (get, set) => {
+      if (!sessionId) return;
+      if (get(isSessionGeneratingAtomFamily(sessionId))) return;
+      const detail = await getAgentChat(sessionId);
+      set(base, detail);
+      set(
+        sessionUserMessageIdsAtomFamily(sessionId),
+        detail.messages.filter((m) => m.role === 'user').map((m) => m.id),
+      );
+      const repliesDict: Record<string, string[]> = {};
+      detail.messages.forEach((m, idx) => {
+        if (m.role === 'user') {
+          if (!repliesDict[m.id]) {
+            repliesDict[m.id] = [];
+          }
+        } else {
+          const userMessage = detail.messages.slice(0, idx).findLast((m) => m.role === 'user');
+          if (userMessage) {
+            repliesDict[userMessage.id].push(m.id);
+          }
+        }
+      });
+      Object.entries(repliesDict).forEach(([userId, replyIds]) => {
+        set(userMessageReplieIdsAtomFamily(userId), replyIds);
+      });
+      detail.messages.forEach((m) => {
+        set(messagesAtomFamily(m.id), m);
+      });
+    },
+  );
+});
+
+export const removeSessionMessageAtom = atom(null, (get, set, sessionId: string | undefined | null) => {
+  if (!sessionId) return;
+  const userIds = get(sessionUserMessageIdsAtomFamily(sessionId));
+  if (!userIds?.length) return;
+
+  const removeIds = new Set<string>([
+    ...userIds,
+    ...userIds.flatMap((uid) => get(userMessageReplieIdsAtomFamily(uid)) ?? []),
+  ]);
+
+  for (const id of removeIds) {
+    messagesAtomFamily.remove(id);
+  }
+  for (const uid of userIds) {
+    userMessageReplieIdsAtomFamily.remove(uid);
+  }
+  sessionUserMessageIdsAtomFamily.remove(sessionId);
+});

@@ -5,16 +5,18 @@ build-backend = "hatchling.build"
 [project]
 name = "factor"
 version = "0.1.0"
-description = "Factor base types and pluggable panel data source"
+description = "Factor base types and panel computation"
 requires-python = ">=3.10"
 dependencies = [
     "custom-code",
+    "data-source",
     "numpy>=1.24.0",
     "pandas>=2.0.0",
 ]
 
 [tool.uv.sources]
 custom-code = { workspace = true }
+data-source = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["factor"]

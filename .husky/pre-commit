@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 set -e
-pnpm run lint:fix
+pnpm exec lint-staged
+
+if git diff --cached --name-only --diff-filter=ACM | grep -qE '^apps/web/'; then
+	pnpm run build
+fi
 
 tmp=$(mktemp)
 trap 'rm -f "$tmp"' EXIT

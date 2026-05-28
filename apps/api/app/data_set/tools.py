@@ -3,24 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import HTTPException
-from langchain_core.tools import tool
 
-from app.data_set.data_set_schemas import (
-    DataSetCreate,
-    DataSetDatasourceBindingInput,
-    DataSetPatch,
-    DataSetRecord,
-)
-from app.data_set.data_sets_store import DataSetsStore
-from app.datasources.schemas import utc_now_iso
-from app.routers.data_sets import (
-    _merge_patch,
-    _to_public,
-    _validate_and_touch_datasources,
-    _validate_bindings_inputs,
-    _validate_datasource_enabled,
-    list_data_sets,
-)
+from app.data_set.schemas import DataSetCreate, DataSetPatch
+from app.tool.models import ToolAuthorization
+from app.tool.safe_tool import safe_tool
+
+from . import controller
 
 
 def _http_error_detail(exc: HTTPException) -> str:
@@ -28,91 +16,129 @@ def _http_error_detail(exc: HTTPException) -> str:
     return d if isinstance(d, str) else str(d)
 
 
-@tool(
-    description=(
-        "创建并保存一个数据集：名称、描述、日期区间、股票代码列表，以及至少一条已启用数据源的绑定。"
-        "多数据源时每条绑定需填写 dependencies（因子依赖字段名，如 close、volume），且同一字段不能重复出现在多条绑定中。"
-    )
-)
+@safe_tool("create_data_set", parse_docstring=True)
 def create_data_set(body: DataSetCreate) -> dict[str, Any]:
-    if not body.name.strip():
-        raise ValueError("名称不能为空")
+    """
+    创建并保存数据集。
+
+    入参 `body` 包含日期区间、标的与数据源绑定；至少一条绑定，columns 名称不得重复。
+
+    Args:
+        body: 数据集创建请求体。
+
+    Returns:
+        创建后的数据集详情。
+    """
     try:
-        _validate_and_touch_datasources(list(body.datasource_bindings))
+        created = controller.create_data_set(body)
     except HTTPException as e:
         raise ValueError(_http_error_detail(e)) from e
-    new_rec = body.to_record()
-    DataSetsStore.add_item(new_rec)
-    return _to_public(new_rec).model_dump()
+    return created.model_dump()
 
 
-@tool(description="获取单个数据集详情，入参 data_set_id 为数据集 id")
+@safe_tool("get_data_set_detail", parse_docstring=True)
 def get_data_set_detail(data_set_id: str) -> dict[str, Any]:
-    rec = DataSetsStore.get_item(data_set_id)
+    """
+    查询单个数据集详情。
+
+    Args:
+        data_set_id: 数据集 ID（UUID）。
+
+    Returns:
+        数据集详情。
+    """
+    rec = controller.get_data_set_detail(data_set_id)
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
-@tool(description="获取工作区内全部数据集列表")
+@safe_tool("get_data_set_list", parse_docstring=True)
 def get_data_set_list() -> list[dict[str, Any]]:
-    return [f.model_dump() for f in list_data_sets()]
+    """
+    查询当前工作区数据集列表。
+
+    Returns:
+        数据集列表，用于后续运行或编辑选择。
+    """
+    return [f.model_dump() for f in controller.list_data_sets()]
 
 
-@tool(
-    description=(
-        "更新数据集（名称、描述、数据源绑定、起止日期、股票代码等），行为与 PATCH /data-sets/{id} 一致。"
-    )
-)
+@safe_tool("update_data_set", parse_docstring=True)
 def update_data_set(data_set_id: str, body: DataSetPatch) -> dict[str, Any]:
-    def _apply(rec: DataSetRecord) -> None:
-        try:
-            if body.datasource_bindings is not None:
-                _validate_and_touch_datasources(list(body.datasource_bindings))
-        except HTTPException as e:
-            raise ValueError(_http_error_detail(e)) from e
-        _merge_patch(rec, body)
-        if not rec.name:
-            raise ValueError("名称不能为空")
-        if not rec.datasource_bindings:
-            raise ValueError("至少保留一条数据源绑定")
-        try:
-            _validate_bindings_inputs(
-                [
-                    DataSetDatasourceBindingInput(
-                        datasource_id=b.datasource_id,
-                        dependencies=list(b.dependencies),
-                    )
-                    for b in rec.datasource_bindings
-                ]
-            )
-        except HTTPException as e:
-            raise ValueError(_http_error_detail(e)) from e
-        for b in rec.datasource_bindings:
-            try:
-                _validate_datasource_enabled(b.datasource_id)
-            except HTTPException as e:
-                raise ValueError(_http_error_detail(e)) from e
-        rec.updated_at = utc_now_iso()
+    """
+    更新数据集配置。
 
-    rec = DataSetsStore.update_item(data_set_id, _apply)
+    仅更新传入字段，语义与 PATCH 接口一致。
+
+    Args:
+        data_set_id: 数据集 ID。
+        body: 数据集更新内容。
+
+    Returns:
+        更新后的数据集详情。
+    """
+    try:
+        rec = controller.update_data_set(data_set_id, body)
+    except HTTPException as e:
+        raise ValueError(_http_error_detail(e)) from e
     if rec is None:
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
-@tool(description="删除数据集，成功时返回被删除记录的公开信息；不存在则报错")
+@safe_tool("delete_data_set", parse_docstring=True)
 def delete_data_set(data_set_id: str) -> dict[str, Any]:
-    rec = DataSetsStore.delete_item(data_set_id)
-    if rec is None:
+    """
+    删除指定数据集。
+
+    Args:
+        data_set_id: 数据集 ID。
+
+    Returns:
+        删除前快照。
+    """
+    rec = controller.get_data_set_detail(data_set_id)
+    if rec is None or not controller.delete_data_set(data_set_id):
         raise ValueError(f"数据集 {data_set_id} 不存在")
-    return _to_public(rec).model_dump()
+    return rec.model_dump()
 
 
-DATA_SET_CHAT_TOOLS = [
-    create_data_set,
-    get_data_set_detail,
-    get_data_set_list,
-    update_data_set,
-    delete_data_set,
-]
+@safe_tool("get_data_set_panel_preview", parse_docstring=True)
+def get_data_set_panel_preview(
+    data_set_id: str,
+    limit: int = 200,
+    sample_bdays: int = 5,
+    window: int = 0,
+) -> dict[str, Any]:
+    """
+    预览数据集的一段数据，用于验证数据集是否可正常使用。
+
+    Args:
+        data_set_id: 数据集 ID。
+        limit: 返回行数上限。
+        sample_bdays: 抽样交易日数量。
+        window: 额外窗口大小（由后端解释）。
+
+    Returns:
+        数据集预览结果。
+    """
+    return controller.get_data_set_panel_preview(
+        data_set_id=data_set_id,
+        limit=limit,
+        sample_bdays=sample_bdays,
+        window=window,
+    )
+
+
+TOOLS = {
+    "data_set.create_data_set": (create_data_set, ToolAuthorization.allowed),
+    "data_set.get_data_set_detail": (get_data_set_detail, ToolAuthorization.allowed),
+    "data_set.get_data_set_list": (get_data_set_list, ToolAuthorization.allowed),
+    "data_set.update_data_set": (update_data_set, ToolAuthorization.need_authorize),
+    "data_set.delete_data_set": (delete_data_set, ToolAuthorization.disabled),
+    "data_set.get_data_set_panel_preview": (
+        get_data_set_panel_preview,
+        ToolAuthorization.allowed,
+    ),
+}

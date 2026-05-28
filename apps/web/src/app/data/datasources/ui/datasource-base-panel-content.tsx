@@ -1,0 +1,100 @@
+'use client';
+
+import { useMemo } from 'react';
+import { useAtom, useAtomValue } from 'jotai';
+import validator from '@rjsf/validator-ajv8';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  datasourcesEditorFormAtom,
+  datasourcesEditorFormErrorAtom,
+  datasourcesIsEditingAtom,
+  datasourcesPluginFormSchemasAtom,
+  datasourcesPluginsAtom,
+  datasourcesSelectedIdAtom,
+} from '@/models/datasource/panel.atom';
+import { getDatasourceConnectionConfig } from '@/models/datasource/plugin-form-schemas';
+import { RjsfStyledForm } from '@/components/rjsf-styled-form';
+import { UploadPathWidget } from './datasource-form-upload';
+
+export function DatasourceBasePanelContent() {
+  const [isEditing] = useAtom(datasourcesIsEditingAtom);
+  const [selectedId] = useAtom(datasourcesSelectedIdAtom);
+  const [form, setForm] = useAtom(datasourcesEditorFormAtom);
+  const [plugins] = useAtom(datasourcesPluginsAtom);
+  const [formError] = useAtom(datasourcesEditorFormErrorAtom);
+  const { baseFormSchema, baseFormUiSchema } = useAtomValue(datasourcesPluginFormSchemasAtom);
+
+  const typeItems = useMemo(
+    () => Object.fromEntries(plugins.map((p) => [p.type, p.title?.trim() || p.type])),
+    [plugins],
+  );
+
+  if (!isEditing && !selectedId) {
+    return null;
+  }
+
+  return (
+    <>
+      {formError && (
+        <Alert variant="destructive">
+          <AlertTitle>校验失败</AlertTitle>
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+      <div className="flex flex-col gap-6">
+        <FieldGroup className="max-w-xl gap-3">
+          <Field>
+            <FieldLabel htmlFor="ds-type">类型</FieldLabel>
+            <Select
+              modal={false}
+              items={typeItems}
+              value={form.type}
+              readOnly={!isEditing || !!selectedId}
+              disabled={plugins.length === 0}
+              onValueChange={(v) => {
+                if (v == null || v === '') return;
+                if (!isEditing || !!selectedId) return;
+                setForm((f) => ({ ...f, type: v, config: { connection: {}, columns: {}, write: {} } }));
+              }}
+            >
+              <SelectTrigger id="ds-type" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {plugins.map((p) => (
+                  <SelectItem key={p.type} value={p.type}>
+                    {p.title?.trim() || p.type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <RjsfStyledForm
+            schema={baseFormSchema}
+            uiSchema={baseFormUiSchema}
+            validator={validator}
+            formData={getDatasourceConnectionConfig(form)}
+            widgets={{ file: UploadPathWidget }}
+            onChange={(next: { formData?: Record<string, unknown> }) =>
+              setForm((f) => ({
+                ...f,
+                config: {
+                  ...f.config,
+                  connection: { ...(next.formData ?? {}) },
+                },
+              }))
+            }
+            liveValidate={false}
+            noHtml5Validate
+            readonly={!isEditing}
+          >
+            <></>
+          </RjsfStyledForm>
+        </FieldGroup>
+      </div>
+    </>
+  );
+}

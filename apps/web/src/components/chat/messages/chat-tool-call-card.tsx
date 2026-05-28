@@ -1,0 +1,257 @@
+'use client';
+
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { useSetAtom } from 'jotai';
+import { Check, CheckCircle2, ChevronRight, Copy, Loader2, Wrench, XCircle } from 'lucide-react';
+
+import { unescapeUnicode } from 'unescape-unicode';
+
+import { Button } from '@/components/ui/button';
+import { authorizeToolCallAtom } from '@/models/chat';
+import type { ChatToolCallDisplay } from '@/models/chat/types';
+import { cn } from '@/lib/utils';
+
+function formatJson(v: unknown): string {
+  if (v === undefined) return '';
+  try {
+    let str = '';
+    if (typeof v === 'string') {
+      str = JSON.stringify(JSON.parse(v), null, 2);
+    } else if (typeof v === 'number') {
+      str = String(v);
+    } else {
+      str = JSON.stringify(v, null, 2);
+    }
+    return unescapeUnicode(str);
+  } catch {
+    return unescapeUnicode(String(v));
+  }
+}
+
+const StatusIcon = memo(function StatusIcon({ status }: { status: ChatToolCallDisplay['status'] }) {
+  return status === 'running' ? (
+    <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-hidden />
+  ) : status === 'ok' ? (
+    <CheckCircle2 className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+  ) : (
+    <XCircle className="size-3.5 shrink-0 text-destructive" aria-hidden />
+  );
+});
+
+const ToolCallHeader = memo(function ToolCallHeader({
+  name,
+  status,
+}: {
+  name: ChatToolCallDisplay['name'];
+  status: ChatToolCallDisplay['status'];
+}) {
+  return (
+    <>
+      <Wrench className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+      <span className="font-mono text-foreground">{name || '(工具)'}</span>
+      <span className="sr-only">工具调用状态：</span>
+      <StatusIcon status={status} />
+    </>
+  );
+});
+
+const CopyButton = memo(function CopyButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!content) return;
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-6 text-muted-foreground hover:text-foreground"
+      onClick={handleCopy}
+      aria-label={copied ? '已复制' : '复制内容'}
+      title={copied ? '已复制' : '复制'}
+      disabled={!content}
+    >
+      {copied ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
+    </Button>
+  );
+});
+
+const ToolCallArgs = memo(function ToolCallArgs({ args }: { args: unknown }) {
+  const argsJson = useMemo(() => formatJson(args), [args]);
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">参数</span>
+        <CopyButton content={argsJson} />
+      </div>
+      <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+        {argsJson}
+      </pre>
+    </>
+  );
+});
+
+const ToolCallResult = memo(function ToolCallResult({ result }: { result: unknown }) {
+  const resultJson = useMemo(() => formatJson(result), [result]);
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">结果</span>
+        <CopyButton content={resultJson} />
+      </div>
+      <pre className="mt-1 max-h-40 overflow-auto rounded bg-background/80 p-2 font-mono text-[11px] leading-relaxed">
+        {resultJson}
+      </pre>
+    </>
+  );
+});
+
+export type ToolAuthorizationUi =
+  | { stage: 'pending'; request: unknown }
+  | { stage: 'decided'; decision: 'approve' | 'reject'; request: unknown }
+  | null;
+
+export function getPersistedAuthorization(call: ChatToolCallDisplay): ToolAuthorizationUi {
+  if (call.authorization_status === 'pending') {
+    return { stage: 'pending', request: { tool_call_id: call.id } };
+  }
+  if (call.authorization_status === 'approved' || call.authorization_status === 'rejected') {
+    return {
+      stage: 'decided',
+      decision: call.authorization_status === 'approved' ? 'approve' : 'reject',
+      request: { tool_call_id: call.id },
+    };
+  }
+  return null;
+}
+
+export const AuthorizationPanel = memo(function AuthorizationPanel({
+  authorization,
+  sessionId,
+  assistantMessageId,
+  toolCallId,
+}: {
+  authorization: Exclude<ToolAuthorizationUi, null>;
+  sessionId: string;
+  assistantMessageId: string;
+  toolCallId: string;
+}) {
+  const authorize = useSetAtom(authorizeToolCallAtom);
+  const [authorizing, setAuthorizing] = useState(false);
+
+  const submitAuthorization = (decision: 'approve' | 'reject') => {
+    if (authorizing) return;
+    setAuthorizing(true);
+    void authorize({
+      sessionId,
+      decision,
+      assistantMessageId,
+      toolCallId,
+    }).finally(() => setAuthorizing(false));
+  };
+
+  return (
+    <div className="mt-2 rounded border border-amber-500/40 bg-amber-500/5 p-2">
+      <div className="mb-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">授权确认</div>
+      {authorization.stage === 'decided' ? (
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          已{authorization.decision === 'approve' ? '允许' : '拒绝'}本次工具调用。
+        </p>
+      ) : (
+        <>
+          <p className="mb-2 text-[11px] text-muted-foreground">请确认是否允许本次工具调用继续执行。</p>
+          <div className="mb-2 flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={authorizing}
+              onClick={() => submitAuthorization('reject')}
+            >
+              拒绝
+            </Button>
+            <Button type="button" size="sm" disabled={authorizing} onClick={() => submitAuthorization('approve')}>
+              {authorizing ? '提交中…' : '允许'}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+});
+
+export function ChatToolCallCard({
+  call,
+  sessionId,
+  assistantMessageId,
+}: {
+  call: ChatToolCallDisplay;
+  sessionId: string;
+  assistantMessageId: string;
+}) {
+  const { name, status, args, result, error } = call;
+  const authorization = getPersistedAuthorization(call);
+  const initRef = useRef(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (initRef.current) {
+      return;
+    }
+    initRef.current = true;
+    setTimeout(() => {
+      setOpen(status === 'running' || status === 'error');
+    }, 0);
+  });
+
+  return (
+    <div className="mb-2 rounded-md border border-border/60 bg-muted/30 text-left last:mb-0">
+      <div
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full cursor-pointer flex-wrap items-center gap-2 px-3 py-2 text-xs font-medium outline-none hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <ChevronRight
+          className={cn(
+            'size-3.5 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-90',
+          )}
+          aria-hidden
+        />
+        <ToolCallHeader name={name} status={status} />
+      </div>
+      {open && (
+        <div className="border-border/40 border-t px-3 py-2">
+          {args !== undefined ? (
+            <div className="mb-2">
+              <ToolCallArgs args={args} />
+            </div>
+          ) : null}
+          {status === 'ok' && result !== undefined ? (
+            <div>
+              <ToolCallResult result={result} />
+            </div>
+          ) : null}
+          {status === 'error' && error ? <p className="text-[11px] leading-relaxed text-destructive">{error}</p> : null}
+          {authorization ? (
+            <AuthorizationPanel
+              authorization={authorization}
+              sessionId={sessionId}
+              assistantMessageId={assistantMessageId}
+              toolCallId={call.id}
+            />
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}

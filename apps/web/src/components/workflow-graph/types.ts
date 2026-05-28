@@ -17,12 +17,19 @@ export type WorkflowNodeInputSpec = WorkflowSocketDefinition & {
   options?: Array<string | number> | null;
   minimum?: number | null;
   maximum?: number | null;
+  /** TextareaNodeParam.rows */
+  rows?: number | null;
+  /** RJSFNodeParam.json_schema */
+  json_schema?: unknown;
+  /** RJSFNodeParam.ui_schema */
+  ui_schema?: unknown;
 };
 
 /** 节点类型目录项：仅描述端口与展示名，不含业务扩展字段。 */
 export type WorkflowNodeTypeDefinition = {
-  type: string;
+  id: string;
   label: string;
+  description?: string;
   /** 可选分类：由上层业务决定是否使用 */
   category?: string;
   inputs: WorkflowNodeInputSpec[];
@@ -30,7 +37,7 @@ export type WorkflowNodeTypeDefinition = {
 };
 
 export interface WorkflowGraphNode extends WorkflowNodeTypeDefinition {
-  id: string;
+  type: string;
   pos: [number, number];
   params?: Record<string, unknown>;
 }

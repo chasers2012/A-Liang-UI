@@ -1,39 +1,19 @@
-/** 数据源（SQL / CSV）相关 DTO，与 API 响应一致。 */
+/** 数据源（插件化 config）相关 DTO，与 API 响应一致。 */
 
-export type DataSourceType = "sql" | "csv";
-
-export interface SqlPublic {
-  db_driver: string;
-  db_host: string;
-  db_port: number | null;
-  db_username: string;
-  db_name: string;
-  has_password: boolean;
-  table: string;
-  date_column: string;
-  asset_column: string;
-  column_map: Record<string, string>;
-}
-
-export interface CsvPublic {
-  path: string;
-  date_column: string;
-  asset_column: string;
-  read_csv_kwargs: Record<string, unknown>;
-}
+export type DataSourceType = string;
 
 export interface DataSourcePublic {
   id: string;
   name: string;
   type: DataSourceType;
-  enabled: boolean;
-  sql: SqlPublic | null;
-  csv: CsvPublic | null;
+  config: Record<string, unknown>;
+  /** 是否允许作为数据同步的写入目标（如 SQL 数据源开启 write_enabled）。 */
+  write_enabled: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface TestResult {
+export interface VerifyResult {
   ok: boolean;
   message: string;
 }
@@ -51,4 +31,30 @@ export interface SqlTableColumnsRequestBody {
 
 export interface SqlTableColumnsResponseBody {
   columns: string[];
+}
+
+/** `/datasources/inspect-columns` 响应（列名 + 建议的日期列/资产列）。 */
+export interface InspectColumnsResponseBody {
+  columns: string[];
+  date_column: string;
+  asset_column: string | null;
+}
+
+export interface DatasourcePluginPublic {
+  type: string;
+  title: string;
+  description: string | null;
+  connection_json_schema: Record<string, unknown>;
+  connection_ui_schema: Record<string, unknown>;
+  columns_json_schema: Record<string, unknown>;
+  columns_ui_schema: Record<string, unknown>;
+  write_json_schema: Record<string, unknown>;
+  write_ui_schema: Record<string, unknown>;
+}
+
+/** `/uploads/file` 响应。 */
+export interface UploadFileResponse {
+  path: string;
+  filename: string;
+  size: number;
 }

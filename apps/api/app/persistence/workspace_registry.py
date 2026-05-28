@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import ClassVar, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -24,37 +24,21 @@ class WorkspaceJsonStore(ABC, Generic[TFile]):
     file_model: ClassVar[type[TFile]]
 
     @classmethod
-    def load_workspace_kwargs(cls) -> dict[str, Any]:
-        """Extra keyword arguments passed to :func:`load_workspace_config`."""
-        return {}
-
-    @classmethod
-    def save_model_dump_kwargs(cls) -> dict[str, Any] | None:
-        """If set, passed as ``model_dump_kwargs`` to :func:`save_workspace_config`."""
-        return None
-
-    @classmethod
     def path(cls) -> Path:
         return workspace_config_path(cls.filename)
 
     @classmethod
     def load(cls) -> TFile:
         m = cls.file_model
-        kwargs = cls.load_workspace_kwargs()
         return load_workspace_config(
             cls.filename,
             m,
             default_factory=m,
-            **kwargs,
         )
 
     @classmethod
     def save(cls, reg: TFile) -> None:
-        md = cls.save_model_dump_kwargs()
-        if md:
-            save_workspace_config(cls.filename, reg, model_dump_kwargs=md)
-        else:
-            save_workspace_config(cls.filename, reg)
+        save_workspace_config(cls.filename, reg)
 
 
 class WorkspaceItemsRegistry(WorkspaceJsonStore[TFile], Generic[TItem, TFile]):

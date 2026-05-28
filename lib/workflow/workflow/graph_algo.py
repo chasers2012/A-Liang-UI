@@ -5,8 +5,7 @@ from __future__ import annotations
 from collections import defaultdict, deque
 from collections.abc import Sequence
 
-from .graph import WorkflowLink
-from .node_types import Node
+from .node_types import Node, WorkflowLink
 
 
 def topological_order(
@@ -18,8 +17,14 @@ def topological_order(
     adj: dict[str, list[str]] = defaultdict(list)
     indeg: dict[str, int] = dict.fromkeys(by_id, 0)
     for link in links:
-        adj[link.from_node].append(link.to_node)
-        indeg[link.to_node] += 1
+        if link.from_.kind != "node" or link.to.kind != "node":
+            continue
+        if not link.from_.node_id or not link.to.node_id:
+            continue
+        if link.from_.node_id not in by_id or link.to.node_id not in by_id:
+            continue
+        adj[link.from_.node_id].append(link.to.node_id)
+        indeg[link.to.node_id] += 1
     q = deque([nid for nid, d in indeg.items() if d == 0])
     out: list[str] = []
     while q:
@@ -32,11 +37,3 @@ def topological_order(
     if len(out) != len(by_id):
         raise ValueError("workflow graph contains a cycle")
     return out
-
-
-def assert_acyclic(
-    nodes: Sequence[Node],
-    links: Sequence[WorkflowLink],
-) -> None:
-    """Raise ``ValueError`` if the graph has a cycle."""
-    topological_order(nodes, links)

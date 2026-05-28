@@ -14,10 +14,17 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def workspace_config_path(filename: str) -> Path:
-    """Resolve *filename* relative to the workspace root, ensuring its parent dir exists."""
-    path = workspace_path(filename)
+    """Resolve *filename* under workspace ``config/``, ensuring parent directory exists."""
+    normalized = str(filename or "").strip().lstrip("/\\")
+    path = workspace_path(f"config/{normalized}")
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def _legacy_workspace_config_path(filename: str) -> Path:
+    """Legacy location (workspace root) kept for one-way read compatibility."""
+    normalized = str(filename or "").strip().lstrip("/\\")
+    return workspace_path(normalized)
 
 
 def load_workspace_config(
@@ -25,31 +32,27 @@ def load_workspace_config(
     model_type: type[T],
     *,
     default_factory: Callable[[], T],
-    json_error_label: str | None = None,
-    non_dict_returns_default: bool = False,
 ) -> T:
     """
     Read *filename* relative to workspace root.
 
-    Missing or whitespace-only file yields *default_factory*(). Invalid JSON
-    raises ``ValueError`` when *json_error_label* is set (message prefix),
-    otherwise ``json.JSONDecodeError``. When *non_dict_returns_default* is true,
-    a non-object JSON root returns the default without validating.
+    Missing or whitespace-only file yields *default_factory*().
+    Invalid JSON raises ``json.JSONDecodeError``.
     """
     path = workspace_config_path(filename)
     if not path.is_file():
-        return default_factory()
+        legacy_path = _legacy_workspace_config_path(filename)
+        if legacy_path.is_file():
+            path = legacy_path
+        else:
+            return default_factory()
     raw = path.read_text(encoding="utf-8")
     if not raw.strip():
         return default_factory()
     try:
         data: Any = json.loads(raw)
-    except json.JSONDecodeError as e:
-        if json_error_label is not None:
-            raise ValueError(f"{json_error_label}: invalid JSON ({e})") from e
+    except json.JSONDecodeError:
         raise
-    if non_dict_returns_default and not isinstance(data, dict):
-        return default_factory()
     if not isinstance(data, dict):
         raise ValueError(f"{filename}: expected JSON object")
     return model_type.model_validate(data)

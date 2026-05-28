@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "data-source"
+version = "0.1.0"
+description = "Neutral DataFrame data source interface for panel loading"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["data_source"]

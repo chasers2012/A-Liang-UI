@@ -1,0 +1,40 @@
+# Dependencies & build artifacts
+node_modules
+apps/web/node_modules
+.pnpm-store
+apps/web/.next
+apps/web/out
+.venv
+venv
+
+# Python caches
+**/__pycache__
+**/*.py[cod]
+*.egg-info
+.eggs
+dist
+build
+!dist/a-liang-ui_portable/**
+
+# Git & IDE
+.git
+.gitignore
+.idea
+.vscode
+.cursor
+
+# Local env & secrets
+.env
+.env.*
+!.env.example
+apps/web/.env.local
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

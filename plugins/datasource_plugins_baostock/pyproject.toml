@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "datasource-plugins-baostock"
+version = "0.1.0"
+description = "BaoStock datasource plugin for A-Liang-UI"
+requires-python = ">=3.10"
+dependencies = [
+    "a-liang-ui-api",
+    "baostock>=0.9.1",
+]
+
+[project.entry-points."a-liang-ui.plugins"]
+baostock = "datasource_plugins_baostock:BaoStockDataSourcePlugin"
+
+[tool.uv.sources]
+a-liang-ui-api = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["datasource_plugins_baostock"]

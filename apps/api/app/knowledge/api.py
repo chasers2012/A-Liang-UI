@@ -1,0 +1,69 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from app.http_errors import http_bad_request
+
+from . import controller
+from .schemas import (
+    KnowledgeDocumentCreateRequest,
+    KnowledgeDocumentPublic,
+    KnowledgeSearchHit,
+)
+
+router = APIRouter(prefix="/knowledge", tags=["knowledge"])
+
+
+class KnowledgeSearchResponse(BaseModel):
+    hits: list[KnowledgeSearchHit] = Field(default_factory=list)
+
+
+class KnowledgeReindexResponse(BaseModel):
+    document_id: str
+    indexed_chunks: int = 0
+    status: str = "queued"
+
+
+@router.post("/documents", response_model=KnowledgeDocumentPublic)
+def create_knowledge_document(body: KnowledgeDocumentCreateRequest) -> KnowledgeDocumentPublic:
+    try:
+        return controller.create_document(body)
+    except ValueError as exc:
+        http_bad_request(exc)
+
+
+@router.get("/documents", response_model=list[KnowledgeDocumentPublic])
+def list_knowledge_documents() -> list[KnowledgeDocumentPublic]:
+    return controller.list_documents()
+
+
+@router.get("/documents/{document_id}", response_model=KnowledgeDocumentPublic)
+def get_knowledge_document(document_id: str) -> KnowledgeDocumentPublic:
+    doc = controller.get_document(document_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="文档不存在")
+    return doc
+
+
+@router.delete("/documents/{document_id}", status_code=204)
+def delete_knowledge_document(document_id: str) -> None:
+    if not controller.delete_document(document_id):
+        raise HTTPException(status_code=404, detail="文档不存在")
+
+
+@router.post("/documents/{document_id}/reindex", response_model=KnowledgeReindexResponse)
+def reindex_knowledge_document(document_id: str) -> KnowledgeReindexResponse:
+    try:
+        job = controller.enqueue_index_document(document_id)
+        return KnowledgeReindexResponse(
+            document_id=document_id, indexed_chunks=0, status=job.status
+        )
+    except ValueError as exc:
+        http_bad_request(exc)
+
+
+@router.get("/search", response_model=KnowledgeSearchResponse)
+def search_knowledge(query: str) -> KnowledgeSearchResponse:
+    hits = controller.search_knowledge(query)
+    return KnowledgeSearchResponse(hits=hits)

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llm-plugins-builtin"
+version = "0.1.0"
+description = "Built-in A-Liang-UI LLM provider plugins (Ollama, OpenAI, DeepSeek)"
+requires-python = ">=3.10"
+dependencies = [
+    "a-liang-ui-api",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.2.1",
+    "langchain-deepseek",
+    "langchain-anthropic",
+]
+
+[project.entry-points."a-liang-ui.plugins"]
+llm_anthropic = "llm_plugins_builtin.anthropic:AnthropicLlmPlugin"
+llm_deepseek = "llm_plugins_builtin.deepseek:DeepSeekLlmPlugin"
+llm_ollama = "llm_plugins_builtin.ollama:OllamaLlmPlugin"
+llm_openai = "llm_plugins_builtin.openai:OpenAiLlmPlugin"
+
+[tool.uv.sources]
+a-liang-ui-api = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["llm_plugins_builtin"]
+

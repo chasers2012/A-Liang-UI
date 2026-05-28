@@ -1,0 +1,17 @@
+services:
+  a-liang-ui:
+    # 与 .github/workflows/release.yml 一致：a-liang-ui:<tag>、a-liang-ui:latest
+    image: ${APP_IMAGE:-a-liang-ui:latest}
+    pull_policy: if_not_present
+    ports:
+      - '8000:8000'
+    environment:
+      NEXT_PUBLIC_BACKEND_API: /api
+      WORKSPACE_ROOT: /data
+      CORS_ORIGINS: '*'
+    volumes:
+      - a-liang-ui-data:/data
+    restart: unless-stopped
+
+volumes:
+  a-liang-ui-data:

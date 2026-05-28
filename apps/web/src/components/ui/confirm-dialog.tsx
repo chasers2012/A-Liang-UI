@@ -1,24 +1,17 @@
-"use client";
+'use client';
 
-
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-} from "@/components/ui/dialog";
-import type { ComponentProps, ReactNode } from "react";
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from '@/components/ui/dialog';
+import type { ComponentProps, ReactNode } from 'react';
 
 export type ConfirmDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  title: ComponentProps<typeof DialogHeader>["title"];
+  title: ComponentProps<typeof DialogHeader>['title'];
   description: ReactNode;
   cancelLabel?: string;
   confirmLabel: string;
-  confirmVariant?: "default" | "destructive";
+  confirmVariant?: 'default' | 'destructive';
   loading?: boolean;
   /** 提交中按钮文案，例如「删除中…」 */
   loadingLabel?: string;
@@ -32,9 +25,9 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  cancelLabel = "取消",
+  cancelLabel = '取消',
   confirmLabel,
-  confirmVariant = "default",
+  confirmVariant = 'default',
   loading = false,
   loadingLabel,
   showCloseButton = true,
@@ -42,28 +35,15 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="md" >
+      <DialogContent size="md">
         <DialogHeader showCloseButton={showCloseButton} title={title} />
-        <DialogBody variant="inset">
-          {description}
-        </DialogBody>
-        <DialogFooter >
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+        <DialogBody variant="inset">{description}</DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             {cancelLabel}
           </Button>
-          <Button
-            type="button"
-            variant={confirmVariant}
-            disabled={loading}
-            onClick={() => void onConfirm()}
-          >
-            {loading
-              ? (loadingLabel ?? `${confirmLabel}中…`)
-              : confirmLabel}
+          <Button type="button" variant={confirmVariant} disabled={loading} onClick={() => void onConfirm()}>
+            {loading ? (loadingLabel ?? `${confirmLabel}中…`) : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

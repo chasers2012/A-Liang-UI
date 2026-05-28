@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, Field
 
-from app import datetime_utils
+from app.common import datetime_utils
 from app.common.id import create_id_generator
+from app.factors.models import FactorRow
 
 FACTORS_DIR = "factors/source"
 
@@ -15,81 +16,9 @@ def source_relative_path(factor_id: str) -> str:
     return f"{FACTORS_DIR}/{factor_id}.py"
 
 
-class FactorRecord(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    id: str = Field(description="因子的id, 格式是UUID")
-    name: str = Field(description="因子名称")
-    group: str = Field(description="因子组")
-    description: str = Field(description="因子描述")
-    max_window: int = Field(description="因子最大窗口", default=1)
-    dependencies: list[str] = Field(
-        description="因子依赖的列这些列会在data中传给因子calc方法",
-        default_factory=lambda: ["close"],
-    )
-    source_path: str = Field(description="因子源码路径")
-    created_at: str = Field(description="因子创建时间")
-    updated_at: str = Field(description="因子更新时间")
-
-
 class FactorRegistryFile(BaseModel):
     version: int = Field(description="因子注册文件版本", default=1)
-    items: list[FactorRecord] = Field(description="因子注册文件中的因子列表", default_factory=list)
-
-
-class FactorCreate(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    name: str = Field(description="因子名称")
-    group: str = Field(description="因子组", default="factor")
-    description: str = Field(description="因子描述", default="")
-    max_window: int = Field(description="因子最大窗口", default=1)
-    dependencies: list[str] = Field(
-        description="因子依赖的列这些列会在data中传给因子calc方法",
-        default_factory=lambda: ["close"],
-    )
-    source: str | None = Field(description="因子源码", default=None)
-
-    @field_validator("name")
-    @classmethod
-    def _strip_name(cls, v: str) -> str:
-        s = v.strip()
-        if not s:
-            raise ValueError("name 不能为空")
-        return s
-
-    @model_validator(mode="after")
-    def _deps_and_window(self) -> FactorCreate:
-        deps = [d.strip() for d in self.dependencies if str(d).strip()]
-        if not deps:
-            raise ValueError("dependencies 不能为空")
-        if self.max_window < 1:
-            raise ValueError("max_window 须 >= 1")
-        return self.model_copy(update={"dependencies": deps})
-
-    def to_record(self, factor_id: str, now: str) -> FactorRecord:
-        return FactorRecord(
-            id=factor_id,
-            name=self.name.strip(),
-            group=self.group.strip(),
-            description=self.description.strip(),
-            max_window=self.max_window,
-            dependencies=list(self.dependencies),
-            source_path=source_relative_path(factor_id),
-            created_at=now,
-            updated_at=now,
-        )
-
-
-class FactorPatch(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    name: str | None = None
-    group: str | None = None
-    description: str | None = None
-    max_window: int | None = None
-    dependencies: list[str] | None = None
-    source: str | None = None
+    items: list[FactorRow] = Field(description="因子注册文件中的因子列表", default_factory=list)
 
 
 class FactorSummaryPublic(BaseModel):
@@ -97,7 +26,7 @@ class FactorSummaryPublic(BaseModel):
     name: str
     group: str
     description: str
-    max_window: int
+    is_plugin: bool = False
     dependencies: list[str]
     source_path: str
     created_at: str
@@ -106,19 +35,29 @@ class FactorSummaryPublic(BaseModel):
 
 class FactorDetailPublic(FactorSummaryPublic):
     source: str
+    param_specs: list[FactorParamSpecPublic] = Field(default_factory=list)
 
 
-def record_to_summary(rec: FactorRecord) -> FactorSummaryPublic:
+class FactorParamSpecPublic(BaseModel):
+    name: str
+    label: str
+    description: str = ""
+    default: float | int | None = None
+    min: float | int | None = None
+    max: float | int | None = None
+
+
+def row_to_summary(row: FactorRow) -> FactorSummaryPublic:
     return FactorSummaryPublic(
-        id=rec.id,
-        name=rec.name,
-        group=rec.group,
-        description=rec.description,
-        max_window=rec.max_window,
-        dependencies=list(rec.dependencies),
-        source_path=rec.source_path,
-        created_at=rec.created_at,
-        updated_at=rec.updated_at,
+        id=row.id,
+        name=row.name,
+        group=row.group,
+        description=row.description,
+        is_plugin=row.is_plugin,
+        dependencies=list(row.dependencies),
+        source_path=row.source_path,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 

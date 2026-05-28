@@ -1,8 +1,8 @@
-/** 评价方案（工作流图）与节点类型目录 DTO。 */
+/** 评价方案（工作流图）与节点类型清单 DTO。 */
 
-import { WorkflowGraphPersisted } from "@/components/workflow-graph/reactflow/types";
+import { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
 
-/** 从工作流图序列化中解析出的工作流节点摘要（供展示/工具函数）。 */
+/** 从工作流图序列化中解析出的工作流节点摘要（供结构消费方使用，如工具函数或校验）。 */
 export interface WorkflowNodeDto {
   id: string;
   type: string;
@@ -25,6 +25,7 @@ export interface NodeTypeSocketPublic {
   required: boolean;
   value_type: string;
   label?: string;
+  description?: string;
   default?: unknown;
   render_type?: string | null;
   options?: Array<string | number> | null;
@@ -33,16 +34,7 @@ export interface NodeTypeSocketPublic {
   maximum?: number | null;
 }
 
-/** /evaluation-profiles/node-types 的目录项（节点定义 + 业务扩展字段）。 */
-export interface EvaluationNodeTypeCatalogItemPublic {
-  type: string;
-  label: string;
-  description: string;
-  /** workflow.Node.category：前端用于分组/展示 */
-  category: string | null;
-  inputs: NodeTypeSocketPublic[];
-  outputs: NodeTypeSocketPublic[];
-  metric_id?: string | null;
-  socket_labels?: Record<string, string>;
-  period_day_style_sockets?: string[];
+export interface WorkflowIOSpecPublic {
+  workflow_inputs: NodeTypeSocketPublic[];
+  workflow_outputs: NodeTypeSocketPublic[];
 }

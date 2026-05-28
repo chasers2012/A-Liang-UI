@@ -1,5 +1,0 @@
-root = true
-
-[apps/web/**]
-indent_style = space
-indent_size = 2

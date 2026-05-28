@@ -5,7 +5,8 @@ export interface FactorSummaryPublic {
   name: string;
   group: string;
   description: string;
-  max_window: number;
+  is_plugin: boolean;
+  window: number;
   dependencies: string[];
   source_path: string;
   created_at: string;
@@ -14,40 +15,35 @@ export interface FactorSummaryPublic {
 
 export interface FactorDetailPublic extends FactorSummaryPublic {
   source: string;
+  param_specs: FactorParamSpecPublic[];
 }
 
-export interface FactorEvaluationsAggregatePublic {
-  total_factors: number;
-  evaluated_count: number;
-  unevaluated_count: number;
-  primary_period: string;
-  mean_ic_primary_avg: number | null;
+export interface FactorParamSpecPublic {
+  name: string;
+  label: string;
+  description?: string;
+  default?: number | null;
+  min?: number | null;
+  max?: number | null;
 }
 
 export interface FactorEvaluationRowPublic {
+  /** Evaluation run primary key (not factor_id/profile_id). */
+  id?: string | null;
   factor_id: string;
   name: string;
   has_evaluation: boolean;
   evaluated_at?: string | null;
   window?: { start?: string | null; end?: string | null } | null;
-  stock_count?: number | null;
+  instrument_count?: number | null;
   error?: string | null;
   /**
    * Workflow collected results payload (来自后端 FactorEvaluationRowPublic#results).
-   * 具体结构取决于工作流中 CollectResult 节点的输入/连线配置。
+   * 具体结构取决于工作流 workflow_outputs.result 的连线配置。
    */
   results?: unknown;
-
-  // 以下字段目前主要用于展示聚合指标；后端可能不返回时请按需兼容。
   mean_ic?: Record<string, number>;
   mean_return_spread?: Record<string, number>;
   /** Present when the run used a named evaluation profile (with or without workflow nodes). */
   evaluation_profile_id?: string | null;
-  /** @deprecated 旧字段：工作流节点输出（可能已被 results 替代）。 */
-  metric_results?: Record<string, unknown>;
-}
-
-export interface FactorEvaluationsSummaryPublic {
-  aggregate: FactorEvaluationsAggregatePublic;
-  rows: FactorEvaluationRowPublic[];
 }

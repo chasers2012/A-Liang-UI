@@ -1,33 +1,38 @@
 {
-    "name": "quant-agent",
-    "private": true,
-    "pnpm": {
-        "ignoredBuiltDependencies": [
-            "sharp",
-            "unrs-resolver"
-        ]
-    },
-    "scripts": {
-        "dev": "pnpm run dev:all",
-        "dev:web": "node scripts/run-with-tree-kill.mjs pnpm --filter web dev",
-        "dev:api": "node scripts/run-with-tree-kill.mjs uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
-        "_dev:web:inner": "pnpm --filter web dev",
-        "_dev:api:inner": "uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
-        "sync:py": "uv sync",
-        "install:all": "pnpm install && uv sync",
-        "dev:all": "node scripts/dev-all.mjs",
-        "build": "pnpm --filter web build",
-        "build:all": "pnpm --filter web build && pnpm run build:api",
-        "build:api": "python apps/api/build.py",
-        "lint": "pnpm --filter web lint",
-        "lint:fix": "pnpm --filter web lint:fix",
-        "prepare": "husky"
-    },
-    "devDependencies": {
-        "@commitlint/cli": "^20.5.0",
-        "@commitlint/config-conventional": "^20.5.0",
-        "tree-kill": "^1.2.2",
-        "husky": "^9.1.7"
-    },
-    "packageManager": "pnpm@9.15.0"
+  "name": "a-liang-ui",
+  "private": true,
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "sharp",
+      "unrs-resolver"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm run dev:all",
+    "dev:web": "node scripts/run-with-tree-kill.mjs pnpm --filter web dev",
+    "dev:api": "node scripts/run-with-tree-kill.mjs uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "_dev:web:inner": "pnpm --filter web dev",
+    "_dev:api:inner": "uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "sync:py": "uv sync",
+    "install:all": "pnpm install && uv sync",
+    "dev:all": "node scripts/dev-all.mjs",
+    "build": "pnpm --filter web build",
+    "build:all": "pnpm --filter web build && pnpm run build:api",
+    "build:api": "python apps/api/build.py",
+    "build:standalone": "python scripts/build_standalone.py",
+    "lint": "pnpm --filter web lint",
+    "lint:fix": "pnpm --filter web lint:fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "lint-staged": "^16.2.4",
+    "prettier": "^3.6.2",
+    "tree-kill": "^1.2.2",
+    "husky": "^9.1.7"
+  },
+  "packageManager": "pnpm@9.15.0"
 }

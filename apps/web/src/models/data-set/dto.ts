@@ -1,10 +1,12 @@
 /** 数据集 DTO（与后端 `/data-sets` API 契约一致）。 */
 
+import type { WorkflowGraphPersisted } from '@/components/workflow-graph/reactflow/types';
+
 export interface DataSetDatasourceBindingPublic {
   datasource_id: string;
   datasource_name: string;
   datasource_type: string;
-  dependencies: string[];
+  columns: string[];
 }
 
 export interface DataSetPublic {
@@ -12,9 +14,10 @@ export interface DataSetPublic {
   name: string;
   description: string;
   datasource_bindings: DataSetDatasourceBindingPublic[];
+  preprocessing_workflow: WorkflowGraphPersisted;
   start: string;
   end: string;
-  stock_codes: string[];
+  instrument_codes: string[];
   created_at: string;
   updated_at: string;
 }

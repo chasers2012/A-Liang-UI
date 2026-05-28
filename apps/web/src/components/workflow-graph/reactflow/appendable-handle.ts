@@ -1,4 +1,4 @@
-export const APPENDABLE_HANDLE_MARKER = "__appendable__";
+export const APPENDABLE_HANDLE_MARKER = '__appendable__';
 
 export function appendableHandleId(baseName: string, slotIndex: number): string {
   return `${baseName}${APPENDABLE_HANDLE_MARKER}${slotIndex}`;
@@ -23,10 +23,6 @@ export function appendableSlotSortKey(handle: string): number {
   if (idx < 0) {
     return 1;
   }
-  const n = Number.parseInt(
-    handle.slice(idx + APPENDABLE_HANDLE_MARKER.length),
-    10,
-  );
+  const n = Number.parseInt(handle.slice(idx + APPENDABLE_HANDLE_MARKER.length), 10);
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
-

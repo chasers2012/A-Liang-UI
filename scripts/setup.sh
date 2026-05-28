@@ -27,7 +27,7 @@ ensure_uv() {
     die "uv was installed but is not on PATH; open a new shell or add ${HOME}/.local/bin to PATH"
 }
 
-echo "==> quant-agent setup (repo: $repo_root)"
+echo "==> A-Liang-UI setup (repo: $repo_root)"
 
 need_cmd pnpm
 ensure_uv

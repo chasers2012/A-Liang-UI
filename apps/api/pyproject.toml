@@ -3,41 +3,43 @@ requires = ["hatchling>=1.18.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quant-agent-api"
+name = "a-liang-ui-api"
 version = "0.1.0"
-description = "quant-agent Python API"
-requires-python = ">=3.10"
+description = "A-Liang-UI Python API"
+requires-python = ">=3.11"
 dependencies = [
-  "agent",
-  "agent-workflow-nodes",
   "custom-code",
   "fastapi>=0.115.0",
+  "sse-starlette>=2.1.0",
+  "python-multipart>=0.0.20",
   "uvicorn[standard]>=0.32.0",
-  "sqlalchemy>=2.0.0",
-  "psycopg[binary]>=3.1.0",
-  "pymysql>=1.1.0",
+  "sqlmodel>=0.0.24",
+  "cryptography>=42.0.0",
   "workspace",
-  "evaluate",
-  "evaluation-metric-templates",
-  "evaluation-workflow-nodes",
+  "data-source",
   "factor",
-  "sql-datasource",
-  "csv-datasource",
+  "pandas>=2.3.0",
   "numpy>=1.26.0",
+  "croniter>=6.0.0",
+  "vectorbt",
   "workflow",
+  "langchain>=0.3.0",
+  "langchain-community>=0.3.0",
+  "langchain-chroma>=0.2.0",
+  "chromadb>=0.5.0",
+  "langchain-classic>=1.0.3",
+  "rank-bm25>=0.2.2",
+  "deepagents>=0.5.3",
+  "langgraph-checkpoint-sqlite>=3.0.3",
+  "diskcache>=5.6.3",
+  "docling>=2.92.0",
 ]
 
 [tool.uv.sources]
-agent = { workspace = true }
-agent-workflow-nodes = { workspace = true }
 custom-code = { workspace = true }
 workspace = { workspace = true }
-evaluate = { workspace = true }
-evaluation-metric-templates = { workspace = true }
-evaluation-workflow-nodes = { workspace = true }
+data-source = { workspace = true }
 factor = { workspace = true }
-sql-datasource = { workspace = true }
-csv-datasource = { workspace = true }
 workflow = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "embedding-plugins-openai"
+version = "0.1.0"
+description = "OpenAI-compatible embedding provider plugin for A-Liang-UI"
+requires-python = ">=3.10"
+dependencies = [
+    "a-liang-ui-api",
+    "langchain-openai>=1.2.1",
+]
+
+[project.entry-points."a-liang-ui.plugins"]
+embedding_openai = "embedding_plugins_openai:OpenAiEmbeddingPlugin"
+
+[tool.uv.sources]
+a-liang-ui-api = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["embedding_plugins_openai"]

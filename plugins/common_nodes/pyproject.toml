@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "common-nodes"
+version = "0.1.0"
+description = "Common workflow node plugin for A-Liang-UI"
+requires-python = ">=3.10"
+dependencies = [
+    "a-liang-ui-api",
+    "workflow",
+]
+
+[project.entry-points."a-liang-ui.plugins"]
+common = "common_nodes.plugin:CommonNodesPlugin"
+
+[tool.uv.sources]
+a-liang-ui-api = { workspace = true }
+workflow = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["common_nodes"]

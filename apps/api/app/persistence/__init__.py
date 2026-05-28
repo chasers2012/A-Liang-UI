@@ -1,1 +1,11 @@
-"""Shared persistence helpers for workspace-backed registries."""
+"""Persistence layer bootstrap."""
+
+from __future__ import annotations
+
+from app.persistence.sqlite_db import create_db_and_tables
+from app.startup_jobs import register_startup_job
+
+
+@register_startup_job
+def init_sqlite_persistence() -> None:
+    create_db_and_tables()

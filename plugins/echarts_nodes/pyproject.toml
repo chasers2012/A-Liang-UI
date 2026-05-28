@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.18.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "echarts-nodes"
+version = "0.1.0"
+description = "ECharts workflow node plugin for A-Liang-UI"
+requires-python = ">=3.10"
+dependencies = [
+    "a-liang-ui-api",
+    "workflow",
+    "echartsy>=0.7.4",
+]
+
+[project.entry-points."a-liang-ui.plugins"]
+echarts = "echarts_nodes.plugin:EchartsNodesPlugin"
+
+[tool.uv.sources]
+a-liang-ui-api = { workspace = true }
+workflow = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["echarts_nodes"]

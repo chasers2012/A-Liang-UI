@@ -1,36 +1,370 @@
-import { atom } from "jotai";
+import { atom } from 'jotai';
+import { atomEffect } from 'jotai-effect';
 
-import { listDatasources } from "@/lib/quant-agent-api";
-import type { DataSourcePublic } from "./dto";
+import { ApiError } from '@/api/client';
+import {
+  deleteDatasource,
+  inspectDatasourceColumns,
+  listDatasourcePlugins,
+  listDatasources,
+  testDatasource,
+} from '@/api/datasources';
+import { defaultNewName } from '@/lib/default-new-name';
+import { createRefreshableAsyncAtoms } from '@/lib/refreshable-async-atoms';
+import type { DataSourcePublic, DatasourcePluginPublic } from './dto';
+import { commitDatasourceForm } from './commit-datasource';
+import { emptyForm, hydrateFormFromDataSource, type FormState } from './form-model';
+import {
+  computeDatasourcePluginBaseConfigValid,
+  computeDatasourcePluginConfigValid,
+  computeDatasourcePluginFormSchemas,
+  nestDatasourceConfigForApi,
+  getDatasourceColumnsConfig,
+  pluginHasWriteSchema,
+  type DatasourcePluginFormSchemas,
+} from './plugin-form-schemas';
 
-export type DatasourcesPanelState = {
-  items: DataSourcePublic[] | null;
-  loadError: string | null;
-  busyId: string | null;
-  testHint: { id: string; ok: boolean; message: string } | null;
-  deleteTarget: DataSourcePublic | null;
-  deleting: boolean;
-};
-
-export const datasourcesPanelAtom = atom<DatasourcesPanelState>({
-  items: null,
-  loadError: null,
-  busyId: null,
-  testHint: null,
-  deleteTarget: null,
-  deleting: false,
+export const datasourcesListAtoms = createRefreshableAsyncAtoms<DataSourcePublic[] | null>({
+  initialValue: null,
+  fetcher: listDatasources,
 });
 
-export const refreshDatasourcesPanelAtom = atom(null, async (_get, set) => {
-  set(datasourcesPanelAtom, (s) => ({ ...s, loadError: null }));
+export const datasourcesBusyIdAtom = atom<string | null>(null);
+export const datasourcesTestHintAtom = atom<{ id: string; ok: boolean; message: string } | null>(null);
+export const datasourcesSelectedIdAtom = atom<string | null>(null);
+export const datasourcesIsEditingAtom = atom<boolean>(false);
+
+/** 数据源详情卡当前 tab（受控于页面） */
+export type DatasourceDetailTab = 'base' | 'fields' | 'write';
+export const datasourcesDetailActiveTabAtom = atom<DatasourceDetailTab>('base');
+export const datasourcesDeleteTargetAtom = atom<DataSourcePublic | null>(null);
+export const datasourcesDeletingAtom = atom<boolean>(false);
+export const datasourcesDeleteErrorAtom = atom<string | null>(null);
+
+export const datasourcesInspectColumnsBusyAtom = atom(false);
+export const datasourcesInspectColumnsErrorAtom = atom<string | null>(null);
+
+/** 清除详情区全局提示（删除失败、连接测试、列探测）；在切换选中项、Tab、编辑流等操作后调用 */
+export const clearDatasourceTransientAlertsAtom = atom(null, (_get, set) => {
+  set(datasourcesDeleteErrorAtom, null);
+  set(datasourcesTestHintAtom, null);
+  set(datasourcesInspectColumnsErrorAtom, null);
+});
+
+/** 右侧编辑器表单（新建/编辑数据源） */
+export const datasourcesEditorFormAtom = atom<FormState>(emptyForm());
+export const datasourcesPluginsAtom = atom<DatasourcePluginPublic[]>([]);
+export const datasourcesEditorFormErrorAtom = atom<string | null>(null);
+export const datasourcesEditorSubmittingAtom = atom(false);
+
+export type DatasourceSearchListRow = {
+  id: string;
+  label: string;
+  description: null;
+  category: string;
+};
+
+export const datasourcesSearchListRowsAtom = atom((get): DatasourceSearchListRow[] | null => {
+  const items = get(datasourcesListAtoms.valueAtom);
+  if (!items) return null;
+  return items.map((ds) => ({
+    id: ds.id,
+    label: ds.name,
+    description: null,
+    category: ds.type,
+  }));
+});
+
+export const datasourcesListCountAtom = atom((get) => {
+  const items = get(datasourcesListAtoms.valueAtom);
+  return items?.length ?? 0;
+});
+
+export const datasourcesSelectedListItemAtom = atom((get): DataSourcePublic | null => {
+  const selectedId = get(datasourcesSelectedIdAtom);
+  if (!selectedId) return null;
+  const items = get(datasourcesListAtoms.valueAtom);
+  return items?.find((d) => d.id === selectedId) ?? null;
+});
+
+export const datasourcesPluginFormSchemasAtom = atom((get): DatasourcePluginFormSchemas => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugins = get(datasourcesPluginsAtom);
+  const plugin = plugins.find((p) => p.type === form.type) ?? null;
+  return computeDatasourcePluginFormSchemas(form, plugin);
+});
+
+const datasourcesSelectedPluginAtom = atom((get): DatasourcePluginPublic | null => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugins = get(datasourcesPluginsAtom);
+  return plugins.find((p) => p.type === form.type) ?? null;
+});
+
+export const datasourcesSelectedPluginHasWriteTabAtom = atom((get) => {
+  const plugin = get(datasourcesSelectedPluginAtom);
+  return pluginHasWriteSchema(plugin);
+});
+
+/** 插件连接 + 字段映射 + 数据写入 RJSF 是否满足 required */
+export const datasourcesPluginConfigValidAtom = atom((get) => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugin = get(datasourcesSelectedPluginAtom);
+  const isEdit = get(datasourcesIsEditingAtom) && !!get(datasourcesSelectedIdAtom);
+  return computeDatasourcePluginConfigValid(form, plugin, { isEdit });
+});
+
+export const datasourcesPluginBaseConfigValidAtom = atom((get) => {
+  const form = get(datasourcesEditorFormAtom);
+  const plugin = get(datasourcesSelectedPluginAtom);
+  const isEdit = get(datasourcesIsEditingAtom) && !!get(datasourcesSelectedIdAtom);
+  return computeDatasourcePluginBaseConfigValid(form, plugin, { isEdit });
+});
+
+export const datasourcesEditorMainFormValidAtom = atom((get) => {
+  const form = get(datasourcesEditorFormAtom);
+  const isEditing = get(datasourcesIsEditingAtom);
+  const selectedId = get(datasourcesSelectedIdAtom);
+  return !!form.name.trim() && !(isEditing && !selectedId && !form.type.trim());
+});
+
+/**
+ * 列探测：读取 {@link datasourcesSelectedIdAtom} 与 {@link datasourcesEditorFormAtom}，
+ * 请求 `/datasources/inspect-columns`，成功则把列名与推断的日期/资产列写回表单 config（busy / error 也在此 atom 内维护）。
+ */
+export const inspectDatasourceColumnsAtom = atom(null, async (get, set): Promise<boolean> => {
+  const selectedId = get(datasourcesSelectedIdAtom);
+  const form = get(datasourcesEditorFormAtom);
+  const { type } = form;
+  const config = nestDatasourceConfigForApi(form);
+
+  set(datasourcesInspectColumnsBusyAtom, true);
+  set(datasourcesInspectColumnsErrorAtom, null);
   try {
-    const items = await listDatasources();
-    set(datasourcesPanelAtom, (s) => ({ ...s, items, loadError: null }));
-  } catch (e) {
-    set(datasourcesPanelAtom, (s) => ({
-      ...s,
-      items: null,
-      loadError: e instanceof Error ? e.message : String(e),
+    const resp = await inspectDatasourceColumns({
+      ...(selectedId ? { datasource_id: selectedId } : { type }),
+      config,
+    });
+    const cols = Array.from(new Set((resp.columns ?? []).map((x) => String(x).trim()).filter((x) => x.length > 0)));
+    if (cols.length === 0) {
+      throw new Error('连接成功，但未获取到可用列名');
+    }
+    set(datasourcesEditorFormAtom, (f) => ({
+      ...f,
+      config: {
+        ...f.config,
+        columns: {
+          ...getDatasourceColumnsConfig(f),
+          columns: cols,
+          date_column: resp.date_column,
+          asset_column: resp.asset_column,
+        },
+      },
     }));
+    return true;
+  } catch (err) {
+    const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : String(err);
+    set(datasourcesInspectColumnsErrorAtom, msg);
+    return false;
+  } finally {
+    set(datasourcesInspectColumnsBusyAtom, false);
   }
+});
+
+/** 从基础配置进入字段映射：先执行列探测，成功则切换到「字段映射」tab。 */
+export const datasourceEditorProceedFromBaseTabAtom = atom(null, async (_get, set) => {
+  const ok = await set(inspectDatasourceColumnsAtom);
+  if (ok) set(datasourcesDetailActiveTabAtom, 'fields');
+});
+
+/** 从字段映射进入数据写入 tab（仅当插件配置了 write_schema）。 */
+export const datasourceEditorProceedFromFieldsTabAtom = atom(null, (_get, set) => {
+  set(datasourcesDetailActiveTabAtom, 'write');
+});
+
+/**
+ * 保存右侧编辑器：清空表单错误、置提交中、调用 {@link commitDatasourceForm}、刷新列表、
+ * 新建成功时选中新建 id、退出编辑态；失败写入 {@link datasourcesEditorFormErrorAtom}。
+ */
+export const saveDatasourceEditorAtom = atom(null, async (get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesEditorFormErrorAtom, null);
+  set(datasourcesEditorSubmittingAtom, true);
+  try {
+    const selectedId = get(datasourcesSelectedIdAtom);
+    const isEditing = get(datasourcesIsEditingAtom);
+    const isCreate = isEditing && !selectedId;
+    const form = get(datasourcesEditorFormAtom);
+    const items = get(datasourcesListAtoms.valueAtom);
+    const result = await commitDatasourceForm(isCreate ? 'create' : 'edit', selectedId, form, items);
+    set(datasourcesListAtoms.refreshAtom);
+    // 与 nodes 详情 bump 类似：等列表 async 完成后再退出编辑，避免 sync 读到旧列表导致右侧详情不更新
+    await get(datasourcesListAtoms.asyncAtom);
+    if (isCreate && result) {
+      set(datasourcesSelectedIdAtom, result.id);
+    }
+    set(datasourcesIsEditingAtom, false);
+    return result;
+  } catch (err) {
+    set(datasourcesEditorFormErrorAtom, err instanceof Error ? err.message : String(err));
+  } finally {
+    set(datasourcesEditorSubmittingAtom, false);
+  }
+});
+
+export const confirmDeleteDatasourceAtom = atom(null, async (get, set) => {
+  const target = get(datasourcesDeleteTargetAtom);
+  if (!target) return;
+
+  const deletedId = target.id;
+  const selectedId = get(datasourcesSelectedIdAtom);
+  const itemsBefore = get(datasourcesListAtoms.valueAtom) ?? [];
+  const deletedIndex = itemsBefore.findIndex((d) => d.id === deletedId);
+
+  set(datasourcesDeletingAtom, true);
+  set(datasourcesDeleteErrorAtom, null);
+  try {
+    await deleteDatasource(deletedId);
+    set(datasourcesDeleteTargetAtom, null);
+    set(datasourcesListAtoms.refreshAtom);
+    await get(datasourcesListAtoms.asyncAtom);
+
+    if (selectedId === deletedId) {
+      set(clearDatasourceTransientAlertsAtom);
+      set(datasourcesIsEditingAtom, false);
+      set(datasourcesDetailActiveTabAtom, 'base');
+
+      const itemsAfter = get(datasourcesListAtoms.valueAtom) ?? [];
+      if (itemsAfter.length === 0) {
+        set(datasourcesSelectedIdAtom, null);
+        set(datasourcesEditorFormAtom, emptyForm());
+      } else {
+        const nextIndex = Math.min(deletedIndex >= 0 ? deletedIndex : 0, itemsAfter.length - 1);
+        set(datasourcesSelectedIdAtom, itemsAfter[nextIndex]!.id);
+      }
+    }
+  } catch (e) {
+    set(datasourcesDeleteErrorAtom, e instanceof Error ? e.message : String(e));
+  } finally {
+    set(datasourcesDeletingAtom, false);
+  }
+});
+
+/** 挂载数据源页时刷新左侧列表 */
+export const datasourcesListRefreshOnMountEffectAtom = atomEffect((_get, set) => {
+  void set(datasourcesListAtoms.refreshAtom);
+});
+
+/** 加载插件目录 → {@link datasourcesPluginsAtom} */
+export const datasourcesPluginsCatalogEffectAtom = atomEffect((_get, set) => {
+  let cancelled = false;
+  void (async () => {
+    try {
+      const catalog = await listDatasourcePlugins();
+      if (!cancelled) set(datasourcesPluginsAtom, catalog);
+    } catch {
+      if (!cancelled) set(datasourcesPluginsAtom, []);
+    }
+  })();
+  return () => {
+    cancelled = true;
+  };
+});
+
+/** 非编辑态：用列表中的选中项填充右侧表单 */
+export const datasourcesSyncViewFormEffectAtom = atomEffect((get, set) => {
+  const isEditing = get(datasourcesIsEditingAtom);
+  if (isEditing) return;
+  const selectedId = get(datasourcesSelectedIdAtom);
+  if (!selectedId) {
+    set(datasourcesEditorFormAtom, emptyForm());
+    return;
+  }
+  const items = get(datasourcesListAtoms.valueAtom);
+  if (items == null) return;
+  const item = items.find((d) => d.id === selectedId) ?? null;
+  if (!item) {
+    set(datasourcesSelectedIdAtom, null);
+    set(datasourcesEditorFormAtom, emptyForm());
+    return;
+  }
+  set(datasourcesEditorFormAtom, hydrateFormFromDataSource(item));
+});
+
+function buildNewDatasourceDraft(plugins: DatasourcePluginPublic[]): FormState {
+  return {
+    ...emptyForm(),
+    name: defaultNewName('新数据源'),
+    type: plugins[0]?.type ?? '',
+    config: { connection: {}, columns: {}, write: {} },
+  };
+}
+
+/** 进入编辑态时拉取详情或初始化新建草稿；退出时复位加载/提交相关 UI 状态 */
+export const datasourcesEditorLoadEffectAtom = atomEffect((get, set) => {
+  const isEditing = get(datasourcesIsEditingAtom);
+  if (!isEditing) {
+    set(datasourcesEditorFormErrorAtom, null);
+    set(datasourcesEditorSubmittingAtom, false);
+    return;
+  }
+  const selectedId = get(datasourcesSelectedIdAtom);
+  const plugins = get(datasourcesPluginsAtom);
+  set(datasourcesEditorFormErrorAtom, null);
+  // Entering edit mode should not trigger a detail refetch; current form is already synced from selected item.
+  if (!selectedId) {
+    const form = get(datasourcesEditorFormAtom);
+    if (!form.type.trim()) {
+      set(datasourcesEditorFormAtom, buildNewDatasourceDraft(plugins));
+    }
+  }
+});
+
+export const testDatasourceConnectionAtom = atom(null, async (_get, set, datasourceId: string) => {
+  set(datasourcesBusyIdAtom, datasourceId);
+  set(datasourcesTestHintAtom, null);
+  try {
+    const r = await testDatasource(datasourceId);
+    set(datasourcesTestHintAtom, { id: datasourceId, ok: r.ok, message: r.message });
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e);
+    set(datasourcesTestHintAtom, { id: datasourceId, ok: false, message: msg });
+  } finally {
+    set(datasourcesBusyIdAtom, null);
+  }
+});
+
+export const selectDatasourceFromListAtom = atom(null, (_get, set, itemId: string) => {
+  set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesSelectedIdAtom, itemId);
+  set(datasourcesIsEditingAtom, false);
+});
+
+export const startCreateNewDatasourceAtom = atom(null, (get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesEditorFormErrorAtom, null);
+  set(datasourcesSelectedIdAtom, null);
+  set(datasourcesEditorFormAtom, buildNewDatasourceDraft(get(datasourcesPluginsAtom)));
+  set(datasourcesIsEditingAtom, true);
+  set(datasourcesDetailActiveTabAtom, 'base');
+});
+
+export const enterDatasourceEditorAtom = atom(null, (_get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesIsEditingAtom, true);
+  set(datasourcesDetailActiveTabAtom, 'base');
+});
+
+export const requestDeleteDatasourceAtom = atom(null, (_get, set, item: DataSourcePublic) => {
+  set(datasourcesDeleteTargetAtom, item);
+});
+
+export const cancelDatasourceEditorAtom = atom(null, (_get, set) => {
+  set(clearDatasourceTransientAlertsAtom);
+  set(datasourcesEditorFormErrorAtom, null);
+  set(datasourcesIsEditingAtom, false);
+});
+
+export const dismissDeleteDatasourceDialogAtom = atom(null, (_get, set) => {
+  set(datasourcesDeleteTargetAtom, null);
+  set(datasourcesDeleteErrorAtom, null);
 });

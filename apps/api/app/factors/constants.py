@@ -8,10 +8,13 @@ class NewFactor(Factor):
     name = ""
     group = "custom"
     description = ""
-    dependencies = ["close"]
-    max_window = 2 # max_window需要是calc中所使用的data最大窗口长度 + 1，例如使用20天的数据，需要将max_window设置为21
+    param_specs = ({"name": "lookback", "label": "回看周期", "default": 1, "min": 1, "max": 250},)
 
-    def calc(self, data: pd.DataFrame) -> pd.Series:
-        close = data["close"]
-        return close.groupby(level="asset", group_keys=False).pct_change(periods=1)
+    @property
+    def window(self) -> int:
+        return int(self.params["lookback"])  # window 需要是 calc 中所使用的 data 最大窗口长度
+
+    def calc(self, close: pd.DataFrame) -> pd.DataFrame:
+        lookback = int(self.params["lookback"])
+        return close.pct_change(periods=lookback)
 """

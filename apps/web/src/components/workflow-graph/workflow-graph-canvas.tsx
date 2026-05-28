@@ -1,74 +1,66 @@
-"use client";
+'use client';
 
-import { Maximize2, Minus, Plus, Trash2 } from "lucide-react";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { AlertTriangle, Minus, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BackgroundVariant,
-  Controls,
   Panel,
   ReactFlow,
   addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
   useReactFlow,
   useStore,
   type Connection,
   type IsValidConnection,
-  type Edge,
-  type EdgeChange,
   type Node,
-  type NodeChange,
-  type OnConnect,
   type ReactFlowInstance,
-  type Viewport,
-} from "reactflow";
-import "reactflow/dist/style.css";
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { WorkflowGraphFitViewButton } from './workflow-graph-fit-view-button';
 
 import {
   WORKFLOW_GRAPH_RF_NODE_TYPES,
   WORKFLOW_GRAPH_RF_PRO_OPTIONS,
-} from "./reactflow/workflow-graph-reactflow-defaults";
-import {
-  WorkflowGraphContextProvider,
-  useWorkflowGraphContext,
-} from "./workflow-graph-context";
+} from './reactflow/workflow-graph-reactflow-defaults';
+import { resolveCollisions } from './reactflow/resolve-collisions';
+import { WorkflowGraphContextProvider, useWorkflowGraphContext } from './workflow-graph-context';
 import {
   toPersistedWorkflowGraph,
   toReactFlowEdges,
   toReactFlowNodes,
-} from "./reactflow/serialize";
-import { normalizeAppendableHandle } from "./reactflow/appendable-handle";
+  WORKFLOW_INPUT_NODE_ID,
+  WORKFLOW_OUTPUT_NODE_ID,
+} from './reactflow/serialize';
+import { normalizeAppendableHandle } from './reactflow/appendable-handle';
+import { isValueTypeCompatible } from './value-type';
 
-import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from "./types";
-import { isWireInputSpec } from "./workflow-node-input-spec";
-import { WorkflowGraphPersisted } from "./reactflow/types";
-
+import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from './types';
+import { WorkflowGraphPersisted } from './reactflow/types';
+import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
 
 /** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
-export const WORKFLOW_GRAPH_NODE_DRAG_MIME =
-  "application/x-workflow-graph-node-type";
+export const WORKFLOW_GRAPH_NODE_DRAG_MIME = 'application/x-workflow-graph-node-type';
 
+function isProtectedPreprocessingNode(node: Node): boolean {
+  return node.id === WORKFLOW_INPUT_NODE_ID || node.id === WORKFLOW_OUTPUT_NODE_ID;
+}
 
-export function WorkflowGraphZoomToolbar() {
-  const { zoomIn, zoomOut, fitView, getNodes, getEdges, deleteElements } =
-    useReactFlow();
-  const { readOnly } = useWorkflowGraphContext();
-  const hasSelection = useStore(
+export function WorkflowGraphZoomToolbar(props: {
+  readOnly?: boolean;
+  onRefreshNodeDefinitions?: () => void;
+  refreshingNodeDefinitions?: boolean;
+}) {
+  const { readOnly: readOnlyFromProps, onRefreshNodeDefinitions, refreshingNodeDefinitions = false } = props;
+  const { zoomIn, zoomOut, getNodes, getEdges, deleteElements } = useReactFlow();
+  const { readOnly: readOnlyFromContext } = useWorkflowGraphContext();
+  const readOnly = readOnlyFromProps ?? readOnlyFromContext;
+  const hasDeletableSelection = useStore(
     useCallback(
       (s) =>
-        s.getNodes().some((n) => n.selected) ||
+        s.getNodes().some((node) => node.selected && !isProtectedPreprocessingNode(node)) ||
         s.edges.some((e) => e.selected),
       [],
     ),
@@ -76,8 +68,9 @@ export function WorkflowGraphZoomToolbar() {
 
   const onDeleteSelected = useCallback(() => {
     if (readOnly) return;
+    const deletableNodes = getNodes().filter((node) => node.selected && !isProtectedPreprocessingNode(node));
     deleteElements({
-      nodes: getNodes().filter((n) => n.selected),
+      nodes: deletableNodes,
       edges: getEdges().filter((e) => e.selected),
     });
   }, [readOnly, deleteElements, getNodes, getEdges]);
@@ -86,7 +79,7 @@ export function WorkflowGraphZoomToolbar() {
     <Panel position="bottom-left" className="m-3!">
       <div
         data-slot="workflow-graph-zoom"
-        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md backdrop-blur-md"
+        className="flex flex-col overflow-hidden rounded-lg border border-border bg-popover/95 text-popover-foreground shadow-md"
       >
         {!readOnly ? (
           <Button
@@ -95,11 +88,25 @@ export function WorkflowGraphZoomToolbar() {
             size="icon"
             className="h-8 w-8 rounded-none border-b border-border text-destructive hover:text-destructive"
             onClick={onDeleteSelected}
-            disabled={!hasSelection}
+            disabled={!hasDeletableSelection}
             aria-label="删除选中的节点或连线"
             title="删除选中（Delete / Backspace）"
           >
             <Trash2 className="size-4" />
+          </Button>
+        ) : null}
+        {!readOnly ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-none border-b border-border"
+            onClick={onRefreshNodeDefinitions}
+            disabled={refreshingNodeDefinitions}
+            aria-label="刷新当前工作流节点定义"
+            title="刷新节点定义"
+          >
+            <RefreshCw className={cn('size-4', refreshingNodeDefinitions && 'animate-spin')} />
           </Button>
         ) : null}
         <Button
@@ -122,18 +129,7 @@ export function WorkflowGraphZoomToolbar() {
         >
           <Minus className="size-4" />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 rounded-none"
-          onClick={() => {
-            fitView({ padding: 0.18, duration: 200 });
-          }}
-          aria-label="适应画布"
-        >
-          <Maximize2 className="size-4" />
-        </Button>
+        <WorkflowGraphFitViewButton />
       </div>
     </Panel>
   );
@@ -142,272 +138,387 @@ export function WorkflowGraphZoomToolbar() {
 export type WorkflowGraphCanvasHandle = {
   getGraph: () => WorkflowGraphPersisted;
   /** 在画布中添加一个节点（`typeKey` 为后端节点类型）。 */
-  addNode: (
-    typeKey: string,
-    opts?: { position?: { x: number; y: number } },
-  ) => void;
-  /** 调整视图以包含所有节点。 */
-  fitViewAll: () => Promise<void>;
+  addNode: (typeKey: string, opts?: { position?: { x: number; y: number } }) => Promise<void>;
 };
 
 export type WorkflowGraphCanvasProps = {
   nodeTypes: WorkflowNodeTypeDefinition[];
-  /** 初始图：工作流图对象（`{nodes,links,viewport}`）。 */
+  /** 初始图：工作流图对象（`{nodes,links}`）。 */
   initialGraph: WorkflowGraphPersisted;
   className?: string;
   readOnly?: boolean;
+  onRefreshNodeDefinitions?: () => Promise<WorkflowNodeTypeDefinition[] | void> | WorkflowNodeTypeDefinition[] | void;
+  onNodeSelect?: (node: { id: string; label?: string | null; outputs?: WorkflowNodeTypeDefinition['outputs'] }) => void;
+  resolveNodeTypeDefinition?: (typeKey: string) => Promise<WorkflowNodeTypeDefinition | null | undefined>;
+  resolveNodeTypeDefinitions?: (typeKeys: string[]) => Promise<WorkflowNodeTypeDefinition[] | null | undefined>;
 };
 
-
-function useGraph(initialGraph: WorkflowGraphPersisted, catalog: Record<string, WorkflowNodeTypeDefinition>) {
-  const initialNodes = useMemo(
-    () => toReactFlowNodes(initialGraph, catalog),
-    [initialGraph, catalog],
-  );
-  const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
-  const initialViewport = useMemo(
-    () => initialGraph.viewport,
-    [initialGraph.viewport],
-  );
-
-  const [nodes, setNodes] = useState<Node[]>(initialNodes);
-  const [edges, setEdges] = useState<Edge[]>(initialEdges);
-  const [viewport, setViewport] = useState<Viewport | undefined>(
-    initialViewport,
-  );
-
-
-  useEffect(() => {
-    setNodes(initialNodes);
-  }, [initialNodes]);
-  useEffect(() => {
-    setEdges(initialEdges);
-  }, [initialEdges]);
-  useEffect(() => {
-    setViewport(initialViewport);
-  }, [initialViewport]);
-
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
-  }, []);
-
-  const onEdgesChange = useCallback((changes: EdgeChange[]) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
-  }, []);
-
-  const onConnect: OnConnect = useCallback((c: Connection) => {
-    if (!c.target || !c.targetHandle) return;
-    setEdges((eds) => {
-      const withoutSameInputHandle = eds.filter(
-        (e) =>
-          !(e.target === c.target && e.targetHandle === c.targetHandle),
-      );
-      return addEdge(
-        {
-          ...c,
-          id: crypto.randomUUID(),
-          type: "default",
-        },
-        withoutSameInputHandle,
-      );
-    });
-  }, []);
-
-  return useMemo(() => ({
-    nodes,
-    edges,
-    viewport,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    setViewport,
-    setNodes,
-    initialViewport
-  }), [nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport]);
+function pickConnectionNodes(rf: ReactFlowInstance | null, sourceId: string, targetId: string) {
+  if (!rf) return { sourceNode: undefined, targetNode: undefined };
+  const allNodes = rf.getNodes();
+  return {
+    sourceNode: allNodes.find((n) => n.id === sourceId),
+    targetNode: allNodes.find((n) => n.id === targetId),
+  };
 }
 
-
-
-export const WorkflowGraphCanvas = forwardRef<
-  WorkflowGraphCanvasHandle,
-  WorkflowGraphCanvasProps
->(
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
+  return (
+    <div className="m-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">工作流渲染出错，请检查工作流文件</p>
+          <p className="mt-1 text-xs break-all opacity-90">{error.message || ''}</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="border-destructive/40 bg-background text-foreground hover:bg-muted"
+          onClick={reset}
+        >
+          重试
+        </Button>
+      </div>
+    </div>
+  );
+}
+export const WorkflowGraphCanvas = forwardRef<WorkflowGraphCanvasHandle, WorkflowGraphCanvasProps>(
   function WorkflowGraphCanvas(
-    { className, nodeTypes, initialGraph, readOnly = false },
+    {
+      className,
+      nodeTypes,
+      initialGraph,
+      readOnly = false,
+      onRefreshNodeDefinitions,
+      onNodeSelect,
+      resolveNodeTypeDefinition,
+      resolveNodeTypeDefinitions,
+    },
     ref,
   ) {
-    const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(() => Object.fromEntries(nodeTypes.map((d) => [d.type, d])), [nodeTypes]);
+    const catalog: Record<string, WorkflowNodeTypeDefinition> = useMemo(
+      () => Object.fromEntries(nodeTypes.map((d) => [d.id, d])),
+      [nodeTypes],
+    );
     const reactFlowRef = useRef<ReactFlowInstance | null>(null);
+    const initialNodes = useMemo(
+      () => toReactFlowNodes(initialGraph, catalog, { readOnly }),
+      [initialGraph, catalog, readOnly],
+    );
+    const initialEdges = useMemo(() => toReactFlowEdges(initialGraph), [initialGraph]);
 
-    const { nodes, edges, viewport, onNodesChange, onEdgesChange, onConnect, setViewport, setNodes, initialViewport } = useGraph(initialGraph, catalog);
+    const fitViewOptions = useMemo(() => ({ padding: 0.18, duration: 200 }), []);
+    const [refreshingNodeDefinitions, setRefreshingNodeDefinitions] = useState(false);
 
+    const onInit = useCallback((inst: ReactFlowInstance) => {
+      reactFlowRef.current = inst;
+    }, []);
 
+    useEffect(() => {
+      const rf = reactFlowRef.current;
+      if (!rf) return;
+      rf.setNodes(initialNodes);
+      rf.setEdges(initialEdges);
+    }, [initialNodes, initialEdges]);
 
-    const isValidConnection: IsValidConnection = useCallback(
-      (c) => {
-        // 仅允许 “输出 -> 输入” 且两端 value_type 相同
-        if (!c.source || !c.target) return false;
-        if (!c.sourceHandle || !c.targetHandle) return false;
-
-        const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
-        const targetHandle = normalizeAppendableHandle(c.targetHandle);
-
-        const sourceNode = nodes.find((n) => n.id === c.source);
-        const targetNode = nodes.find((n) => n.id === c.target);
-        const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
-          ?.outputs;
-        const targetInputsRaw = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)
-          ?.inputs;
-        const targetInputs = (targetInputsRaw ?? []).filter(isWireInputSpec);
-
-        const out = sourceOutputs?.find((s) => s.name === sourceHandle);
-        const inp = targetInputs.find((s) => s.name === targetHandle);
-        if (!out || !inp) return false;
-
-        return out.value_type === inp.value_type;
+    const onNodeDragStop = useCallback(
+      (_: unknown, node: Node) => {
+        if (readOnly) return;
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setNodes((nds) =>
+          resolveCollisions(nds, {
+            fixedNodeId: node.id,
+            margin: 32,
+            maxIterations: 80,
+            overlapThreshold: 0.12,
+          }),
+        );
       },
-      [nodes],
+      [readOnly],
     );
 
-    const onMoveEnd = (_: unknown, vp: Viewport) => {
-      setViewport(vp);
-    };
+    const onConnect = useCallback(
+      (c: Connection) => {
+        if (readOnly) return;
+        if (!c.target || !c.targetHandle) return;
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setEdges((eds) => {
+          const withoutSameInputHandle = eds.filter(
+            (e) => !(e.target === c.target && e.targetHandle === c.targetHandle),
+          );
+          return addEdge(
+            {
+              ...c,
+              id: crypto.randomUUID(),
+              type: 'default',
+            },
+            withoutSameInputHandle,
+          );
+        });
+      },
+      [readOnly],
+    );
+
+    const onNodeClick = useCallback(
+      (_: unknown, node: Node) => {
+        const data = node.data as { label?: string; outputs?: WorkflowNodeTypeDefinition['outputs'] } | undefined;
+        onNodeSelect?.({ id: node.id, label: data?.label ?? null, outputs: data?.outputs ?? [] });
+      },
+      [onNodeSelect],
+    );
+
+    const isValidConnection: IsValidConnection = useCallback((c) => {
+      // 支持 value_type 逗号分隔多类型；两端任一类型匹配即可连接。
+      if (!c.source || !c.target) return false;
+      if (!c.sourceHandle || !c.targetHandle) return false;
+
+      const sourceHandle = normalizeAppendableHandle(c.sourceHandle);
+      const targetHandle = normalizeAppendableHandle(c.targetHandle);
+
+      const { sourceNode, targetNode } = pickConnectionNodes(reactFlowRef.current, c.source, c.target);
+      const sourceOutputs = (sourceNode?.data as { outputs?: { name: string; value_type: string }[] } | undefined)
+        ?.outputs;
+      const targetInputs = (targetNode?.data as { inputs?: WorkflowNodeInputSpec[] } | undefined)?.inputs ?? [];
+
+      const out = sourceOutputs?.find((s) => s.name === sourceHandle);
+      const inp = targetInputs.find((s) => s.name === targetHandle);
+      if (!out || !inp) return false;
+
+      // 对于 param（内联字段）常见 value_type 为空；此时视为“任意类型可接入”，
+      // 由后续将 param 提升为 socket 后再按节点真实输入类型约束。
+      return isValueTypeCompatible(out.value_type, inp.value_type);
+    }, []);
 
     const addNode = useCallback(
-      (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
+      async (typeKey: string, opts?: { position?: { x: number; y: number } }) => {
         if (readOnly) return;
-        const def = catalog[typeKey];
-        setNodes((prev) => {
+        let resolvedDef: WorkflowNodeTypeDefinition | null | undefined;
+        try {
+          resolvedDef = await resolveNodeTypeDefinition?.(typeKey);
+        } catch {
+          resolvedDef = undefined;
+        }
+        const def = resolvedDef ?? catalog[typeKey];
+        const rf = reactFlowRef.current;
+        if (!rf) return;
+        rf.setNodes((prev) => {
           const idx = prev.length;
           const fallbackPos = {
             x: 40 + (idx % 3) * 260,
             y: 40 + Math.floor(idx / 3) * 120,
           };
           const position = opts?.position ?? fallbackPos;
-          return [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              type: "workflowStep",
-              position,
-              data: {
-                backendType: typeKey,
-                label: def?.label ?? typeKey,
-                inputs: def?.inputs ?? [],
-                outputs: def?.outputs ?? [],
-                params: {},
-              },
-            } satisfies Node,
-          ];
+          const node = {
+            id: crypto.randomUUID(),
+            type: 'workflowStep',
+            position,
+            data: {
+              backendType: typeKey,
+              label: def?.label ?? typeKey,
+              description: def?.description,
+              inputs: def?.inputs ?? [],
+              outputs: def?.outputs ?? [],
+              params: {},
+            },
+          } satisfies Node;
+
+          return resolveCollisions([...prev, node], {
+            fixedNodeId: node.id,
+            margin: 32,
+            maxIterations: 80,
+            overlapThreshold: 0.12,
+          });
         });
       },
-      [catalog, readOnly, setNodes],
+      [catalog, readOnly, resolveNodeTypeDefinition],
     );
 
-    const getGraph = useCallback(() => {
-      const rfViewport = reactFlowRef.current?.getViewport?.();
-      return toPersistedWorkflowGraph(nodes, edges, rfViewport ?? viewport);
-    }, [nodes, edges, viewport]);
-
-    const fitViewAll = useCallback((): Promise<void> => {
+    const applyNodeDefinitionsToCurrentGraph = useCallback((defs: WorkflowNodeTypeDefinition[]) => {
       const rf = reactFlowRef.current;
-      if (!rf) return Promise.resolve();
-
-      return new Promise<void>((resolve) => {
-        // 保存时会触发重渲染；延迟一帧，确保 React Flow 已完成节点尺寸测量。
-        requestAnimationFrame(() => {
-          const padding = 0.18;
-          const duration = 200;
-          rf.fitView({ padding, duration });
-          // 等待 fitView 动画/布局结束后再 resolve，保证 getViewport() 已更新。
-          setTimeout(resolve, duration + 50);
-        });
-      });
+      if (!rf) return;
+      const nextCatalog = Object.fromEntries(defs.map((d) => [d.id, d]));
+      rf.setNodes((nodes) =>
+        nodes.map((node) => {
+          const data = (node.data ?? {}) as {
+            backendType?: string;
+            label?: string;
+            description?: string;
+            inputs?: WorkflowNodeTypeDefinition['inputs'];
+            outputs?: WorkflowNodeTypeDefinition['outputs'];
+          };
+          const backendType = data.backendType;
+          if (!backendType) return node;
+          const def = nextCatalog[backendType];
+          if (!def) return node;
+          return {
+            ...node,
+            data: {
+              ...data,
+              label: def.label ?? backendType,
+              description: def.description,
+              inputs: def.inputs ?? [],
+              outputs: def.outputs ?? [],
+            },
+          };
+        }),
+      );
     }, []);
 
-    useImperativeHandle(
-      ref,
-      () => ({ getGraph, addNode, fitViewAll }),
-      [getGraph, addNode, fitViewAll],
+    const resolveCurrentGraphNodeDefinitions = useCallback(
+      async (defs: WorkflowNodeTypeDefinition[]) => {
+        if (!resolveNodeTypeDefinition) return defs;
+        const rf = reactFlowRef.current;
+        if (!rf) return defs;
+
+        const merged = new Map(defs.map((d) => [d.id, d]));
+        const backendTypes = new Set(
+          rf
+            .getNodes()
+            .map((node) => ((node.data ?? {}) as { backendType?: string }).backendType)
+            .filter((type): type is string => Boolean(type)),
+        );
+
+        const typeKeys = [...backendTypes];
+        if (typeKeys.length === 0) return [...merged.values()];
+
+        let unresolvedTypeKeys = typeKeys;
+        if (resolveNodeTypeDefinitions) {
+          try {
+            const resolvedBatch = await resolveNodeTypeDefinitions(typeKeys);
+            const resolvedTypeKeys = new Set<string>();
+            for (const def of resolvedBatch ?? []) {
+              merged.set(def.id, def);
+              resolvedTypeKeys.add(def.id);
+            }
+            unresolvedTypeKeys = typeKeys.filter((typeKey) => !resolvedTypeKeys.has(typeKey));
+          } catch {
+            // fallback to single fetch below
+          }
+        }
+
+        await Promise.all(
+          unresolvedTypeKeys.map(async (typeKey) => {
+            try {
+              const resolved = await resolveNodeTypeDefinition(typeKey);
+              if (resolved) merged.set(typeKey, resolved);
+            } catch {
+              // ignore single node definition refresh failure
+            }
+          }),
+        );
+
+        return [...merged.values()];
+      },
+      [resolveNodeTypeDefinition, resolveNodeTypeDefinitions],
     );
 
-    const onDragOver = (e: React.DragEvent) => {
-      if (readOnly) return;
-      const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
-      if (!has) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-    };
+    const onRefreshCurrentNodeDefinitions = useCallback(async () => {
+      if (readOnly || refreshingNodeDefinitions) return;
+      setRefreshingNodeDefinitions(true);
+      try {
+        const latestDefinitions = await onRefreshNodeDefinitions?.();
+        const refreshedDefinitions = await resolveCurrentGraphNodeDefinitions(latestDefinitions ?? nodeTypes);
+        applyNodeDefinitionsToCurrentGraph(refreshedDefinitions);
+      } finally {
+        setRefreshingNodeDefinitions(false);
+      }
+    }, [
+      applyNodeDefinitionsToCurrentGraph,
+      nodeTypes,
+      onRefreshNodeDefinitions,
+      readOnly,
+      refreshingNodeDefinitions,
+      resolveCurrentGraphNodeDefinitions,
+    ]);
 
-    const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-      if (readOnly) return;
-      const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
-      if (!typeKey) return;
-      e.preventDefault();
-
+    const getGraph = useCallback(() => {
       const rf = reactFlowRef.current;
-      const el = e.currentTarget;
       if (!rf) {
-        addNode(typeKey);
-        return;
+        return toPersistedWorkflowGraph(initialNodes, initialEdges);
       }
-      const rect = el.getBoundingClientRect();
-      const clientPoint = { x: e.clientX, y: e.clientY };
-      const flowPos = rf.screenToFlowPosition(clientPoint);
-      if (
-        clientPoint.x < rect.left ||
-        clientPoint.x > rect.right ||
-        clientPoint.y < rect.top ||
-        clientPoint.y > rect.bottom
-      ) {
-        addNode(typeKey);
-        return;
-      }
-      addNode(typeKey, { position: flowPos });
-    };
+      return toPersistedWorkflowGraph(rf.getNodes(), rf.getEdges());
+    }, [initialEdges, initialNodes]);
+
+    useImperativeHandle(ref, () => ({ getGraph, addNode }), [getGraph, addNode]);
+
+    const onDragOver = useCallback(
+      (e: React.DragEvent) => {
+        if (readOnly) return;
+        const has = e.dataTransfer.types.includes(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+        if (!has) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      },
+      [readOnly],
+    );
+
+    const onDrop = useCallback(
+      (e: React.DragEvent<HTMLDivElement>) => {
+        if (readOnly) return;
+        const typeKey = e.dataTransfer.getData(WORKFLOW_GRAPH_NODE_DRAG_MIME);
+        if (!typeKey) return;
+        e.preventDefault();
+
+        const rf = reactFlowRef.current;
+        const el = e.currentTarget;
+        if (!rf) {
+          void addNode(typeKey);
+          return;
+        }
+        const rect = el.getBoundingClientRect();
+        const clientPoint = { x: e.clientX, y: e.clientY };
+        const flowPos = rf.screenToFlowPosition(clientPoint);
+        if (
+          clientPoint.x < rect.left ||
+          clientPoint.x > rect.right ||
+          clientPoint.y < rect.top ||
+          clientPoint.y > rect.bottom
+        ) {
+          void addNode(typeKey);
+          return;
+        }
+        void addNode(typeKey, { position: flowPos });
+      },
+      [addNode, readOnly],
+    );
 
     return (
-      <div
-        data-slot="workflow-graph-layout"
-        className={cn(
-          "flex min-h-[320px] flex-col gap-3", className
-        )}
-      >
+      <div data-slot="workflow-graph-layout" className={cn('flex h-full min-h-0 flex-col gap-3', className)}>
         <div
           className={cn(
-            "workflow-graph-canvas-root relative flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40",
-            readOnly && "workflow-graph-canvas-root--readonly",
+            'workflow-graph-canvas-root relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-muted text-sm shadow-sm ring-1 ring-border/40',
+            readOnly && 'workflow-graph-canvas-root--readonly',
           )}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
         >
           <WorkflowGraphContextProvider readOnly={readOnly}>
-            <div
-              className="relative min-h-[280px] flex-1"
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-            >
+            <ErrorBoundary errorComponent={Error}>
               <ReactFlow
-                nodes={nodes}
-                edges={edges}
+                defaultNodes={initialNodes}
+                defaultEdges={initialEdges}
                 nodeTypes={WORKFLOW_GRAPH_RF_NODE_TYPES}
-                onInit={(inst) => {
-                  reactFlowRef.current = inst;
-                }}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
+                onlyRenderVisibleElements
+                onInit={onInit}
+                onNodeDragStop={onNodeDragStop}
+                onNodeClick={onNodeClick}
                 onConnect={readOnly ? undefined : onConnect}
                 isValidConnection={readOnly ? undefined : isValidConnection}
-                onMoveEnd={onMoveEnd}
-                defaultViewport={initialViewport}
-                fitView={!initialViewport}
-                deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+                fitView
+                fitViewOptions={fitViewOptions}
+                deleteKeyCode={readOnly ? null : ['Backspace', 'Delete']}
                 nodesDraggable={!readOnly}
                 nodesConnectable={!readOnly}
-                elementsSelectable={!readOnly}
+                elementsSelectable
                 zoomOnScroll
                 zoomOnPinch
                 panOnScroll={false}
                 proOptions={WORKFLOW_GRAPH_RF_PRO_OPTIONS}
-                className="min-h-[280px] flex-1"
+                className="h-full min-h-0 flex-1"
               >
                 <Background
                   id="workflow-graph-bg"
@@ -416,13 +527,16 @@ export const WorkflowGraphCanvas = forwardRef<
                   variant={BackgroundVariant.Dots}
                   className="opacity-60"
                 />
-                <Controls showInteractive={false} />
-                <WorkflowGraphZoomToolbar />
+                <WorkflowGraphZoomToolbar
+                  readOnly={readOnly}
+                  onRefreshNodeDefinitions={onRefreshCurrentNodeDefinitions}
+                  refreshingNodeDefinitions={refreshingNodeDefinitions}
+                />
               </ReactFlow>
-
-            </div>
+            </ErrorBoundary>
           </WorkflowGraphContextProvider>
         </div>
       </div>
     );
-  });
+  },
+);

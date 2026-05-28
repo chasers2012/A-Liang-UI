@@ -1,25 +1,58 @@
-"use client";
+'use client';
 
-import { useId } from "react";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { memo, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { ArrowUp, LoaderCircle, Square } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  activeSessionIdAtom,
+  chatInputAtom,
+  chatIsSendingAtom,
+  isSessionGeneratingAtomFamily,
+  sendChatMessageAtom,
+  stopChatMessageAtom,
+} from '@/models/chat';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 
-interface AiChatComposerProps {
-  input: string;
-  isSending: boolean;
-  onInputChange: (value: string) => void;
-  onSend: () => void;
-}
+const STOP_LOCK_MS = 300;
 
-export function AiChatComposer({
-  input,
-  isSending,
-  onInputChange,
-  onSend,
-}: AiChatComposerProps) {
+export const AiChatComposer = memo(function AiChatComposer() {
   const formId = useId();
+  const [input, setInput] = useAtom(chatInputAtom);
+  const isSending = useAtomValue(chatIsSendingAtom);
+  const activeSessionId = useAtomValue(activeSessionIdAtom);
+  const isGeneratingInActiveSession = useAtomValue(isSessionGeneratingAtomFamily(activeSessionId ?? '__none__'));
+  const send = useSetAtom(sendChatMessageAtom);
+  const stop = useSetAtom(stopChatMessageAtom);
+  const [stopLocked, setStopLocked] = useState(false);
+  const stopUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isBlockedByOtherSession = isSending && !isGeneratingInActiveSession;
+
+  useEffect(() => {
+    return () => {
+      if (stopUnlockTimerRef.current) {
+        clearTimeout(stopUnlockTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleComposerButtonClick = useCallback(() => {
+    if (isBlockedByOtherSession) return;
+    if (isGeneratingInActiveSession) {
+      stop();
+      return;
+    }
+    if (stopUnlockTimerRef.current) {
+      clearTimeout(stopUnlockTimerRef.current);
+    }
+    setStopLocked(true);
+    stopUnlockTimerRef.current = setTimeout(() => {
+      setStopLocked(false);
+      stopUnlockTimerRef.current = null;
+    }, STOP_LOCK_MS);
+    void send();
+  }, [isBlockedByOtherSession, isGeneratingInActiveSession, send, stop]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -30,12 +63,20 @@ export function AiChatComposer({
         <Button
           type="button"
           size="icon"
-          aria-label="发送"
-          onClick={() => void onSend()}
-          disabled={isSending || !input.trim()}
+          aria-label={isGeneratingInActiveSession ? '停止生成' : '发送'}
+          onClick={handleComposerButtonClick}
+          disabled={
+            isBlockedByOtherSession ||
+            (!isGeneratingInActiveSession && !input.trim()) ||
+            (isGeneratingInActiveSession && stopLocked)
+          }
         >
-          {isSending ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden />
+          {isGeneratingInActiveSession ? (
+            stopLocked ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden />
+            ) : (
+              <Square className="size-4 fill-current" aria-hidden />
+            )
           ) : (
             <ArrowUp className="size-4" aria-hidden />
           )}
@@ -45,16 +86,16 @@ export function AiChatComposer({
           rows={3}
           placeholder="输入消息，Enter 发送，Shift+Enter 换行"
           value={input}
-          disabled={isSending}
-          onChange={(ev) => onInputChange(ev.target.value)}
+          onChange={(ev) => setInput(ev.target.value)}
           onKeyDown={(ev) => {
-            if (ev.key !== "Enter" || ev.shiftKey) return;
+            if (isSending) return;
+            if (ev.key !== 'Enter' || ev.shiftKey) return;
             ev.preventDefault();
-            void onSend();
+            void send();
           }}
-          className="min-h-18 min-w-0 flex-1 resize-y"
+          className="min-h-18 min-w-0 flex-1 resize-y max-h-64"
         />
       </div>
     </div>
   );
-}
+});

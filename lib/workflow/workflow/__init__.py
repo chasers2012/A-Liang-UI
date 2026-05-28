@@ -4,9 +4,20 @@ Public API is grouped roughly as: graph models, execution, node type metadata
 (:mod:`workflow.node_types`), discovery (:mod:`workflow.node_registry`), validation.
 """
 
+from .editing import (
+    add_node,
+    connect_nodes,
+    connect_to_workflow_output,
+    connect_workflow_input,
+    disconnect_link,
+    move_node,
+    remove_node,
+    set_node_param,
+    unset_node_param,
+    update_node_metadata,
+)
 from .executor import WorkflowExecutor, WorkflowUnknownNodeTypeError, gather_node_inputs
-from .graph import WorkflowGraph, WorkflowLink, WorkflowViewport
-from .graph_algo import assert_acyclic, topological_order
+from .graph_algo import topological_order
 from .node_decorator import collect_node_classes, workflow_node, workflow_node_type_key
 from .node_loader import WorkflowNodeLoader
 from .node_types import (
@@ -14,35 +25,47 @@ from .node_types import (
     BooleanNodeParam,
     Node,
     NodeParam,
-    NodeParamModel,
     NumberNodeParam,
     OptionsNodeParam,
     Socket,
     StringNodeParam,
-    validate_node_param_list,
+    TextareaNodeParam,
+    WorkflowGraph,
+    WorkflowLink,
+    WorkflowViewport,
 )
+from .validation import validate_required_workflow_fields
 
 __all__ = [
     "AppendableSocket",
     "BooleanNodeParam",
     "Node",
     "NodeParam",
-    "NodeParamModel",
     "NumberNodeParam",
     "OptionsNodeParam",
     "Socket",
     "StringNodeParam",
+    "TextareaNodeParam",
     "WorkflowExecutor",
     "WorkflowGraph",
     "WorkflowLink",
     "WorkflowNodeLoader",
     "WorkflowUnknownNodeTypeError",
     "WorkflowViewport",
-    "assert_acyclic",
+    "add_node",
     "collect_node_classes",
+    "connect_nodes",
+    "connect_to_workflow_output",
+    "connect_workflow_input",
+    "disconnect_link",
     "gather_node_inputs",
+    "move_node",
+    "remove_node",
+    "set_node_param",
     "topological_order",
-    "validate_node_param_list",
+    "unset_node_param",
+    "update_node_metadata",
+    "validate_required_workflow_fields",
     "workflow_node",
     "workflow_node_type_key",
 ]

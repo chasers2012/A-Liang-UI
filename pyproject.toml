@@ -1,45 +1,66 @@
 [project]
-name = "quant-agent"
+name = "a-liang-ui"
 version = "0.1.0"
 description = "Monorepo root: pnpm (apps/web) + uv workspace (apps/api)"
 requires-python = ">=3.9"
-dependencies = ["quant-agent-api"]
+dependencies = [
+    "a-liang-ui-api",
+    "datasource-plugins-builtin",
+    "datasource-plugins-baostock",
+    "datasource-plugins-tushare",
+    "llm-plugins-builtin",
+    "embedding-plugins-openai",
+    "embedding-plugins-huggingface",
+    "rerank-plugins-huggingface",
+    "echarts-nodes",
+    "common-nodes",
+    "strategy-nodes",
+    "alphalens-nodes",
+    "technical-nodes",
+    "example-factors",
+    "example-strategies",
+    "example-evaluation-profiles",
+]
 
 [tool.uv.sources]
-quant-agent-api = { workspace = true }
-csv-datasource = { workspace = true }
-sql-datasource = { workspace = true }
-evaluate = { workspace = true }
-evaluation-metric-templates = { workspace = true }
+a-liang-ui-api = { workspace = true }
+datasource-plugins-builtin = { workspace = true }
+datasource-plugins-baostock = { workspace = true }
+datasource-plugins-tushare = { workspace = true }
+llm-plugins-builtin = { workspace = true }
+embedding-plugins-openai = { workspace = true }
+embedding-plugins-huggingface = { workspace = true }
+rerank-plugins-huggingface = { workspace = true }
+echarts-nodes = { workspace = true }
+common-nodes = { workspace = true }
+strategy-nodes = { workspace = true }
+alphalens-nodes = { workspace = true }
+technical-nodes = { workspace = true }
+example-factors = { workspace = true }
+example-strategies = { workspace = true }
+example-evaluation-profiles = { workspace = true }
+data-source = { workspace = true }
 factor = { workspace = true }
-agent = { workspace = true }
 workspace = { workspace = true }
 custom-code = { workspace = true }
 workflow = { workspace = true }
-evaluation-workflow-nodes = { workspace = true }
-agent-workflow-nodes = { workspace = true }
 
 [tool.uv.workspace]
-members = ["apps/api", "lib/*"]
+members = ["apps/api", "lib/*", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin", "plugins/embedding_plugins_huggingface", "plugins/embedding_plugins_openai", "plugins/rerank_plugins_huggingface", "plugins/echarts_nodes", "plugins/common_nodes", "plugins/strategy_nodes", "plugins/alphalens_nodes", "plugins/technical_nodes", "plugins/example_factors", "plugins/example_strategies", "plugins/example_evaluation_profiles"]
 
 [dependency-groups]
 dev = [
     "httpx>=0.27.0",
     "pytest>=8.0.0",
-    "agent",
-    "csv-datasource",
-    "sql-datasource",
-    "evaluate",
     "factor",
     "workspace",
     "custom-code",
-    "psycopg[binary]>=3.1",
     "ruff>=0.15.8",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["lib", "apps/api/tests"]
-pythonpath = ["apps/api"]
+pythonpath = ["apps/api", "plugins/datasource_plugins_builtin", "plugins/datasource_plugins_baostock", "plugins/datasource_plugins_tushare", "plugins/llm_plugins_builtin"]
 addopts = ["-ra"]
 
 [tool.ruff]

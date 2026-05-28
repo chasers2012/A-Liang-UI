@@ -1,18 +1,14 @@
-"""Workflow node type metadata: dataclass definitions and JSON :class:`NodeParamModel`.
+"""Workflow node type metadata (sockets, params, nodes) and graph container models.
 
-- **Dataclasses** ``Socket``, ``NodeParam`` subclasses, ``Node``: used by ``@workflow_node`` and
-  :meth:`collect_node_classes` / catalogs.
-- **Pydantic** ``NodeParamModel`` / :func:`validate_node_param_list`: same public JSON shape as
-  ``NodeParam.serialize()``; used by API layers that need validation without Python node classes.
+Socket / :class:`Node` definitions are used by ``@workflow_node`` and
+:meth:`collect_node_classes` / catalogs. :class:`WorkflowGraph` holds serialized
+graph instances (nodes + links; viewport is not persisted).
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable
 from typing import Any, Literal
-
-from .node_loader import WorkflowNodeLoader
 
 # --- Dataclasses (compile-time node metadata) ---------------------------------
 
@@ -41,28 +37,6 @@ class Socket:
         self.description = description
         self.value_type = value_type
         self.render_type = render_type
-
-    @staticmethod
-    def parse(config_dict: dict) -> Socket:
-        return Socket(
-            name=config_dict.get("name", ""),
-            required=config_dict.get("required", False),
-            label=config_dict.get("label", ""),
-            description=config_dict.get("description", ""),
-            value_type=config_dict.get("value_type", ""),
-            render_type=config_dict.get("render_type", ""),
-        )
-
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly socket specification used by API responses."""
-        return {
-            "name": self.name,
-            "required": self.required,
-            "label": self.label,
-            "description": self.description,
-            "value_type": self.value_type,
-            "render_type": self.render_type,
-        }
 
 
 class AppendableSocket(Socket):
@@ -114,14 +88,6 @@ class NodeParam(Socket):
         self.default = default
         self.render_type = getattr(type(self), "render_type", None)
 
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly socket specification used by API responses."""
-        return {
-            **super().serialize(),
-            "default": self.default,
-            "render_type": self.render_type,
-        }
-
 
 class OptionsNodeParam(NodeParam):
     options: list[str | float | int] | Callable | None = None
@@ -148,14 +114,6 @@ class OptionsNodeParam(NodeParam):
             **_ignored,
         )
         self.options = options
-
-    def serialize(self) -> dict[str, Any]:
-        opts = self.options
-        options = list(opts()) if callable(opts) else list(opts or [])
-        return {
-            **super().serialize(),
-            "options": options,
-        }
 
 
 class NumberNodeParam(NodeParam):
@@ -189,9 +147,6 @@ class NumberNodeParam(NodeParam):
         self.minimum = minimum
         self.maximum = maximum
 
-    def serialize(self) -> dict[str, Any]:
-        return {**super().serialize(), "minimum": self.minimum, "maximum": self.maximum}
-
 
 class StringNodeParam(NodeParam):
     default: str = ""
@@ -217,6 +172,34 @@ class StringNodeParam(NodeParam):
             default=default,
             **_ignored,
         )
+
+
+class TextareaNodeParam(StringNodeParam):
+    """多行字符串参数（前端用 textarea 渲染，适合 JSON、长文本）。"""
+
+    render_type: str = "textarea"
+
+    def __init__(
+        self,
+        name: str,
+        required: bool = False,
+        label: str = "",
+        description: str = "",
+        value_type: str = "",
+        default: str = "",
+        rows: int = 6,
+        **_ignored: Any,
+    ) -> None:
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type,
+            default=default,
+            **_ignored,
+        )
+        self.rows = max(2, min(int(rows), 40))
 
 
 class BooleanNodeParam(NodeParam):
@@ -277,6 +260,58 @@ class DateNodeParam(NodeParam):
         )
 
 
+class RJSFNodeParam(NodeParam):
+    """A NodeParam rendered by React JSONSchema Form (RJSF) on frontend."""
+
+    render_type: str = "rjsf"
+    json_schema: dict[str, Any] | Callable[[], dict[str, Any]]
+    ui_schema: dict[str, Any] | Callable[[], dict[str, Any]]
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        required: bool = False,
+        label: str = "",
+        description: str = "",
+        value_type: str = "",
+        json_schema: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
+        ui_schema: dict[str, Any] | Callable[[], dict[str, Any]] | None = None,
+        default: Any | None = None,
+        **_ignored: Any,
+    ) -> None:
+        # Allow schema to be a function (e.g. depending on runtime settings).
+        # The function will be evaluated during serialization for API responses.
+        schema_preview: dict[str, Any] = {}
+        if isinstance(json_schema, dict):
+            schema_preview = json_schema
+        elif json_schema is None:
+            schema_preview = {}
+
+        if default is None and "default" in schema_preview:
+            default = schema_preview.get("default")
+
+        super().__init__(
+            name=name,
+            required=required,
+            label=label,
+            description=description,
+            value_type=value_type or schema_preview.get("type", "") or "object",
+            default=default,
+            **_ignored,
+        )
+        self.json_schema = json_schema or {}
+        self.ui_schema = ui_schema or {}
+
+    def resolve_json_schema(self) -> dict[str, Any]:
+        raw = self.json_schema() if callable(self.json_schema) else self.json_schema
+        return dict(raw or {})
+
+    def resolve_ui_schema(self) -> dict[str, Any]:
+        raw = self.ui_schema() if callable(self.ui_schema) else self.ui_schema
+        return dict(raw or {})
+
+
 class Node:
     """Unified workflow node model for both type-definition and graph-instance data.
 
@@ -322,112 +357,114 @@ class Node:
         self.outputs = outputs or ()
         self.params = params or {}
 
-    def execute(self, **kwargs: Any) -> tuple[Any, ...]:
+    def execute(self, **_kwargs: Any) -> tuple[Any, ...]:
         pass
 
-    def serialize(self) -> dict[str, Any]:
-        """JSON-friendly node definition payload."""
-        return {
-            "type": self.type,
-            "label": self.label,
-            "description": self.description,
-            "category": self.category,
-            "inputs": [s.serialize() for s in self.inputs],
-            "outputs": [s.serialize() for s in self.outputs],
-            "params": self.params,
-        }
 
-    @staticmethod
-    def parse(json_dict: dict[str, Any]) -> Node:
-        """Parse a workflow graph node config.
+# --- Graph instance models (nodes + links) ------------------------------------
 
-        Expected JSON shape is consistent with :meth:`serialize` (plus a few
-        optional UI fields like ``description`` that may be omitted).
-        """
-
-        type_key = json_dict.get("type", "")
-        if not isinstance(type_key, str) or not type_key.strip():
-            raise ValueError("node payload missing string field 'type'")
-
-        node_cls = WorkflowNodeLoader.instance().resolve(type_key)
-
-        # Try to build the node instance. Many built-in nodes have no required
-        # __init__ args; still, we mirror parse_workflow_node_source's behavior
-        # (fall back to __new__ if no-arg init fails).
-        try:
-            node_obj: Node = node_cls()  # type: ignore[call-arg]
-        except Exception:
-            node_obj = node_cls.__new__(node_cls)  # type: ignore[misc]
-
-        # Graph-instance fields.
-        node_obj.id = json_dict.get("id", "") if isinstance(json_dict.get("id"), str) else ""
-
-        pos_raw = json_dict.get("pos")
-        if isinstance(pos_raw, list) and len(pos_raw) >= 2:
-            try:
-                node_obj.pos = [float(pos_raw[0]), float(pos_raw[1])]
-            except (TypeError, ValueError):
-                node_obj.pos = [0.0, 0.0]
-        else:
-            node_obj.pos = [0.0, 0.0]
-
-        params_raw = json_dict.get("params", {})
-        node_obj.params = params_raw if isinstance(params_raw, dict) else {}
-
-        # Optional UI/persisted overrides (do not affect execution semantics).
-        for k in ("label", "description", "category", "entry", "type"):
-            v = json_dict.get(k)
-            if isinstance(v, str) and v.strip():
-                setattr(node_obj, k, v)
-
-        # If the resolved class doesn't carry socket metadata (or it was lost),
-        # we can reconstruct socket order from JSON payload.
-        if not getattr(node_obj, "outputs", None) and isinstance(json_dict.get("outputs"), list):
-            node_obj.outputs = tuple(
-                Socket.parse(s)
-                for s in json_dict.get("outputs", [])
-                if isinstance(s, dict) and s.get("name")
-            )
-        if not getattr(node_obj, "inputs", None) and isinstance(json_dict.get("inputs"), list):
-            node_obj.inputs = tuple(
-                Socket.parse(s)
-                for s in json_dict.get("inputs", [])
-                if isinstance(s, dict) and s.get("name")
-            )
-
-        return node_obj
+WorkflowEndpointKind = Literal["node", "workflow_input", "workflow_output"]
 
 
-# --- Pydantic (JSON interchange) ------------------------------------------------
-
-_PARAM_KEY_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-
-
-class NodeParamModel:
-    """Declarative schema for workflow node parameters (besides graph inputs).
-
-    For ``entry="execute"``, parameter keys are merged into the keyword arguments
-    passed to ``execute`` along with linked socket values.
-    """
+class WorkflowEndpoint:
+    kind: WorkflowEndpointKind
+    node_id: str | None
+    socket: str
 
     def __init__(
         self,
-        key: str,
-        label: str = "",
-        type: Literal["number", "boolean", "string"] = "number",
-        default: Any | None = None,
-        minimum: float | int | None = None,
-        maximum: float | int | None = None,
+        *,
+        kind: WorkflowEndpointKind,
+        socket: str,
+        node_id: str | None = None,
     ) -> None:
-        self.key = key
-        self.label = label
-        self.type = type
-        self.default = default
-        self.minimum = minimum
-        self.maximum = maximum
+        self.kind = kind
+        self.socket = socket
+        self.node_id = node_id
+
+    def serialize(self) -> dict[str, Any]:
+        if self.kind == "node":
+            return {"kind": "node", "node_id": self.node_id or "", "socket": self.socket}
+        if self.kind == "workflow_input":
+            return {"kind": "workflow_input", "socket": self.socket}
+        return {"kind": "workflow_output", "socket": self.socket}
 
 
-def validate_node_param_list(items: list[NodeParamModel]) -> None:
-    keys = [x.key for x in items]
-    if len(keys) != len(set(keys)):
-        raise ValueError("workflow_parameters 存在重复的 key")
+class WorkflowLink:
+    id: str | None = None
+    from_: WorkflowEndpoint
+    to: WorkflowEndpoint
+
+    def __init__(
+        self,
+        *,
+        id: str | None = None,
+        from_: WorkflowEndpoint | None = None,
+        to: WorkflowEndpoint | None = None,
+    ) -> None:
+        self.id = id
+        self.from_ = from_ or WorkflowEndpoint(kind="node", node_id="", socket="")
+        self.to = to or WorkflowEndpoint(kind="node", node_id="", socket="")
+
+    def serialize(self) -> dict[str, Any]:
+        return {"id": self.id, "from": self.from_.serialize(), "to": self.to.serialize()}
+
+
+class WorkflowViewport:
+    x: float = 0.0
+    y: float = 0.0
+    zoom: float = 1.0
+
+    def __init__(self, x: float = 0.0, y: float = 0.0, zoom: float = 1.0) -> None:
+        self.x = x
+        self.y = y
+        self.zoom = zoom
+
+    def serialize(self) -> dict:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "zoom": self.zoom,
+        }
+
+
+class WorkflowGraph:
+    nodes: list[Node]
+    links: list[WorkflowLink]
+    workflow_inputs: list[Socket]
+    workflow_outputs: list[Socket]
+    viewport: WorkflowViewport | None
+
+    def __init__(
+        self,
+        *,
+        nodes: list[Node] | None = None,
+        links: list[WorkflowLink] | None = None,
+        workflow_inputs: list[Socket] | None = None,
+        workflow_outputs: list[Socket] | None = None,
+        viewport: WorkflowViewport | None = None,
+    ) -> None:
+        self.nodes = list(nodes or [])
+        self.links = list(links or [])
+        self.workflow_inputs = list(workflow_inputs or [])
+        self.workflow_outputs = list(workflow_outputs or [])
+        self.viewport = viewport
+
+    def serialize(self) -> dict:
+        from .parser import Parser
+
+        nodes_payload: list[dict[str, Any]] = []
+        for node in self.nodes:
+            nodes_payload.append(
+                Parser.serialize_node(
+                    node,
+                    include_description=False,
+                    include_socket_description=False,
+                )
+            )
+        return {
+            "nodes": nodes_payload,
+            "links": [link.serialize() for link in self.links],
+            "workflow_inputs": [Parser.serialize_socket(s) for s in self.workflow_inputs],
+            "workflow_outputs": [Parser.serialize_socket(s) for s in self.workflow_outputs],
+        }
