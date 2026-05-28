@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: '阿量UI（A-Liang-UI）',
+  title: '阿量UI',
   description: 'Visual quantitative workflow editor with AI collaboration',
 };
 
