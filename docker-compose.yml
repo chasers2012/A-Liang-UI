@@ -6,7 +6,7 @@ services:
     ports:
       - '8000:8000'
     environment:
-      NEXT_PUBLIC_A_LIANG_UI_API: /api
+      NEXT_PUBLIC_BACKEND_API: /api
       A_LIANG_UI_WORKSPACE: /data
       CORS_ORIGINS: '*'
     volumes:

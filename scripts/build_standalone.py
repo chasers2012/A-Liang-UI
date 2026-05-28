@@ -143,7 +143,7 @@ def build_web(*, skip: bool) -> None:
         return
     pnpm = _resolve_tool("pnpm")
     env = os.environ.copy()
-    env.setdefault("NEXT_PUBLIC_A_LIANG_UI_API", "/api")
+    env.setdefault("NEXT_PUBLIC_BACKEND_API", "/api")
     _run([pnpm, "install", "--frozen-lockfile"], env=env)
     _run([pnpm, "--filter", "web", "build"], env=env)
     if not (WEB_OUT / "index.html").is_file():

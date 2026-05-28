@@ -6,7 +6,12 @@ function normalizeApiBase(raw: string): string {
 }
 
 function publicApiBaseFromEnv(): string | undefined {
-  const raw = process.env.NEXT_PUBLIC_A_LIANG_UI_API?.trim() || process.env.A_LIANG_UI_API?.trim();
+  const raw =
+    process.env.NEXT_PUBLIC_BACKEND_API?.trim() ||
+    process.env.NEXT_PUBLIC_QUANT_AGENT_API?.trim() ||
+    process.env.QUANT_AGENT_API?.trim() ||
+    process.env.NEXT_PUBLIC_A_LIANG_UI_API?.trim() ||
+    process.env.A_LIANG_UI_API?.trim();
   return raw ? normalizeApiBase(raw) : undefined;
 }
 
