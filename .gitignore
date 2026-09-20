@@ -28,6 +28,7 @@ apps/api/build
 Thumbs.db
 .cursor/plans
 .cursor/mcp.json
+.cursor/rules/common.mdc
 apps/web/.cursor/mcp.json
 .editorconfig
 
