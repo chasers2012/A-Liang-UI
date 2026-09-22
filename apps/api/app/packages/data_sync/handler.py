@@ -14,7 +14,7 @@ from app.packages.data_sync.schemas import (
 )
 from app.packages.datasource.controller import get_datasource
 from app.packages.datasource.registry import DataSourceItemsRegistry
-from app.infra.scheduler import controller as scheduler_controller
+from app.packages.scheduler import controller as scheduler_controller
 
 
 def _incremental_start_date_from_targets(targets: list[tuple[str, Any]]) -> str | None:

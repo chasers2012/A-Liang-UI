@@ -52,7 +52,7 @@ def create_db_and_tables() -> None:
     from app.packages.factors import models as _factor_models  # noqa: F401
     from app.packages.knowledge import models as _knowledge_models  # noqa: F401
     from app.packages.nodes import models as _node_models  # noqa: F401
-    from ..scheduler import models as _scheduler_models  # noqa: F401
+    from app.packages.scheduler import models as _scheduler_models  # noqa: F401
     from app.packages.strategy import models as _strategy_models  # noqa: F401
     from app.packages.tool import models as _tool_models  # noqa: F401
     from app.packages.visibility import models as _visibility_models  # noqa: F401

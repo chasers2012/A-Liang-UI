@@ -53,6 +53,6 @@ def build_tools(candidate_tool_ids: list[str]) -> dict[str, Any]:
 
 
 def resolve_subagent_tool_ids(subagent_id: str, default_tool_ids: set[str]) -> list[str]:
-    import app.agents.controller as agents_controller
+    import app.packages.agents.controller as agents_controller
 
     return agents_controller.get_subagent_tool_ids(subagent_id, list(default_tool_ids))

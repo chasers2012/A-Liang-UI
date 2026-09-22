@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 
 from app.http_errors import http_bad_request
+from app.packages.scheduler import controller as scheduler_controller
 from app.query_params import parse_csv_query
-from app.infra.scheduler import controller as scheduler_controller
 
 from . import controller
 from .schemas import (

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import uuid4
 
-from ..events import event_bus
+from app.packages.events import event_bus
 from .exceptions import JobCancelledError
 from .models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
 from .registry import SchedulerRegistry
@@ -400,7 +400,7 @@ def mark_job_failed_or_retrying(job_id: str, error_message: str) -> SchedulerJob
 
 
 def cancel_job(job_id: str) -> SchedulerJobPublic:
-    from app.scheduler import execution
+    from app.packages.scheduler import execution
 
     row = SchedulerRegistry.get_job(job_id)
     if row is None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
 
-from app.infra.config.controller import get_module_config
+from app.packages.config.controller import get_module_config
 
 from .config import register_rerank_settings_module
 from .plugins import get_rerank_plugin

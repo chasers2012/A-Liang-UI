@@ -31,7 +31,7 @@ def list_task_types() -> list[str]:
 
 def bootstrap_task_handlers() -> None:
     """Import modules that register task handlers (for isolated worker processes)."""
-    import app.backtest.controller
+    import app.packages.backtest.controller
     import app.packages.data_sync
-    import app.evaluation.run.controller
-    import app.knowledge.controller  # noqa: F401
+    import app.packages.evaluation.run.controller
+    import app.packages.knowledge.controller  # noqa: F401

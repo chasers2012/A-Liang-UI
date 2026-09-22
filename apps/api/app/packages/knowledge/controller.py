@@ -7,10 +7,10 @@ from uuid import uuid4
 
 from workspace import workspace_path
 
-from app.infra.events import event_bus
-from app.infra.scheduler.controller import enqueue_oneoff_job
-from app.infra.scheduler.handlers import register_task_handler
-from app.infra.scheduler.schemas import SchedulerJobPublic
+from app.packages.events import event_bus
+from app.packages.scheduler.controller import enqueue_oneoff_job
+from app.packages.scheduler.handlers import register_task_handler
+from app.packages.scheduler.schemas import SchedulerJobPublic
 
 from .config import (
     KnowledgeSettings,

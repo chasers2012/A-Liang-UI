@@ -8,7 +8,7 @@ import time
 from sqlalchemy import and_, or_
 from sqlmodel import select
 
-from ..persistence.sqlite_db import get_session
+from app.infra.persistence.sqlite_db import get_session
 from .models import SchedulerTaskRow
 from .utils import next_cron_time, utcnow
 from app.startup_jobs import register_startup_job

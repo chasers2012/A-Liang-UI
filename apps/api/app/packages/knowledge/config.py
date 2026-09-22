@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import suppress
 from typing import Any
 
-from app.infra.config import BaseConfig
+from app.packages.config import BaseConfig
 
 
 def register_knowledge_settings_module() -> None:

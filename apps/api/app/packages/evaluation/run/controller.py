@@ -6,9 +6,9 @@ from app.packages.evaluation.profile.models import EvaluationProfileRow
 from app.packages.evaluation.profile.redistry import EvaluationProfilesRegistry
 from app.packages.evaluation.run.models import EvaluationRunRow
 from app.packages.factors.registry import FactorItemsRegistry
-from app.infra.scheduler.controller import enqueue_oneoff_job
-from app.infra.scheduler.handlers import register_task_handler
-from app.infra.scheduler.schemas import SchedulerJobPublic
+from app.packages.scheduler.controller import enqueue_oneoff_job
+from app.packages.scheduler.handlers import register_task_handler
+from app.packages.scheduler.schemas import SchedulerJobPublic
 
 from .profile_workflow_runner import run_evaluation_profile_workflow
 from .redistry import (

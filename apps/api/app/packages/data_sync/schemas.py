@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from workflow.schemas import WorkflowGraphPersisted
 
 from app.packages.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
-from app.infra.scheduler.schemas import (
+from app.packages.scheduler.schemas import (
     SchedulerJobListResponse,
     SchedulerJobLogPublic,
     SchedulerJobPublic,

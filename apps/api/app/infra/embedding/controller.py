@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from langchain_core.embeddings import Embeddings
 
-from app.infra.config.controller import get_module_config
+from app.packages.config.controller import get_module_config
 
 from .config import register_embedding_settings_module
 from .plugins import get_embedding_plugin

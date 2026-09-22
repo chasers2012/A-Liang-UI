@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlmodel import Column, Field, SQLModel
 
-from ..persistence.sql_types import JsonText
+from app.infra.persistence.sql_types import JsonText
 
 
 def utcnow() -> datetime:

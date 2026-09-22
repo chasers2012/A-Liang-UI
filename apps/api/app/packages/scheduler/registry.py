@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import and_, func, or_, update
 from sqlmodel import select
 
-from ..persistence.sqlite_db import get_session
+from app.infra.persistence.sqlite_db import get_session
 from .models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
 
 

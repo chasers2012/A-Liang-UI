@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from app.packages.data_sync.constants import DATASOURCE_SYNC_TASK_TYPE
-from app.infra.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
-from app.infra.scheduler.registry import SchedulerRegistry
+from app.packages.scheduler.models import SchedulerJobLogRow, SchedulerJobRow, SchedulerTaskRow
+from app.packages.scheduler.registry import SchedulerRegistry
 
 
 class DataSyncRegistry:

@@ -17,9 +17,14 @@ from app.packages.data_sync.schemas import (
     UpdateDataSyncTaskRequest,
 )
 from app.packages.datasource.registry import DataSourceItemsRegistry
-from app.infra.scheduler import controller as scheduler_controller
-from app.infra.scheduler.models import SchedulerTaskRow
-from app.infra.scheduler.utils import next_cron_time, normalize_cron_expr, utcnow, validate_cron_expr
+from app.packages.scheduler import controller as scheduler_controller
+from app.packages.scheduler.models import SchedulerTaskRow
+from app.packages.scheduler.utils import (
+    next_cron_time,
+    normalize_cron_expr,
+    utcnow,
+    validate_cron_expr,
+)
 
 
 def _payload_dict(payload: DataSyncTaskPayload) -> dict[str, object]:

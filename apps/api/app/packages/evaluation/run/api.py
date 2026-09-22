@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from app.http_errors import http_bad_request
 from app.packages.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
 from app.packages.evaluation.run.schemas import (
     EvaluationRunDetailPublic,
     RunEvaluationRunRequest,
 )
-from app.http_errors import http_bad_request
-from app.infra.scheduler.schemas import SchedulerJobPublic
+from app.packages.scheduler.schemas import SchedulerJobPublic
 
 from . import controller
 
