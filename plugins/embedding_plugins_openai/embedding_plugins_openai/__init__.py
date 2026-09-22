@@ -3,8 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal
 
-from app.embedding.plugins import EmbeddingPlugin
-from app.form import FormSchema
+from app.infra.embedding.plugins import EmbeddingPlugin
+from app.packages.form import FormSchema
 from langchain_core.embeddings import Embeddings
 from langchain_openai import OpenAIEmbeddings
 from pydantic import BaseModel, ConfigDict, model_validator

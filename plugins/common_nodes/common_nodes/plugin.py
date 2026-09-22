@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from app.nodes.node_plugin import NodePlugin
+from app.packages.nodes.node_plugin import NodePlugin
 
 from common_nodes.data_set_to_wide import DataSetToWideNode
 from common_nodes.dataframe_rename_columns import RenameDataFrameColumnsNode

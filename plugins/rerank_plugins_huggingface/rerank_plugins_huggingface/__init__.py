@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.form import FormSchema
-from app.rerank.plugins import RerankPlugin
+from app.packages.form import FormSchema
+from app.packages.rerank.plugins import RerankPlugin
 from langchain_classic.retrievers.document_compressors import CrossEncoderReranker
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
 from pydantic import BaseModel, ConfigDict, model_validator

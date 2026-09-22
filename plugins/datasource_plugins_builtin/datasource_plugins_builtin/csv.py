@@ -6,9 +6,9 @@ from typing import Any, Literal
 
 import duckdb
 import pandas as pd
-from app.datasource.plugins import DataSourcePlugin
-from app.datasource.schemas import DataSourceSpec
-from app.form import FormSchema
+from app.packages.datasource.plugins import DataSourcePlugin
+from app.packages.datasource.schemas import DataSourceSpec
+from app.packages.form import FormSchema
 from data_source import VerifyResult
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from workspace import get_workspace_root

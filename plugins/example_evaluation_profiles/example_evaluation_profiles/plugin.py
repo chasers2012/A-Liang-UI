@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any, ClassVar
 
-from app.evaluation.profile.profile_plugin import (
+from app.packages.evaluation.profile.profile_plugin import (
     EvaluationProfilePlugin,
     EvaluationProfileWorkflowSpec,
 )

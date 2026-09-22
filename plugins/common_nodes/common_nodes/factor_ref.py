@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-from app.factors.controller import get_factor
-from app.factors.registry import FactorItemsRegistry
+from app.packages.factors.controller import get_factor
+from app.packages.factors.registry import FactorItemsRegistry
 from factor import Factor
 from workflow import Socket, workflow_node
 from workflow.node_types import RJSFNodeParam

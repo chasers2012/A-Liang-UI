@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from app.nodes.node_plugin import NodePlugin
+from app.packages.nodes.node_plugin import NodePlugin
 
 from echarts_nodes import (
     EchartsBarNode,

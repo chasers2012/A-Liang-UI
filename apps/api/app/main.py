@@ -14,31 +14,31 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from workspace import workspace_path
 
-import app.embedding
-import app.llm_tools
-import app.persistence
-import app.plugin
-import app.rerank
-import app.scheduler
-from app.agents import api as agents_router
-from app.backtest import api as backtests_router
-from app.chat import api as agent_llm_router
-from app.config import api as config_router
-from app.data_set import api as data_sets_router
-from app.data_sync import api as data_sync_router
-from app.datasource import api as datasources_router
-from app.evaluation.profile import api as evaluation_profiles_router
-from app.evaluation.run import api as evaluation_runs_router
-from app.events import api as events_router
-from app.factors import api as factors_router
-from app.knowledge import api as knowledge_router
-from app.nodes import api as nodes_router
+import app.infra.embedding
+import app.infra.llm_tools
+import app.infra.persistence
+import app.infra.scheduler
+import app.packages.plugin
+import app.packages.rerank
+from app.infra.events import api as events_router
+from app.infra.scheduler import api as scheduler_router
+from app.packages.agents import api as agents_router
+from app.packages.backtest import api as backtests_router
+from app.packages.chat import api as agent_llm_router
+from app.packages.config import api as config_router
+from app.packages.data_set import api as data_sets_router
+from app.packages.data_sync import api as data_sync_router
+from app.packages.datasource import api as datasources_router
+from app.packages.evaluation.profile import api as evaluation_profiles_router
+from app.packages.evaluation.run import api as evaluation_runs_router
+from app.packages.factors import api as factors_router
+from app.packages.knowledge import api as knowledge_router
+from app.packages.nodes import api as nodes_router
+from app.packages.strategy import api as strategies_router
+from app.packages.tool import api as tools_router
+from app.packages.uploads import api as uploads_router
 from app.paths import API_PREFIX
-from app.scheduler import api as scheduler_router
 from app.startup_jobs import STARTUP_JOBS
-from app.strategy import api as strategies_router
-from app.tool import api as tools_router
-from app.uploads import api as uploads_router
 from app.web_static import mount_web_static
 
 

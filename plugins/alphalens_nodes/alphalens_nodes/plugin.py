@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from app.nodes.node_plugin import NodePlugin
+from app.packages.nodes.node_plugin import NodePlugin
 from workflow import Node
 
 from alphalens_nodes.performance.average_cumulative_return_by_quantile_metric import (

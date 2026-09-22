@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from app.factors.factor_plugin import FactorPlugin
+from app.packages.factors.factor_plugin import FactorPlugin
 
 from example_factors.factors import (
     LowVolatilityFactor,

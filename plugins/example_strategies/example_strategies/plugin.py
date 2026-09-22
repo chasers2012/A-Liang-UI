@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any, ClassVar
 
-from app.strategy.strategy_plugin import StrategyPlugin, StrategyWorkflowSpec
+from app.packages.strategy.strategy_plugin import StrategyPlugin, StrategyWorkflowSpec
 
 
 def _load_workflow_json(filename: str) -> dict[str, Any]:

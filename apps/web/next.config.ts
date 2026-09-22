@@ -4,7 +4,7 @@ import type { NextConfig } from 'next';
 const webBasePath = (process.env.WEB_UI_PREFIX ?? '').replace(/\/$/, '');
 
 const nextConfig: NextConfig = {
-  // output: 'export', // 移除：生产构建时才需要静态导出，开发模式下会导致高CPU占用
+  output: 'export', // 移除：生产构建时才需要静态导出，开发模式下会导致高CPU占用
   ...(webBasePath ? { basePath: webBasePath } : {}),
   trailingSlash: true,
   images: {

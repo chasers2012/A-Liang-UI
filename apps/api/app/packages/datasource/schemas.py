@@ -1,0 +1,364 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from typing import Any
+
+from data_source import DataSource
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.infra.common.datetime_utils import utc_now_iso
+from app.infra.common.id import create_id_generator
+from app.packages.datasource.models import DataSourceRow
+from app.packages.form import FormSchema
+
+DataSourceType = str
+
+generate_id = create_id_generator("datasources")
+
+
+DATASOURCE_WRITE_FLAT_KEYS = frozenset({"write_enabled"})
+
+
+def pop_write_flat_keys_from_mapping(
+    columns_like: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """从仍含扁平 ``write_*`` 键的 ``columns`` 片段中拆出写入配置（兼容旧存储）。"""
+    rest = dict(columns_like or {})
+    w: dict[str, Any] = {}
+    for k in DATASOURCE_WRITE_FLAT_KEYS:
+        if k in rest:
+            w[k] = rest.pop(k)
+    return rest, w
+
+
+def merged_write_flat_dict_from_storage(plain: dict[str, Any]) -> dict[str, Any]:
+    """从 ``connection``、旧版 ``columns`` 或顶层 ``write`` 合并出扁平 ``write_*`` 配置（供同步校验）。"""
+    conn = dict(plain.get("connection") or {})
+    w = {k: conn[k] for k in DATASOURCE_WRITE_FLAT_KEYS if k in conn}
+    cols = dict(plain.get("columns") or {})
+    top = dict(plain.get("write") or {})
+    for src in (cols, top):
+        for k in DATASOURCE_WRITE_FLAT_KEYS:
+            if k not in w and k in src:
+                w[k] = src[k]
+    return w
+
+
+class DataSourceWriteConfig(BaseModel):
+    """
+    通用「可写入 / 同步落地」语义模型；各插件可将对应字段存于 ``connection`` 或其它段，
+    由插件在 ``validate_write_config`` 中从扁平字典解析。
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    write_enabled: bool = False
+
+
+class DataSourceSpec(ABC):
+    """Form schemas and config/datasource behavior for a datasource plugin."""
+
+    def __init__(
+        self,
+        connection_schema: FormSchema | None = None,
+        columns_schema: FormSchema | None = None,
+        write_schema: FormSchema | None = None,
+    ) -> None:
+        self.connection_schema = connection_schema
+        self.columns_schema = columns_schema
+        self.write_schema = write_schema
+
+    def resolved_connection_secret_keys(self) -> list[str]:
+        schema = self.connection_schema
+        return schema.resolved_secret_keys() if schema is not None else []
+
+    def resolved_columns_secret_keys(self) -> list[str]:
+        schema = self.columns_schema
+        return schema.resolved_secret_keys() if schema is not None else []
+
+    def resolved_write_secret_keys(self) -> list[str]:
+        schema = self.write_schema
+        return schema.resolved_secret_keys() if schema is not None else []
+
+    def validate_write_config(self, write_config: dict[str, Any]) -> DataSourceWriteConfig:
+        """从扁平 ``write_*`` 字典解析并校验通用写入语义（插件可从 ``connection`` 等段组装该字典）。"""
+        return DataSourceWriteConfig.model_validate(dict(write_config or {}))
+
+    def prepare_storage_config(
+        self,
+        datasource_id: str,
+        config: dict[str, Any],
+    ) -> dict[str, Any]:
+        """保存前由插件根据数据源 ID 补全配置（如 CSV 自动路径）。"""
+        return dict(config or {})
+
+    def split_write_config_for_validation(
+        self,
+        connection_config: dict[str, Any],
+        columns_config: dict[str, Any],
+        write_config: dict[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        """将仍散落在各段的 ``write_*`` 键归并到 ``write`` 段（供 ``validate_config`` 使用）。"""
+        connection = dict(connection_config or {})
+        columns = dict(columns_config or {})
+        write = dict(write_config or {})
+        if self.write_schema is not None:
+            for part in (connection, columns):
+                rest, legacy = pop_write_flat_keys_from_mapping(part)
+                part.clear()
+                part.update(rest)
+                for k, v in legacy.items():
+                    if k not in write:
+                        write[k] = v
+            return connection, columns, write
+        cols_only, legacy_cols = pop_write_flat_keys_from_mapping(columns)
+        for k, v in legacy_cols.items():
+            if k not in connection:
+                connection[k] = v
+        for k, v in write.items():
+            if k not in connection:
+                connection[k] = v
+        return connection, cols_only, {}
+
+    def decrypt_storage_config(self, stored_config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(stored_config or {})
+        connection_schema = self.connection_schema
+        columns_schema = self.columns_schema
+        write_schema = self.write_schema
+        connection = dict(raw.get("connection") or {})
+        columns = dict(raw.get("columns") or {})
+        write = dict(raw.get("write") or {})
+        connection = (
+            connection_schema.decrypt_form(connection)
+            if connection_schema is not None
+            else connection
+        )
+        columns = columns_schema.decrypt_form(columns) if columns_schema is not None else columns
+        write = write_schema.decrypt_form(write) if write_schema is not None else write
+        if self.write_schema is not None:
+            connection, columns, write = self.split_write_config_for_validation(
+                connection, columns, write
+            )
+        else:
+            for k in DATASOURCE_WRITE_FLAT_KEYS:
+                if k in columns and k not in connection:
+                    connection[k] = columns.pop(k)
+            for k, v in write.items():
+                if k not in connection:
+                    connection[k] = v
+            write = {}
+        return {"connection": connection, "columns": columns, "write": write}
+
+    def encrypt_storage_config(self, storage_config: dict[str, Any]) -> dict[str, Any]:
+        raw = dict(storage_config or {})
+        connection_schema = self.connection_schema
+        columns_schema = self.columns_schema
+        write_schema = self.write_schema
+        connection = dict(raw.get("connection") or {})
+        columns = dict(raw.get("columns") or {})
+        write = dict(raw.get("write") or {})
+        out: dict[str, Any] = {
+            "connection": (
+                connection_schema.encrypt_form(connection)
+                if connection_schema is not None
+                else connection
+            ),
+            "columns": (
+                columns_schema.encrypt_form(columns) if columns_schema is not None else columns
+            ),
+        }
+        if write_schema is not None:
+            out["write"] = write_schema.encrypt_form(write)
+        return out
+
+    def merge_overlay_with_saved_secrets(
+        self,
+        saved: dict[str, Any],
+        overlay: dict[str, Any],
+    ) -> dict[str, Any]:
+        saved_plain = self.decrypt_storage_config(dict(saved or {}))
+        overlay_raw = dict(overlay or {})
+        connection_overlay = dict(overlay_raw.get("connection") or {})
+        columns_overlay = dict(overlay_raw.get("columns") or {})
+        write_overlay = dict(overlay_raw.get("write") or {})
+
+        def _merge_part(
+            schema: FormSchema | None,
+            saved_part: dict[str, Any],
+            overlay_part: dict[str, Any],
+        ) -> dict[str, Any]:
+            if schema is None:
+                return {**saved_part, **overlay_part}
+            return schema.merge_overlay_keep_secrets(saved_part, overlay_part)
+
+        merged = {
+            "connection": _merge_part(
+                self.connection_schema,
+                dict(saved_plain.get("connection") or {}),
+                connection_overlay,
+            ),
+            "columns": _merge_part(
+                self.columns_schema,
+                dict(saved_plain.get("columns") or {}),
+                columns_overlay,
+            ),
+        }
+        if self.write_schema is not None:
+            merged["write"] = _merge_part(
+                self.write_schema,
+                dict(saved_plain.get("write") or {}),
+                write_overlay,
+            )
+        return merged
+
+    @abstractmethod
+    def validate_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        """校验并规范化 ``{connection, columns[, write]}``，返回可 JSON 序列化的存储形态。"""
+
+    @abstractmethod
+    def to_datasource(self, config: dict[str, Any]) -> DataSource:
+        """由已解密的 ``{connection, columns[, write]}`` 构建 :class:`~data_source.DataSource`。"""
+
+
+# --- API payloads ---
+
+
+class DataSourceCreate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    name: str
+    type: DataSourceType
+    connection_config: dict[str, Any] = Field(default_factory=dict)
+    columns_config: dict[str, Any] = Field(default_factory=dict)
+    write_config: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_type_and_config(self) -> DataSourceCreate:
+        if not str(self.type).strip():
+            raise ValueError("type is required")
+        if self.connection_config is None:
+            raise ValueError("connection_config is required")
+        if self.columns_config is None:
+            raise ValueError("columns_config is required")
+        return self
+
+    def to_row(self) -> DataSourceRow:
+        now = utc_now_iso()
+        rid = generate_id()
+        return DataSourceRow(
+            id=rid,
+            name=self.name,
+            type=str(self.type).strip(),
+            config={
+                "connection": dict(self.connection_config or {}),
+                "columns": dict(self.columns_config or {}),
+                "write": dict(self.write_config or {}),
+            },
+            created_at=now,
+            updated_at=now,
+        )
+
+
+class DataSourcePatch(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    name: str | None = None
+    connection_config: dict[str, Any] | None = None
+    columns_config: dict[str, Any] | None = None
+    write_config: dict[str, Any] | None = None
+
+
+class DataSourcePublic(BaseModel):
+    id: str
+    name: str
+    type: DataSourceType
+    config: dict[str, Any]
+    write_enabled: bool = False
+    created_at: str
+    updated_at: str
+
+
+def datasource_write_enabled(row: DataSourceRow) -> bool:
+    from app.packages.datasource.plugins import get_datasource_plugin
+
+    plugin = get_datasource_plugin(str(row.type))
+    plain = plugin.spec.decrypt_storage_config(dict(row.config or {}))
+    write_flat = merged_write_flat_dict_from_storage(plain)
+    return bool(plugin.spec.validate_write_config(write_flat).write_enabled)
+
+
+def row_to_public(row: DataSourceRow) -> DataSourcePublic:
+    from app.packages.datasource.plugins import get_datasource_plugin
+
+    plugin = get_datasource_plugin(str(row.type))
+    connection_schema = plugin.spec.connection_schema
+    columns_schema = plugin.spec.columns_schema
+    write_schema = plugin.spec.write_schema
+    raw_config = dict(row.config or {})
+    plain = plugin.spec.decrypt_storage_config(raw_config)
+    public_config = deepcopy(plain)
+    if not isinstance(public_config.get("connection"), dict):
+        public_config["connection"] = {}
+    if not isinstance(public_config.get("columns"), dict):
+        public_config["columns"] = {}
+    if connection_schema is not None:
+        public_config["connection"] = connection_schema.redact(dict(plain.get("connection") or {}))
+    if columns_schema is not None:
+        public_config["columns"] = columns_schema.redact(dict(plain.get("columns") or {}))
+    if write_schema is not None:
+        public_config["write"] = write_schema.redact(dict(plain.get("write") or {}))
+        for k in DATASOURCE_WRITE_FLAT_KEYS:
+            public_config["connection"].pop(k, None)
+            public_config["columns"].pop(k, None)
+    else:
+        public_config.pop("write", None)
+    return DataSourcePublic(
+        id=row.id,
+        name=row.name,
+        type=str(row.type),
+        config=public_config,
+        write_enabled=datasource_write_enabled(row),
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
+
+
+class InspectColumnsRequest(BaseModel):
+    """
+    Generic column inspection request.
+
+    - Provide `type` + `config` to inspect without saving.
+    - Or provide `datasource_id` and optionally overlay `config` to inspect a saved datasource; secret fields
+      from the client that are blank or redacted (``***``) keep the stored values.
+    """
+
+    datasource_id: str | None = None
+    type: str | None = None
+    config: dict[str, Any] | None = None
+
+
+class InspectColumnsResponse(BaseModel):
+    """列探测结果：可用列名与建议的字段映射（与数据源 ``config`` 同级字段）。"""
+
+    columns: list[str]
+    date_column: str
+    asset_column: str | None = None
+
+
+class DatasourceDependencyFieldsResponse(BaseModel):
+    """数据源物理列名列表。"""
+
+    fields: list[str]
+
+
+class DatasourcePluginPublic(BaseModel):
+    type: str
+    title: str
+    description: str | None = None
+    connection_json_schema: dict[str, Any] = Field(default_factory=dict)
+    connection_ui_schema: dict[str, Any] = Field(default_factory=dict)
+    columns_json_schema: dict[str, Any] = Field(default_factory=dict)
+    columns_ui_schema: dict[str, Any] = Field(default_factory=dict)
+    write_json_schema: dict[str, Any] = Field(default_factory=dict)
+    write_ui_schema: dict[str, Any] = Field(default_factory=dict)

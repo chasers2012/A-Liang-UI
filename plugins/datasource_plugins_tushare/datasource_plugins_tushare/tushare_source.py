@@ -8,9 +8,9 @@ from types import MappingProxyType
 from typing import Any, Literal
 
 import pandas as pd
-from app.datasource.plugins import DataSourcePlugin
-from app.datasource.schemas import DataSourceSpec
-from app.form import FormSchema
+from app.packages.datasource.plugins import DataSourcePlugin
+from app.packages.datasource.schemas import DataSourceSpec
+from app.packages.form import FormSchema
 from data_source import DataSource, VerifyResult
 
 from .client import TushareIOBusyError, call_pro, resolve_token, run_tushare_io
