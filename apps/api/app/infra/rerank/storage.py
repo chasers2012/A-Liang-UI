@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.packages.rerank.plugins import get_rerank_plugin, list_rerank_plugins
+from app.infra.rerank.plugins import get_rerank_plugin, list_rerank_plugins
 
 ROOT_KEYS: tuple[str, ...] = ("rerank_provider",)
 _RESERVED_KEYS = frozenset((*ROOT_KEYS, "rerank_providers"))

@@ -17,15 +17,15 @@ from workspace import workspace_path
 import app.infra.embedding
 import app.infra.llm_tools
 import app.infra.persistence
+import app.infra.plugin
+import app.infra.rerank
 import app.infra.scheduler
-import app.packages.plugin
-import app.packages.rerank
+from app.infra.config import api as config_router
 from app.infra.events import api as events_router
 from app.infra.scheduler import api as scheduler_router
 from app.packages.agents import api as agents_router
 from app.packages.backtest import api as backtests_router
 from app.packages.chat import api as agent_llm_router
-from app.packages.config import api as config_router
 from app.packages.data_set import api as data_sets_router
 from app.packages.data_sync import api as data_sync_router
 from app.packages.datasource import api as datasources_router

@@ -5,8 +5,8 @@ import logging
 from collections.abc import Callable, Iterable
 from typing import ClassVar
 
-from app.packages.plugin.base import Plugin
-from app.packages.plugin.constants import PLUGIN_ENTRY_POINT_GROUP
+from app.infra.plugin.base import Plugin
+from app.infra.plugin.constants import PLUGIN_ENTRY_POINT_GROUP
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ def _plugin_registry_key(plugin: Plugin) -> PluginRegistryKey:
 
 def _entry_points_for_group(group: str) -> list[importlib.metadata.EntryPoint]:
     eps = importlib.metadata.entry_points()
-    # Python 3.10+: EntryPoints has .select(); older versions return dict-like.
     if hasattr(eps, "select"):
         selected = eps.select(group=group)  # type: ignore[attr-defined]
         return sorted(selected, key=lambda ep: (ep.name.lower(), ep.name))
@@ -55,8 +54,6 @@ class PluginRegistry:
 
     def register(self, plugin: Plugin) -> None:
         key = _plugin_registry_key(plugin)
-        # if key in self._plugins:
-        #     raise ValueError(self._duplicate_message(key[0], key[1]))
         self._plugins[key] = plugin
         plugin.on_registered()
 

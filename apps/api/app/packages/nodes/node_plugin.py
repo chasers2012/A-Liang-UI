@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from workflow import Node
 
-from app.packages.plugin import Plugin
-from app.packages.visibility.controller import list_domain_node_visibility_configs, toggle_node_visibility
+from app.infra.plugin import Plugin
+from app.packages.visibility.controller import (
+    list_domain_node_visibility_configs,
+    toggle_node_visibility,
+)
 
 from .registry import WorkflowNodesRegistry
 

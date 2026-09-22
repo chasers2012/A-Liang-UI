@@ -49,7 +49,8 @@ def _bootstrap_child_env() -> None:
 
 
 def _bootstrap_child_runtime() -> None:
-    from app.packages.plugin.registry import PluginRegistry, load_plugins_from_entry_points
+    from app.infra.plugin.registry import PluginRegistry, load_plugins_from_entry_points
+
     from .handlers import bootstrap_task_handlers
 
     try:

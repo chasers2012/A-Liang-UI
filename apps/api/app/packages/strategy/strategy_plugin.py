@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app.packages.plugin import Plugin
+from app.infra.plugin import Plugin
 from app.packages.strategy import controller
 
 

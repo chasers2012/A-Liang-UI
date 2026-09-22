@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from typing import Any
 
-from app.packages.form.schema import FormSchema
+from app.infra.form.schema import FormSchema
 
 from .controller import get_module_config
 from .registry import register_config_spec

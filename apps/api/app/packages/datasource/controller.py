@@ -4,6 +4,7 @@ from typing import Any
 
 from data_source import DataSource, VerifyResult
 
+from app.infra.plugin import PluginRegistry
 from app.packages.datasource.models import DataSourceRow
 from app.packages.datasource.plugins import get_datasource_plugin
 from app.packages.datasource.registry import DataSourceItemsRegistry
@@ -18,7 +19,6 @@ from app.packages.datasource.schemas import (
     row_to_public,
     utc_now_iso,
 )
-from app.packages.plugin import PluginRegistry
 
 
 def _normalize_name(name: str) -> str:

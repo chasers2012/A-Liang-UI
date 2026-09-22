@@ -6,9 +6,9 @@ from functools import cache
 from typing import Any, Literal
 
 import duckdb
+from app.infra.form import FormSchema
 from app.packages.datasource.plugins import DataSourcePlugin
 from app.packages.datasource.schemas import DataSourceSpec
-from app.packages.form import FormSchema
 from data_source import VerifyResult
 from pydantic import BaseModel, ConfigDict, model_validator
 

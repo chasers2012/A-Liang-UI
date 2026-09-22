@@ -10,7 +10,7 @@ from langchain_core.documents import Document
 from workspace import workspace_path
 
 from app.infra.embedding.controller import get_embeddings
-from app.packages.rerank.controller import get_reranker
+from app.infra.rerank.controller import get_reranker
 
 from .config import KnowledgeSettings
 

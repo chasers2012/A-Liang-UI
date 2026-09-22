@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.packages.form.schema import FormSchema
+from app.infra.form.schema import FormSchema
 
 
 class ConfigModuleSpec(BaseModel):

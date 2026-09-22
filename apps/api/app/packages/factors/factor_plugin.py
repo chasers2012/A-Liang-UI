@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from factor import Factor
 
+from app.infra.plugin import Plugin
 from app.packages.factors import controller
-from app.packages.plugin import Plugin
 
 
 class FactorPlugin(Plugin):

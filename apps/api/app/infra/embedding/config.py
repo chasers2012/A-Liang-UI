@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.packages.config import BaseConfig
-from app.packages.config.registry import get_config_spec, register_config_spec
-from app.packages.config.schema import ConfigModuleSpec
+from app.infra.config import BaseConfig
+from app.infra.config.registry import get_config_spec, register_config_spec
+from app.infra.config.schema import ConfigModuleSpec
+from app.infra.form.schema import FormSchema
+
 from .plugins import list_embedding_plugins
-from app.packages.form.schema import FormSchema
 
 
 def register_embedding_settings_module() -> None:

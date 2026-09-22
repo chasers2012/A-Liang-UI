@@ -4,9 +4,9 @@ from typing import ClassVar
 
 from data_source import VerifyResult
 
+from app.infra.plugin.base import Plugin
+from app.infra.plugin.registry import PluginRegistry
 from app.packages.datasource.schemas import DataSourceSpec
-from app.packages.plugin.base import Plugin
-from app.packages.plugin.registry import PluginRegistry
 
 __all__ = [
     "DataSourcePlugin",

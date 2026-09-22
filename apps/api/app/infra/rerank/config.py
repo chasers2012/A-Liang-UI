@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.packages.config import BaseConfig
-from app.packages.config.registry import get_config_spec, register_config_spec
-from app.packages.config.schema import ConfigModuleSpec
-from app.packages.form.schema import FormSchema
-from app.packages.rerank.plugins import list_rerank_plugins
+from app.infra.config.base import BaseConfig
+from app.infra.config.registry import get_config_spec, register_config_spec
+from app.infra.config.schema import ConfigModuleSpec
+from app.infra.form.schema import FormSchema
+from app.infra.rerank.plugins import list_rerank_plugins
 
 
 def register_rerank_settings_module() -> None:

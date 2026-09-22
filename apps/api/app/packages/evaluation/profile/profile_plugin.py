@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.infra.plugin import Plugin
 from app.packages.evaluation.profile import controller
-from app.packages.plugin import Plugin
 
 
 @dataclass(frozen=True)

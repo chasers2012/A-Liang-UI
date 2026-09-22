@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from app.infra.form import FormSchema
 from app.infra.llm.plugins import LlmPlugin
-from app.packages.form import FormSchema
 from pydantic import BaseModel, ConfigDict, model_validator
 
 

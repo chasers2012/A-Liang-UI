@@ -8,7 +8,7 @@ import baostock as bs
 import pandas as pd
 from app.packages.datasource.plugins import DataSourcePlugin
 from app.packages.datasource.schemas import DataSourceSpec
-from app.packages.form import FormSchema
+from app.infra.form import FormSchema
 from data_source import DataSource, VerifyResult
 
 from .common import BaoStockColumnsConfig, BaoStockConnectionConfig

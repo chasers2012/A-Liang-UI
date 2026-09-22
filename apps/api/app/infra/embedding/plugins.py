@@ -6,9 +6,9 @@ from typing import Any, ClassVar
 
 from langchain_core.embeddings import Embeddings
 
-from app.packages.form import FormSchema
-from app.packages.plugin.base import Plugin
-from app.packages.plugin.registry import PluginRegistry, load_plugins_from_entry_points
+from app.infra.form import FormSchema
+from app.infra.plugin.base import Plugin
+from app.infra.plugin.registry import PluginRegistry, load_plugins_from_entry_points
 
 __all__ = [
     "EmbeddingPlugin",
