@@ -40,6 +40,7 @@ import { isValueTypeCompatible } from './value-type';
 import type { WorkflowNodeInputSpec, WorkflowNodeTypeDefinition } from './types';
 import { WorkflowGraphPersisted } from './reactflow/types';
 import { ErrorBoundary } from 'next/dist/client/components/error-boundary';
+import type { ErrorComponent } from 'next/dist/client/components/error-boundary';
 
 /** 左侧「添加节点」拖到画布时使用的 DataTransfer MIME（避免与普通文本拖放冲突）。 */
 export const WORKFLOW_GRAPH_NODE_DRAG_MIME = 'application/x-workflow-graph-node-type';
@@ -162,14 +163,16 @@ function pickConnectionNodes(rf: ReactFlowInstance | null, sourceId: string, tar
   };
 }
 
-export default function Error({ error, reset }: { error: Error; reset: () => void }) {
+export default function Error({ error, reset }: { error: unknown; reset: () => void }) {
+  const msg = (error as { message?: string }).message;
+  const message = typeof error === 'string' ? error : msg || 'An error occurred';
   return (
     <div className="m-4 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-destructive">
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">工作流渲染出错，请检查工作流文件</p>
-          <p className="mt-1 text-xs break-all opacity-90">{error.message || ''}</p>
+          <p className="mt-1 text-xs break-all opacity-90">{message}</p>
         </div>
         <Button
           type="button"
