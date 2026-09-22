@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.evaluation.profile.controller import FactorNotFoundError, ProfileNotFoundError
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 from . import controller
 

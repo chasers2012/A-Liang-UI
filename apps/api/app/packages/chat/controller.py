@@ -7,8 +7,8 @@ from typing import Any
 
 from app.infra.common.datetime_utils import utc_now_iso
 from app.infra.common.id import create_id_generator
+from app.infra.stream import control as stream_control
 
-from . import stream_control
 from .registry import ChatRegistry
 from .schemas import (
     ChatArchivedSummaryPublic,

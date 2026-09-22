@@ -16,9 +16,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.types import Command
 from langgraph.typing import InputT
 
-from app.packages.agents import create_main_agent
-
-from .events import (
+from app.infra.stream.events import (
     DeltaEvent,
     DoneEvent,
     ReasoningEvent,
@@ -27,6 +25,7 @@ from .events import (
     ToolEvent,
     ToolPayload,
 )
+from app.packages.agents import create_main_agent
 
 
 def _canonicalize_args(value: Any) -> str:

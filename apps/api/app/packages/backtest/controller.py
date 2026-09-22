@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.packages.data_set.controller import get_data_set, get_data_set_detail
+from app.infra.backtest import emit_run_event
 from app.infra.scheduler.controller import enqueue_oneoff_job
 from app.infra.scheduler.handlers import register_task_handler
+from app.packages.data_set.controller import get_data_set, get_data_set_detail
 from app.packages.strategy.registry import StrategyRegistry
 
 from .engine.runner import run_backtest_and_persist
-from .events import emit_run_event
 from .models import BacktestRunRow
 from .registry import BacktestRunsStore
 from .result_manager import BacktestResultManager

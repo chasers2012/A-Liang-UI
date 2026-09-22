@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from app.infra.events import event_bus
 
-from .models import BacktestRunRow
+if TYPE_CHECKING:
+    from app.packages.backtest.models import BacktestRunRow
 
 _RUN_TOPIC = "backtest.run.updated"
 
 
-def emit_run_event(row: BacktestRunRow, *, deleted: bool = False) -> None:
+def emit_run_event(row: "BacktestRunRow", *, deleted: bool = False) -> None:
     """Publish a ``backtest.run.updated`` event for the given row.
 
     The payload mirrors :class:`BacktestRunSummary` keys (without joined

@@ -5,8 +5,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from app.infra.llm_tools.review_with_llm import review_with_llm
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 from . import controller
 from .constants import DEFAULT_NODE_SOURCE

@@ -4,9 +4,9 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.data_set.schemas import DataSetCreate, DataSetPatch
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 from . import controller
 

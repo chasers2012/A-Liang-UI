@@ -32,6 +32,7 @@ from workflow.editing import (
 )
 from workflow.schemas import WorkflowGraphPersisted
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.nodes.controller import build_workflow_node_for_graph
 from app.packages.strategy.schemas import (
     StrategyCreate,
@@ -42,7 +43,6 @@ from app.packages.strategy.schemas import (
     StrategyWorkflowUnsetNodeParamOp,
 )
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 from . import controller
 from .draft import (

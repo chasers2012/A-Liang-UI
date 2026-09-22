@@ -1,4 +1,4 @@
-"""Chat streaming flow control."""
+"""SSE streaming flow control (protocol layer)."""
 
 from __future__ import annotations
 
@@ -14,11 +14,19 @@ from typing import Any
 from diskcache import Cache
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.types import Command
-from workspace import workspace_path
 
 from app.infra.llm import build_chat_model
+from app.packages.chat.schemas import (
+    AssistantBlockPublic,
+    ChatAuthorizationRequest,
+    ChatMessageIn,
+    ChatRequest,
+    ChatStopRequest,
+    ChatToolCallPublic,
+    ensure_chat_message_id,
+    message_text_for_model,
+)
 
-from .agent import stream_event_aiter_for_chat
 from .events import (
     DeltaEvent,
     DoneEvent,
@@ -30,21 +38,17 @@ from .events import (
     ToolEvent,
     ToolPayload,
 )
-from .registry import ChatRegistry
-from .schemas import (
-    AssistantBlockPublic,
-    ChatAuthorizationRequest,
-    ChatMessageIn,
-    ChatRequest,
-    ChatStopRequest,
-    ChatToolCallPublic,
-    ensure_chat_message_id,
-    message_text_for_model,
-)
 
 _AUTH_PENDING_TTL_SECONDS = 10 * 60
 _AUTH_WAIT_POLL_SECONDS = 0.2
-_AUTH_CACHE = Cache(str(workspace_path(".a-liang-ui/chat_auth_cache")))
+
+
+def _workspace_auth_cache() -> Cache:
+    from workspace import workspace_path
+
+    return Cache(str(workspace_path(".a-liang-ui/chat_auth_cache")))
+
+
 _RUNNING_STREAMS_LOCK = threading.Lock()
 _RUNNING_STREAMS: dict[str, dict[str, Any]] = {}
 
@@ -103,7 +107,7 @@ def _register_pending_auth(
     session_id: str,
     assistant_message_id: str,
 ) -> None:
-    _AUTH_CACHE.set(
+    _workspace_auth_cache().set(
         _auth_pending_key(thread_id),
         {
             "session_id": session_id,
@@ -111,12 +115,12 @@ def _register_pending_auth(
         },
         expire=_AUTH_PENDING_TTL_SECONDS,
     )
-    _AUTH_CACHE.delete(_auth_decision_key(thread_id))
+    _workspace_auth_cache().delete(_auth_decision_key(thread_id))
 
 
 def _clear_pending_auth(thread_id: str) -> None:
-    _AUTH_CACHE.delete(_auth_pending_key(thread_id))
-    _AUTH_CACHE.delete(_auth_decision_key(thread_id))
+    _workspace_auth_cache().delete(_auth_pending_key(thread_id))
+    _workspace_auth_cache().delete(_auth_decision_key(thread_id))
 
 
 def _append_delta_block(
@@ -339,6 +343,8 @@ def _build_chat_context_messages(
     *,
     replace_from_message_id: str | None = None,
 ) -> tuple[list[ChatMessageIn], list[ChatMessageIn]]:
+    from app.packages.chat.registry import ChatRegistry
+
     history_messages = ChatRegistry.get_messages(session_id) or []
     if replace_from_message_id:
         replace_index = next(
@@ -387,9 +393,9 @@ async def _wait_for_authorization_decision(
     while True:
         if await is_disconnected():
             return None
-        decision = _AUTH_CACHE.get(decision_key, default=None)
+        decision = _workspace_auth_cache().get(decision_key, default=None)
         if isinstance(decision, dict):
-            _AUTH_CACHE.delete(decision_key)
+            _workspace_auth_cache().delete(decision_key)
             return decision
         await asyncio.sleep(_AUTH_WAIT_POLL_SECONDS)
 
@@ -414,6 +420,8 @@ async def stream_async(  # noqa: C901
     get_active_chat: Callable[[str], Any | None],
     replace_session_messages: Callable[[str, list[ChatMessageIn]], None],
 ) -> AsyncIterator[str]:
+    from app.packages.chat.agent import stream_event_aiter_for_chat
+
     session_id, incoming_user, persisted_context_messages, context_messages = _prepare_chat_stream(
         body,
         get_active_chat=get_active_chat,
@@ -560,7 +568,7 @@ def stop_stream(body: ChatStopRequest) -> dict[str, Any]:
 def submit_authorization(body: ChatAuthorizationRequest) -> dict[str, Any]:
     thread_id = f"{body.session_id}:{body.assistant_message_id}"
 
-    pending = _AUTH_CACHE.get(_auth_pending_key(thread_id), default=None)
+    pending = _workspace_auth_cache().get(_auth_pending_key(thread_id), default=None)
     if not pending:
         raise ValueError("未找到待授权的运行上下文，可能已超时或已完成。")
 
@@ -570,7 +578,7 @@ def submit_authorization(body: ChatAuthorizationRequest) -> dict[str, Any]:
     if pending["assistant_message_id"] != body.assistant_message_id:
         raise ValueError("assistant_message_id 不匹配")
 
-    _AUTH_CACHE.set(
+    _workspace_auth_cache().set(
         _auth_decision_key(thread_id),
         {
             "decisions": [d.model_dump(mode="json") for d in body.decisions],

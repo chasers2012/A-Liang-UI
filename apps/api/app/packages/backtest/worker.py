@@ -5,10 +5,10 @@ import threading
 from contextlib import suppress
 from datetime import datetime, timezone
 
+from app.infra.backtest import emit_run_event
 from app.startup_jobs import register_startup_job
 
 from .engine.runner import run_backtest_and_persist
-from .events import emit_run_event
 from .registry import BacktestRunsStore
 
 _QUEUE: queue.Queue[str] = queue.Queue()

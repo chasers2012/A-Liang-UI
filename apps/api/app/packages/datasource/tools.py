@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.datasource import controller as datasource_controller
 from app.packages.datasource.schemas import DataSourceCreate, DataSourcePatch
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 
 @safe_tool("create_datasource", parse_docstring=True)

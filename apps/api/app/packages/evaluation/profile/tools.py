@@ -6,6 +6,7 @@ from typing import Any
 
 import workflow.node_types as _workflow_node_types
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.datasource.schemas import utc_now_iso
 from app.packages.evaluation.profile.constants import empty_workflow_template_dict
 from app.packages.evaluation.profile.models import EvaluationProfileRow
@@ -17,7 +18,6 @@ from app.packages.evaluation.profile.schemas import (
     workflow_public_dict,
 )
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 
 def _to_public(row: EvaluationProfileRow) -> EvaluationProfilePublic:

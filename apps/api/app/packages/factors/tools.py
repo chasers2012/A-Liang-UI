@@ -5,9 +5,9 @@ from typing import Any
 
 from factor import Factor
 
+from app.infra.tooling.safe_tool import safe_tool
 from app.packages.factors.constants import NEW_FACTOR_TEMPLATE
 from app.packages.tool.models import ToolAuthorization
-from app.packages.tool.safe_tool import safe_tool
 
 from . import controller
 

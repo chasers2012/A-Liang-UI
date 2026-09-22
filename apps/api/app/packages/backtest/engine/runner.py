@@ -7,10 +7,10 @@ from datetime import datetime, timezone
 import pandas as pd
 from workflow import WorkflowExecutor
 
+from app.infra.backtest import emit_run_event
 from app.packages.data_set.controller import get_data_set
 from app.packages.strategy.registry import StrategyRegistry
 
-from ..events import emit_run_event
 from ..registry import BacktestRunsStore
 from ..result_manager import BacktestResultManager
 from .market_data import load_market_data

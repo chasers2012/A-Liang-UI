@@ -1,4 +1,4 @@
-"""SSE event models for chat streaming."""
+"""SSE stream event models (protocol definitions)."""
 
 from __future__ import annotations
 
